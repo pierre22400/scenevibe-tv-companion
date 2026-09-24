@@ -283,8 +283,20 @@ decoded image bytes are capped at 2 MiB, the declared MIME type must match the
 decoded image, and large dimensions are downsampled before rendering. No new
 Android permission is added.
 
-Physical qualification of image rendering is still required before v0.3.0 is
-declared qualified.
+### Physical v0.3.0 image validation
+
+The rich overlay path was then tested physically on the same Sony Bravia with a
+local JPEG supplied by the PC sender. The Companion returned
+`mediaRendered: true`, and the image was visibly rendered in the SceneVibe
+overlay together with its commentary text above the active TV application.
+
+This validates the first end-to-end rich-media path:
+
+`PC asset -> bounded LAN commentary payload -> Android TV Companion -> image + text overlay`.
+
+The result qualifies JPEG image rendering for this POC on the tested Sony
+Bravia. It does not yet define the durable canonical FinalTrack media-reference
+contract.
 
 ## Diagnosis and cleanup
 
