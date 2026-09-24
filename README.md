@@ -330,6 +330,26 @@ The sender resolves the referenced asset locally, enforces the 2 MiB POC limit,
 encodes the bytes only for the LAN transport payload, and never writes the local
 path into FinalTrack.
 
+### Physical FinalTrack 1.1 mixed playback validation
+
+The sender was then exercised against the physical Sony Bravia with a three-event
+FinalTrack 1.1 sequence:
+
+1. text-only commentary;
+2. an image-backed commentary referencing `asset-house-001`;
+3. text-only commentary.
+
+The TV visibly rendered the complete sequence. The correlated ACKs reported
+`mediaRendered: false` for the two text-only events and
+`mediaRendered: true` for the image-backed event, which is the expected
+transport state. The sender resolved the local JPEG through the external asset
+map; the canonical FinalTrack contained only the asset reference.
+
+This physically validates the mixed FinalTrack 1.1 playback path on the tested
+Sony Bravia:
+
+`FinalTrack 1.1 -> assetRef resolution -> bounded LAN payload -> TV rich overlay`.
+
 ## Diagnosis and cleanup
 
 ~~~sh
