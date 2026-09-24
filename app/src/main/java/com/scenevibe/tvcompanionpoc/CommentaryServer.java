@@ -40,15 +40,19 @@ public final class CommentaryServer {
         this.listener = listener;
     }
 
-    public synchronized void start() throws IOException {
+    public synchronized void start() {
         if (running) return;
-        server = new ServerSocket();
-        server.setReuseAddress(true);
-        server.bind(new InetSocketAddress(PORT));
-        running = true;
-        acceptThread = new Thread(this::acceptLoop, "scenevibe-commentary-server");
-        acceptThread.start();
-        Log.i(TAG, "Commentary server listening on 0.0.0.0:" + PORT);
+        try {
+            server = new ServerSocket();
+            server.setReuseAddress(true);
+            server.bind(new InetSocketAddress(PORT));
+            running = true;
+            acceptThread = new Thread(this::acceptLoop, "scenevibe-commentary-server");
+            acceptThread.start();
+            Log.i(TAG, "Commentary server listening on 0.0.0.0:" + PORT);
+        } catch (IOException error) {
+            throw new IllegalStateException("Could not bind commentary server", error);
+        }
     }
 
     private void acceptLoop() {
@@ -96,8 +100,14 @@ public final class CommentaryServer {
                 respond(output, 413, error("invalid_length", "Body must be 1.." + MAX_BODY_BYTES + " bytes"));
                 return;
             }
-            byte[] body = input.readNBytes(length);
-            if (body.length != length) {
+            byte[] body = new byte[length];
+            int offset = 0;
+            while (offset < length) {
+                int count = input.read(body, offset, length - offset);
+                if (count < 0) break;
+                offset += count;
+            }
+            if (offset != length) {
                 respond(output, 400, error("bad_request", "Incomplete request body"));
                 return;
             }
