@@ -26,6 +26,7 @@ public final class OverlayService extends Service {
     private OverlayRenderer renderer;
     private boolean foregroundReady;
     private CommentaryServer commentaryServer;
+    private MediaSessionProbe mediaSessionProbe;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -42,7 +43,7 @@ public final class OverlayService extends Service {
             Notification notification = new Notification.Builder(this, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_launcher)
                     .setContentTitle("SceneVibe TV Companion POC")
-                    .setContentText("Test overlay is running. Open to stop it.")
+                    .setContentText("Overlay and passive MediaSession probe are running.")
                     .setContentIntent(openControls)
                     .setOngoing(true)
                     .build();
@@ -85,8 +86,13 @@ public final class OverlayService extends Service {
                 });
                 commentaryServer.start();
             }
+            if (mediaSessionProbe == null) {
+                mediaSessionProbe = new MediaSessionProbe(this);
+                mediaSessionProbe.start();
+            }
             Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
-                    + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary");
+                    + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
+                    + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
             return START_STICKY;
         } catch (RuntimeException error) {
             Log.e(TAG, "WindowManager overlay failed", error);
@@ -110,6 +116,10 @@ public final class OverlayService extends Service {
     /** Remove the window and notification on every normal destruction path. */
     @Override
     public void onDestroy() {
+        if (mediaSessionProbe != null) {
+            mediaSessionProbe.stop();
+            mediaSessionProbe = null;
+        }
         if (commentaryServer != null) {
             commentaryServer.stop();
             commentaryServer = null;
