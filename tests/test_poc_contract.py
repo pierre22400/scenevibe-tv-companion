@@ -51,12 +51,20 @@ class PocContractTests(unittest.TestCase):
         """Pin the v0.2 message contract and local renderer boundary."""
         server = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java").read_text()
         renderer = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java").read_text()
-        self.assertIn('PORT = 8765', server)
-        self.assertIn('MAX_BODY_BYTES = 16384', server)
-        self.assertIn('scenevibe.commentary.v1', server)
-        self.assertIn('scenevibe.commentary.ack.v1', server)
-        self.assertIn('showCommentary', renderer)
+        self.assertIn("PORT = 8765", server)
+        self.assertIn("MAX_BODY_BYTES = 16384", server)
+        self.assertIn("scenevibe.commentary.v1", server)
+        self.assertIn("scenevibe.commentary.ack.v1", server)
+        self.assertIn("showCommentary", renderer)
+
+    def test_latest_commentary_owns_expiry(self):
+        """A replacement commentary must cancel the previous pending expiry."""
+        renderer = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java").read_text()
+        self.assertIn("private final Runnable commentaryExpiry", renderer)
+        self.assertIn("handler.removeCallbacks(commentaryExpiry)", renderer)
+        self.assertIn("handler.postDelayed(commentaryExpiry, durationMs)", renderer)
+        self.assertNotIn("commentaryUntil", renderer)
+
 
 if __name__ == "__main__":
     unittest.main()
-
