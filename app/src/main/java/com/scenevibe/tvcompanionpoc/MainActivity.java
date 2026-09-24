@@ -52,8 +52,8 @@ public final class MainActivity extends Activity {
         addButton(controls, "Stop overlay", this::stopOverlay);
 
         TextView instruction = new TextView(this);
-        instruction.setText("Start the overlay, press Home, then open Prime Video. "
-                + "The TV test is required: this screen cannot confirm compatibility.");
+        instruction.setText("Start the overlay, then open a streaming app. "
+                + "Dynamic commentary listens on TV port 8765 while the overlay service runs.");
         instruction.setTextColor(0xFFD0C9BE);
         instruction.setTextSize(16);
         instruction.setGravity(Gravity.CENTER);
