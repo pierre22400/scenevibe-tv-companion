@@ -228,6 +228,24 @@ durationMs, and only its expiry restores the normal status badge.
 A contract test pins this behavior by requiring cancellation of the previous
 expiry and scheduling of the new one.
 
+### Physical v0.2.1 timer validation
+
+The correction was then verified on the same physical Sony Bravia.
+
+A single commentary requested for 5000 ms was logged as displayed at
+22:12:44.856 and expired at 22:12:49.859, for an observed renderer duration of
+5003 ms.
+
+A replacement sequence was then exercised with 12 s, 12 s and 10 s comments.
+The renderer logged three commentary displays but only one final expiry. The
+third commentary was displayed at 22:13:30.219 and expired at 22:13:40.221,
+for an observed duration of 10002 ms. The earlier pending expiries did not
+interrupt the replacement comment.
+
+The same sequence was also observed visually on the TV and behaved normally.
+This physically validates the v0.2.1 latest-commentary expiry correction on the
+tested Sony Bravia.
+
 ## Diagnosis and cleanup
 
 ~~~sh
