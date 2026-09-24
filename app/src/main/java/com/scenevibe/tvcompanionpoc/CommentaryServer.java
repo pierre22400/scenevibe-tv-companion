@@ -1,5 +1,8 @@
 package com.scenevibe.tvcompanionpoc;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -18,18 +21,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Tiny LAN-only HTTP transport for the physical v0.2.x POC.
- * It accepts one bounded commentary contract and returns a correlated ACK.
+ * Tiny LAN-only HTTP transport for the physical v0.3.x POC.
+ * It accepts bounded text commentary plus optional inline JPEG/PNG media and
+ * returns a correlated ACK.
  */
 public final class CommentaryServer {
     public interface Listener {
-        void onCommentary(String id, String text, long durationMs);
+        void onCommentary(String id, String text, long durationMs, Bitmap mediaBitmap);
     }
 
     public static final int PORT = 8765;
     private static final String TAG = "SceneVibePoc";
     private static final int MAX_HEADER_BYTES = 8192;
-    private static final int MAX_BODY_BYTES = 16384;
+    private static final int MAX_BODY_BYTES = 3 * 1024 * 1024;
+    private static final int MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+    private static final int MAX_RENDER_WIDTH = 1280;
+    private static final int MAX_RENDER_HEIGHT = 720;
+
     private final Listener listener;
     private final ExecutorService clients = Executors.newSingleThreadExecutor();
     private volatile boolean running;
@@ -59,7 +67,7 @@ public final class CommentaryServer {
         while (running) {
             try {
                 Socket socket = server.accept();
-                socket.setSoTimeout(5000);
+                socket.setSoTimeout(10000);
                 clients.execute(() -> handle(socket));
             } catch (IOException error) {
                 if (running) Log.e(TAG, "Commentary server accept failed", error);
@@ -86,7 +94,8 @@ public final class CommentaryServer {
                 JSONObject health = new JSONObject();
                 health.put("type", "scenevibe.health.v1");
                 health.put("status", "ready");
-                health.put("version", "0.2.1");
+                health.put("version", "0.3.0");
+                health.put("media", "inline-image");
                 respond(output, 200, health);
                 return;
             }
@@ -97,7 +106,8 @@ public final class CommentaryServer {
 
             int length = contentLength(lines);
             if (length <= 0 || length > MAX_BODY_BYTES) {
-                respond(output, 413, error("invalid_length", "Body must be 1.." + MAX_BODY_BYTES + " bytes"));
+                respond(output, 413, error("invalid_length",
+                        "Body must be 1.." + MAX_BODY_BYTES + " bytes"));
                 return;
             }
             byte[] body = new byte[length];
@@ -111,7 +121,15 @@ public final class CommentaryServer {
                 respond(output, 400, error("bad_request", "Incomplete request body"));
                 return;
             }
-            JSONObject json = new JSONObject(new String(body, StandardCharsets.UTF_8));
+
+            JSONObject json;
+            try {
+                json = new JSONObject(new String(body, StandardCharsets.UTF_8));
+            } catch (JSONException error) {
+                respond(output, 400, error("invalid_json", "Request body must be valid JSON"));
+                return;
+            }
+
             if (!"scenevibe.commentary.v1".equals(json.optString("type"))) {
                 respond(output, 422, error("invalid_type", "Expected scenevibe.commentary.v1"));
                 return;
@@ -121,22 +139,89 @@ public final class CommentaryServer {
             long durationMs = json.optLong("durationMs", 10000);
             if (id.isEmpty() || id.length() > 128 || text.isEmpty() || text.length() > 1000
                     || durationMs < 1000 || durationMs > 60000) {
-                respond(output, 422, error("invalid_commentary", "Invalid id, text or durationMs"));
+                respond(output, 422, error("invalid_commentary",
+                        "Invalid id, text or durationMs"));
                 return;
             }
 
-            listener.onCommentary(id, text, durationMs);
+            Bitmap mediaBitmap = null;
+            JSONObject media = json.optJSONObject("media");
+            if (media != null) {
+                MediaDecodeResult decoded = decodeImage(media);
+                if (decoded.errorCode != null) {
+                    respond(output, 422, error(decoded.errorCode, decoded.errorMessage));
+                    return;
+                }
+                mediaBitmap = decoded.bitmap;
+            }
+
+            listener.onCommentary(id, text, durationMs, mediaBitmap);
             JSONObject ack = new JSONObject();
             ack.put("type", "scenevibe.commentary.ack.v1");
             ack.put("id", id);
             ack.put("status", "rendered");
+            ack.put("mediaRendered", mediaBitmap != null);
             respond(output, 200, ack);
-            Log.i(TAG, "Commentary rendered and ACK sent; id=" + id);
+            Log.i(TAG, "Commentary rendered and ACK sent; id=" + id
+                    + "; media=" + (mediaBitmap != null));
         } catch (JSONException error) {
-            Log.w(TAG, "Invalid commentary JSON", error);
+            Log.w(TAG, "Could not build commentary response", error);
         } catch (IOException error) {
             if (running) Log.w(TAG, "Commentary client failed", error);
         }
+    }
+
+    private MediaDecodeResult decodeImage(JSONObject media) {
+        if (!"image".equals(media.optString("kind"))) {
+            return MediaDecodeResult.error("invalid_media_kind", "Only media.kind=image is supported");
+        }
+        String mimeType = media.optString("mimeType", "").trim().toLowerCase(Locale.ROOT);
+        if (!"image/jpeg".equals(mimeType) && !"image/png".equals(mimeType)) {
+            return MediaDecodeResult.error("invalid_media_type",
+                    "Only image/jpeg and image/png are supported");
+        }
+        String encoded = media.optString("dataBase64", "").trim();
+        if (encoded.isEmpty()) {
+            return MediaDecodeResult.error("invalid_media_data", "media.dataBase64 is required");
+        }
+
+        final byte[] imageBytes;
+        try {
+            imageBytes = Base64.decode(encoded, Base64.DEFAULT);
+        } catch (IllegalArgumentException error) {
+            return MediaDecodeResult.error("invalid_media_data", "media.dataBase64 is invalid");
+        }
+        if (imageBytes.length == 0 || imageBytes.length > MAX_IMAGE_BYTES) {
+            return MediaDecodeResult.error("image_too_large",
+                    "Decoded image must be 1.." + MAX_IMAGE_BYTES + " bytes");
+        }
+
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length, bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0 || bounds.outMimeType == null) {
+            return MediaDecodeResult.error("invalid_image", "Image bytes could not be decoded");
+        }
+        if (!mimeType.equals(bounds.outMimeType)) {
+            return MediaDecodeResult.error("media_type_mismatch",
+                    "Declared mimeType does not match decoded image");
+        }
+
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight);
+        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length, options);
+        if (bitmap == null) {
+            return MediaDecodeResult.error("invalid_image", "Image bytes could not be rendered");
+        }
+        return MediaDecodeResult.success(bitmap);
+    }
+
+    private int sampleSize(int width, int height) {
+        int sample = 1;
+        while (width / sample > MAX_RENDER_WIDTH || height / sample > MAX_RENDER_HEIGHT) {
+            sample *= 2;
+        }
+        return sample;
     }
 
     private byte[] readHeaders(BufferedInputStream input) throws IOException {
@@ -179,7 +264,8 @@ public final class CommentaryServer {
     private void respond(BufferedOutputStream output, int status, JSONObject json) throws IOException {
         byte[] body = json.toString().getBytes(StandardCharsets.UTF_8);
         String reason = status == 200 ? "OK" : status == 404 ? "Not Found"
-                : status == 413 ? "Payload Too Large" : status == 422 ? "Unprocessable Entity" : "Bad Request";
+                : status == 413 ? "Payload Too Large" : status == 422 ? "Unprocessable Entity"
+                : "Bad Request";
         String headers = "HTTP/1.1 " + status + " " + reason + "\r\n"
                 + "Content-Type: application/json; charset=utf-8\r\n"
                 + "Content-Length: " + body.length + "\r\n"
@@ -197,5 +283,25 @@ public final class CommentaryServer {
         }
         clients.shutdownNow();
         Log.i(TAG, "Commentary server stopped");
+    }
+
+    private static final class MediaDecodeResult {
+        final Bitmap bitmap;
+        final String errorCode;
+        final String errorMessage;
+
+        private MediaDecodeResult(Bitmap bitmap, String errorCode, String errorMessage) {
+            this.bitmap = bitmap;
+            this.errorCode = errorCode;
+            this.errorMessage = errorMessage;
+        }
+
+        static MediaDecodeResult success(Bitmap bitmap) {
+            return new MediaDecodeResult(bitmap, null, null);
+        }
+
+        static MediaDecodeResult error(String code, String message) {
+            return new MediaDecodeResult(null, code, message);
+        }
     }
 }

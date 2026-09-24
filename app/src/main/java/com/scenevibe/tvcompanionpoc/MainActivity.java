@@ -33,7 +33,7 @@ public final class MainActivity extends Activity {
         controls.setBackgroundColor(0xFF17130F);
 
         TextView title = new TextView(this);
-        title.setText("SceneVibe\nTV Companion POC v0.2.1");
+        title.setText("SceneVibe\nTV Companion POC v0.3.0");
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(32);
         title.setGravity(Gravity.CENTER);
@@ -53,7 +53,7 @@ public final class MainActivity extends Activity {
 
         TextView instruction = new TextView(this);
         instruction.setText("Start the overlay, then open a streaming app. "
-                + "Dynamic commentary listens on TV port 8765 while the overlay service runs.");
+                + "Dynamic text and image commentary listens on TV port 8765 while the overlay service runs.");
         instruction.setTextColor(0xFFD0C9BE);
         instruction.setTextSize(16);
         instruction.setGravity(Gravity.CENTER);

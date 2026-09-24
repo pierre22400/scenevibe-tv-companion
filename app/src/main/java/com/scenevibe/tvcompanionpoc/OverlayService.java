@@ -13,7 +13,9 @@ import android.util.Log;
 
 /**
  * User-started foreground service that owns the Android overlay window.
- * The only network feature is the bounded LAN commentary server. No media, accessibility,\n * screen capture or streaming application API is used.
+ * The only network feature is the bounded LAN commentary server. Optional image bytes are
+ * supplied by the sender; no media capture, accessibility, screen capture or streaming
+ * application API is used.
  */
 public final class OverlayService extends Service {
     public static final String ACTION_TOP = "com.scenevibe.tvcompanionpoc.SHOW_TOP";
@@ -76,8 +78,10 @@ public final class OverlayService extends Service {
             }
             renderer.show(bottom);
             if (commentaryServer == null) {
-                commentaryServer = new CommentaryServer((id, text, durationMs) -> {
-                    if (renderer != null) renderer.showCommentary(text, durationMs);
+                commentaryServer = new CommentaryServer((id, text, durationMs, mediaBitmap) -> {
+                    if (renderer != null) {
+                        renderer.showCommentary(text, durationMs, mediaBitmap);
+                    }
                 });
                 commentaryServer.start();
             }

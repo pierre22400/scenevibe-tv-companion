@@ -1,6 +1,7 @@
 package com.scenevibe.tvcompanionpoc;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -11,16 +12,20 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Renders the persistent noninteractive overlay and transient commentary. */
+/** Renders the persistent noninteractive overlay and transient rich commentary. */
 public final class OverlayRenderer {
     private static final String TAG = "SceneVibePoc";
     private final Context context;
     private final Runnable permissionLost;
     private final WindowManager windows;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private LinearLayout panel;
     private TextView badge;
+    private ImageView mediaView;
     private WindowManager.LayoutParams params;
     private int ticks;
     private String commentaryText;
@@ -34,6 +39,7 @@ public final class OverlayRenderer {
         public void run() {
             commentaryText = null;
             if (badge != null) {
+                clearMedia();
                 showStatusBadge();
                 Log.i(TAG, "Dynamic commentary expired; status badge restored");
             }
@@ -43,13 +49,13 @@ public final class OverlayRenderer {
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
-            if (badge == null) return;
+            if (panel == null) return;
             if (commentaryText == null) {
                 showStatusBadge();
             }
             ticks++;
             if (ticks % 30 == 0) {
-                Log.d(TAG, "Overlay heartbeat; attached=" + badge.isAttachedToWindow());
+                Log.d(TAG, "Overlay heartbeat; attached=" + panel.isAttachedToWindow());
                 if (!Settings.canDrawOverlays(context)) {
                     permissionLost.run();
                     return;
@@ -67,23 +73,41 @@ public final class OverlayRenderer {
     }
 
     public void show(boolean bottom) {
-        if (badge != null) {
+        if (panel != null) {
             params.gravity = (bottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.END;
-            windows.updateViewLayout(badge, params);
+            windows.updateViewLayout(panel, params);
             Log.i(TAG, "Overlay position updated");
             return;
         }
-        TextView view = new TextView(context);
-        view.setTextColor(0xFFFFFFFF);
-        view.setTextSize(20);
-        view.setGravity(Gravity.CENTER);
-        view.setPadding(dp(18), dp(10), dp(18), dp(10));
-        view.setMaxWidth(dp(560));
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setGravity(Gravity.CENTER);
+        container.setPadding(dp(18), dp(12), dp(18), dp(12));
         GradientDrawable background = new GradientDrawable();
         background.setColor(0xAA17130F);
         background.setCornerRadius(dp(14));
-        view.setBackground(background);
-        view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+        container.setBackground(background);
+
+        ImageView image = new ImageView(context);
+        image.setAdjustViewBounds(true);
+        image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        image.setVisibility(View.GONE);
+        LinearLayout.LayoutParams imageParams =
+                new LinearLayout.LayoutParams(dp(520), dp(292));
+        imageParams.bottomMargin = dp(10);
+        container.addView(image, imageParams);
+
+        TextView text = new TextView(context);
+        text.setTextColor(0xFFFFFFFF);
+        text.setTextSize(20);
+        text.setGravity(Gravity.CENTER);
+        text.setMaxWidth(dp(520));
+        container.addView(text, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        container.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
             @Override public void onViewAttachedToWindow(View attached) {
                 Log.i(TAG, "Overlay view attached");
             }
@@ -102,27 +126,39 @@ public final class OverlayRenderer {
         layout.gravity = (bottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.END;
         layout.x = dp(28);
         layout.y = dp(28);
-        layout.alpha = 0.75f;
+        layout.alpha = 0.92f;
         layout.setTitle("SceneVibe TV Companion POC");
-        windows.addView(view, layout);
-        badge = view;
+        windows.addView(container, layout);
+
+        panel = container;
+        badge = text;
+        mediaView = image;
         params = layout;
+        showStatusBadge();
         heartbeat.run();
         Log.i(TAG, "Overlay view attached");
     }
 
     /**
-     * Replace the badge body with a commentary for exactly its requested duration.
+     * Replace the badge body with commentary for exactly its requested duration.
+     * Optional bitmap media is rendered above the text in the same overlay card.
      * The latest commentary owns expiry: any older pending expiry is cancelled.
      */
-    public void showCommentary(String text, long durationMs) {
+    public void showCommentary(String text, long durationMs, Bitmap mediaBitmap) {
         handler.post(() -> {
-            if (badge == null) return;
+            if (panel == null || badge == null || mediaView == null) return;
             handler.removeCallbacks(commentaryExpiry);
             commentaryText = text;
             badge.setText("SceneVibe\n\n" + text);
+            if (mediaBitmap != null) {
+                mediaView.setImageBitmap(mediaBitmap);
+                mediaView.setVisibility(View.VISIBLE);
+            } else {
+                clearMedia();
+            }
             handler.postDelayed(commentaryExpiry, durationMs);
-            Log.i(TAG, "Dynamic commentary displayed; durationMs=" + durationMs);
+            Log.i(TAG, "Dynamic commentary displayed; durationMs=" + durationMs
+                    + "; media=" + (mediaBitmap != null));
         });
     }
 
@@ -130,21 +166,33 @@ public final class OverlayRenderer {
         handler.removeCallbacks(heartbeat);
         handler.removeCallbacks(commentaryExpiry);
         commentaryText = null;
-        if (badge != null) {
+        if (panel != null) {
             try {
-                windows.removeViewImmediate(badge);
+                clearMedia();
+                windows.removeViewImmediate(panel);
                 Log.i(TAG, "Overlay view removed");
             } catch (IllegalArgumentException error) {
                 Log.w(TAG, "Overlay was already detached", error);
             } finally {
+                panel = null;
                 badge = null;
+                mediaView = null;
                 params = null;
             }
         }
     }
 
+    private void clearMedia() {
+        if (mediaView != null) {
+            mediaView.setImageDrawable(null);
+            mediaView.setVisibility(View.GONE);
+        }
+    }
+
     private void showStatusBadge() {
-        badge.setText("SceneVibe\nTV Companion POC v0.2.1\n"
+        if (badge == null) return;
+        clearMedia();
+        badge.setText("SceneVibe\nTV Companion POC v0.3.0\n"
                 + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
     }
 
