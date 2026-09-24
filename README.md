@@ -298,6 +298,38 @@ The result qualifies JPEG image rendering for this POC on the tested Sony
 Bravia. It does not yet define the durable canonical FinalTrack media-reference
 contract.
 
+## FinalTrack 1.1 mixed playback sender
+
+The repository also includes a development sender for the separately validated
+FinalTrack 1.1 media-reference candidate.
+
+The canonical track contains only an `assetRef`. Machine-local paths remain in
+an external asset map used by the sender.
+
+Example asset map:
+
+~~~json
+{
+  "asset-house-001": "C:\\Users\\DENIS\\Downloads\\maison.jpg"
+}
+~~~
+
+The included mixed fixture contains a text-only comment, an image-backed
+comment, then another text-only comment.
+
+Run it from the repository root:
+
+~~~powershell
+.\scripts\play-finaltrack-media.ps1 `
+  -TvIp "192.168.1.183" `
+  -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
+  -AssetMapPath ".\examples\asset-map.json"
+~~~
+
+The sender resolves the referenced asset locally, enforces the 2 MiB POC limit,
+encodes the bytes only for the LAN transport payload, and never writes the local
+path into FinalTrack.
+
 ## Diagnosis and cleanup
 
 ~~~sh
