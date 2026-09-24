@@ -32,4 +32,4 @@ $payload = @{
     }
 } | ConvertTo-Json -Depth 5 -Compress
 
-Invoke-RestMethod -Method Post -Uri "http://$TvIp:8765/commentary" -ContentType "application/json" -Body $payload
+Invoke-RestMethod -Method Post -Uri "http://${TvIp}:8765/commentary" -ContentType "application/json" -Body $payload
