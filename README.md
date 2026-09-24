@@ -1,187 +1,246 @@
 # SceneVibe TV Companion POC
 
-**Purpose:** test on a physical Android TV / Google TV whether an independent,
-transparent Android window can remain visible while an official streaming app
-plays video. This is an installable experiment, not a video player or the final
-SceneVibe TV application.
+**Purpose:** verify on a physical Android TV / Google TV that SceneVibe can keep
+an independent, transparent commentary layer above an official streaming app
+without controlling, modifying, capturing or replacing the video stream.
 
-## What the app does
+This repository is an installable technical POC, not the final SceneVibe TV
+application.
 
-- A TV remote friendly activity checks `Settings.canDrawOverlays()` and opens
-  Android's overlay settings. It starts a top-right or bottom-right test badge
-  and can stop it.
-- A user-started foreground service owns the overlay for as long as Android
-  permits it, including after leaving the activity. A persistent notification
-  returns to the controls. Android may still kill the service; `START_STICKY`
-  requests recovery and the last position is restored if a restart occurs.
-- A separate renderer uses one `TYPE_APPLICATION_OVERLAY` window with
-  `FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCHABLE`, overall alpha `0.75`, a small
-  translucent badge, and a clock. It never intercepts remote keys. The badge
-  changes only its position when a second Start button is pressed.
+## Current state
 
-The app has **no internet, capture, accessibility, microphone or media
-permission**, no boot receiver, no Cast, no streaming account integration and
-no code in another app. Android's permission page is user controlled. It does
-not grant a permission silently.
+The consolidated build is **v0.2.1**.
 
-## Open source review before implementation
+- A TV-friendly activity checks the user-granted **Display over other apps**
+  capability and starts/stops the overlay.
+- A foreground service owns the overlay after the activity is left.
+- A noninteractive TYPE_APPLICATION_OVERLAY window uses
+  FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCHABLE, so the streaming app keeps remote
+  focus.
+- A bounded LAN HTTP server listens on TV port **8765** only while the overlay
+  service runs.
+- POST /commentary renders transient SceneVibe text.
+- GET /health reports service readiness.
+- The newest commentary owns its expiry: when a new comment replaces an older
+  one, the previous pending expiry is cancelled before the new duration starts.
+
+The app has no capture, accessibility, microphone or media permission, no boot
+receiver, no Cast receiver and no streaming-account integration. It does use
+android.permission.INTERNET solely for the current LAN POC transport.
+
+## Security boundary
+
+The v0.2.x transport is intentionally minimal and is **not** the final
+pairing/security design. It has no authentication and must be used only on a
+trusted local network during development.
+
+The Companion does not contact, inspect, capture or modify the streaming
+application or its video.
+
+## Open-source review before implementation
 
 Reviewed the default branches on 24 September 2026:
 
 | Project | License and implementation | POC decision |
 | --- | --- | --- |
-| [TvOverlay](https://github.com/gugutab/TvOverlay) | No `LICENSE` file in the repository. It contains APKs, JSON examples and Home Assistant/Postman samples, but no Android source code. Its README describes `SYSTEM_ALERT_WINDOW`, an ADB `appops` fallback on some TVs, positioning and REST/MQTT control. Foreground service, `WindowManager` flags and remote focus cannot be verified from source. | No code copied. The permission troubleshooting and small-corner display inform the test procedure. REST/MQTT is unnecessary here. |
-| [TVCompanion](https://github.com/avnishkirnalli/TVCompanion) | MIT; Java Android TV host plus Android controller. A foreground `CompanionService` serves TCP and advertises via `NsdManager`; a separate `ScreenStreamingService` uses MediaProjection. It declares `SYSTEM_ALERT_WINDOW` but the reviewed host service does not implement the small visual overlay required here. The TV manifest exposes a Leanback launcher. | No code copied. Separating the service from the activity and NSD/TCP is a possible future direction; screen capture, boot start and network code are explicitly excluded. |
-| [PipTV](https://github.com/juniorbarrigana/PipTV) | MIT; Kotlin, Compose, Media3, WebView and an `AccessibilityService`. Its PiP window uses `TYPE_ACCESSIBILITY_OVERLAY`, `WindowManager`, key interception and focus recovery; its manifest also declares `SYSTEM_ALERT_WINDOW`. The README documents TV remote handling. | No code copied. Its focus handling serves an interactive player; this badge must not take focus, so it uses `TYPE_APPLICATION_OVERLAY` and no accessibility service. |
+| [TvOverlay](https://github.com/gugutab/TvOverlay) | No LICENSE file in the repository. Its README describes SYSTEM_ALERT_WINDOW, an ADB appops fallback, positioning and REST/MQTT control. | No code copied. Permission troubleshooting and corner positioning informed the test protocol. |
+| [TVCompanion](https://github.com/avnishkirnalli/TVCompanion) | MIT; Android TV host/controller architecture with foreground service and network transport. | No code copied. Service/activity separation was a useful architectural reference. Screen capture and boot-start behavior were excluded. |
+| [PipTV](https://github.com/juniorbarrigana/PipTV) | MIT; Android TV UI with accessibility-overlay behavior for an interactive player. | No code copied. SceneVibe deliberately uses a noninteractive application overlay and no accessibility service. |
 
-No third-party source is included, so these licenses introduce no code
-redistribution obligation in this repository. The implementation uses Android
-framework APIs directly. A future phone-to-TV connection may study
-TVCompanion's NSD discovery and TCP acknowledgement, but none exists here.
-
-Android API references: [overlay permission](https://developer.android.com/reference/android/provider/Settings#canDrawOverlays(android.content.Context)), [window flags and touch pass-through](https://developer.android.com/reference/android/view/WindowManager.LayoutParams), [special-use foreground service](https://developer.android.com/develop/background-work/services/fgs/service-types), and [TV launcher requirements](https://developer.android.com/training/tv/get-started/create).
+No third-party source is included. The implementation uses Android framework
+APIs directly.
 
 ## Build and automated checks
 
 Requires JDK 17, Android SDK Platform 35, Build Tools 35.x and Gradle **8.9**.
-The Android Gradle plugin is pinned to **8.7.3**. There is no Gradle wrapper
-binary in this minimal repository. With `ANDROID_HOME` or `ANDROID_SDK_ROOT`
-set and `gradle` 8.9 available:
+The Android Gradle plugin is pinned to **8.7.3**.
 
-```sh
+~~~sh
 python3 -m unittest discover -s tests
 gradle :app:assembleDebug :app:lintDebug --stacktrace
-```
+~~~
 
-The debug APK is `app/build/outputs/apk/debug/app-debug.apk`. The
-`Android debug APK` GitHub Actions workflow runs the same checks and uploads
-that file as the `scenevibe-tv-companion-poc-debug` artifact. A successful
-build only proves packaging and static checks; it cannot prove the overlay
-works on Prime Video or that a TV exposes the permission setting.
+The debug APK is:
 
-Target: Android API **26–35** (Android 8.0+; later releases need device tests).
-`TYPE_APPLICATION_OVERLAY` and notification channels exist from API 26.
-The foreground service declares the `specialUse` type and permission required
-when targeting Android 14+, with its narrow experimental use stated in the
-manifest. This sideloaded POC makes no Play Store acceptance claim. Android TV
-and Google TV share the Android APIs used here; launcher, settings, background
-management and app-specific overlay restrictions can vary by model and OS.
-No Sony-only APIs are used.
+~~~text
+app/build/outputs/apk/debug/app-debug.apk
+~~~
 
-## Install and grant the permission on a TV
+The **Android debug APK** GitHub Actions workflow runs the same contract tests,
+Android build and lint on pushes to main, then uploads
+scenevibe-tv-companion-poc-debug.
 
-Connect ADB to the TV as documented for its developer settings, then:
+A green build proves packaging and static checks only. Physical qualification
+is recorded separately below.
 
-```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+Target: Android API **26–35**. No Sony-only API is used.
+
+### Debug APK signing note
+
+GitHub-hosted runners create an ephemeral debug keystore unless a stable signing
+configuration is supplied. Therefore a debug APK from a later workflow run may
+not update a previously installed debug APK with adb install -r.
+
+For this disposable POC, if Android reports
+INSTALL_FAILED_UPDATE_INCOMPATIBLE, uninstall the existing package and then
+install the new APK:
+
+~~~sh
+adb uninstall com.scenevibe.tvcompanionpoc
+adb install app-debug.apk
+~~~
+
+This also clears the **Display over other apps** grant, so grant it again after
+reinstallation.
+
+## Install and grant overlay permission
+
+Connect ADB to the TV, then:
+
+~~~sh
+adb install app-debug.apk
 adb shell am start -n com.scenevibe.tvcompanionpoc/.MainActivity
-```
+~~~
 
 On the TV, select **Open overlay permission settings**, locate SceneVibe TV
-Companion POC and allow **Display over other apps**. Return to the app: its
-status must read **granted**. Android 11+ may show a general list rather than
-the package page. If a TV does not expose the setting, use this **development
-fallback only** after deciding to grant the permission:
+Companion POC and allow **Display over other apps**. Return to the app and
+confirm:
 
-```sh
+~~~text
+Display over other apps: granted
+~~~
+
+If a development TV does not expose the permission screen, an ADB fallback is
+available after explicitly deciding to grant it:
+
+~~~sh
 adb shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW allow
 adb shell appops get com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW
-```
+~~~
 
-Reopen the app and check its status; the `appops` result alone is not proof
-that `Settings.canDrawOverlays()` returns true on this particular TV. If the
-service cannot start, inspect logcat. To revoke the development grant, use
-`adb shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW default`
-or the TV settings. Do not use ADB as the intended consumer flow.
+Do not use ADB as the intended consumer permission flow.
 
-## Physical qualification protocol
+## Dynamic commentary protocol
 
-1. Note TV model, Android/Google TV version, firmware, Prime Video version and
-   whether permission was granted in Settings or by ADB.
-2. In SceneVibe, start **top right**. Confirm the clock advances. Press Home,
-   navigate with the remote, and check the badge remains visible.
-3. Open official **Prime Video**, start a normal video and watch for at least
-   two minutes. Record whether the badge is visible over the *video image*
-   (not merely over menus), whether video and audio remain normal, whether
-   Play/Pause and D-pad still control Prime Video, and any flicker/blanking.
-4. Reopen SceneVibe and switch to **bottom right**. Repeat on the same video;
-   this distinguishes corner policies and subtitle obstruction. Select
-   **Stop overlay** and confirm the badge disappears from Home and Prime Video.
-5. Repeat steps 2–4 separately with official **Netflix** and **Disney+**,
-   recording results per app. No result for one app establishes another.
+While the user-started overlay service is running, the TV listens on TCP port
+**8765**.
 
-Record a pass **only** if the badge remains visible over the playing video
-while sound, picture and remote controls work normally. A service heartbeat
-does not prove that Android composited the badge over protected video. If
-menus work but the video hides the badge, record that precise failure. If
-permission or foreground service setup fails, record that as a separate
-blocker. This repository has no physical TV result yet.
+### Health
+
+~~~http
+GET /health
+~~~
+
+v0.2.1 returns a JSON object with:
+
+- type: scenevibe.health.v1
+- status: ready
+- version: 0.2.1
+
+### Commentary
+
+~~~http
+POST /commentary
+Content-Type: application/json
+~~~
+
+Body contract:
+
+- type must be scenevibe.commentary.v1
+- id: non-empty, maximum 128 characters
+- text: non-empty, maximum 1000 characters
+- durationMs: optional, default 10000, allowed range 1000–60000
+- request body maximum: 16 KiB
+
+Example PowerShell request, replacing the IP with the TV's current LAN address:
+
+~~~powershell
+Invoke-RestMethod -Method Post -Uri "http://192.168.1.183:8765/commentary" `
+  -ContentType "application/json" `
+  -Body '{"type":"scenevibe.commentary.v1","id":"physical-001","text":"Dynamic SceneVibe commentary from the PC.","durationMs":10000}'
+~~~
+
+Expected acknowledgement:
+
+~~~json
+{"type":"scenevibe.commentary.ack.v1","id":"physical-001","status":"rendered"}
+~~~
+
+Stopping the overlay service also closes port 8765. Starting the overlay again
+restarts the commentary server.
+
+## Physical qualification — Sony Bravia, 24 September 2026
+
+### v0.1.0 overlay architecture
+
+After the user granted **Display over other apps**, the overlay remained visible
+over playing video in:
+
+- Prime Video
+- Netflix
+- Disney+
+- Canal+
+- YouTube
+
+Prime Video was exercised for at least five minutes with normal picture, sound
+and remote control. Top-right and bottom-right placement, cross-app persistence,
+explicit Stop, full Android reboot behavior, force-stop and recovery were also
+tested successfully.
+
+A full reboot stopped the running overlay, as expected because this POC has no
+boot receiver, while the Android overlay permission remained granted.
+
+### v0.2.0 dynamic transport
+
+The LAN transport was then qualified physically on the same Sony Bravia.
+
+Observed passes:
+
+1. A PowerShell POST /commentary from the PC produced visible dynamic
+   commentary above a playing Prime Video image and returned the correlated
+   scenevibe.commentary.ack.v1 with status: rendered.
+2. Three successive commentary messages were all received and rendered.
+   Perceived timing during replacement was slightly imprecise; this observation
+   led to the v0.2.1 exact-expiry correction.
+3. With Prime Video remaining in the foreground and the Companion activity in
+   the background, a new LAN commentary still rendered and returned its ACK.
+4. After switching from Prime Video to Netflix, the overlay and LAN transport
+   remained active and a new commentary rendered successfully above Netflix.
+5. **Stop overlay** removed the badge and closed the HTTP server. A subsequent
+   GET /health failed to connect, which is the expected stopped state.
+6. Starting the overlay again restored normal overlay and server operation
+   without rebooting the TV.
+
+These results qualify the tested architecture on that physical Sony Bravia.
+They do not establish identical behavior on every Android TV / Google TV model,
+firmware or streaming application.
+
+## v0.2.1 correction
+
+Physical v0.2.0 testing showed that replacement comments all rendered correctly,
+but their visible durations could feel imprecise.
+
+v0.2.1 changes the renderer so each commentary owns one explicit expiry
+callback. Before a newer commentary is displayed, the previous pending expiry
+callback is removed. The new comment then receives its full requested
+durationMs, and only its expiry restores the normal status badge.
+
+A contract test pins this behavior by requiring cancellation of the previous
+expiry and scheduling of the new one.
 
 ## Diagnosis and cleanup
 
-```sh
+~~~sh
 adb logcat -s SceneVibePoc:D AndroidRuntime:E
 adb shell appops get com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW
 adb shell dumpsys window
 adb uninstall com.scenevibe.tvcompanionpoc
-```
+~~~
 
 Logs cover service creation/destruction, foreground start, permission loss,
-WindowManager add/update/remove, attach/detach, errors and a heartbeat every
-30 seconds. Android does not notify this app when another application or the
-compositor merely *conceals* a still-attached overlay: observation of the TV
-image is essential. The service does not force itself above system UI or
-another app's secure/special surfaces. Some manufacturers do not expose the
-overlay permission UI, and Android may remove a foreground service under
-resource pressure. Those limitations remain to be tested on the Sony Bravia.
+WindowManager add/update/remove, attach/detach, commentary display/expiry,
+errors and the 30-second heartbeat.
 
-
-
-## Physical result — Sony Bravia, 24 September 2026
-
-POC v0.1.0 was physically qualified on the test Sony Bravia. After the user
-granted **Display over other apps**, the overlay remained continuously visible
-over playing video in Prime Video, Netflix, Disney+, Canal+ and YouTube.
-Prime Video was exercised for five minutes with playback controls; picture,
-sound and remote control remained normal. Top-right and bottom-right positions,
-cross-app persistence, explicit Stop, Android reboot behavior, force-stop and
-recovery were also exercised successfully. A full ADB reboot removed the
-running overlay as expected while preserving the user's overlay permission.
-
-This result qualifies the overlay architecture on that tested TV; it is not a
-claim that every Android/Google TV model or firmware behaves identically.
-
-## v0.2.0 — dynamic commentary transport
-
-v0.2.0 keeps the same noninteractive Android overlay and adds one deliberately
-small LAN transport. While the user-started overlay service is running, the TV
-listens on TCP port **8765**. It exposes:
-
-- `GET /health`
-- `POST /commentary`
-
-The commentary body is bounded to 16 KiB and must use
-`scenevibe.commentary.v1`, with a non-empty `id`, `text` (maximum 1000
-characters) and optional `durationMs` from 1000 to 60000. A valid message is
-rendered over the current TV application and receives a correlated
-`scenevibe.commentary.ack.v1` response. The normal POC badge returns after the
-requested duration.
-
-Example from PowerShell, replacing the IP with the TV's current LAN address:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "http://192.168.1.183:8765/commentary" `
-  -ContentType "application/json" `
-  -Body '{"type":"scenevibe.commentary.v1","id":"physical-001","text":"Dynamic SceneVibe commentary from the PC.","durationMs":10000}'
-```
-
-Expected response:
-
-```json
-{"type":"scenevibe.commentary.ack.v1","id":"physical-001","status":"rendered"}
-```
-
-This is a development transport, not the final pairing/security design. It has
-no authentication and must be used only on a trusted local network for the POC.
-It does not contact, inspect, capture or modify the streaming application or
-its video.
+Android does not notify the app merely because another application or compositor
+conceals a still-attached overlay, so physical observation remains part of the
+qualification procedure.
