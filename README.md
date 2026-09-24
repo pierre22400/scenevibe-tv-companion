@@ -135,3 +135,53 @@ another app's secure/special surfaces. Some manufacturers do not expose the
 overlay permission UI, and Android may remove a foreground service under
 resource pressure. Those limitations remain to be tested on the Sony Bravia.
 
+
+
+## Physical result — Sony Bravia, 24 September 2026
+
+POC v0.1.0 was physically qualified on the test Sony Bravia. After the user
+granted **Display over other apps**, the overlay remained continuously visible
+over playing video in Prime Video, Netflix, Disney+, Canal+ and YouTube.
+Prime Video was exercised for five minutes with playback controls; picture,
+sound and remote control remained normal. Top-right and bottom-right positions,
+cross-app persistence, explicit Stop, Android reboot behavior, force-stop and
+recovery were also exercised successfully. A full ADB reboot removed the
+running overlay as expected while preserving the user's overlay permission.
+
+This result qualifies the overlay architecture on that tested TV; it is not a
+claim that every Android/Google TV model or firmware behaves identically.
+
+## v0.2.0 — dynamic commentary transport
+
+v0.2.0 keeps the same noninteractive Android overlay and adds one deliberately
+small LAN transport. While the user-started overlay service is running, the TV
+listens on TCP port **8765**. It exposes:
+
+- `GET /health`
+- `POST /commentary`
+
+The commentary body is bounded to 16 KiB and must use
+`scenevibe.commentary.v1`, with a non-empty `id`, `text` (maximum 1000
+characters) and optional `durationMs` from 1000 to 60000. A valid message is
+rendered over the current TV application and receives a correlated
+`scenevibe.commentary.ack.v1` response. The normal POC badge returns after the
+requested duration.
+
+Example from PowerShell, replacing the IP with the TV's current LAN address:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://192.168.1.183:8765/commentary" `
+  -ContentType "application/json" `
+  -Body '{"type":"scenevibe.commentary.v1","id":"physical-001","text":"Dynamic SceneVibe commentary from the PC.","durationMs":10000}'
+```
+
+Expected response:
+
+```json
+{"type":"scenevibe.commentary.ack.v1","id":"physical-001","status":"rendered"}
+```
+
+This is a development transport, not the final pairing/security design. It has
+no authentication and must be used only on a trusted local network for the POC.
+It does not contact, inspect, capture or modify the streaming application or
+its video.
