@@ -1,1 +1,130 @@
-{}
+{
+  "schemaVersion": "1.1.0",
+  "contract": "scenevibe.final-track",
+  "trackId": "tv-poc-finaltrack-media-001",
+  "requestId": "tv-poc-request-media-001",
+  "media": {
+    "platform": "Prime Video",
+    "videoId": "physical-tv-poc",
+    "filmTitle": "SceneVibe Physical TV Test",
+    "releaseYear": 2026,
+    "edition": "POC",
+    "language": "en"
+  },
+  "density": "normal",
+  "source": {
+    "pass2PlanId": "tv-poc-plan-001",
+    "pass2Contract": "scenevibe.pass2.output",
+    "pass2SchemaVersion": "1.2.0",
+    "generationMode": "deterministic_fixture",
+    "promptVersion": "tv-poc-1",
+    "trackKind": "canonical_maximal",
+    "spoilerPolicy": "no_future_spoilers"
+  },
+  "playbackPolicy": {
+    "replayOnBackwardSeek": "always",
+    "pauseFreezesDisplay": true,
+    "maxVisibleComments": 1
+  },
+  "timeline": {
+    "timebase": "media_seconds",
+    "plannedStartSec": 0,
+    "plannedEndSec": 30
+  },
+  "comments": [
+    {
+      "id": "mixed-ft-001",
+      "topic": "scene",
+      "priority": 80,
+      "text": "SceneVibe — text-only commentary from FinalTrack 1.1.",
+      "evidenceRefs": [
+        "ev-demo-001"
+      ],
+      "sourceRefs": [
+        "src-demo-001"
+      ],
+      "schedule": {
+        "earliestStartSec": 0,
+        "idealStartSec": 0,
+        "latestStartSec": 0,
+        "windowClass": "narrow"
+      },
+      "display": {
+        "durationSec": 5,
+        "position": "top"
+      },
+      "spoilerAfterSec": null
+    },
+    {
+      "id": "mixed-ft-002",
+      "topic": "place",
+      "priority": 78,
+      "text": "SceneVibe — this commentary carries an image through assetRef.",
+      "evidenceRefs": [
+        "ev-demo-002"
+      ],
+      "sourceRefs": [
+        "src-demo-001"
+      ],
+      "schedule": {
+        "earliestStartSec": 8,
+        "idealStartSec": 8,
+        "latestStartSec": 8,
+        "windowClass": "narrow"
+      },
+      "display": {
+        "durationSec": 6,
+        "position": "top"
+      },
+      "spoilerAfterSec": null,
+      "media": {
+        "kind": "image",
+        "assetRef": "asset-house-001"
+      }
+    },
+    {
+      "id": "mixed-ft-003",
+      "topic": "production",
+      "priority": 70,
+      "text": "SceneVibe — back to a text-only card after the image.",
+      "evidenceRefs": [
+        "ev-demo-003"
+      ],
+      "sourceRefs": [
+        "src-demo-001"
+      ],
+      "schedule": {
+        "earliestStartSec": 18,
+        "idealStartSec": 18,
+        "latestStartSec": 18,
+        "windowClass": "narrow"
+      },
+      "display": {
+        "durationSec": 7,
+        "position": "top"
+      },
+      "spoilerAfterSec": null
+    }
+  ],
+  "quietWindows": [],
+  "sources": [
+    {
+      "id": "src-demo-001",
+      "title": "SceneVibe TV transport POC",
+      "publisher": "SceneVibe",
+      "url": "https://example.com/scenevibe-tv-poc",
+      "sourceType": "reference"
+    }
+  ],
+  "assets": [
+    {
+      "id": "asset-house-001",
+      "kind": "image",
+      "mimeType": "image/jpeg",
+      "role": "photo",
+      "sourceRefs": [
+        "src-demo-001"
+      ]
+    }
+  ]
+}
