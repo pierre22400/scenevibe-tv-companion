@@ -13,10 +13,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-/**
- * Renders one small, translucent, noninteractive WindowManager overlay.
- * Future event delivery can call this renderer without changing the service lifecycle.
- */
+/** Renders the persistent noninteractive overlay and transient commentary. */
 public final class OverlayRenderer {
     private static final String TAG = "SceneVibePoc";
     private final Context context;
@@ -26,15 +23,19 @@ public final class OverlayRenderer {
     private TextView badge;
     private WindowManager.LayoutParams params;
     private int ticks;
+    private String commentaryText;
+    private long commentaryUntil;
     private final Runnable heartbeat = new Runnable() {
-        /** Update the clock, record a sparse heartbeat and detect revoked permission. */
         @Override
         public void run() {
-            if (badge == null) {
-                return;
+            if (badge == null) return;
+            if (commentaryText != null && System.currentTimeMillis() < commentaryUntil) {
+                badge.setText("SceneVibe\n\n" + commentaryText);
+            } else {
+                commentaryText = null;
+                badge.setText("SceneVibe\nTV Companion POC v0.2.0\n"
+                        + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
             }
-            badge.setText("SceneVibe\nTV Companion POC\n"
-                    + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
             ticks++;
             if (ticks % 30 == 0) {
                 Log.d(TAG, "Overlay heartbeat; attached=" + badge.isAttachedToWindow());
@@ -47,17 +48,13 @@ public final class OverlayRenderer {
         }
     };
 
-    /** Obtain the standard window service without depending on a TV manufacturer. */
     public OverlayRenderer(Context context, Runnable permissionLost) {
         this.context = context;
         this.permissionLost = permissionLost;
         windows = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        if (windows == null) {
-            throw new IllegalStateException("WindowManager unavailable");
-        }
+        if (windows == null) throw new IllegalStateException("WindowManager unavailable");
     }
 
-    /** Attach once and subsequently move the same window between the two positions. */
     public void show(boolean bottom) {
         if (badge != null) {
             params.gravity = (bottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.END;
@@ -65,27 +62,21 @@ public final class OverlayRenderer {
             Log.i(TAG, "Overlay position updated");
             return;
         }
-
         TextView view = new TextView(context);
         view.setTextColor(0xFFFFFFFF);
         view.setTextSize(20);
         view.setGravity(Gravity.CENTER);
         view.setPadding(dp(18), dp(10), dp(18), dp(10));
-        view.setMaxWidth(dp(300));
+        view.setMaxWidth(dp(560));
         GradientDrawable background = new GradientDrawable();
         background.setColor(0xAA17130F);
         background.setCornerRadius(dp(14));
         view.setBackground(background);
         view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-            /** Distinguish an attached window from an app that still has a running service. */
-            @Override
-            public void onViewAttachedToWindow(View attached) {
+            @Override public void onViewAttachedToWindow(View attached) {
                 Log.i(TAG, "Overlay view attached");
             }
-
-            /** Surface unexpected detachment in adb logcat. */
-            @Override
-            public void onViewDetachedFromWindow(View detached) {
+            @Override public void onViewDetachedFromWindow(View detached) {
                 Log.i(TAG, "Overlay view detached");
             }
         });
@@ -100,20 +91,29 @@ public final class OverlayRenderer {
         layout.gravity = (bottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.END;
         layout.x = dp(28);
         layout.y = dp(28);
-        // Android 12+ restricts touch pass-through under untrusted windows.
-        // A single small window with alpha <= 0.8 stays within that threshold.
         layout.alpha = 0.75f;
         layout.setTitle("SceneVibe TV Companion POC");
-        Log.i(TAG, "Adding TYPE_APPLICATION_OVERLAY with WindowManager");
         windows.addView(view, layout);
         badge = view;
         params = layout;
         heartbeat.run();
+        Log.i(TAG, "Overlay view attached");
     }
 
-    /** Cancel updates and remove the actual window when the service stops. */
+    /** Replace the badge body with a commentary, then automatically restore status. */
+    public void showCommentary(String text, long durationMs) {
+        handler.post(() -> {
+            if (badge == null) return;
+            commentaryText = text;
+            commentaryUntil = System.currentTimeMillis() + durationMs;
+            badge.setText("SceneVibe\n\n" + text);
+            Log.i(TAG, "Dynamic commentary displayed");
+        });
+    }
+
     public void dismiss() {
         handler.removeCallbacks(heartbeat);
+        commentaryText = null;
         if (badge != null) {
             try {
                 windows.removeViewImmediate(badge);
@@ -127,9 +127,7 @@ public final class OverlayRenderer {
         }
     }
 
-    /** Convert density independent sizes to display pixels. */
     private int dp(int value) {
         return Math.round(value * context.getResources().getDisplayMetrics().density);
     }
 }
-
