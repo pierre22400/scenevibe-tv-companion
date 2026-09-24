@@ -5,6 +5,7 @@
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.INTERNET" />
 
   <application
     android:allowBackup="false"
@@ -27,8 +28,7 @@
       android:foregroundServiceType="specialUse">
       <property
         android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-        android:value="User-started, persistent, noninteractive visual overlay for Android TV testing" />
+        android:value="User-started, persistent, noninteractive SceneVibe commentary overlay for Android TV testing" />
     </service>
   </application>
 </manifest>
-
