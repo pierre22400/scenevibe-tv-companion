@@ -14,7 +14,7 @@ class PocContractTests(unittest.TestCase):
     """Detect accidental expansion beyond the overlay and narrow LAN transport."""
 
     def test_permissions_remain_limited_to_overlay_foreground_and_lan(self):
-        """Allow only overlay, foreground service and the v0.2 LAN transport."""
+        """Allow only overlay, foreground service and the bounded LAN transport."""
         root = ET.parse(MANIFEST).getroot()
         permissions = {node.attrib[ANDROID + "name"] for node in root.findall("uses-permission")}
         self.assertEqual(
@@ -48,14 +48,14 @@ class PocContractTests(unittest.TestCase):
         self.assertEqual(features["android.hardware.touchscreen"], "false")
 
     def test_commentary_transport_is_bounded_and_non_exported(self):
-        """Pin the v0.2 message contract and local renderer boundary."""
+        """Pin the v0.3 message contract, image bounds and local renderer boundary."""
         server = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java").read_text()
         renderer = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java").read_text()
         self.assertIn("PORT = 8765", server)
-        self.assertIn("MAX_BODY_BYTES = 16384", server)
+        self.assertIn("MAX_BODY_BYTES = 3 * 1024 * 1024", server)\n        self.assertIn("MAX_IMAGE_BYTES = 2 * 1024 * 1024", server)\n        self.assertIn("MAX_RENDER_WIDTH = 1280", server)\n        self.assertIn("MAX_RENDER_HEIGHT = 720", server)
         self.assertIn("scenevibe.commentary.v1", server)
         self.assertIn("scenevibe.commentary.ack.v1", server)
-        self.assertIn("showCommentary", renderer)
+        self.assertIn("showCommentary", renderer)\n        self.assertIn("ImageView", renderer)\n        self.assertIn("media.dataBase64", server)\n        self.assertIn("image/jpeg", server)\n        self.assertIn("image/png", server)
 
     def test_latest_commentary_owns_expiry(self):
         """A replacement commentary must cancel the previous pending expiry."""
