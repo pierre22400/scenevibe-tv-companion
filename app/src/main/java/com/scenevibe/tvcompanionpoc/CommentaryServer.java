@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Tiny LAN-only HTTP transport for the physical v0.2.0 POC.
+ * Tiny LAN-only HTTP transport for the physical v0.2.x POC.
  * It accepts one bounded commentary contract and returns a correlated ACK.
  */
 public final class CommentaryServer {
@@ -86,7 +86,7 @@ public final class CommentaryServer {
                 JSONObject health = new JSONObject();
                 health.put("type", "scenevibe.health.v1");
                 health.put("status", "ready");
-                health.put("version", "0.2.0");
+                health.put("version", "0.2.1");
                 respond(output, 200, health);
                 return;
             }
