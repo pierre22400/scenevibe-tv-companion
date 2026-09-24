@@ -2,7 +2,7 @@ name: Android debug APK
 
 on:
   push:
-    branches: [work/android-tv-overlay-poc-001]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
