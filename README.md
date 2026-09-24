@@ -9,7 +9,7 @@ application.
 
 ## Current state
 
-The consolidated build is **v0.2.1**.
+The current candidate build is **v0.3.0**.
 
 - A TV-friendly activity checks the user-granted **Display over other apps**
   capability and starts/stops the overlay.
@@ -19,7 +19,7 @@ The consolidated build is **v0.2.1**.
   focus.
 - A bounded LAN HTTP server listens on TV port **8765** only while the overlay
   service runs.
-- POST /commentary renders transient SceneVibe text.
+- POST /commentary renders transient SceneVibe text and can optionally render a bounded JPEG/PNG image above it.
 - GET /health reports service readiness.
 - The newest commentary owns its expiry: when a new comment replaces an older
   one, the previous pending expiry is cancelled before the new duration starts.
@@ -30,7 +30,7 @@ android.permission.INTERNET solely for the current LAN POC transport.
 
 ## Security boundary
 
-The v0.2.x transport is intentionally minimal and is **not** the final
+The v0.3.x transport is intentionally minimal and is **not** the final
 pairing/security design. It has no authentication and must be used only on a
 trusted local network during development.
 
@@ -131,11 +131,12 @@ While the user-started overlay service is running, the TV listens on TCP port
 GET /health
 ~~~
 
-v0.2.1 returns a JSON object with:
+v0.3.0 returns a JSON object with:
 
 - type: scenevibe.health.v1
 - status: ready
-- version: 0.2.1
+- version: 0.3.0
+- media: inline-image
 
 ### Commentary
 
@@ -150,7 +151,11 @@ Body contract:
 - id: non-empty, maximum 128 characters
 - text: non-empty, maximum 1000 characters
 - durationMs: optional, default 10000, allowed range 1000–60000
-- request body maximum: 16 KiB
+- request body maximum: 3 MiB
+- optional media.kind: image
+- optional media.mimeType: image/jpeg or image/png
+- optional media.dataBase64: inline image bytes, maximum 2 MiB after Base64 decoding
+- decoded images are downsampled for rendering to a maximum working envelope of 1280×720
 
 Example PowerShell request, replacing the IP with the TV's current LAN address:
 
@@ -163,8 +168,28 @@ Invoke-RestMethod -Method Post -Uri "http://192.168.1.183:8765/commentary" `
 Expected acknowledgement:
 
 ~~~json
-{"type":"scenevibe.commentary.ack.v1","id":"physical-001","status":"rendered"}
+{"type":"scenevibe.commentary.ack.v1","id":"physical-001","status":"rendered","mediaRendered":false}
 ~~~
+
+### Image commentary
+
+v0.3.0 adds an optional inline image payload to the same commentary contract.
+The TV never reads a Windows path and does not fetch an arbitrary remote image:
+the sender reads the local asset, Base64-encodes it and sends the bounded bytes
+with the commentary.
+
+The repository includes a PowerShell sender:
+
+~~~powershell
+.\scripts\send-media-commentary.ps1 -TvIp "192.168.1.183" -ImagePath "C:\Users\DENIS\Downloads\maison.jpg" -Text "SceneVibe — image overlay test" -DurationMs 10000
+~~~
+
+A successful media ACK contains mediaRendered: true.
+
+This transport shape is deliberately separate from the canonical FinalTrack
+schema. The physical media-rendering POC should be qualified first; a durable
+FinalTrack media-reference contract can then be versioned without embedding
+machine-specific paths such as C:\\... in canonical tracks.
 
 Stopping the overlay service also closes port 8765. Starting the overlay again
 restarts the commentary server.
@@ -245,6 +270,21 @@ interrupt the replacement comment.
 The same sequence was also observed visually on the TV and behaved normally.
 This physically validates the v0.2.1 latest-commentary expiry correction on the
 tested Sony Bravia.
+
+## v0.3.0 rich overlay candidate
+
+v0.3.0 preserves the qualified text/timer behavior and extends the overlay card
+with an optional image region. The sender may provide a JPEG or PNG together
+with a normal commentary. The image and text share the same duration and the
+same latest-commentary expiry ownership.
+
+The transport is bounded before bitmap allocation: the HTTP body is capped,
+decoded image bytes are capped at 2 MiB, the declared MIME type must match the
+decoded image, and large dimensions are downsampled before rendering. No new
+Android permission is added.
+
+Physical qualification of image rendering is still required before v0.3.0 is
+declared qualified.
 
 ## Diagnosis and cleanup
 
