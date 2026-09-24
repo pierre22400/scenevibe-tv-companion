@@ -39,7 +39,9 @@ redistribution obligation in this repository. The implementation uses Android
 framework APIs directly. A future phone-to-TV connection may study
 TVCompanion's NSD discovery and TCP acknowledgement, but none exists here.
 
-Android API references: [overlay permission](https://developer.android.com/reference/android/provider/Settings#canDrawOverlays(android.content.Context)), [window flags and touch pass-through](https://developer.android.com/reference/android/view/WindowManager.LayoutParams), [special-use foreground service](https://developer.android.com/develop/background-work/services/fgs/service-types), and [TV launcher requirements](https://developer.android.com/training/tv/get-started/create).\n\n## Build and automated checks
+Android API references: [overlay permission](https://developer.android.com/reference/android/provider/Settings#canDrawOverlays(android.content.Context)), [window flags and touch pass-through](https://developer.android.com/reference/android/view/WindowManager.LayoutParams), [special-use foreground service](https://developer.android.com/develop/background-work/services/fgs/service-types), and [TV launcher requirements](https://developer.android.com/training/tv/get-started/create).
+
+## Build and automated checks
 
 Requires JDK 17, Android SDK Platform 35, Build Tools 35.x and Gradle **8.9**.
 The Android Gradle plugin is pinned to **8.7.3**. There is no Gradle wrapper
