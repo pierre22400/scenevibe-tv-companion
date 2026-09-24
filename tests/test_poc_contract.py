@@ -73,5 +73,15 @@ class PocContractTests(unittest.TestCase):
         self.assertNotIn("commentaryUntil", renderer)
 
 
+    def test_finaltrack_media_sender_keeps_asset_paths_external(self):
+        """Resolve FinalTrack assetRef values through a separate sender-side asset map."""
+        sender = (ROOT / "scripts/play-finaltrack-media.ps1").read_text()
+        fixture = (ROOT / "examples/finaltrack-media-tv-poc.json").read_text()
+        self.assertIn('schemaVersion -ne "1.1.0"', sender)
+        self.assertIn("assetRef", sender)
+        self.assertIn("AssetMapPath", sender)
+        self.assertIn("asset-house-001", fixture)
+        self.assertNotIn("C:\\Users\\DENIS", fixture)
+
 if __name__ == "__main__":
     unittest.main()
