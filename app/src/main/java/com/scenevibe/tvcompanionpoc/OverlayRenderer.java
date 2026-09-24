@@ -24,17 +24,28 @@ public final class OverlayRenderer {
     private WindowManager.LayoutParams params;
     private int ticks;
     private String commentaryText;
-    private long commentaryUntil;
+
+    /**
+     * Exact expiry for the currently displayed commentary.
+     * A newer commentary removes this callback before scheduling its own expiry.
+     */
+    private final Runnable commentaryExpiry = new Runnable() {
+        @Override
+        public void run() {
+            commentaryText = null;
+            if (badge != null) {
+                showStatusBadge();
+                Log.i(TAG, "Dynamic commentary expired; status badge restored");
+            }
+        }
+    };
+
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
             if (badge == null) return;
-            if (commentaryText != null && System.currentTimeMillis() < commentaryUntil) {
-                badge.setText("SceneVibe\n\n" + commentaryText);
-            } else {
-                commentaryText = null;
-                badge.setText("SceneVibe\nTV Companion POC v0.2.0\n"
-                        + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
+            if (commentaryText == null) {
+                showStatusBadge();
             }
             ticks++;
             if (ticks % 30 == 0) {
@@ -100,19 +111,24 @@ public final class OverlayRenderer {
         Log.i(TAG, "Overlay view attached");
     }
 
-    /** Replace the badge body with a commentary, then automatically restore status. */
+    /**
+     * Replace the badge body with a commentary for exactly its requested duration.
+     * The latest commentary owns expiry: any older pending expiry is cancelled.
+     */
     public void showCommentary(String text, long durationMs) {
         handler.post(() -> {
             if (badge == null) return;
+            handler.removeCallbacks(commentaryExpiry);
             commentaryText = text;
-            commentaryUntil = System.currentTimeMillis() + durationMs;
             badge.setText("SceneVibe\n\n" + text);
-            Log.i(TAG, "Dynamic commentary displayed");
+            handler.postDelayed(commentaryExpiry, durationMs);
+            Log.i(TAG, "Dynamic commentary displayed; durationMs=" + durationMs);
         });
     }
 
     public void dismiss() {
         handler.removeCallbacks(heartbeat);
+        handler.removeCallbacks(commentaryExpiry);
         commentaryText = null;
         if (badge != null) {
             try {
@@ -125,6 +141,11 @@ public final class OverlayRenderer {
                 params = null;
             }
         }
+    }
+
+    private void showStatusBadge() {
+        badge.setText("SceneVibe\nTV Companion POC v0.2.1\n"
+                + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
     }
 
     private int dp(int value) {
