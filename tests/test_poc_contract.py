@@ -11,10 +11,10 @@ ANDROID = "{http://schemas.android.com/apk/res/android}"
 
 
 class PocContractTests(unittest.TestCase):
-    """Detect accidental expansion into capture, network or exported services."""
+    """Detect accidental expansion beyond the overlay and narrow LAN transport."""
 
-    def test_permissions_remain_limited_to_overlay_and_foreground_service(self):
-        """Reject new privileged capabilities outside this physical overlay test."""
+    def test_permissions_remain_limited_to_overlay_foreground_and_lan(self):
+        """Allow only overlay, foreground service and the v0.2 LAN transport."""
         root = ET.parse(MANIFEST).getroot()
         permissions = {node.attrib[ANDROID + "name"] for node in root.findall("uses-permission")}
         self.assertEqual(
@@ -23,6 +23,7 @@ class PocContractTests(unittest.TestCase):
                 "android.permission.SYSTEM_ALERT_WINDOW",
                 "android.permission.FOREGROUND_SERVICE",
                 "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+                "android.permission.INTERNET",
             },
         )
 
@@ -46,6 +47,15 @@ class PocContractTests(unittest.TestCase):
         }
         self.assertEqual(features["android.hardware.touchscreen"], "false")
 
+    def test_commentary_transport_is_bounded_and_non_exported(self):
+        """Pin the v0.2 message contract and local renderer boundary."""
+        server = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java").read_text()
+        renderer = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java").read_text()
+        self.assertIn('PORT = 8765', server)
+        self.assertIn('MAX_BODY_BYTES = 16384', server)
+        self.assertIn('scenevibe.commentary.v1', server)
+        self.assertIn('scenevibe.commentary.ack.v1', server)
+        self.assertIn('showCommentary', renderer)
 
 if __name__ == "__main__":
     unittest.main()
