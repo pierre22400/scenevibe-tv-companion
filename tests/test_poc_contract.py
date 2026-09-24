@@ -52,10 +52,17 @@ class PocContractTests(unittest.TestCase):
         server = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java").read_text()
         renderer = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java").read_text()
         self.assertIn("PORT = 8765", server)
-        self.assertIn("MAX_BODY_BYTES = 3 * 1024 * 1024", server)\n        self.assertIn("MAX_IMAGE_BYTES = 2 * 1024 * 1024", server)\n        self.assertIn("MAX_RENDER_WIDTH = 1280", server)\n        self.assertIn("MAX_RENDER_HEIGHT = 720", server)
+        self.assertIn("MAX_BODY_BYTES = 3 * 1024 * 1024", server)
+        self.assertIn("MAX_IMAGE_BYTES = 2 * 1024 * 1024", server)
+        self.assertIn("MAX_RENDER_WIDTH = 1280", server)
+        self.assertIn("MAX_RENDER_HEIGHT = 720", server)
         self.assertIn("scenevibe.commentary.v1", server)
         self.assertIn("scenevibe.commentary.ack.v1", server)
-        self.assertIn("showCommentary", renderer)\n        self.assertIn("ImageView", renderer)\n        self.assertIn("media.dataBase64", server)\n        self.assertIn("image/jpeg", server)\n        self.assertIn("image/png", server)
+        self.assertIn("showCommentary", renderer)
+        self.assertIn("ImageView", renderer)
+        self.assertIn("media.dataBase64", server)
+        self.assertIn("image/jpeg", server)
+        self.assertIn("image/png", server)
 
     def test_latest_commentary_owns_expiry(self):
         """A replacement commentary must cancel the previous pending expiry."""
