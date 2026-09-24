@@ -13,7 +13,7 @@ import android.util.Log;
 
 /**
  * User-started foreground service that owns the Android overlay window.
- * No network, media, accessibility, screen capture or streaming application API is used.
+ * The only network feature is the bounded LAN commentary server. No media, accessibility,\n * screen capture or streaming application API is used.
  */
 public final class OverlayService extends Service {
     public static final String ACTION_TOP = "com.scenevibe.tvcompanionpoc.SHOW_TOP";
