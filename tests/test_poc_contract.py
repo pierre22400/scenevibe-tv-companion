@@ -32,9 +32,27 @@ class PocContractTests(unittest.TestCase):
         root = ET.parse(MANIFEST).getroot()
         application = root.find("application")
         self.assertIsNotNone(application)
-        service = application.find("service")
-        self.assertEqual(service.attrib[ANDROID + "exported"], "false")
-        self.assertEqual(service.attrib[ANDROID + "foregroundServiceType"], "specialUse")
+        services = {
+            node.attrib[ANDROID + "name"]: node
+            for node in application.findall("service")
+        }
+        overlay = services[".OverlayService"]
+        self.assertEqual(overlay.attrib[ANDROID + "exported"], "false")
+        self.assertEqual(overlay.attrib[ANDROID + "foregroundServiceType"], "specialUse")
+        media_access = services[".MediaSessionAccessService"]
+        self.assertEqual(media_access.attrib[ANDROID + "exported"], "false")
+        self.assertEqual(
+            media_access.attrib[ANDROID + "permission"],
+            "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE",
+        )
+        actions = {
+            node.attrib[ANDROID + "name"]
+            for node in media_access.findall("intent-filter/action")
+        }
+        self.assertIn(
+            "android.service.notification.NotificationListenerService",
+            actions,
+        )
         activity = application.find("activity")
         categories = {
             element.attrib[ANDROID + "name"]
@@ -72,6 +90,20 @@ class PocContractTests(unittest.TestCase):
         self.assertIn("handler.postDelayed(commentaryExpiry, durationMs)", renderer)
         self.assertNotIn("commentaryUntil", renderer)
 
+
+    def test_mediasession_probe_is_passive_and_position_focused(self):
+        """Read published playback state without sending media controls."""
+        probe = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java").read_text()
+        listener = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java").read_text()
+        self.assertIn("getActiveSessions", probe)
+        self.assertIn("getPlaybackState", probe)
+        self.assertIn("getPosition", probe)
+        self.assertIn("getPlaybackSpeed", probe)
+        self.assertIn("getLastPositionUpdateTime", probe)
+        self.assertIn("SystemClock.elapsedRealtime", probe)
+        self.assertNotIn("getTransportControls", probe)
+        self.assertNotIn("dispatchMediaButtonEvent", probe)
+        self.assertNotIn("onNotificationPosted", listener)
 
     def test_finaltrack_media_sender_keeps_asset_paths_external(self):
         """Resolve FinalTrack assetRef values through a separate sender-side asset map."""

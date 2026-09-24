@@ -94,7 +94,7 @@ public final class CommentaryServer {
                 JSONObject health = new JSONObject();
                 health.put("type", "scenevibe.health.v1");
                 health.put("status", "ready");
-                health.put("version", "0.3.0");
+                health.put("version", "0.4.0");
                 health.put("media", "inline-image");
                 respond(output, 200, health);
                 return;

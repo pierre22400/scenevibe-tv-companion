@@ -9,7 +9,7 @@ application.
 
 ## Current state
 
-The current candidate build is **v0.3.0**.
+The current candidate build is **v0.4.0**.
 
 - A TV-friendly activity checks the user-granted **Display over other apps**
   capability and starts/stops the overlay.
@@ -21,12 +21,20 @@ The current candidate build is **v0.3.0**.
   service runs.
 - POST /commentary renders transient SceneVibe text and can optionally render a bounded JPEG/PNG image above it.
 - GET /health reports service readiness.
+- A passive MediaSession probe can sample active session playback state/position once per second after the user explicitly grants Android notification-listener access.
 - The newest commentary owns its expiry: when a new comment replaces an older
   one, the previous pending expiry is cancelled before the new duration starts.
 
-The app has no capture, accessibility, microphone or media permission, no boot
-receiver, no Cast receiver and no streaming-account integration. It does use
-android.permission.INTERNET solely for the current LAN POC transport.
+The app has no capture, accessibility, microphone or privileged media-control
+permission, no boot receiver, no Cast receiver and no streaming-account
+integration. It does use android.permission.INTERNET solely for the current LAN
+POC transport.
+
+v0.4.0 also declares a NotificationListenerService solely because Android allows
+an enabled notification listener to call MediaSessionManager.getActiveSessions()
+for sessions published by other apps. The user must explicitly grant that
+special access in Android settings. The SceneVibe listener does not implement
+notification-content callbacks and the probe never sends playback controls.
 
 ## Security boundary
 
@@ -131,11 +139,11 @@ While the user-started overlay service is running, the TV listens on TCP port
 GET /health
 ~~~
 
-v0.3.0 returns a JSON object with:
+v0.4.0 returns a JSON object with:
 
 - type: scenevibe.health.v1
 - status: ready
-- version: 0.3.0
+- version: 0.4.0
 - media: inline-image
 
 ### Commentary
@@ -349,6 +357,61 @@ This physically validates the mixed FinalTrack 1.1 playback path on the tested
 Sony Bravia:
 
 `FinalTrack 1.1 -> assetRef resolution -> bounded LAN payload -> TV rich overlay`.
+
+## v0.4.0 passive MediaSession synchronization probe
+
+This cycle tests whether Android TV itself exposes a useful playback clock from
+official streaming applications.
+
+Android requires either privileged MEDIA_CONTENT_CONTROL permission or an
+enabled NotificationListenerService before an ordinary app can query active
+sessions from other packages. The POC uses the user-granted notification-listener
+route and does not request privileged media-control permission.
+
+In the TV activity:
+
+1. choose **Open media-session access settings**;
+2. explicitly grant access to SceneVibe;
+3. return and confirm **MediaSession access: granted**;
+4. start the overlay;
+5. open a streaming application and play a title.
+
+The probe samples once per second and writes only to the `SceneVibeMedia`
+logcat tag. It records package, playback state, published position, an estimated
+current position, speed, age of the last position update, duration and basic
+published title/subtitle metadata.
+
+The estimated position is derived only while the published state is PLAYING,
+FAST_FORWARDING or REWINDING:
+
+`estimated = publishedPosition + updateAge × playbackSpeed`.
+
+The probe is intentionally passive. It does not call transport controls, dispatch
+media buttons, seek, pause, resume, inspect notifications, capture the screen or
+read subtitle content.
+
+Physical qualification should test at least:
+
+- normal playback: estimated position advances near real time;
+- pause: state becomes PAUSED and position stops advancing;
+- resume: state returns to PLAYING;
+- forward seek: published/estimated position jumps forward;
+- backward seek: published/estimated position jumps backward;
+- application switch: identify whether a new active session is exposed.
+
+Prime Video is the first target. Netflix, Disney+ and YouTube should then be
+checked because session publication is controlled by each streaming app.
+
+Use:
+
+~~~sh
+adb logcat -c
+adb logcat -v time -s SceneVibeMedia:I
+~~~
+
+This test is successful only if a streaming application's published MediaSession
+provides a sufficiently accurate and responsive clock. A successful Android API
+call by itself is not enough.
 
 ## Diagnosis and cleanup
 

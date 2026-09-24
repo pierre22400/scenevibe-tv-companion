@@ -3,7 +3,9 @@ package com.scenevibe.tvcompanionpoc;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.ComponentName;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -20,6 +22,7 @@ import android.widget.Toast;
 public final class MainActivity extends Activity {
     private static final String TAG = "SceneVibePoc";
     private TextView permissionStatus;
+    private TextView mediaAccessStatus;
 
     /** Build the small, remote navigable control screen without UI libraries. */
     @Override
@@ -33,7 +36,7 @@ public final class MainActivity extends Activity {
         controls.setBackgroundColor(0xFF17130F);
 
         TextView title = new TextView(this);
-        title.setText("SceneVibe\nTV Companion POC v0.3.0");
+        title.setText("SceneVibe\nTV Companion POC v0.4.0");
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(32);
         title.setGravity(Gravity.CENTER);
@@ -46,14 +49,22 @@ public final class MainActivity extends Activity {
         permissionStatus.setPadding(0, dp(20), 0, dp(20));
         controls.addView(permissionStatus);
 
+        mediaAccessStatus = new TextView(this);
+        mediaAccessStatus.setTextColor(0xFFFFFFFF);
+        mediaAccessStatus.setTextSize(18);
+        mediaAccessStatus.setGravity(Gravity.CENTER);
+        mediaAccessStatus.setPadding(0, 0, 0, dp(20));
+        controls.addView(mediaAccessStatus);
+
         addButton(controls, "Open overlay permission settings", this::openPermissionSettings);
+        addButton(controls, "Open media-session access settings", this::openMediaSessionAccessSettings);
         addButton(controls, "Start overlay · top right", () -> startOverlay(OverlayService.ACTION_TOP));
         addButton(controls, "Start overlay · bottom right", () -> startOverlay(OverlayService.ACTION_BOTTOM));
         addButton(controls, "Stop overlay", this::stopOverlay);
 
         TextView instruction = new TextView(this);
         instruction.setText("Start the overlay, then open a streaming app. "
-                + "Dynamic text and image commentary listens on TV port 8765 while the overlay service runs.");
+                + "Dynamic commentary listens on TV port 8765. With MediaSession access granted, the overlay service also logs passive playback state and position once per second.");
         instruction.setTextColor(0xFFD0C9BE);
         instruction.setTextSize(16);
         instruction.setGravity(Gravity.CENTER);
@@ -70,6 +81,9 @@ public final class MainActivity extends Activity {
         permissionStatus.setText(Settings.canDrawOverlays(this)
                 ? "Display over other apps: granted"
                 : "Display over other apps: not granted. Open settings first.");
+        mediaAccessStatus.setText(NotificationAccess.isGranted(this)
+                ? "MediaSession access: granted"
+                : "MediaSession access: not granted. Open settings to test synchronization.");
     }
 
     /** Make each control keyboard and TV D-pad accessible. */
@@ -97,6 +111,34 @@ public final class MainActivity extends Activity {
             } catch (ActivityNotFoundException second) {
                 Log.e(TAG, "Overlay settings unavailable on this TV", second);
                 Toast.makeText(this, "Overlay settings unavailable; see README for ADB fallback.",
+                        Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    /**
+     * Open the user-controlled notification-listener access screen required by
+     * Android for querying active MediaSessions from other applications.
+     */
+    private void openMediaSessionAccessSettings() {
+        Intent intent;
+        if (Build.VERSION.SDK_INT >= 30) {
+            ComponentName component = NotificationAccess.component(this);
+            intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+                    .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                            component.flattenToString());
+        } else {
+            intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        }
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException first) {
+            try {
+                startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+            } catch (ActivityNotFoundException second) {
+                Log.e(TAG, "Notification-listener settings unavailable on this TV", second);
+                Toast.makeText(this,
+                        "MediaSession access settings unavailable on this TV.",
                         Toast.LENGTH_LONG).show();
             }
         }
