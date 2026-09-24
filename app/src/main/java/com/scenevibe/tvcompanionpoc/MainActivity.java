@@ -33,7 +33,7 @@ public final class MainActivity extends Activity {
         controls.setBackgroundColor(0xFF17130F);
 
         TextView title = new TextView(this);
-        title.setText("SceneVibe\nTV Companion POC");
+        title.setText("SceneVibe\nTV Companion POC v0.2.1");
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(32);
         title.setGravity(Gravity.CENTER);
