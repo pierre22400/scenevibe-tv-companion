@@ -23,6 +23,7 @@ public final class OverlayService extends Service {
     private static final int NOTIFICATION_ID = 1001;
     private OverlayRenderer renderer;
     private boolean foregroundReady;
+    private CommentaryServer commentaryServer;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -74,7 +75,14 @@ public final class OverlayService extends Service {
                 renderer = new OverlayRenderer(this, this::onPermissionLost);
             }
             renderer.show(bottom);
-            Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top"));
+            if (commentaryServer == null) {
+                commentaryServer = new CommentaryServer((id, text, durationMs) -> {
+                    if (renderer != null) renderer.showCommentary(text, durationMs);
+                });
+                commentaryServer.start();
+            }
+            Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
+                    + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary");
             return START_STICKY;
         } catch (RuntimeException error) {
             Log.e(TAG, "WindowManager overlay failed", error);
@@ -98,6 +106,10 @@ public final class OverlayService extends Service {
     /** Remove the window and notification on every normal destruction path. */
     @Override
     public void onDestroy() {
+        if (commentaryServer != null) {
+            commentaryServer.stop();
+            commentaryServer = null;
+        }
         if (renderer != null) {
             renderer.dismiss();
             renderer = null;
