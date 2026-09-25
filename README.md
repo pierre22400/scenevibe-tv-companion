@@ -342,7 +342,7 @@ Run it from the repository root:
 .\scripts\play-finaltrack-media.ps1 `
   -TvIp "192.168.1.183" `
   -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
-  -AssetMapPath ".\examples\asset-map.json" `
+  -AssetMapPath "$env:TEMP\scenevibe-asset-map.json" `
   -Token $token
 ~~~
 
@@ -583,11 +583,13 @@ closes port 8765 but does not erase the token; uninstalling clears it.
 
 ~~~powershell
 $tvIp = "192.168.1.183" # Replace with the address displayed on the TV
+Copy-Item ".\examples\asset-map.example.json" "$env:TEMP\scenevibe-asset-map.json"
+notepad "$env:TEMP\scenevibe-asset-map.json" # Set path to a real JPEG/PNG
 $token = .\scripts\pair-tv.ps1 -TvIp $tvIp -Code "123456" # Replace with TV code
 Invoke-RestMethod -Uri "http://${tvIp}:8765/health"
 .\scripts\load-finaltrack-mediasession.ps1 -TvIp $tvIp -Token $token `
   -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
-  -AssetMapPath ".\examples\asset-map.json"
+  -AssetMapPath "$env:TEMP\scenevibe-asset-map.json"
 ~~~
 
 The sample asset map is only a template: bind its image reference to a real

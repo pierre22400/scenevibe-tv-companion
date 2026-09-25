@@ -194,6 +194,12 @@ public final class CommentaryServer {
             respond(output, 422, error("invalid_type", "Expected scenevibe.pair.request.v1"));
             return;
         }
+        if (!(json.opt("code") instanceof String)
+                || !(json.opt("clientName") instanceof String)) {
+            respond(output, 422, error("invalid_pair_request",
+                    "code and clientName must be strings"));
+            return;
+        }
         synchronized (pairing) {
             PairingPolicy.Result result = pairing.pair(json.optString("code", null),
                     json.optString("clientName", null));

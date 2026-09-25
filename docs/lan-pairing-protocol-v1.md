@@ -95,11 +95,13 @@ successful pairing or Reset. This POC has no token expiry or remote revoke API.
 
 ~~~powershell
 $tvIp = "192.168.1.183" # Example only; use TV-displayed IPv4
+Copy-Item ".\examples\asset-map.example.json" "$env:TEMP\scenevibe-asset-map.json"
+notepad "$env:TEMP\scenevibe-asset-map.json" # Set path to a real image
 $token = .\scripts\pair-tv.ps1 -TvIp $tvIp -Code "123456" # Use current TV code
 Invoke-RestMethod -Uri "http://${tvIp}:8765/health"
 .\scripts\load-finaltrack-mediasession.ps1 -TvIp $tvIp -Token $token `
   -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
-  -AssetMapPath ".\examples\asset-map.json"
+  -AssetMapPath "$env:TEMP\scenevibe-asset-map.json"
 ~~~
 
 The asset map is a local path mapping to a real image. Keep the returned

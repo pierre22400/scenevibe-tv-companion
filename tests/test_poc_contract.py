@@ -161,5 +161,18 @@ class PocContractTests(unittest.TestCase):
             self.assertIn('[Parameter(Mandatory=$true)][string]$Token', script)
             self.assertIn('Authorization = "Bearer $Token"', script)
 
+    def test_track_pause_policy_reaches_renderer_without_player_controls(self):
+        """Keep pause-aware display isolated from the direct commentary timer."""
+        java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
+        loader = (ROOT / "scripts/load-finaltrack-mediasession.ps1").read_text()
+        service = (java / "OverlayService.java").read_text()
+        renderer = (java / "OverlayRenderer.java").read_text()
+        self.assertIn("playbackPolicy.pauseFreezesDisplay", loader)
+        self.assertIn("showTrackedCommentary", service)
+        self.assertIn("renderer.onPlayback(playing, freeze)", service)
+        self.assertIn("displayCountdown.update", renderer)
+        self.assertIn("public void showCommentary(", renderer)
+        self.assertNotIn("getTransportControls", service)
+
 if __name__ == "__main__":
     unittest.main()

@@ -40,6 +40,8 @@ public class CommentaryServerAuthTest {
             assertStatus(409, send(port, "POST", "/pair", "{}", null));
 
             String code = policy.start();
+            assertStatus(422, send(port, "POST", "/pair",
+                    "{\"type\":\"scenevibe.pair.request.v1\",\"code\":123456,\"clientName\":\"sender\"}", null));
             String request = "{\"type\":\"scenevibe.pair.request.v1\",\"code\":\"" + code
                     + "\",\"clientName\":\"test sender\"}";
             String paired = send(port, "POST", "/pair", request, null);
