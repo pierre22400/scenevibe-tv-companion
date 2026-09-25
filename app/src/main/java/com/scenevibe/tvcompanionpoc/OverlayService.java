@@ -13,9 +13,9 @@ import android.util.Log;
 
 /**
  * User-started foreground service that owns the Android overlay window.
- * The only network feature is the bounded LAN commentary server. Optional image bytes are
- * supplied by the sender; no media capture, accessibility, screen capture or streaming
- * application API is used.
+ * The LAN transport can render direct commentary or load a bounded track.
+ * Track timing is driven only by passive MediaSession state published by the
+ * foreground streaming app; SceneVibe never sends transport controls.
  */
 public final class OverlayService extends Service {
     public static final String ACTION_TOP = "com.scenevibe.tvcompanionpoc.SHOW_TOP";
@@ -27,6 +27,7 @@ public final class OverlayService extends Service {
     private boolean foregroundReady;
     private CommentaryServer commentaryServer;
     private MediaSessionProbe mediaSessionProbe;
+    private MediaSyncedTrackScheduler trackScheduler;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -43,7 +44,7 @@ public final class OverlayService extends Service {
             Notification notification = new Notification.Builder(this, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_launcher)
                     .setContentTitle("SceneVibe TV Companion POC")
-                    .setContentText("Overlay and passive MediaSession probe are running.")
+                    .setContentText("Overlay and MediaSession-synced track scheduler are running.")
                     .setContentIntent(openControls)
                     .setOngoing(true)
                     .build();
@@ -78,20 +79,43 @@ public final class OverlayService extends Service {
                 renderer = new OverlayRenderer(this, this::onPermissionLost);
             }
             renderer.show(bottom);
-            if (commentaryServer == null) {
-                commentaryServer = new CommentaryServer((id, text, durationMs, mediaBitmap) -> {
+
+            if (trackScheduler == null) {
+                trackScheduler = new MediaSyncedTrackScheduler(event -> {
                     if (renderer != null) {
-                        renderer.showCommentary(text, durationMs, mediaBitmap);
+                        renderer.showCommentary(
+                                event.text, event.durationMs, event.mediaBitmap);
                     }
                 });
+            }
+
+            if (commentaryServer == null) {
+                commentaryServer = new CommentaryServer(
+                        (id, text, durationMs, mediaBitmap) -> {
+                            if (renderer != null) {
+                                renderer.showCommentary(text, durationMs, mediaBitmap);
+                            }
+                        },
+                        track -> {
+                            if (trackScheduler != null) {
+                                trackScheduler.load(track);
+                            }
+                        });
                 commentaryServer.start();
             }
+
             if (mediaSessionProbe == null) {
-                mediaSessionProbe = new MediaSessionProbe(this);
+                mediaSessionProbe = new MediaSessionProbe(this, snapshot -> {
+                    if (trackScheduler != null) {
+                        trackScheduler.onPlaybackSnapshot(snapshot);
+                    }
+                });
                 mediaSessionProbe.start();
             }
+
             Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
                     + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
+                    + "; track=http://TV_IP:" + CommentaryServer.PORT + "/track"
                     + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
             return START_STICKY;
         } catch (RuntimeException error) {
@@ -119,6 +143,10 @@ public final class OverlayService extends Service {
         if (mediaSessionProbe != null) {
             mediaSessionProbe.stop();
             mediaSessionProbe = null;
+        }
+        if (trackScheduler != null) {
+            trackScheduler.clear();
+            trackScheduler = null;
         }
         if (commentaryServer != null) {
             commentaryServer.stop();

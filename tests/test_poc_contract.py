@@ -115,5 +115,28 @@ class PocContractTests(unittest.TestCase):
         self.assertIn("asset-house-001", fixture)
         self.assertNotIn("C:\\Users\\DENIS", fixture)
 
+
+    def test_mediasession_scheduler_loads_tracks_without_transport_control(self):
+        """Drive bounded track events from passive playback snapshots only."""
+        scheduler = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java").read_text()
+        server = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java").read_text()
+        loader = (ROOT / "scripts/load-finaltrack-mediasession.ps1").read_text()
+        self.assertIn("scenevibe.track.v1", server)
+        self.assertIn("scenevibe.track.ack.v1", server)
+        self.assertIn("MAX_TRACK_COMMENTS = 256", server)
+        self.assertIn("targetPackage", server)
+        self.assertIn("FORWARD_SEEK_THRESHOLD_MS = 5000L", scheduler)
+        self.assertIn("BACKWARD_SEEK_THRESHOLD_MS = 2000L", scheduler)
+        self.assertIn("MAX_LATE_MS = 2000L", scheduler)
+        self.assertIn("PlaybackState.STATE_PLAYING", scheduler)
+        self.assertIn("COMMENT_DUE", scheduler)
+        self.assertNotIn("getTransportControls", scheduler)
+        self.assertNotIn("dispatchMediaButtonEvent", scheduler)
+        self.assertIn("/track", loader)
+        self.assertIn("idealStartSec", loader)
+        self.assertIn("TargetPackage", loader)
+        self.assertIn("dataBase64", loader)
+        self.assertNotIn("Stopwatch", loader)
+
 if __name__ == "__main__":
     unittest.main()

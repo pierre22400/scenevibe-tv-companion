@@ -192,7 +192,7 @@ public final class OverlayRenderer {
     private void showStatusBadge() {
         if (badge == null) return;
         clearMedia();
-        badge.setText("SceneVibe\nTV Companion POC v0.4.0\n"
+        badge.setText("SceneVibe\nTV Companion POC v0.5.0\n"
                 + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
     }
 

@@ -9,7 +9,7 @@ application.
 
 ## Current state
 
-The current candidate build is **v0.4.0**.
+The current candidate build is **v0.5.0**.
 
 - A TV-friendly activity checks the user-granted **Display over other apps**
   capability and starts/stops the overlay.
@@ -22,6 +22,7 @@ The current candidate build is **v0.4.0**.
 - POST /commentary renders transient SceneVibe text and can optionally render a bounded JPEG/PNG image above it.
 - GET /health reports service readiness.
 - A passive MediaSession probe can sample active session playback state/position once per second after the user explicitly grants Android notification-listener access.
+- POST /track loads a bounded runtime track produced from FinalTrack 1.1; the TV then schedules its comments from the selected streaming app's MediaSession clock instead of a PC stopwatch.
 - The newest commentary owns its expiry: when a new comment replaces an older
   one, the previous pending expiry is cancelled before the new duration starts.
 
@@ -139,12 +140,13 @@ While the user-started overlay service is running, the TV listens on TCP port
 GET /health
 ~~~
 
-v0.4.0 returns a JSON object with:
+v0.5.0 returns a JSON object with:
 
 - type: scenevibe.health.v1
 - status: ready
-- version: 0.4.0
+- version: 0.5.0
 - media: inline-image
+- synchronization: media-session-clock
 
 ### Commentary
 
@@ -412,6 +414,81 @@ adb logcat -v time -s SceneVibeMedia:I
 This test is successful only if a streaming application's published MediaSession
 provides a sufficiently accurate and responsive clock. A successful Android API
 call by itself is not enough.
+
+## Physical v0.4.0 MediaSession qualification — Sony Bravia, 25 September 2026
+
+The passive MediaSession probe was exercised physically before introducing TV-side
+track scheduling.
+
+On the tested Sony Bravia, Prime Video exposed package
+`com.amazon.amazonvideo.livingroom` with a usable playback clock. During normal
+playback the published position advanced approximately one second per second
+(for example 263480 ms, 264493 ms, 265498 ms, 266503 ms). Pause was then held
+for more than ten seconds and the position remained fixed at 366667 ms while
+the state remained PAUSED. Resume returned to PLAYING and normal progression.
+A forward seek of roughly two minutes moved the published clock from about
+376348 ms to about 501056 ms, after which normal progression resumed.
+
+Netflix exposed package `com.netflix.ninja` with the same basic behavior.
+Normal playback advanced from 14560 ms to 18683 ms over successive samples.
+During pause, the position remained fixed at 41691 ms while updateAge continued
+to increase.
+
+These observations physically qualify the passive playback clock on Prime Video
+for play, pause, resume and forward seek, and on Netflix for play and pause, on
+this Sony Bravia. Other streaming applications remain probable candidates but
+are not physically qualified by these tests.
+
+The Sony notification-access UI did not provide a usable toggle during this
+development test, so the listener was enabled with Android's ADB development
+command. That is acceptable for the POC but is not a consumer onboarding design.
+
+## v0.5.0 MediaSession-synced FinalTrack scheduler candidate
+
+v0.5.0 connects the two previously separate POC paths:
+
+`FinalTrack 1.1 -> sender-side assetRef resolution -> POST /track -> passive MediaSession clock -> TV scheduler -> rich overlay`.
+
+The canonical FinalTrack remains unchanged. Machine-local paths are still held
+only in the external asset map. The new PowerShell loader converts each
+`schedule.idealStartSec` into a bounded runtime `startMs`, resolves optional
+image assets, and sends a `scenevibe.track.v1` payload to the TV. No stopwatch
+is used by the sender.
+
+The runtime track requires an explicit Android package name so the scheduler
+does not accidentally follow an unrelated active MediaSession. The Prime Video
+default is `com.amazon.amazonvideo.livingroom`.
+
+Load the existing FinalTrack 1.1 mixed fixture with:
+
+~~~powershell
+.\scripts\load-finaltrack-mediasession.ps1 `
+  -TvIp "192.168.1.183" `
+  -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
+  -AssetMapPath ".\examples\asset-map.json"
+~~~
+
+The TV returns `scenevibe.track.ack.v1` with status `loaded`. Scheduling then
+depends only on the streaming application's published playback position.
+
+The candidate scheduler uses an explicit deterministic seek policy:
+
+- during PAUSED, BUFFERING or NONE states, it never renders a new comment;
+- during normal PLAYING progression, a due comment is rendered from the TV clock;
+- a forward jump greater than 5 seconds is treated as a seek and crossed
+  comments are marked consumed instead of burst-rendered;
+- a backward jump greater than 2 seconds re-arms comments at or after the new
+  position so they may replay when the viewer watches that section again;
+- a comment more than 2 seconds late is skipped rather than rendered out of
+  context.
+
+The scheduler remains passive: it reads snapshots only and contains no transport
+control, media-button dispatch, screen capture, subtitle capture or streaming
+application API integration.
+
+Physical qualification for v0.5.0 must now verify that the mixed fixture renders
+at its media positions on Prime Video, that pause freezes scheduling, and that
+forward/backward seeks follow the policy above without a commentary burst.
 
 ## Diagnosis and cleanup
 

@@ -23,9 +23,42 @@ public final class MediaSessionProbe {
     private static final String TAG = "SceneVibeMedia";
     private static final long SAMPLE_INTERVAL_MS = 1000L;
 
+    public interface Listener {
+        void onSnapshot(Snapshot snapshot);
+    }
+
+    /** Immutable playback sample forwarded to the SceneVibe scheduler. */
+    public static final class Snapshot {
+        public final String packageName;
+        public final int state;
+        public final String stateName;
+        public final long positionMs;
+        public final long estimatedPositionMs;
+        public final float speed;
+        public final long updateAgeMs;
+
+        Snapshot(
+                String packageName,
+                int state,
+                String stateName,
+                long positionMs,
+                long estimatedPositionMs,
+                float speed,
+                long updateAgeMs) {
+            this.packageName = packageName;
+            this.state = state;
+            this.stateName = stateName;
+            this.positionMs = positionMs;
+            this.estimatedPositionMs = estimatedPositionMs;
+            this.speed = speed;
+            this.updateAgeMs = updateAgeMs;
+        }
+    }
+
     private final Context context;
     private final MediaSessionManager sessions;
     private final ComponentName listenerComponent;
+    private final Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
 
@@ -39,7 +72,12 @@ public final class MediaSessionProbe {
     };
 
     public MediaSessionProbe(Context context) {
+        this(context, null);
+    }
+
+    public MediaSessionProbe(Context context, Listener listener) {
         this.context = context;
+        this.listener = listener;
         sessions = context.getSystemService(MediaSessionManager.class);
         listenerComponent = NotificationAccess.component(context);
     }
@@ -84,14 +122,18 @@ public final class MediaSessionProbe {
         }
 
         for (int index = 0; index < controllers.size(); index++) {
-            logController(index, controllers.get(index));
+            Snapshot snapshot = snapshotController(index, controllers.get(index));
+            if (listener != null) {
+                listener.onSnapshot(snapshot);
+            }
         }
     }
 
-    private void logController(int index, MediaController controller) {
+    private Snapshot snapshotController(int index, MediaController controller) {
         PlaybackState state = controller.getPlaybackState();
         MediaMetadata metadata = controller.getMetadata();
 
+        int stateCode = state == null ? PlaybackState.STATE_NONE : state.getState();
         long positionMs = state == null ? -1L : state.getPosition();
         float speed = state == null ? 0f : state.getPlaybackSpeed();
         long updatedAtMs = state == null ? -1L : state.getLastPositionUpdateTime();
@@ -106,11 +148,12 @@ public final class MediaSessionProbe {
         String subtitle = metadataText(metadata, MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE);
         long durationMs = metadata == null
                 ? -1L : metadata.getLong(MediaMetadata.METADATA_KEY_DURATION);
+        String readableState = stateName(state);
 
         Log.i(TAG,
                 "SESSION index=" + index
                 + " package=" + controller.getPackageName()
-                + " state=" + stateName(state)
+                + " state=" + readableState
                 + " positionMs=" + positionMs
                 + " estimatedMs=" + estimatedPositionMs
                 + " speed=" + speed
@@ -118,6 +161,15 @@ public final class MediaSessionProbe {
                 + " durationMs=" + durationMs
                 + " title=" + safe(title)
                 + " subtitle=" + safe(subtitle));
+
+        return new Snapshot(
+                controller.getPackageName(),
+                stateCode,
+                readableState,
+                positionMs,
+                estimatedPositionMs,
+                speed,
+                updateAgeMs);
     }
 
     private long estimatePositionMs(
