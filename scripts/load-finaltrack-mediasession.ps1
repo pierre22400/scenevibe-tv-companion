@@ -6,7 +6,11 @@ param(
 )
 
 $track = Get-Content $TrackPath -Raw | ConvertFrom-Json
-$assetMap = Get-Content $AssetMapPath -Raw | ConvertFrom-Json -AsHashtable
+$assetMapJson = Get-Content $AssetMapPath -Raw | ConvertFrom-Json
+$assetMap = @{}
+foreach ($property in $assetMapJson.PSObject.Properties) {
+    $assetMap[$property.Name] = $property.Value
+}
 
 if ($track.contract -ne "scenevibe.final-track" -or $track.schemaVersion -ne "1.1.0") {
     throw "Expected SceneVibe FinalTrack 1.1.0."
