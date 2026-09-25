@@ -436,8 +436,25 @@ to increase.
 
 These observations physically qualify the passive playback clock on Prime Video
 for play, pause, resume and forward seek, and on Netflix for play and pause, on
-this Sony Bravia. Other streaming applications remain probable candidates but
-are not physically qualified by these tests.
+this Sony Bravia.
+
+Additional physical checks on the same TV showed:
+
+- Canal+ (`com.canal.android.canal`) exposed a normal millisecond playback clock
+  advancing approximately one second per second, with a published duration.
+- YouTube TV (`com.google.android.youtube.tv`) exposed the same usable clock
+  behavior and also published title/duration metadata.
+- Disney+ (`com.disney.disneyplus`) exposed an active PLAYING MediaSession,
+  title, episode subtitle and duration, but the published playback position in
+  the observed sample was not a usable Android millisecond clock: values such as
+  7, 14, 18, 10 and 24 were both far too small and non-monotonic. Disney+ is
+  therefore session-visible but is NOT qualified as a synchronization clock by
+  this test.
+
+Current physical status is therefore: Prime qualified for play/pause/resume/seek;
+Netflix qualified for play/pause; Canal+ and YouTube qualified for normal
+playback clock progression; Disney+ MediaSession discovery/metadata works but its
+published position is not yet usable for SceneVibe scheduling.
 
 The Sony notification-access UI did not provide a usable toggle during this
 development test, so the listener was enabled with Android's ADB development
