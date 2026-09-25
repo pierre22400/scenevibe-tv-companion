@@ -372,11 +372,17 @@ route and does not request privileged media-control permission.
 
 In the TV activity:
 
-1. choose **Open media-session access settings**;
-2. explicitly grant access to SceneVibe;
-3. return and confirm **MediaSession access: granted**;
-4. start the overlay;
-5. open a streaming application and play a title.
+1. choose **Open Apps settings for MediaSession access**;
+2. navigate with the remote to **Special app access -> Notification access -> SceneVibe**;
+3. explicitly grant access to SceneVibe;
+4. return and confirm **MediaSession access: granted**;
+5. start the overlay;
+6. open a streaming application and play a title.
+
+The indirect Apps-settings route is intentional. On the physically tested Sony
+Bravia, launching the notification-access activity directly produced an initial
+D-pad focus trap, while entering through the normal Apps settings hierarchy
+preserved remote navigation.
 
 The probe samples once per second and writes only to the `SceneVibeMedia`
 logcat tag. It records package, playback state, published position, an estimated
@@ -468,8 +474,12 @@ reported `MediaSession access: granted`.
 
 This is therefore recorded as a focus/navigation defect observed on the tested
 Sony Bravia firmware, not as a failure of the Android notification-listener
-permission mechanism. ADB remains development-only. Full evidence and public
-platform references are recorded in
+permission mechanism. A follow-up test showed that entering Notification access
+manually through **Settings -> Apps -> Special app access** preserves normal
+D-pad navigation, while launching the notification-access activity directly
+does not. The Companion now opens the top-level Apps settings and guides the user
+through that working TV-native path. ADB remains development-only. Full evidence
+and public platform references are recorded in
 [docs/sony-notification-access-focus-2026-09-25.md](docs/sony-notification-access-focus-2026-09-25.md).
 
 ## v0.5.0 MediaSession-synced FinalTrack scheduler candidate
