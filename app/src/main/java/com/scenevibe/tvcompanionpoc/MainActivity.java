@@ -3,9 +3,7 @@ package com.scenevibe.tvcompanionpoc;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.content.ComponentName;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -57,7 +55,7 @@ public final class MainActivity extends Activity {
         controls.addView(mediaAccessStatus);
 
         addButton(controls, "Open overlay permission settings", this::openPermissionSettings);
-        addButton(controls, "Open media-session access settings", this::openMediaSessionAccessSettings);
+        addButton(controls, "Open Apps settings for MediaSession access", this::openMediaSessionAccessSettings);
         addButton(controls, "Start overlay · top right", () -> startOverlay(OverlayService.ACTION_TOP));
         addButton(controls, "Start overlay · bottom right", () -> startOverlay(OverlayService.ACTION_BOTTOM));
         addButton(controls, "Stop overlay", this::stopOverlay);
@@ -117,26 +115,24 @@ public final class MainActivity extends Activity {
     }
 
     /**
-     * Open the user-controlled notification-listener access screen required by
-     * Android for querying active MediaSessions from other applications.
+     * Open the top-level Apps settings and let the user navigate to:
+     * Special app access -> Notification access -> SceneVibe.
+     *
+     * On the physically tested Sony Bravia, launching NotificationAccessActivity
+     * directly left D-pad focus trapped on the outer settings container, while
+     * entering through Apps settings preserved normal remote navigation.
      */
     private void openMediaSessionAccessSettings() {
-        Intent intent;
-        if (Build.VERSION.SDK_INT >= 30) {
-            ComponentName component = NotificationAccess.component(this);
-            intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
-                    .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
-                            component.flattenToString());
-        } else {
-            intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-        }
+        Toast.makeText(this,
+                "In Settings: Special app access -> Notification access -> SceneVibe.",
+                Toast.LENGTH_LONG).show();
         try {
-            startActivity(intent);
+            startActivity(new Intent(Settings.ACTION_APPLICATION_SETTINGS));
         } catch (ActivityNotFoundException first) {
             try {
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
             } catch (ActivityNotFoundException second) {
-                Log.e(TAG, "Notification-listener settings unavailable on this TV", second);
+                Log.e(TAG, "MediaSession access settings unavailable on this TV", second);
                 Toast.makeText(this,
                         "MediaSession access settings unavailable on this TV.",
                         Toast.LENGTH_LONG).show();
