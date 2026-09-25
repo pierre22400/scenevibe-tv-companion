@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$TvIp,
     [Parameter(Mandatory=$true)][string]$ImagePath,
+    [Parameter(Mandatory=$true)][string]$Token,
     [string]$Text = "SceneVibe image commentary",
     [string]$Id = "media-poc-001",
     [int]$DurationMs = 10000
@@ -32,4 +33,5 @@ $payload = @{
     }
 } | ConvertTo-Json -Depth 5 -Compress
 
-Invoke-RestMethod -Method Post -Uri "http://${TvIp}:8765/commentary" -ContentType "application/json" -Body $payload
+Invoke-RestMethod -Method Post -Uri "http://${TvIp}:8765/commentary" -ContentType "application/json" -Body $payload `
+    -Headers @{ Authorization = "Bearer $Token" }

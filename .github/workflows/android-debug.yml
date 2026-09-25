@@ -2,7 +2,7 @@ name: Android debug APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/tv-pairing-authenticated-lan-001]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
       - name: Check POC boundary
         run: python3 -m unittest discover -s tests
       - name: Build and lint debug APK
-        run: gradle :app:assembleDebug :app:lintDebug --stacktrace
+        run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: scenevibe-tv-companion-poc-debug

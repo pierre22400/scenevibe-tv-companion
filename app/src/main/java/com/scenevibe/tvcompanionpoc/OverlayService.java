@@ -81,10 +81,13 @@ public final class OverlayService extends Service {
             renderer.show(bottom);
 
             if (trackScheduler == null) {
-                trackScheduler = new MediaSyncedTrackScheduler(event -> {
-                    if (renderer != null) {
-                        renderer.showCommentary(
+                trackScheduler = new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
+                    @Override public void onRender(ScheduledTrack.Event event) {
+                        if (renderer != null) renderer.showTrackedCommentary(
                                 event.text, event.durationMs, event.mediaBitmap);
+                    }
+                    @Override public void onPlayback(boolean playing, boolean freeze) {
+                        if (renderer != null) renderer.onPlayback(playing, freeze);
                     }
                 });
             }
@@ -100,7 +103,7 @@ public final class OverlayService extends Service {
                             if (trackScheduler != null) {
                                 trackScheduler.load(track);
                             }
-                        });
+                        }, PairingRuntime.get(this));
                 commentaryServer.start();
             }
 

@@ -6,6 +6,7 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.format.DateFormat;
 import android.util.Log;
@@ -29,6 +30,9 @@ public final class OverlayRenderer {
     private WindowManager.LayoutParams params;
     private int ticks;
     private String commentaryText;
+    private final DisplayCountdown displayCountdown = new DisplayCountdown();
+    private boolean trackedCommentary;
+    private boolean playbackRunning = true;
 
     /**
      * Exact expiry for the currently displayed commentary.
@@ -38,6 +42,8 @@ public final class OverlayRenderer {
         @Override
         public void run() {
             commentaryText = null;
+            trackedCommentary = false;
+            displayCountdown.clear();
             if (badge != null) {
                 clearMedia();
                 showStatusBadge();
@@ -145,9 +151,39 @@ public final class OverlayRenderer {
      * The latest commentary owns expiry: any older pending expiry is cancelled.
      */
     public void showCommentary(String text, long durationMs, Bitmap mediaBitmap) {
+        showCommentaryInternal(text, durationMs, mediaBitmap, false);
+    }
+
+    /** Track cards can opt in to freezing their visible-time countdown on pause. */
+    public void showTrackedCommentary(String text, long durationMs, Bitmap mediaBitmap) {
+        showCommentaryInternal(text, durationMs, mediaBitmap, true);
+    }
+
+    public void onPlayback(boolean playing, boolean pauseFreezesDisplay) {
+        handler.post(() -> {
+            playbackRunning = playing;
+            if (!trackedCommentary || commentaryText == null) return;
+            if (!pauseFreezesDisplay) {
+                trackedCommentary = false;
+                displayCountdown.clear();
+                return;
+            }
+            long remaining = displayCountdown.update(playing, SystemClock.uptimeMillis());
+            handler.removeCallbacks(commentaryExpiry);
+            if (remaining == 0L) commentaryExpiry.run();
+            else if (playing) handler.postDelayed(commentaryExpiry, remaining);
+        });
+    }
+
+    private void showCommentaryInternal(String text, long durationMs, Bitmap mediaBitmap,
+            boolean fromTrack) {
         handler.post(() -> {
             if (panel == null || badge == null || mediaView == null) return;
             handler.removeCallbacks(commentaryExpiry);
+            trackedCommentary = fromTrack;
+            displayCountdown.clear();
+            if (fromTrack) displayCountdown.start(durationMs, SystemClock.uptimeMillis(),
+                    playbackRunning);
             commentaryText = text;
             badge.setText("SceneVibe\n\n" + text);
             if (mediaBitmap != null) {
@@ -156,7 +192,9 @@ public final class OverlayRenderer {
             } else {
                 clearMedia();
             }
-            handler.postDelayed(commentaryExpiry, durationMs);
+            if (!fromTrack || playbackRunning) {
+                handler.postDelayed(commentaryExpiry, durationMs);
+            }
             Log.i(TAG, "Dynamic commentary displayed; durationMs=" + durationMs
                     + "; media=" + (mediaBitmap != null));
         });
@@ -166,6 +204,8 @@ public final class OverlayRenderer {
         handler.removeCallbacks(heartbeat);
         handler.removeCallbacks(commentaryExpiry);
         commentaryText = null;
+        trackedCommentary = false;
+        displayCountdown.clear();
         if (panel != null) {
             try {
                 clearMedia();
@@ -192,7 +232,7 @@ public final class OverlayRenderer {
     private void showStatusBadge() {
         if (badge == null) return;
         clearMedia();
-        badge.setText("SceneVibe\nTV Companion POC v0.5.0\n"
+        badge.setText("SceneVibe\nTV Companion POC v0.6.0\n"
                 + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
     }
 

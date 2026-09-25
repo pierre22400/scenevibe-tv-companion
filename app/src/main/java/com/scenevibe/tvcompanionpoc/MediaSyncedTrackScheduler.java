@@ -24,6 +24,7 @@ public final class MediaSyncedTrackScheduler {
 
     public interface Listener {
         void onRender(ScheduledTrack.Event event);
+        void onPlayback(boolean playing, boolean pauseFreezesDisplay);
     }
 
     private final Listener listener;
@@ -56,6 +57,8 @@ public final class MediaSyncedTrackScheduler {
     public synchronized void onPlaybackSnapshot(MediaSessionProbe.Snapshot snapshot) {
         if (track == null || snapshot == null) return;
         if (!track.targetPackage.equals(snapshot.packageName)) return;
+        listener.onPlayback(snapshot.state == PlaybackState.STATE_PLAYING,
+                track.pauseFreezesDisplay);
 
         long positionMs = snapshot.estimatedPositionMs >= 0L
                 ? snapshot.estimatedPositionMs : snapshot.positionMs;

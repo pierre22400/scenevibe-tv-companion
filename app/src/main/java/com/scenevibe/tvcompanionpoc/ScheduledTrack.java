@@ -17,11 +17,14 @@ import java.util.List;
 final class ScheduledTrack {
     final String trackId;
     final String targetPackage;
+    final boolean pauseFreezesDisplay;
     final List<Event> comments;
 
-    ScheduledTrack(String trackId, String targetPackage, List<Event> comments) {
+    ScheduledTrack(String trackId, String targetPackage, List<Event> comments,
+            boolean pauseFreezesDisplay) {
         this.trackId = trackId;
         this.targetPackage = targetPackage;
+        this.pauseFreezesDisplay = pauseFreezesDisplay;
         ArrayList<Event> sorted = new ArrayList<>(comments);
         sorted.sort(Comparator.comparingLong(event -> event.startMs));
         this.comments = Collections.unmodifiableList(sorted);

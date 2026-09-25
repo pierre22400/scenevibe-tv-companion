@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory=$true)][string]$TvIp,
     [Parameter(Mandatory=$true)][string]$TrackPath,
     [Parameter(Mandatory=$true)][string]$AssetMapPath,
+    [Parameter(Mandatory=$true)][string]$Token,
     [string]$TargetPackage = "com.amazon.amazonvideo.livingroom"
 )
 
@@ -59,10 +60,12 @@ $payload = @{
     type = "scenevibe.track.v1"
     trackId = [string]$track.trackId
     targetPackage = $TargetPackage
+    pauseFreezesDisplay = [bool]$track.playbackPolicy.pauseFreezesDisplay
     comments = $runtimeComments
 }
 
 $uri = "http://$($TvIp):8765/track"
 Write-Host "Loading FinalTrack $($track.trackId) on TV for MediaSession package $TargetPackage"
 $body = $payload | ConvertTo-Json -Depth 8 -Compress
-Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body
+Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body `
+    -Headers @{ Authorization = "Bearer $Token" }
