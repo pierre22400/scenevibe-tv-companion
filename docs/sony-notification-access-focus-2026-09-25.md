@@ -48,7 +48,13 @@ immediately activated the row. After this first pointer interaction, normal D-pa
 
 The tested behavior is consistent with an initial focus trap in the Sony/Android TV Settings implementation: focus is left on the two-panel scroll container instead of entering the notification-access preference list.
 
-This is not evidence that Android or Sony blocks notification-listener access. The permission itself works, the user consent UI works once the list receives focus, and the listener connects normally after grant.
+A follow-up comparison isolated the trigger more precisely:
+
+- manual navigation through **Settings -> Apps -> Special app access -> Notification access** was fully D-pad navigable;
+- launching the general notification-listener settings action directly opened the same page but reproduced the inaccessible initial focus;
+- therefore the issue is associated with direct activity/intent entry on this firmware, not with the Notification access page in all entry contexts.
+
+This is not evidence that Android or Sony blocks notification-listener access. The permission itself works, the user consent UI works, and the listener connects normally after grant.
 
 The observation is specific to the tested Sony Bravia firmware. It must not be generalized to every Sony, Android TV or Google TV device.
 
@@ -87,16 +93,27 @@ ADB remains reliable:
 
 For diagnosis only, a direct `adb shell input tap ...` can move interaction into the stuck list. Neither command is an acceptable consumer onboarding flow.
 
-### Consumer-facing candidate
+### Consumer-facing workaround selected
 
-The lowest-risk workaround to test on affected TVs is a real pointer input, for example a USB/Bluetooth mouse, to click one enabled preference row once. Sony documents general mouse support on Google TV / Android TV and specifically states that standard left-click works on supported models. The physical SceneVibe test shows that one pointer interaction is sufficient to restore normal D-pad navigation on this TV, but the mouse workaround itself still requires physical confirmation on the tested Bravia.
+The physical follow-up found a better workaround than a mouse: enter through the normal Android TV settings hierarchy.
 
-SceneVibe must not try to programmatically grant its own notification-listener access or inject input into Android Settings. The permission is intentionally user-controlled.
+On the tested Sony Bravia:
 
-The app should continue to:
+1. **Settings -> Apps -> Special app access -> Notification access** was normally D-pad navigable;
+2. direct launch of Notification access through an Intent reproduced the focus trap;
+3. direct launch of the top-level Apps settings preserved navigation.
 
-1. open the official detail-settings intent when available;
-2. read back the actual enabled-listener state when the user returns;
-3. provide device-specific troubleshooting text only if the grant is still absent.
+The Companion therefore now opens `Settings.ACTION_APPLICATION_SETTINGS` and
+guides the user to **Special app access -> Notification access -> SceneVibe**.
+When the user returns, SceneVibe reads the actual enabled-listener state and
+shows whether MediaSession access is granted.
 
-A future product cycle should test whether a different Settings intent/deep-link, a Sony firmware update, or another supported user input method avoids the initial focus trap without requiring ADB.
+This keeps consent entirely user-controlled and requires no ADB, pointer
+injection, accessibility service or self-granting permission.
+
+A USB/Bluetooth mouse remains a development/troubleshooting fallback because one
+pointer click was shown to release the trapped focus, but it is no longer the
+preferred consumer path.
+
+A future multi-device qualification should verify this onboarding route on other
+Sony, Android TV and Google TV firmware families.
