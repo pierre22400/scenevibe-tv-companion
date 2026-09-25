@@ -74,6 +74,8 @@ Useful references:
   https://support.google.com/androidtv/thread/184601803/not-being-able-to-grant-access-to-notifications-to-an-app-on-android-tv
 - Sony Professional BRAVIA settings documentation describing Notification access as a selectable permitted-app list:
   https://pro-bravia.sony.net/wp-content/uploads/2026/01/settings_ez20l_en.pdf
+- Sony support documentation confirming that Google TV / Android TV models generally accept USB or Bluetooth mice and that standard left-click works:
+  https://www.sony.fr/electronics/support/televisions-projectors-lcd-tvs-android-/k-65s3/articles/00128141
 
 ## Workarounds
 
@@ -87,7 +89,7 @@ For diagnosis only, a direct `adb shell input tap ...` can move interaction into
 
 ### Consumer-facing candidate
 
-The lowest-risk workaround to test on affected TVs is a real pointer input, for example a USB/Bluetooth mouse, to click one enabled preference row once. The physical test shows that one pointer interaction is sufficient to restore normal D-pad navigation on this TV.
+The lowest-risk workaround to test on affected TVs is a real pointer input, for example a USB/Bluetooth mouse, to click one enabled preference row once. Sony documents general mouse support on Google TV / Android TV and specifically states that standard left-click works on supported models. The physical SceneVibe test shows that one pointer interaction is sufficient to restore normal D-pad navigation on this TV, but the mouse workaround itself still requires physical confirmation on the tested Bravia.
 
 SceneVibe must not try to programmatically grant its own notification-listener access or inject input into Android Settings. The permission is intentionally user-controlled.
 
