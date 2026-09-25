@@ -456,9 +456,21 @@ Netflix qualified for play/pause; Canal+ and YouTube qualified for normal
 playback clock progression; Disney+ MediaSession discovery/metadata works but its
 published position is not yet usable for SceneVibe scheduling.
 
-The Sony notification-access UI did not provide a usable toggle during this
-development test, so the listener was enabled with Android's ADB development
-command. That is acceptable for the POC but is not a consumer onboarding design.
+A follow-up physical investigation isolated the Sony notification-access issue.
+The Android TV `NotificationAccessActivity` was correctly in the foreground and
+showed SceneVibe, but the initial focus remained on the outer two-panel scroll
+container instead of entering the enabled preference list. Remote D-pad, injected
+D-pad and TAB input could not move that focus. A single development-only pointer
+tap on the SceneVibe preference row moved interaction into the list; normal D-pad
+navigation then worked for both the Interface and SceneVibe rows, and the user
+could grant SceneVibe through the visible Android consent flow. SceneVibe then
+reported `MediaSession access: granted`.
+
+This is therefore recorded as a focus/navigation defect observed on the tested
+Sony Bravia firmware, not as a failure of the Android notification-listener
+permission mechanism. ADB remains development-only. Full evidence and public
+platform references are recorded in
+[docs/sony-notification-access-focus-2026-09-25.md](docs/sony-notification-access-focus-2026-09-25.md).
 
 ## v0.5.0 MediaSession-synced FinalTrack scheduler candidate
 
@@ -503,9 +515,41 @@ The scheduler remains passive: it reads snapshots only and contains no transport
 control, media-button dispatch, screen capture, subtitle capture or streaming
 application API integration.
 
-Physical qualification for v0.5.0 must now verify that the mixed fixture renders
-at its media positions on Prime Video, that pause freezes scheduling, and that
-forward/backward seeks follow the policy above without a commentary burst.
+### Physical v0.5.0 qualification — Sony Bravia + Prime Video, 25 September 2026
+
+The complete MediaSession-synced FinalTrack path was then exercised physically
+on the same Sony Bravia with Prime Video.
+
+The TV health endpoint reported `version: 0.5.0` and
+`synchronization: media-session-clock`. The mixed FinalTrack 1.1 fixture loaded
+through `POST /track` with `status: loaded`, target package
+`com.amazon.amazonvideo.livingroom`, and three runtime comments.
+
+Observed passes:
+
+1. During normal playback the three fixture events rendered at their expected
+   media positions: text at approximately 0 s, image + text at approximately
+   8 s, and text at approximately 18 s.
+2. Pausing Prime froze scheduling: no new due comment was triggered while the
+   MediaSession state remained paused, and scheduling resumed with playback.
+3. A backward seek re-armed later comments, allowing them to be replayed
+   repeatedly by revisiting their media positions.
+4. A forward seek from before the 8 s event to beyond the 18 s event did not
+   burst-render crossed comments. They were consumed according to the v0.5 seek
+   policy.
+
+This physically qualifies the complete path on the tested device:
+
+`FinalTrack 1.1 -> assetRef resolution -> POST /track -> Prime MediaSession clock -> TV scheduler -> rich overlay`.
+
+One limitation remains: if a commentary card is already visible when Prime is
+paused, its renderer expiry timer continues and the card disappears after its
+requested display duration. Scheduler triggering is pause-aware, but the current
+renderer therefore does not yet implement the FinalTrack
+`pauseFreezesDisplay: true` policy for an already-visible card.
+
+The full test record is in
+[docs/physical-qualification-v0.5-2026-09-25.md](docs/physical-qualification-v0.5-2026-09-25.md).
 
 ## Diagnosis and cleanup
 
