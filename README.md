@@ -658,3 +658,11 @@ errors and the 30-second heartbeat.
 Android does not notify the app merely because another application or compositor
 conceals a still-attached overlay, so physical observation remains part of the
 qualification procedure.
+
+## Outbound SceneVibe Cloud candidate (physical qualification pending)
+
+This branch adds a **separate** HTTPS cloud route alongside the v0.6 LAN pairing/receiver. Build the Android APK with `SCENEVIBE_CLOUD_ORIGIN=https://<your-domain>` (an exact HTTPS host on port 443); without it, the v0.6 LAN app builds and the UI reports **Cloud: Not configured**. Configure PostgreSQL and the server using the monorepo's `docs/tv-cloud-control-plane-v1.md`; no domain or paid cloud instance is included.
+
+Start the overlay, then select **Connect to SceneVibe Cloud** on TV. A six-digit code appears on the TV after a successful outbound activation request. Enter that code in Chrome's **Connect TV** section. The TV detects the claim by conditional HTTPS polling while its foreground overlay service runs. The device credential remains in app-private Android storage and is distinct from the LAN bearer token and Chrome controller token. **Disconnect cloud** stops polling locally but retains the private device proof for later TV-initiated reconnection; cached commentary survives. It does not revoke the server token. Account-level revocation remains future work.
+
+Each cloud revision uses the same track parser as LAN; the TV commits the validated text-only runtime JSON and revision before loading its MediaSession scheduler and sending a correlated ACK. At service restart, it restores the cached track before any network request, even with the desktop offline. This does not qualify the physical Sony/Prime Video behavior. Test: queue a real Prime track in Chrome, observe Loaded on TV, close Chrome and power off/disconnect the PC, verify normal playback and commentary, then stop/restart SceneVibe while PC remains off, test pause/resume and both seek directions. The TV never controls Prime Video. There is no phone, boot receiver or cloud playback timer in this candidate.

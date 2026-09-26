@@ -2,7 +2,7 @@ name: Android debug APK
 
 on:
   push:
-    branches: [main, work/tv-pairing-authenticated-lan-001]
+    branches: [main, work/tv-pairing-authenticated-lan-001, work/tv-cloud-client-001]
   pull_request:
     branches: [main]
   workflow_dispatch:
