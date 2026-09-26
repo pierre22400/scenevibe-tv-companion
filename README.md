@@ -571,7 +571,7 @@ renderer therefore does not yet implement the FinalTrack
 The full test record is in
 [docs/physical-qualification-v0.5-2026-09-25.md](docs/physical-qualification-v0.5-2026-09-25.md).
 
-## v0.6.0 pairing and physical qualification plan
+## v0.6.0 pairing and physical qualification
 
 The TV activity now shows **Not paired / Pairing open / Paired**, current LAN
 IPv4 when available, **Start pairing** and **Reset pairing**. First grant overlay
@@ -600,24 +600,44 @@ local JPEG/PNG before loading. Direct commentary sender:
   -ImagePath "C:\images\example.jpg"
 ~~~
 
-**TV procedure (not yet executed for v0.6):** install the new APK; grant Display
-over other apps; grant MediaSession access through Settings → Apps → Special
-app access → Notification access → SceneVibe (the Sony tested D-pad route);
-start the overlay; Start pairing; record the code; run `pair-tv.ps1`; GET
-`/health`; POST `/track` with the token; open official Prime Video and play
-the test content. Observe comments at approximately 0 / 8 / 18 seconds,
-pause/resume, seek backward and forward. While a comment is visible, pause
-before it expires, wait longer than its full duration, confirm it remains,
-resume and confirm it disappears after the remaining visible time. Press Reset
-pairing on TV and verify that another POST with the old token receives 401.
-Record image, audio and remote control behavior. Do not mark any of these
-v0.6 observations PASS until someone performs them on the physical TV.
+### Physical v0.6.0 qualification — Sony Bravia + Prime Video, 25 September 2026
 
-Automated checks can prove the token gate, protocol, build, lint and timer
-arithmetic. The v0.5 Sony Prime qualification above is historical evidence;
-it does not automatically qualify this new APK. Netflix and Disney+ playback
-overlays likewise require their own physical checks; Disney+ has not provided
-a usable MediaSession playback clock in the previous Sony observation.
+The v0.6 APK was exercised on the physical Sony Bravia after a clean reinstall.
+The Sony-safe Settings -> Apps -> Special app access -> Notification access
+route remained navigable with the remote and MediaSession access reported
+granted.
+
+Observed v0.6 passes:
+
+1. Start pairing displayed a six-digit code. A LAN POST to `/pair` returned
+   `scenevibe.pair.ack.v1`, status `paired`, a deviceId and a 43-character
+   Base64URL token; the TV state changed to paired.
+2. POST `/commentary` without a Bearer token returned HTTP 401 and rendered
+   nothing on the TV.
+3. A valid authenticated commentary returned
+   `scenevibe.commentary.ack.v1`, status `rendered`, and was visibly rendered.
+4. An authenticated two-comment `scenevibe.track.v1` fixture loaded with
+   `status: loaded`, target package `com.amazon.amazonvideo.livingroom`.
+5. With `pauseFreezesDisplay: true`, a card with a nominal 10-second lifetime
+   was paused while visible. It remained visible for more than 15 seconds of
+   paused wall time. After playback resumed, it remained for its unconsumed
+   visible time and then disappeared normally.
+
+This closes the v0.5 already-visible-card pause limitation on the tested Sony
+Bravia with Prime Video.
+
+The physical run did **not** exercise Reset pairing / old-token revocation,
+five invalid pairing attempts, pairing-window expiry, token replacement, v0.6
+image rendering, v0.6 forward/backward seek regression checks, or Netflix /
+Disney+ v0.6 playback. Those paths must not be described as physically
+qualified by this run.
+
+The complete v0.6 physical record is in
+[docs/physical-qualification-v0.6-2026-09-25.md](docs/physical-qualification-v0.6-2026-09-25.md).
+
+Automated checks cover the broader token gate, protocol, build, lint and timer
+arithmetic. The v0.5 physical record remains the evidence for its previously
+qualified mixed-media and seek behavior.
 
 The full endpoint and error contract for the future "Send to TV" client is
 in [docs/lan-pairing-protocol-v1.md](docs/lan-pairing-protocol-v1.md).
