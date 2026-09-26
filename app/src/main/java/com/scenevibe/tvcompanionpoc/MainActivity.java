@@ -5,13 +5,20 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.net.Inet4Address;
+import java.net.NetworkInterface;
+import java.util.Collections;
 
 /**
  * TV remote friendly controls for the user-granted overlay capability.
@@ -21,6 +28,14 @@ public final class MainActivity extends Activity {
     private static final String TAG = "SceneVibePoc";
     private TextView permissionStatus;
     private TextView mediaAccessStatus;
+    private TextView pairingStatus;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable pairingRefresh = new Runnable() {
+        @Override public void run() {
+            refreshPairing();
+            handler.postDelayed(this, 1000L);
+        }
+    };
 
     /** Build the small, remote navigable control screen without UI libraries. */
     @Override
@@ -34,7 +49,7 @@ public final class MainActivity extends Activity {
         controls.setBackgroundColor(0xFF17130F);
 
         TextView title = new TextView(this);
-        title.setText("SceneVibe\nTV Companion POC v0.5.0");
+        title.setText("SceneVibe\nTV Companion POC v0.6.0");
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(32);
         title.setGravity(Gravity.CENTER);
@@ -54,11 +69,19 @@ public final class MainActivity extends Activity {
         mediaAccessStatus.setPadding(0, 0, 0, dp(20));
         controls.addView(mediaAccessStatus);
 
+        pairingStatus = new TextView(this);
+        pairingStatus.setTextColor(0xFFFFFFFF);
+        pairingStatus.setTextSize(18);
+        pairingStatus.setGravity(Gravity.CENTER);
+        controls.addView(pairingStatus);
+
         addButton(controls, "Open overlay permission settings", this::openPermissionSettings);
         addButton(controls, "Open Apps settings for MediaSession access", this::openMediaSessionAccessSettings);
         addButton(controls, "Start overlay · top right", () -> startOverlay(OverlayService.ACTION_TOP));
         addButton(controls, "Start overlay · bottom right", () -> startOverlay(OverlayService.ACTION_BOTTOM));
         addButton(controls, "Stop overlay", this::stopOverlay);
+        addButton(controls, "Start pairing (120 seconds)", this::startPairing);
+        addButton(controls, "Reset pairing", this::resetPairing);
 
         TextView instruction = new TextView(this);
         instruction.setText("Start the overlay, then open a streaming app. "
@@ -69,7 +92,10 @@ public final class MainActivity extends Activity {
         instruction.setPadding(0, dp(24), 0, 0);
         controls.addView(instruction);
 
-        setContentView(controls);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.addView(controls);
+        setContentView(scroll);
     }
 
     /** Refresh authorization after returning from Android settings. */
@@ -82,6 +108,61 @@ public final class MainActivity extends Activity {
         mediaAccessStatus.setText(NotificationAccess.isGranted(this)
                 ? "MediaSession access: granted"
                 : "MediaSession access: not granted. Open settings to test synchronization.");
+        handler.removeCallbacks(pairingRefresh);
+        pairingRefresh.run();
+    }
+
+    @Override protected void onPause() {
+        handler.removeCallbacks(pairingRefresh);
+        super.onPause();
+    }
+
+    private void startPairing() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Grant overlay permission and start overlay first.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!startOverlay(null)) return;
+        PairingRuntime.get(this).start();
+        refreshPairing();
+        Log.i(TAG, "Pairing window opened by TV user");
+    }
+
+    private void resetPairing() {
+        PairingRuntime.get(this).reset();
+        refreshPairing();
+        Log.i(TAG, "Pairing reset by TV user");
+    }
+
+    private void refreshPairing() {
+        PairingPolicy pairing = PairingRuntime.get(this);
+        PairingPolicy.Status status = pairing.status();
+        String label = status == PairingPolicy.Status.PAIRING_OPEN ? "Pairing open"
+                : status == PairingPolicy.Status.PAIRED ? "Paired" : "Not paired";
+        String address = lanIpv4();
+        pairingStatus.setText("Pairing: " + label
+                + (status == PairingPolicy.Status.PAIRING_OPEN
+                        ? " · " + ((pairing.remainingMs() + 999) / 1000) + "s · Code: "
+                                + pairing.codeForTv() : "")
+                + "\nTV IPv4: " + (address == null ? "unavailable" : address)
+                + " · Port: 8765");
+    }
+
+    private String lanIpv4() {
+        try {
+            for (NetworkInterface network : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                if (!network.isUp() || network.isLoopback()) continue;
+                for (java.net.InetAddress address : Collections.list(network.getInetAddresses())) {
+                    if (address instanceof Inet4Address && address.isSiteLocalAddress()) {
+                        return address.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception error) {
+            Log.w(TAG, "TV IPv4 discovery unavailable", error);
+        }
+        return null;
     }
 
     /** Make each control keyboard and TV D-pad accessible. */
@@ -141,17 +222,19 @@ public final class MainActivity extends Activity {
     }
 
     /** Start the foreground service only after an explicit user action and permission check. */
-    private void startOverlay(String action) {
+    private boolean startOverlay(String action) {
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "Grant Display over other apps first.", Toast.LENGTH_LONG).show();
-            return;
+            return false;
         }
         try {
             startForegroundService(new Intent(this, OverlayService.class).setAction(action));
+            return true;
         } catch (RuntimeException error) {
             Log.e(TAG, "Could not start overlay service", error);
             Toast.makeText(this, "Service start failed; inspect SceneVibePoc in logcat.",
                     Toast.LENGTH_LONG).show();
+            return false;
         }
     }
 

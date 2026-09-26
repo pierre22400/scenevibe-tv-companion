@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$true)][string]$TvIp,
     [Parameter(Mandatory=$true)][string]$TrackPath,
-    [Parameter(Mandatory=$true)][string]$AssetMapPath
+    [Parameter(Mandatory=$true)][string]$AssetMapPath,
+    [Parameter(Mandatory=$true)][string]$Token
 )
 
 $track = Get-Content $TrackPath -Raw | ConvertFrom-Json
@@ -55,5 +56,6 @@ foreach ($comment in ($track.comments | Sort-Object {$_.schedule.idealStartSec})
 
     Write-Host "$(Get-Date -Format HH:mm:ss) $($comment.id) @ $($comment.schedule.idealStartSec)s media=$($null -ne $comment.media)"
     $body = $payload | ConvertTo-Json -Depth 6 -Compress
-    Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body
+    Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $body `
+        -Headers @{ Authorization = "Bearer $Token" }
 }

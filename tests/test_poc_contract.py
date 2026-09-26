@@ -138,5 +138,41 @@ class PocContractTests(unittest.TestCase):
         self.assertIn("dataBase64", loader)
         self.assertNotIn("Stopwatch", loader)
 
+    def test_lan_pairing_is_explicit_and_mutations_are_authenticated(self):
+        """Prevent accidental regression to unauthenticated LAN writes."""
+        java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
+        server = (java / "CommentaryServer.java").read_text()
+        policy = (java / "PairingPolicy.java").read_text()
+        activity = (java / "MainActivity.java").read_text()
+        self.assertIn('"/pair"', server)
+        self.assertIn('pairing.authorized(headerValue(lines, "authorization"))', server)
+        self.assertIn('"unauthorized"', server)
+        self.assertIn('"0.6.0"', server)
+        self.assertIn('"token"', server)
+        self.assertIn("new byte[32]", policy)
+        self.assertIn("MessageDigest.isEqual", policy)
+        self.assertIn("MAX_FAILURES = 5", policy)
+        self.assertIn("WINDOW_MS = 120_000L", policy)
+        self.assertIn("this::resetPairing", activity)
+        self.assertIn("Settings.ACTION_APPLICATION_SETTINGS", activity)
+        for sender in ("load-finaltrack-mediasession.ps1", "send-media-commentary.ps1",
+                       "play-finaltrack-media.ps1"):
+            script = (ROOT / "scripts" / sender).read_text()
+            self.assertIn('[Parameter(Mandatory=$true)][string]$Token', script)
+            self.assertIn('Authorization = "Bearer $Token"', script)
+
+    def test_track_pause_policy_reaches_renderer_without_player_controls(self):
+        """Keep pause-aware display isolated from the direct commentary timer."""
+        java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
+        loader = (ROOT / "scripts/load-finaltrack-mediasession.ps1").read_text()
+        service = (java / "OverlayService.java").read_text()
+        renderer = (java / "OverlayRenderer.java").read_text()
+        self.assertIn("playbackPolicy.pauseFreezesDisplay", loader)
+        self.assertIn("showTrackedCommentary", service)
+        self.assertIn("renderer.onPlayback(playing, freeze)", service)
+        self.assertIn("displayCountdown.update", renderer)
+        self.assertIn("public void showCommentary(", renderer)
+        self.assertNotIn("getTransportControls", service)
+
 if __name__ == "__main__":
     unittest.main()

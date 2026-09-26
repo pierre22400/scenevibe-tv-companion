@@ -52,18 +52,22 @@ public final class CommentaryServer {
 
     private final Listener listener;
     private final TrackListener trackListener;
+    private final PairingPolicy pairing;
+    private final int port;
     private final ExecutorService clients = Executors.newSingleThreadExecutor();
     private volatile boolean running;
     private ServerSocket server;
     private Thread acceptThread;
 
-    public CommentaryServer(Listener listener) {
-        this(listener, null);
+    public CommentaryServer(Listener listener, TrackListener trackListener, PairingPolicy pairing) {
+        this(listener, trackListener, pairing, PORT);
     }
 
-    public CommentaryServer(Listener listener, TrackListener trackListener) {
+    CommentaryServer(Listener listener, TrackListener trackListener, PairingPolicy pairing, int port) {
         this.listener = listener;
         this.trackListener = trackListener;
+        this.pairing = pairing;
+        this.port = port;
     }
 
     public synchronized void start() {
@@ -71,15 +75,17 @@ public final class CommentaryServer {
         try {
             server = new ServerSocket();
             server.setReuseAddress(true);
-            server.bind(new InetSocketAddress(PORT));
+            server.bind(new InetSocketAddress(port));
             running = true;
             acceptThread = new Thread(this::acceptLoop, "scenevibe-commentary-server");
             acceptThread.start();
-            Log.i(TAG, "Commentary server listening on 0.0.0.0:" + PORT);
+            Log.i(TAG, "Commentary server listening on 0.0.0.0:" + server.getLocalPort());
         } catch (IOException error) {
             throw new IllegalStateException("Could not bind commentary server", error);
         }
     }
+
+    synchronized int boundPort() { return server.getLocalPort(); }
 
     private void acceptLoop() {
         while (running) {
@@ -112,15 +118,28 @@ public final class CommentaryServer {
                 JSONObject health = new JSONObject();
                 health.put("type", "scenevibe.health.v1");
                 health.put("status", "ready");
-                health.put("version", "0.5.0");
+                health.put("version", "0.6.0");
+                health.put("protocolVersion", "1");
+                health.put("pairingRequired", true);
+                health.put("paired", pairing.hasToken());
                 health.put("media", "inline-image");
                 health.put("synchronization", "media-session-clock");
                 respond(output, 200, health);
                 return;
             }
             if (!"POST".equals(method)
-                    || (!"/commentary".equals(path) && !"/track".equals(path))) {
-                respond(output, 404, error("not_found", "Use POST /commentary or POST /track"));
+                    || (!"/commentary".equals(path) && !"/track".equals(path)
+                            && !"/pair".equals(path))) {
+                respond(output, 404, error("not_found", "Use POST /pair, /commentary or /track"));
+                return;
+            }
+
+            if ("/pair".equals(path) && pairing.status() != PairingPolicy.Status.PAIRING_OPEN) {
+                respond(output, 409, error("pairing_closed", "Open pairing on the TV first"));
+                return;
+            }
+            if (!"/pair".equals(path) && !pairing.authorized(headerValue(lines, "authorization"))) {
+                respond(output, 401, error("unauthorized", "Valid Bearer token required"));
                 return;
             }
 
@@ -150,10 +169,17 @@ public final class CommentaryServer {
                 return;
             }
 
-            if ("/track".equals(path)) {
-                handleTrack(output, json);
+            if (!"/pair".equals(path) && !pairing.authorized(headerValue(lines, "authorization"))) {
+                respond(output, 401, error("unauthorized", "Valid Bearer token required"));
+                return;
+            }
+
+            if ("/pair".equals(path)) {
+                handlePair(output, json);
+            } else if ("/track".equals(path)) {
+                handleTrack(output, json, headerValue(lines, "authorization"));
             } else {
-                handleCommentary(output, json);
+                handleCommentary(output, json, headerValue(lines, "authorization"));
             }
         } catch (JSONException error) {
             Log.w(TAG, "Could not build commentary response", error);
@@ -162,7 +188,44 @@ public final class CommentaryServer {
         }
     }
 
-    private void handleCommentary(BufferedOutputStream output, JSONObject json)
+    private void handlePair(BufferedOutputStream output, JSONObject json)
+            throws IOException, JSONException {
+        if (!"scenevibe.pair.request.v1".equals(json.optString("type"))) {
+            respond(output, 422, error("invalid_type", "Expected scenevibe.pair.request.v1"));
+            return;
+        }
+        if (!(json.opt("code") instanceof String)
+                || !(json.opt("clientName") instanceof String)) {
+            respond(output, 422, error("invalid_pair_request",
+                    "code and clientName must be strings"));
+            return;
+        }
+        synchronized (pairing) {
+            PairingPolicy.Result result = pairing.pair(json.optString("code", null),
+                    json.optString("clientName", null));
+            if (result != PairingPolicy.Result.PAIRED) {
+                String code = result == PairingPolicy.Result.CLOSED ? "pairing_closed"
+                        : result == PairingPolicy.Result.TOO_MANY_ATTEMPTS ? "too_many_attempts"
+                        : result == PairingPolicy.Result.INVALID_REQUEST ? "invalid_pair_request"
+                        : "invalid_code";
+                int status = result == PairingPolicy.Result.INVALID_REQUEST ? 422
+                        : result == PairingPolicy.Result.INVALID_CODE ? 401
+                        : result == PairingPolicy.Result.TOO_MANY_ATTEMPTS ? 429 : 409;
+                respond(output, status, error(code, "Pairing failed; check TV pairing state and code"));
+                return;
+            }
+            JSONObject ack = new JSONObject();
+            ack.put("type", "scenevibe.pair.ack.v1");
+            ack.put("status", "paired");
+            ack.put("deviceId", pairing.deviceId());
+            ack.put("token", pairing.tokenForPairAck());
+            respond(output, 200, ack);
+        }
+        Log.i(TAG, "LAN sender paired");
+    }
+
+    private void handleCommentary(BufferedOutputStream output, JSONObject json,
+            String authorization)
             throws IOException, JSONException {
         if (!"scenevibe.commentary.v1".equals(json.optString("type"))) {
             respond(output, 422, error("invalid_type", "Expected scenevibe.commentary.v1"));
@@ -189,7 +252,13 @@ public final class CommentaryServer {
             mediaBitmap = decoded.bitmap;
         }
 
-        listener.onCommentary(id, text, durationMs, mediaBitmap);
+        synchronized (pairing) {
+            if (!pairing.authorized(authorization)) {
+                respond(output, 401, error("unauthorized", "Valid Bearer token required"));
+                return;
+            }
+            listener.onCommentary(id, text, durationMs, mediaBitmap);
+        }
         JSONObject ack = new JSONObject();
         ack.put("type", "scenevibe.commentary.ack.v1");
         ack.put("id", id);
@@ -200,7 +269,7 @@ public final class CommentaryServer {
                 + "; media=" + (mediaBitmap != null));
     }
 
-    private void handleTrack(BufferedOutputStream output, JSONObject json)
+    private void handleTrack(BufferedOutputStream output, JSONObject json, String authorization)
             throws IOException, JSONException {
         if (trackListener == null) {
             respond(output, 422, error("track_unavailable", "Track scheduler is unavailable"));
@@ -259,8 +328,20 @@ public final class CommentaryServer {
             events.add(new ScheduledTrack.Event(id, text, startMs, durationMs, mediaBitmap));
         }
 
-        ScheduledTrack track = new ScheduledTrack(trackId, targetPackage, events);
-        trackListener.onTrackLoaded(track);
+        Object pausePolicy = json.opt("pauseFreezesDisplay");
+        if (pausePolicy != null && !(pausePolicy instanceof Boolean)) {
+            respond(output, 422, error("invalid_track", "pauseFreezesDisplay must be a boolean"));
+            return;
+        }
+        ScheduledTrack track = new ScheduledTrack(trackId, targetPackage, events,
+                Boolean.TRUE.equals(pausePolicy));
+        synchronized (pairing) {
+            if (!pairing.authorized(authorization)) {
+                respond(output, 401, error("unauthorized", "Valid Bearer token required"));
+                return;
+            }
+            trackListener.onTrackLoaded(track);
+        }
 
         JSONObject ack = new JSONObject();
         ack.put("type", "scenevibe.track.ack.v1");
@@ -356,6 +437,16 @@ public final class CommentaryServer {
         return -1;
     }
 
+    private String headerValue(String[] lines, String name) {
+        for (int i = 1; i < lines.length; i++) {
+            int delimiter = lines[i].indexOf(':');
+            if (delimiter > 0 && name.equalsIgnoreCase(lines[i].substring(0, delimiter).trim())) {
+                return lines[i].substring(delimiter + 1).trim();
+            }
+        }
+        return null;
+    }
+
     private JSONObject error(String code, String message) throws JSONException {
         JSONObject json = new JSONObject();
         json.put("type", "scenevibe.error.v1");
@@ -366,12 +457,15 @@ public final class CommentaryServer {
 
     private void respond(BufferedOutputStream output, int status, JSONObject json) throws IOException {
         byte[] body = json.toString().getBytes(StandardCharsets.UTF_8);
-        String reason = status == 200 ? "OK" : status == 404 ? "Not Found"
+        String reason = status == 200 ? "OK" : status == 401 ? "Unauthorized"
+                : status == 404 ? "Not Found" : status == 409 ? "Conflict"
+                : status == 429 ? "Too Many Requests"
                 : status == 413 ? "Payload Too Large" : status == 422 ? "Unprocessable Entity"
                 : "Bad Request";
         String headers = "HTTP/1.1 " + status + " " + reason + "\r\n"
                 + "Content-Type: application/json; charset=utf-8\r\n"
                 + "Content-Length: " + body.length + "\r\n"
+                + "Cache-Control: no-store\r\n"
                 + "Connection: close\r\n\r\n";
         output.write(headers.getBytes(StandardCharsets.US_ASCII));
         output.write(body);

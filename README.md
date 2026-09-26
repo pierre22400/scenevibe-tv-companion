@@ -9,7 +9,7 @@ application.
 
 ## Current state
 
-The current candidate build is **v0.5.0**.
+The current candidate build is **v0.6.0** (paired authenticated LAN POC).
 
 - A TV-friendly activity checks the user-granted **Display over other apps**
   capability and starts/stops the overlay.
@@ -19,10 +19,12 @@ The current candidate build is **v0.5.0**.
   focus.
 - A bounded LAN HTTP server listens on TV port **8765** only while the overlay
   service runs.
-- POST /commentary renders transient SceneVibe text and can optionally render a bounded JPEG/PNG image above it.
+- POST /commentary requires a paired Bearer token and renders bounded text/image.
 - GET /health reports service readiness.
 - A passive MediaSession probe can sample active session playback state/position once per second after the user explicitly grants Android notification-listener access.
-- POST /track loads a bounded runtime track produced from FinalTrack 1.1; the TV then schedules its comments from the selected streaming app's MediaSession clock instead of a PC stopwatch.
+- POST /track requires the same token and loads a bounded runtime track produced from FinalTrack 1.1; the TV schedules its comments from the selected streaming app's MediaSession clock.
+- The user opens a 120-second six-digit pairing window on the TV; POST /pair exchanges that code for a revocable 256-bit random token. Reset pairing invalidates the token immediately.
+- A runtime track can opt in to `pauseFreezesDisplay`: its currently visible commentary retains the remaining display time while the matching MediaSession reports pause.
 - The newest commentary owns its expiry: when a new comment replaces an older
   one, the previous pending expiry is cancelled before the new duration starts.
 
@@ -39,9 +41,13 @@ notification-content callbacks and the probe never sends playback controls.
 
 ## Security boundary
 
-The v0.3.x transport is intentionally minimal and is **not** the final
-pairing/security design. It has no authentication and must be used only on a
-trusted local network during development.
+v0.6.0 authenticates mutating LAN requests with a paired Bearer token. Pairing
+is initiated on the TV, limited to five incorrect codes and expires after 120
+seconds. The token is persisted in private application storage; Reset pairing
+revokes it. **Transport is still plain HTTP without TLS.** A local network
+eavesdropper or active MITM can capture the code or token. Use a trusted LAN;
+this POC does not solve hostile Wi-Fi, interception or client identity.
+See [the versioned LAN protocol](docs/lan-pairing-protocol-v1.md).
 
 The Companion does not contact, inspect, capture or modify the streaming
 application or its video.
@@ -66,7 +72,7 @@ The Android Gradle plugin is pinned to **8.7.3**.
 
 ~~~sh
 python3 -m unittest discover -s tests
-gradle :app:assembleDebug :app:lintDebug --stacktrace
+gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
 ~~~
 
 The debug APK is:
@@ -76,7 +82,7 @@ app/build/outputs/apk/debug/app-debug.apk
 ~~~
 
 The **Android debug APK** GitHub Actions workflow runs the same contract tests,
-Android build and lint on pushes to main, then uploads
+Android build, unit tests and lint on pushes to the work branch / PR, then uploads
 scenevibe-tv-companion-poc-debug.
 
 A green build proves packaging and static checks only. Physical qualification
@@ -140,11 +146,12 @@ While the user-started overlay service is running, the TV listens on TCP port
 GET /health
 ~~~
 
-v0.5.0 returns a JSON object with:
+v0.6.0 returns a JSON object with:
 
 - type: scenevibe.health.v1
 - status: ready
-- version: 0.5.0
+- version: 0.6.0
+- protocolVersion: "1", pairingRequired: true, paired: true/false
 - media: inline-image
 - synchronization: media-session-clock
 
@@ -153,6 +160,7 @@ v0.5.0 returns a JSON object with:
 ~~~http
 POST /commentary
 Content-Type: application/json
+Authorization: Bearer <token>
 ~~~
 
 Body contract:
@@ -167,11 +175,12 @@ Body contract:
 - optional media.dataBase64: inline image bytes, maximum 2 MiB after Base64 decoding
 - decoded images are downsampled for rendering to a maximum working envelope of 1280×720
 
-Example PowerShell request, replacing the IP with the TV's current LAN address:
+Example PowerShell request, replacing the IP and token:
 
 ~~~powershell
 Invoke-RestMethod -Method Post -Uri "http://192.168.1.183:8765/commentary" `
   -ContentType "application/json" `
+  -Headers @{ Authorization = "Bearer $token" } `
   -Body '{"type":"scenevibe.commentary.v1","id":"physical-001","text":"Dynamic SceneVibe commentary from the PC.","durationMs":10000}'
 ~~~
 
@@ -191,7 +200,7 @@ with the commentary.
 The repository includes a PowerShell sender:
 
 ~~~powershell
-.\scripts\send-media-commentary.ps1 -TvIp "192.168.1.183" -ImagePath "C:\Users\DENIS\Downloads\maison.jpg" -Text "SceneVibe — image overlay test" -DurationMs 10000
+.\scripts\send-media-commentary.ps1 -TvIp "192.168.1.183" -Token $token -ImagePath "C:\images\example.jpg" -Text "SceneVibe — image overlay test" -DurationMs 10000
 ~~~
 
 A successful media ACK contains mediaRendered: true.
@@ -333,7 +342,8 @@ Run it from the repository root:
 .\scripts\play-finaltrack-media.ps1 `
   -TvIp "192.168.1.183" `
   -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
-  -AssetMapPath ".\examples\asset-map.json"
+  -AssetMapPath "$env:TEMP\scenevibe-asset-map.json" `
+  -Token $token
 ~~~
 
 The sender resolves the referenced asset locally, enforces the 2 MiB POC limit,
@@ -560,6 +570,77 @@ renderer therefore does not yet implement the FinalTrack
 
 The full test record is in
 [docs/physical-qualification-v0.5-2026-09-25.md](docs/physical-qualification-v0.5-2026-09-25.md).
+
+## v0.6.0 pairing and physical qualification
+
+The TV activity now shows **Not paired / Pairing open / Paired**, current LAN
+IPv4 when available, **Start pairing** and **Reset pairing**. First grant overlay
+permission and start the overlay service. Start pairing displays a six-digit
+code for 120 seconds; the fifth wrong code closes the window. The sender uses
+the code once and keeps the returned token in memory. A later pairing replaces
+the prior token, and Reset pairing revokes it immediately. Stopping the overlay
+closes port 8765 but does not erase the token; uninstalling clears it.
+
+~~~powershell
+$tvIp = "192.168.1.183" # Replace with the address displayed on the TV
+Copy-Item ".\examples\asset-map.example.json" "$env:TEMP\scenevibe-asset-map.json"
+notepad "$env:TEMP\scenevibe-asset-map.json" # Set path to a real JPEG/PNG
+$token = .\scripts\pair-tv.ps1 -TvIp $tvIp -Code "123456" # Replace with TV code
+Invoke-RestMethod -Uri "http://${tvIp}:8765/health"
+.\scripts\load-finaltrack-mediasession.ps1 -TvIp $tvIp -Token $token `
+  -TrackPath ".\examples\finaltrack-media-tv-poc.json" `
+  -AssetMapPath "$env:TEMP\scenevibe-asset-map.json"
+~~~
+
+The sample asset map is only a template: bind its image reference to a real
+local JPEG/PNG before loading. Direct commentary sender:
+
+~~~powershell
+.\scripts\send-media-commentary.ps1 -TvIp $tvIp -Token $token `
+  -ImagePath "C:\images\example.jpg"
+~~~
+
+### Physical v0.6.0 qualification — Sony Bravia + Prime Video, 25 September 2026
+
+The v0.6 APK was exercised on the physical Sony Bravia after a clean reinstall.
+The Sony-safe Settings -> Apps -> Special app access -> Notification access
+route remained navigable with the remote and MediaSession access reported
+granted.
+
+Observed v0.6 passes:
+
+1. Start pairing displayed a six-digit code. A LAN POST to `/pair` returned
+   `scenevibe.pair.ack.v1`, status `paired`, a deviceId and a 43-character
+   Base64URL token; the TV state changed to paired.
+2. POST `/commentary` without a Bearer token returned HTTP 401 and rendered
+   nothing on the TV.
+3. A valid authenticated commentary returned
+   `scenevibe.commentary.ack.v1`, status `rendered`, and was visibly rendered.
+4. An authenticated two-comment `scenevibe.track.v1` fixture loaded with
+   `status: loaded`, target package `com.amazon.amazonvideo.livingroom`.
+5. With `pauseFreezesDisplay: true`, a card with a nominal 10-second lifetime
+   was paused while visible. It remained visible for more than 15 seconds of
+   paused wall time. After playback resumed, it remained for its unconsumed
+   visible time and then disappeared normally.
+
+This closes the v0.5 already-visible-card pause limitation on the tested Sony
+Bravia with Prime Video.
+
+The physical run did **not** exercise Reset pairing / old-token revocation,
+five invalid pairing attempts, pairing-window expiry, token replacement, v0.6
+image rendering, v0.6 forward/backward seek regression checks, or Netflix /
+Disney+ v0.6 playback. Those paths must not be described as physically
+qualified by this run.
+
+The complete v0.6 physical record is in
+[docs/physical-qualification-v0.6-2026-09-25.md](docs/physical-qualification-v0.6-2026-09-25.md).
+
+Automated checks cover the broader token gate, protocol, build, lint and timer
+arithmetic. The v0.5 physical record remains the evidence for its previously
+qualified mixed-media and seek behavior.
+
+The full endpoint and error contract for the future "Send to TV" client is
+in [docs/lan-pairing-protocol-v1.md](docs/lan-pairing-protocol-v1.md).
 
 ## Diagnosis and cleanup
 
