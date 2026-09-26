@@ -108,6 +108,7 @@ final class CloudControlClient {
         Reply confirmed=http("POST","devices/"+deviceId+"/ack",token,ack);
         if(confirmed.status!=200||confirmed.body==null
             ||!"scenevibe.cloud.ack.v1".equals(confirmed.body.optString("type"))
+            ||!"loaded".equals(confirmed.body.optString("status"))
             ||confirmed.body.optLong("revision",-1)!=revision)throw new IllegalStateException("Cloud ACK rejected");
         if(!cache.markAcknowledged(revision))throw new IllegalStateException("Cloud ACK state could not be persisted");
         Log.i(TAG,"Cloud track loaded; revision="+revision);
@@ -134,7 +135,12 @@ final class CloudControlClient {
             try(InputStream input=status<400?connection.getInputStream():connection.getErrorStream()) {
                 if(input==null)return new Reply(status,null);
                 ByteArrayOutputStream output=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int count;
-                while((count=input.read(buffer))!=-1){if(output.size()+count>LIMIT)throw new IllegalStateException("Cloud response too large");output.write(buffer,0,count);}
+                long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+                while((count=input.read(buffer))!=-1){
+                    if(System.nanoTime()>deadline||output.size()+count>LIMIT)
+                        throw new IllegalStateException("Cloud response timeout or too large");
+                    output.write(buffer,0,count);
+                }
                 return new Reply(status,new JSONObject(output.toString(StandardCharsets.UTF_8.name())));
             }
         } finally {connection.disconnect();}
