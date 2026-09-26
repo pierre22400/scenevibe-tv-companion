@@ -2,7 +2,13 @@ plugins {
     id "com.android.application"
 }
 
+def cloudOrigin = providers.environmentVariable("SCENEVIBE_CLOUD_ORIGIN").orElse("").get()
+if (cloudOrigin && !(cloudOrigin ==~ /https:\/\/[^\/:?#]+/)) {
+    throw new GradleException("SCENEVIBE_CLOUD_ORIGIN must be an exact HTTPS origin on port 443")
+}
+
 android {
+    buildFeatures { buildConfig true }
     namespace "com.scenevibe.tvcompanionpoc"
     compileSdk 35
 
@@ -10,8 +16,9 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc"
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName "0.6.0"
+        versionCode 8
+        versionName "0.7.0-cloud-candidate"
+        buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
     }
 
     compileOptions {

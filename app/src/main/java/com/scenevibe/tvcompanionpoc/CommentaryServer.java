@@ -5,7 +5,6 @@ import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.util.Log;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -17,10 +16,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -47,8 +43,6 @@ public final class CommentaryServer {
     private static final int MAX_IMAGE_BYTES = 2 * 1024 * 1024;
     private static final int MAX_RENDER_WIDTH = 1280;
     private static final int MAX_RENDER_HEIGHT = 720;
-    private static final int MAX_TRACK_COMMENTS = 256;
-    private static final long MAX_TRACK_START_MS = 12L * 60L * 60L * 1000L;
 
     private final Listener listener;
     private final TrackListener trackListener;
@@ -275,66 +269,20 @@ public final class CommentaryServer {
             respond(output, 422, error("track_unavailable", "Track scheduler is unavailable"));
             return;
         }
-        if (!"scenevibe.track.v1".equals(json.optString("type"))) {
-            respond(output, 422, error("invalid_type", "Expected scenevibe.track.v1"));
-            return;
-        }
-
-        String trackId = json.optString("trackId", "").trim();
-        String targetPackage = json.optString("targetPackage", "").trim();
-        JSONArray commentsJson = json.optJSONArray("comments");
-        if (trackId.isEmpty() || trackId.length() > 128
-                || targetPackage.isEmpty() || targetPackage.length() > 200
-                || commentsJson == null || commentsJson.length() == 0
-                || commentsJson.length() > MAX_TRACK_COMMENTS) {
-            respond(output, 422, error("invalid_track",
-                    "Invalid trackId, targetPackage or comments"));
-            return;
-        }
-
-        ArrayList<ScheduledTrack.Event> events = new ArrayList<>();
-        Set<String> ids = new HashSet<>();
-        for (int index = 0; index < commentsJson.length(); index++) {
-            JSONObject item = commentsJson.optJSONObject(index);
-            if (item == null) {
-                respond(output, 422, error("invalid_track_comment",
-                        "Each comments item must be an object"));
-                return;
-            }
-
-            String id = item.optString("id", "").trim();
-            String text = item.optString("text", "").trim();
-            long startMs = item.optLong("startMs", -1L);
-            long durationMs = item.optLong("durationMs", -1L);
-            if (id.isEmpty() || id.length() > 128 || !ids.add(id)
-                    || text.isEmpty() || text.length() > 1000
-                    || startMs < 0L || startMs > MAX_TRACK_START_MS
-                    || durationMs < 1000L || durationMs > 60000L) {
-                respond(output, 422, error("invalid_track_comment",
-                        "Invalid or duplicate id, text, startMs or durationMs"));
-                return;
-            }
-
-            Bitmap mediaBitmap = null;
-            JSONObject media = item.optJSONObject("media");
-            if (media != null) {
+        final ScheduledTrack track;
+        try {
+            track = TrackParser.parse(json, media -> {
                 MediaDecodeResult decoded = decodeImage(media);
                 if (decoded.errorCode != null) {
-                    respond(output, 422, error(decoded.errorCode, decoded.errorMessage));
-                    return;
+                    throw new TrackParser.Invalid(decoded.errorCode, decoded.errorMessage);
                 }
-                mediaBitmap = decoded.bitmap;
-            }
-            events.add(new ScheduledTrack.Event(id, text, startMs, durationMs, mediaBitmap));
-        }
-
-        Object pausePolicy = json.opt("pauseFreezesDisplay");
-        if (pausePolicy != null && !(pausePolicy instanceof Boolean)) {
-            respond(output, 422, error("invalid_track", "pauseFreezesDisplay must be a boolean"));
+                return decoded.bitmap;
+            });
+        } catch (TrackParser.Invalid invalid) {
+            respond(output, 422, error(invalid.code, invalid.getMessage()));
             return;
         }
-        ScheduledTrack track = new ScheduledTrack(trackId, targetPackage, events,
-                Boolean.TRUE.equals(pausePolicy));
+
         synchronized (pairing) {
             if (!pairing.authorized(authorization)) {
                 respond(output, 401, error("unauthorized", "Valid Bearer token required"));
@@ -345,14 +293,14 @@ public final class CommentaryServer {
 
         JSONObject ack = new JSONObject();
         ack.put("type", "scenevibe.track.ack.v1");
-        ack.put("trackId", trackId);
+        ack.put("trackId", track.trackId);
         ack.put("status", "loaded");
-        ack.put("targetPackage", targetPackage);
-        ack.put("commentCount", events.size());
+        ack.put("targetPackage", track.targetPackage);
+        ack.put("commentCount", track.comments.size());
         respond(output, 200, ack);
-        Log.i(TAG, "Track loaded and ACK sent; trackId=" + trackId
-                + "; targetPackage=" + targetPackage
-                + "; comments=" + events.size());
+        Log.i(TAG, "Track loaded and ACK sent; trackId=" + track.trackId
+                + "; targetPackage=" + track.targetPackage
+                + "; comments=" + track.comments.size());
     }
 
     private MediaDecodeResult decodeImage(JSONObject media) {

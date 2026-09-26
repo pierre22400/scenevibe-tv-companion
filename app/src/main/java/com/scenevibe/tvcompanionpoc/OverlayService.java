@@ -20,6 +20,7 @@ import android.util.Log;
 public final class OverlayService extends Service {
     public static final String ACTION_TOP = "com.scenevibe.tvcompanionpoc.SHOW_TOP";
     public static final String ACTION_BOTTOM = "com.scenevibe.tvcompanionpoc.SHOW_BOTTOM";
+    public static final String ACTION_CLOUD_CONNECT = "com.scenevibe.tvcompanionpoc.CLOUD_CONNECT";
     private static final String TAG = "SceneVibePoc";
     private static final String CHANNEL_ID = "overlay_poc";
     private static final int NOTIFICATION_ID = 1001;
@@ -28,6 +29,8 @@ public final class OverlayService extends Service {
     private CommentaryServer commentaryServer;
     private MediaSessionProbe mediaSessionProbe;
     private MediaSyncedTrackScheduler trackScheduler;
+    private CloudTrackRepository cloudTrackRepository;
+    private CloudControlClient cloudClient;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -70,7 +73,7 @@ public final class OverlayService extends Service {
         }
         String action = intent == null ? null : intent.getAction();
         boolean bottom = ACTION_BOTTOM.equals(action)
-                || (action == null && getSharedPreferences("overlay", Context.MODE_PRIVATE)
+                || (!ACTION_TOP.equals(action) && getSharedPreferences("overlay", Context.MODE_PRIVATE)
                         .getBoolean("bottom", false));
         getSharedPreferences("overlay", Context.MODE_PRIVATE).edit()
                 .putBoolean("bottom", bottom).apply();
@@ -90,6 +93,9 @@ public final class OverlayService extends Service {
                         if (renderer != null) renderer.onPlayback(playing, freeze);
                     }
                 });
+                cloudTrackRepository = new CloudTrackRepository(this);
+                long restored = cloudTrackRepository.restore(trackScheduler);
+                if (restored > 0) Log.i(TAG, "Cached cloud track restored; revision=" + restored);
             }
 
             if (commentaryServer == null) {
@@ -115,6 +121,12 @@ public final class OverlayService extends Service {
                 });
                 mediaSessionProbe.start();
             }
+
+            if (cloudClient == null && !BuildConfig.CLOUD_ORIGIN.isEmpty()) {
+                cloudClient = new CloudControlClient(this, cloudTrackRepository, trackScheduler);
+                cloudClient.start();
+            }
+            if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
 
             Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
                     + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
@@ -143,6 +155,10 @@ public final class OverlayService extends Service {
     /** Remove the window and notification on every normal destruction path. */
     @Override
     public void onDestroy() {
+        if (cloudClient != null) {
+            cloudClient.stop();
+            cloudClient = null;
+        }
         if (mediaSessionProbe != null) {
             mediaSessionProbe.stop();
             mediaSessionProbe = null;

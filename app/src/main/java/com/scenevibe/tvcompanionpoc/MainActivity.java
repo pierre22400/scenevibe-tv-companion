@@ -29,10 +29,12 @@ public final class MainActivity extends Activity {
     private TextView permissionStatus;
     private TextView mediaAccessStatus;
     private TextView pairingStatus;
+    private TextView cloudStatus;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable pairingRefresh = new Runnable() {
         @Override public void run() {
             refreshPairing();
+            refreshCloud();
             handler.postDelayed(this, 1000L);
         }
     };
@@ -75,6 +77,13 @@ public final class MainActivity extends Activity {
         pairingStatus.setGravity(Gravity.CENTER);
         controls.addView(pairingStatus);
 
+        cloudStatus = new TextView(this);
+        cloudStatus.setTextColor(0xFFFFFFFF);
+        cloudStatus.setTextSize(18);
+        cloudStatus.setGravity(Gravity.CENTER);
+        cloudStatus.setPadding(0, dp(12), 0, dp(12));
+        controls.addView(cloudStatus);
+
         addButton(controls, "Open overlay permission settings", this::openPermissionSettings);
         addButton(controls, "Open Apps settings for MediaSession access", this::openMediaSessionAccessSettings);
         addButton(controls, "Start overlay · top right", () -> startOverlay(OverlayService.ACTION_TOP));
@@ -82,6 +91,8 @@ public final class MainActivity extends Activity {
         addButton(controls, "Stop overlay", this::stopOverlay);
         addButton(controls, "Start pairing (120 seconds)", this::startPairing);
         addButton(controls, "Reset pairing", this::resetPairing);
+        addButton(controls, "Connect to SceneVibe Cloud", this::connectCloud);
+        addButton(controls, "Disconnect cloud", this::disconnectCloud);
 
         TextView instruction = new TextView(this);
         instruction.setText("Start the overlay, then open a streaming app. "
@@ -147,6 +158,33 @@ public final class MainActivity extends Activity {
                                 + pairing.codeForTv() : "")
                 + "\nTV IPv4: " + (address == null ? "unavailable" : address)
                 + " · Port: 8765");
+    }
+
+    /** Shows the code only on TV; a cached track remains usable without a controller. */
+    private void refreshCloud() {
+        CloudDeviceCredentials identity = new CloudDeviceCredentials(this);
+        if (BuildConfig.CLOUD_ORIGIN.isEmpty()) {cloudStatus.setText("Cloud: Not configured");return;}
+        String code = identity.code();
+        String status = code != null ? "Activation open · Code: " + code
+                : identity.connected() ? "Connected" : "Not connected";
+        boolean cached = new CloudTrackRepository(this).revision() > 0;
+        if (identity.offline()) status = cached ? "Offline / cached track available" : "Offline";
+        cloudStatus.setText("Cloud: " + status + (cached && !identity.offline() ? " · cached track available" : ""));
+    }
+
+    /** Starts a new activation on the already user-started foreground service. */
+    private void connectCloud() {
+        if (BuildConfig.CLOUD_ORIGIN.isEmpty()) {
+            Toast.makeText(this,"Build with SCENEVIBE_CLOUD_ORIGIN first.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        startOverlay(OverlayService.ACTION_CLOUD_CONNECT);
+    }
+
+    /** Clears the TV-side cloud credential; server revocation is a future account flow. */
+    private void disconnectCloud() {
+        new CloudDeviceCredentials(this).disconnect();
+        refreshCloud();
     }
 
     private String lanIpv4() {
