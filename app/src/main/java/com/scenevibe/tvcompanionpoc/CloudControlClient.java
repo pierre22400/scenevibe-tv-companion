@@ -21,7 +21,8 @@ final class CloudControlClient {
     private final CloudDeviceCredentials identity;
     private final CloudTrackRepository cache;
     private final MediaSyncedTrackScheduler scheduler;
-    private final String deviceId;
+    /** Local stable id from PairingPolicy.deviceId(); used ONLY as the activation installationId. */
+    private final String installationId;
     private final String origin;
     private volatile boolean running;
     private int failures;
@@ -30,7 +31,7 @@ final class CloudControlClient {
         this.identity=new CloudDeviceCredentials(context);
         this.cache=cache;
         this.scheduler=scheduler;
-        this.deviceId=PairingRuntime.get(context).deviceId();
+        this.installationId=PairingRuntime.get(context).deviceId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
     }
     /** Restores cached media in OverlayService before starting the first network fetch. */
@@ -45,14 +46,19 @@ final class CloudControlClient {
         if(!running)return;
         io.execute(()->{
             try {
-                JSONObject request=new JSONObject().put("deviceId",deviceId);
-                Reply reply=http("POST","activations",identity.deviceToken(),request);
+                JSONObject request=new JSONObject().put("installationId",installationId);
+                String existing=identity.deviceToken();
+                if(existing!=null)request.put("deviceToken",existing);
+                Reply reply=http("POST","device-activations",existing,request);
                 JSONObject data=reply.body;
                 if(reply.status!=201||!CloudProtocol.validActivation(data)) {
                     Log.w(TAG,"Activation rejected or malformed");return;
                 }
-                if(!identity.pending(data.getString("activationId"),data.getString("activationSecret"),
-                        data.getString("deviceToken"),data.getString("code")))throw new IllegalStateException("Private credential write failed");
+                // A valid 201 durable-persists deviceToken+cloudDeviceId IMMEDIATELY plus the
+                // temporary activation state; do NOT wait for a claimed status.
+                if(!identity.persistActivation(data.getString("deviceId"),data.getString("deviceToken"),
+                        data.getString("activationId"),data.getString("activationSecret"),data.getString("userCode")))
+                    throw new IllegalStateException("Private credential write failed");
                 Log.i(TAG,"Cloud activation open");
             }catch(Exception error){Log.w(TAG,"Cloud activation unavailable");}
         });
@@ -73,50 +79,51 @@ final class CloudControlClient {
         long delay=CloudProtocol.backoffSeconds(failures);
         if(running)io.schedule(this::poll,delay,TimeUnit.SECONDS);
     }
-    /** Promotes the pending token only after the activation secret reports claimed. */
+    /** Reads the activation lifecycle; claimed connects, expired drops only the temporaries. */
     private void checkActivation() throws Exception {
         String activationId=identity.activationId(), temporary=identity.activationSecret();
         if(activationId==null||temporary==null)return;
-        Reply reply=http("GET","activations/"+activationId,temporary,null);
-        if(reply.status!=200||reply.body==null||!"scenevibe.cloud.activation.status.v1".equals(reply.body.optString("type")))
-            throw new IllegalStateException("Invalid activation status");
+        Reply reply=http("GET","device-activations/"+activationId,temporary,null);
+        if(reply.status!=200||reply.body==null)throw new IllegalStateException("Invalid activation status");
         String status=reply.body.optString("status");
+        if(!CloudProtocol.validActivationStatus(status))throw new IllegalStateException("Unknown activation status");
         if("claimed".equals(status)) {
-            if(!identity.confirm())throw new IllegalStateException("Credential commit failed");
+            if(!identity.confirmClaimed())throw new IllegalStateException("Credential commit failed");
             Log.i(TAG,"Cloud connected");
         }else if("expired".equals(status)) {
-            identity.clearPending();Log.i(TAG,"Cloud activation expired");
-        }else if(!"open".equals(status))throw new IllegalStateException("Unknown activation status");
+            identity.clearExpiredActivation();Log.i(TAG,"Cloud activation expired");
+        }
     }
     /** Downloads only revisions beyond the last ACK; retries an unacknowledged cached revision. */
     private void fetchAssignment() throws Exception {
-        String token=identity.deviceToken();if(token==null)return;
-        Reply reply=http("GET","devices/"+deviceId+"/assignment?afterRevision="+cache.acknowledged(),token,null);
-        if(reply.status==204)return;
+        String token=identity.deviceToken(), cloudDeviceId=identity.cloudDeviceId();
+        if(token==null||cloudDeviceId==null)return;
+        Reply reply=http("GET","devices/"+cloudDeviceId+"/assignment?afterRevision="+cache.acknowledged(),token,null);
+        // 204 = nothing newer, 404 = authenticated but no current assignment: both NORMAL, not offline.
+        if(reply.status==204||reply.status==404)return;
+        if(reply.status==401) {Log.w(TAG,"Cloud credential rejected");return;}
         JSONObject data=reply.body;
-        if(reply.status!=200||data==null||!"scenevibe.cloud.assignment.v1".equals(data.optString("type")))
+        if(reply.status!=200||data==null||!CloudProtocol.validAssignment(data,cloudDeviceId,cache.revision()))
             throw new IllegalStateException("Invalid assignment response");
         long revision=data.optLong("revision",-1), cached=cache.revision();
         JSONObject runtime=data.optJSONObject("runtimeTrack");
-        String trackId=data.optString("trackId","");
-        if(!CloudProtocol.validAssignment(data,deviceId,cached))
-            throw new IllegalStateException("Invalid assignment revision");
+        String finalTrackId=data.optString("finalTrackId","");
+        // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
         if(revision>cached && !cache.install(revision,runtime.toString(),scheduler))
             throw new IllegalStateException("Invalid or non-durable runtime track");
         // A cached, unacknowledged revision was already restored when service started.
-        JSONObject ack=new JSONObject().put("revision",revision).put("trackId",trackId);
-        Reply confirmed=http("POST","devices/"+deviceId+"/ack",token,ack);
-        if(confirmed.status!=200||confirmed.body==null
-            ||!"scenevibe.cloud.ack.v1".equals(confirmed.body.optString("type"))
-            ||!"loaded".equals(confirmed.body.optString("status"))
-            ||confirmed.body.optLong("revision",-1)!=revision)throw new IllegalStateException("Cloud ACK rejected");
+        // ACK sends finalTrackId (NOT trackId) and only after the scheduler load succeeded.
+        JSONObject ack=new JSONObject().put("revision",revision).put("finalTrackId",finalTrackId);
+        Reply confirmed=http("POST","devices/"+cloudDeviceId+"/ack",token,ack);
+        if(confirmed.status!=200||!CloudProtocol.validAck(confirmed.body,cloudDeviceId,revision))
+            throw new IllegalStateException("Cloud ACK rejected");
         if(!cache.markAcknowledged(revision))throw new IllegalStateException("Cloud ACK state could not be persisted");
         Log.i(TAG,"Cloud track loaded; revision="+revision);
     }
     /** Reads at most three megabytes from an explicitly configured HTTPS endpoint. */
     private Reply http(String method,String path,String token,JSONObject body) throws Exception {
         if(!running)throw new IllegalStateException("Cloud client stopped");
-        HttpsURLConnection connection=(HttpsURLConnection)new URL(origin+"/api/tv/v1/"+path).openConnection();
+        HttpsURLConnection connection=(HttpsURLConnection)new URL(origin+"/api/v1/"+path).openConnection();
         try {
             connection.setRequestMethod(method);connection.setConnectTimeout(8000);connection.setReadTimeout(8000);
             connection.setInstanceFollowRedirects(false);connection.setUseCaches(false);

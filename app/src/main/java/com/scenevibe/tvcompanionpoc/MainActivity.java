@@ -164,7 +164,7 @@ public final class MainActivity extends Activity {
     private void refreshCloud() {
         CloudDeviceCredentials identity = new CloudDeviceCredentials(this);
         if (BuildConfig.CLOUD_ORIGIN.isEmpty()) {cloudStatus.setText("Cloud: Not configured");return;}
-        String code = identity.code();
+        String code = identity.userCode();
         String status = code != null ? "Activation open · Code: " + code
                 : identity.connected() ? "Connected" : "Not connected";
         boolean cached = new CloudTrackRepository(this).revision() > 0;
