@@ -1,5 +1,8 @@
 # SceneVibe TV Companion POC
 
+> **STATUS — ACTIVE ANDROID TV REPOSITORY.** Together with `pierre22400/interface-scenevibe`, this is part of the default active SceneVibe working set. `main` is the physically qualified v0.6 LAN baseline. PR #7 is the active outbound-cloud candidate, but it must be aligned to the canonical `/api/v1` cloud protocol merged in the monorepo before it can be merged here.
+
+
 **Purpose:** verify on a physical Android TV / Google TV that SceneVibe can keep
 an independent, transparent commentary layer above an official streaming app
 without controlling, modifying, capturing or replacing the video stream.
