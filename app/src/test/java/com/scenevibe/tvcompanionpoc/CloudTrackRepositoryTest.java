@@ -61,4 +61,36 @@ public final class CloudTrackRepositoryTest {
         assertEquals(0,new CloudTrackRepository(memory).restore(scheduler()));
         assertTrue(memory.values.isEmpty());
     }
+    /** A malformed newer runtimeTrack never replaces the existing durable cache. */
+    @Test public void malformedRuntimeTrackNeverReplacesCache() throws Exception {
+        Memory memory=new Memory();CloudTrackRepository repository=new CloudTrackRepository(memory);
+        assertTrue(repository.install(1,track("first"),scheduler()));
+        // Wrong runtimeTrack type is rejected by the shared parser.
+        String wrongType=track("second").replace("scenevibe.track.v1","scenevibe.other.v1");
+        assertFalse(repository.install(2,wrongType,scheduler()));
+        // A bad comment duration is rejected by the shared parser.
+        String badDuration=track("second").replace("\"durationMs\":6000","\"durationMs\":1");
+        assertFalse(repository.install(2,badDuration,scheduler()));
+        // Media on a text-only cloud track is rejected before any cache write.
+        String withMedia=track("second").replace("\"durationMs\":6000","\"durationMs\":6000,\"media\":{\"kind\":\"image\"}");
+        assertFalse(repository.install(2,withMedia,scheduler()));
+        // The first validated revision remains the only durable state.
+        assertEquals(1,repository.revision());
+        assertEquals("first",new JSONObject(memory.values.get("runtime")).optString("trackId"));
+    }
+    /** markAcknowledged succeeds only for the currently persisted revision; failures never change it. */
+    @Test public void ackFailurePathLeavesAcknowledgedUnchanged() {
+        Memory memory=new Memory();CloudTrackRepository repository=new CloudTrackRepository(memory);
+        assertTrue(repository.install(2,track("only"),scheduler()));
+        // A revision other than the persisted one cannot be acknowledged.
+        assertFalse(repository.markAcknowledged(1));
+        assertFalse(repository.markAcknowledged(3));
+        assertEquals(0,repository.acknowledged());
+        // Only the exact persisted revision is acknowledged.
+        assertTrue(repository.markAcknowledged(2));
+        assertEquals(2,repository.acknowledged());
+        // A stale ACK after a successful one never regresses the acknowledged revision.
+        assertFalse(repository.markAcknowledged(1));
+        assertEquals(2,repository.acknowledged());
+    }
 }

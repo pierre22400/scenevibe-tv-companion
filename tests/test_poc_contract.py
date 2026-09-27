@@ -163,6 +163,22 @@ class PocContractTests(unittest.TestCase):
             self.assertIn('[Parameter(Mandatory=$true)][string]$Token', script)
             self.assertIn('Authorization = "Bearer $Token"', script)
 
+    def test_cloud_client_uses_canonical_api_v1_and_not_the_obsolete_contract(self):
+        """The outbound Cloud client must speak the canonical /api/v1 base, never /api/tv/v1."""
+        client = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java").read_text()
+        self.assertNotIn("/api/tv/v1/", client)
+        self.assertIn("/api/v1/", client)
+
+    def test_cloud_client_stays_outbound_only_with_no_inbound_receiver(self):
+        """The Cloud client dials out over HTTPS only; there is no listening Cloud endpoint."""
+        client = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java").read_text()
+        self.assertIn("HttpsURLConnection", client)
+        # No inbound socket/server surface for Cloud: the LAN receiver (port 8765) is the
+        # only listener and lives in CommentaryServer, not in the outbound Cloud client.
+        self.assertNotIn("ServerSocket", client)
+        self.assertNotIn("BroadcastReceiver", client)
+        self.assertNotIn("8765", client)
+
     def test_track_pause_policy_reaches_renderer_without_player_controls(self):
         """Keep pause-aware display isolated from the direct commentary timer."""
         java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"

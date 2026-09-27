@@ -27,8 +27,14 @@ jobs:
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Check POC boundary
         run: python3 -m unittest discover -s tests
-      - name: Build and lint debug APK
+      - name: Build and lint debug APK (Cloud not configured)
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
+      - name: Validate configured Cloud BuildConfig path (safe dummy origin)
+        env:
+          # Literal non-secret dummy HTTPS origin: exercises the configured BuildConfig
+          # path (CLOUD_ORIGIN set) without introducing any credential or real endpoint.
+          SCENEVIBE_CLOUD_ORIGIN: https://cloud.example
+        run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: scenevibe-tv-companion-poc-debug
