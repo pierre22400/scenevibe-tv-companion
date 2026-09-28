@@ -8,13 +8,7 @@ import java.util.Set;
 
 /**
  * Drives a loaded SceneVibe runtime track from the passive MediaSession clock.
- *
- * Policy for this POC:
- * - PAUSED/BUFFERING/NONE never advance or render comments.
- * - normal forward playback renders at most one due comment per probe sample;
- * - a forward jump greater than 5 s is treated as a seek and crossed comments are skipped;
- * - a backward jump greater than 2 s re-arms comments at/after the new position;
- * - comments more than 2 s late are skipped rather than burst-rendered.
+ * The clock is accepted only while the active session matches the track's exact media identity.
  */
 public final class MediaSyncedTrackScheduler {
     private static final String TAG = "SceneVibeSync";
@@ -25,43 +19,74 @@ public final class MediaSyncedTrackScheduler {
     public interface Listener {
         void onRender(ScheduledTrack.Event event);
         void onPlayback(boolean playing, boolean pauseFreezesDisplay);
+        /** False means any currently visible track card must disappear immediately. */
+        default void onEligibility(boolean eligible) {}
     }
 
     private final Listener listener;
     private final Set<String> consumed = new HashSet<>();
     private ScheduledTrack track;
     private long lastPositionMs = -1L;
+    private boolean mediaEligible;
 
     public MediaSyncedTrackScheduler(Listener listener) {
         this.listener = listener;
     }
 
     public synchronized void load(ScheduledTrack newTrack) {
+        listener.onEligibility(false);
         track = newTrack;
         consumed.clear();
         lastPositionMs = -1L;
+        mediaEligible = false;
         Log.i(TAG, "TRACK_LOADED trackId=" + newTrack.trackId
                 + " targetPackage=" + newTrack.targetPackage
+                + " mediaVideoId=" + newTrack.mediaIdentity.videoId
                 + " comments=" + newTrack.comments.size());
     }
 
     public synchronized void clear() {
+        listener.onEligibility(false);
         if (track != null) {
             Log.i(TAG, "TRACK_CLEARED trackId=" + track.trackId);
         }
         track = null;
         consumed.clear();
         lastPositionMs = -1L;
+        mediaEligible = false;
+    }
+
+    /** No active/authorized session is never allowed to leave a frozen card on screen. */
+    public synchronized void onPlaybackUnavailable() {
+        if (track == null) return;
+        deactivate("session_unavailable", null);
     }
 
     public synchronized void onPlaybackSnapshot(MediaSessionProbe.Snapshot snapshot) {
         if (track == null || snapshot == null) return;
-        if (!track.targetPackage.equals(snapshot.packageName)) return;
-        listener.onPlayback(snapshot.state == PlaybackState.STATE_PLAYING,
-                track.pauseFreezesDisplay);
+        if (!MediaIdentityMatcher.matches(track, snapshot)) {
+            deactivate("media_identity_mismatch", snapshot);
+            return;
+        }
 
         long positionMs = snapshot.estimatedPositionMs >= 0L
                 ? snapshot.estimatedPositionMs : snapshot.positionMs;
+
+        if (!mediaEligible) {
+            mediaEligible = true;
+            listener.onEligibility(true);
+            lastPositionMs = -1L;
+            if (positionMs >= 0L) {
+                int rearmed = rearmFrom(positionMs);
+                Log.i(TAG, "MEDIA_IDENTITY_MATCH trackId=" + track.trackId
+                        + " package=" + snapshot.packageName
+                        + " positionMs=" + positionMs
+                        + " rearmedFuture=" + rearmed);
+            }
+        }
+
+        listener.onPlayback(snapshot.state == PlaybackState.STATE_PLAYING,
+                track.pauseFreezesDisplay);
         if (positionMs < 0L) return;
 
         if (lastPositionMs < 0L) {
@@ -100,6 +125,19 @@ public final class MediaSyncedTrackScheduler {
         lastPositionMs = positionMs;
         if (snapshot.state == PlaybackState.STATE_PLAYING) {
             renderDue(positionMs);
+        }
+    }
+
+    private void deactivate(String reason, MediaSessionProbe.Snapshot snapshot) {
+        boolean wasEligible = mediaEligible;
+        mediaEligible = false;
+        lastPositionMs = -1L;
+        if (wasEligible) listener.onEligibility(false);
+        if (wasEligible || snapshot != null) {
+            Log.i(TAG, "MEDIA_IDENTITY_BLOCKED reason=" + reason
+                    + " package=" + (snapshot == null ? "-" : snapshot.packageName)
+                    + " title=" + (snapshot == null ? "-" : snapshot.title)
+                    + " subtitle=" + (snapshot == null ? "-" : snapshot.subtitle));
         }
     }
 

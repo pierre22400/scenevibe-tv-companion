@@ -25,7 +25,12 @@ public final class CloudProtocolTest {
             .put("deviceId",deviceId).put("revision",revision)
             .put("finalTrackId","final-"+trackId).put("trackId",trackId)
             .put("runtimeTrack",new JSONObject().put("type","scenevibe.track.v1")
-                .put("trackId",trackId).put("targetPackage","com.amazon.amazonvideo.livingroom"));
+                .put("trackId",trackId).put("targetPackage","com.amazon.amazonvideo.livingroom")
+                .put("mediaIdentity",new JSONObject()
+                    .put("platform","prime_video")
+                    .put("videoId","video-1")
+                    .put("title","Columbo — Eaux troubles")
+                    .put("durationMs",5_884_768)));
     }
 
     /** A canonical 201 with userCode, UUID ids, bounded secrets and ISO expiry validates. */
@@ -94,6 +99,13 @@ public final class CloudProtocolTest {
     @Test public void assignmentRejectsWrongRuntimeTrackType() throws Exception {
         JSONObject envelope=assignment(UUID_B,2,"track-1");
         envelope.getJSONObject("runtimeTrack").put("type","scenevibe.other.v1");
+        assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
+    }
+
+    /** A package-only runtime is unsafe: media identity is mandatory. */
+    @Test public void assignmentRejectsMissingMediaIdentity() throws Exception {
+        JSONObject envelope=assignment(UUID_B,2,"track-1");
+        envelope.getJSONObject("runtimeTrack").remove("mediaIdentity");
         assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
     }
 

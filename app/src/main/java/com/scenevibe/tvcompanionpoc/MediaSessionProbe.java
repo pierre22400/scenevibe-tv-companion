@@ -25,6 +25,8 @@ public final class MediaSessionProbe {
 
     public interface Listener {
         void onSnapshot(Snapshot snapshot);
+        /** Absence/loss of a usable session must fail closed and hide tracked commentary. */
+        default void onUnavailable() {}
     }
 
     /** Immutable playback sample forwarded to the SceneVibe scheduler. */
@@ -36,6 +38,10 @@ public final class MediaSessionProbe {
         public final long estimatedPositionMs;
         public final float speed;
         public final long updateAgeMs;
+        public final String mediaId;
+        public final String title;
+        public final String subtitle;
+        public final long durationMs;
 
         Snapshot(
                 String packageName,
@@ -44,7 +50,11 @@ public final class MediaSessionProbe {
                 long positionMs,
                 long estimatedPositionMs,
                 float speed,
-                long updateAgeMs) {
+                long updateAgeMs,
+                String mediaId,
+                String title,
+                String subtitle,
+                long durationMs) {
             this.packageName = packageName;
             this.state = state;
             this.stateName = stateName;
@@ -52,6 +62,10 @@ public final class MediaSessionProbe {
             this.estimatedPositionMs = estimatedPositionMs;
             this.speed = speed;
             this.updateAgeMs = updateAgeMs;
+            this.mediaId = mediaId;
+            this.title = title;
+            this.subtitle = subtitle;
+            this.durationMs = durationMs;
         }
     }
 
@@ -98,10 +112,12 @@ public final class MediaSessionProbe {
     private void sample() {
         if (!NotificationAccess.isGranted(context)) {
             Log.i(TAG, "ACCESS_REQUIRED notificationListener=false");
+            unavailable();
             return;
         }
         if (sessions == null) {
             Log.w(TAG, "MEDIA_SESSION_MANAGER_UNAVAILABLE");
+            unavailable();
             return;
         }
 
@@ -110,23 +126,34 @@ public final class MediaSessionProbe {
             controllers = sessions.getActiveSessions(listenerComponent);
         } catch (SecurityException error) {
             Log.w(TAG, "ACCESS_DENIED active sessions unavailable", error);
+            unavailable();
             return;
         } catch (RuntimeException error) {
             Log.w(TAG, "PROBE_FAILED active sessions query", error);
+            unavailable();
             return;
         }
 
         if (controllers.isEmpty()) {
             Log.i(TAG, "NO_ACTIVE_SESSIONS");
+            unavailable();
             return;
         }
 
+        Snapshot primary = null;
         for (int index = 0; index < controllers.size(); index++) {
             Snapshot snapshot = snapshotController(index, controllers.get(index));
-            if (listener != null) {
-                listener.onSnapshot(snapshot);
+            if (primary == null
+                    || (primary.state != PlaybackState.STATE_PLAYING
+                        && snapshot.state == PlaybackState.STATE_PLAYING)) {
+                primary = snapshot;
             }
         }
+        if (listener != null && primary != null) listener.onSnapshot(primary);
+    }
+
+    private void unavailable() {
+        if (listener != null) listener.onUnavailable();
     }
 
     private Snapshot snapshotController(int index, MediaController controller) {
@@ -141,6 +168,7 @@ public final class MediaSessionProbe {
                 : Math.max(0L, SystemClock.elapsedRealtime() - updatedAtMs);
         long estimatedPositionMs = estimatePositionMs(state, positionMs, speed, updateAgeMs);
 
+        String mediaId = metadataText(metadata, MediaMetadata.METADATA_KEY_MEDIA_ID);
         String title = metadataText(metadata, MediaMetadata.METADATA_KEY_TITLE);
         if (title.isEmpty()) {
             title = metadataText(metadata, MediaMetadata.METADATA_KEY_DISPLAY_TITLE);
@@ -158,6 +186,7 @@ public final class MediaSessionProbe {
                 + " estimatedMs=" + estimatedPositionMs
                 + " speed=" + speed
                 + " updateAgeMs=" + updateAgeMs
+                + " mediaId=" + safe(mediaId)
                 + " durationMs=" + durationMs
                 + " title=" + safe(title)
                 + " subtitle=" + safe(subtitle));
@@ -169,7 +198,11 @@ public final class MediaSessionProbe {
                 positionMs,
                 estimatedPositionMs,
                 speed,
-                updateAgeMs);
+                updateAgeMs,
+                mediaId,
+                title,
+                subtitle,
+                durationMs);
     }
 
     private long estimatePositionMs(

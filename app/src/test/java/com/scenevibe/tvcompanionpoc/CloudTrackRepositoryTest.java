@@ -25,12 +25,16 @@ public final class CloudTrackRepositoryTest {
         @Override public void onPlayback(boolean playing,boolean freeze){}
     });}
     /** One text-only valid runtime assignment. */
-    private static String track(String id){return "{\"type\":\"scenevibe.track.v1\",\"trackId\":\""+id+"\",\"targetPackage\":\"com.amazon.amazonvideo.livingroom\",\"pauseFreezesDisplay\":true,\"comments\":[{\"id\":\"c1\",\"text\":\"Hello\",\"startMs\":1000,\"durationMs\":6000}]}";}
+    private static String track(String id){return "{\"type\":\"scenevibe.track.v1\",\"trackId\":\""+id+"\",\"targetPackage\":\"com.amazon.amazonvideo.livingroom\",\"mediaIdentity\":{\"platform\":\"prime_video\",\"videoId\":\"video-1\",\"title\":\"Columbo — Eaux troubles\",\"durationMs\":5884768},\"pauseFreezesDisplay\":true,\"comments\":[{\"id\":\"c1\",\"text\":\"Hello\",\"startMs\":1000,\"durationMs\":6000}]}";}
     /** Validates the LAN parser's exact event bounds and rejects duplicate IDs. */
     @Test public void sharedParserRejectsMalformedOrPartialTrack() throws Exception {
         ScheduledTrack parsed=TrackParser.parse(new JSONObject(track("first")),media->null);
         assertEquals("first",parsed.trackId);assertEquals(1,parsed.comments.size());
         assertTrue(parsed.pauseFreezesDisplay);
+        assertEquals("video-1", parsed.mediaIdentity.videoId);
+        String missingIdentity=track("unsafe").replace(",\\\"mediaIdentity\\\":{\\\"platform\\\":\\\"prime_video\\\",\\\"videoId\\\":\\\"video-1\\\",\\\"title\\\":\\\"Columbo — Eaux troubles\\\",\\\"durationMs\\\":5884768}","");
+        try {TrackParser.parse(new JSONObject(missingIdentity),media->null);fail("expected missing media identity");}
+        catch(TrackParser.Invalid expected){assertEquals("invalid_track",expected.code);}
         String invalid=track("first").replace("\"durationMs\":6000","\"durationMs\":999");
         try {TrackParser.parse(new JSONObject(invalid),media->null);fail("expected invalid duration");}
         catch(TrackParser.Invalid expected){assertEquals("invalid_track_comment",expected.code);}

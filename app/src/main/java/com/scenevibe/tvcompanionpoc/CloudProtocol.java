@@ -36,13 +36,22 @@ final class CloudProtocol {
         if(!(rawRevision instanceof Number))return false;
         long revision=((Number)rawRevision).longValue();
         JSONObject runtime=data.optJSONObject("runtimeTrack");
+        JSONObject media=runtime==null?null:runtime.optJSONObject("mediaIdentity");
+        Object rawDuration=media==null?null:media.opt("durationMs");
         String finalTrackId=data.optString("finalTrackId","");
         String trackId=data.optString("trackId","");
-        return revision>=1&&revision>=cached&&runtime!=null
+        return revision>=1&&revision>=cached&&runtime!=null&&media!=null
             &&!finalTrackId.isEmpty()&&!trackId.isEmpty()
             &&"scenevibe.track.v1".equals(runtime.optString("type"))
             &&trackId.equals(runtime.optString("trackId"))
-            &&"com.amazon.amazonvideo.livingroom".equals(runtime.optString("targetPackage"));
+            &&"com.amazon.amazonvideo.livingroom".equals(runtime.optString("targetPackage"))
+            &&"prime_video".equals(media.optString("platform"))
+            &&bounded(media.optString("videoId"),256)&&bounded(media.optString("title"),500)
+            &&rawDuration instanceof Number&&((Number)rawDuration).longValue()>0;
+    }
+
+    private static boolean bounded(String value,int max) {
+        return value!=null&&!value.trim().isEmpty()&&value.length()<=max;
     }
     /**
      * The ACK response confirms the exact device + revision and reports acknowledged

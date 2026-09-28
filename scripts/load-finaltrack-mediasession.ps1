@@ -56,10 +56,24 @@ foreach ($comment in ($track.comments | Sort-Object {$_.schedule.idealStartSec})
     $runtimeComments += $runtime
 }
 
+$mediaDurationMs = [int64]([Math]::Round([double]$track.timeline.plannedEndSec * 1000))
+if ([string]$track.media.platform -ne "prime_video" -or
+    [string]::IsNullOrWhiteSpace([string]$track.media.videoId) -or
+    [string]::IsNullOrWhiteSpace([string]$track.media.filmTitle) -or
+    $mediaDurationMs -le 0) {
+    throw "FinalTrack media identity is incomplete for TV scheduling."
+}
+
 $payload = @{
     type = "scenevibe.track.v1"
     trackId = [string]$track.trackId
     targetPackage = $TargetPackage
+    mediaIdentity = @{
+        platform = [string]$track.media.platform
+        videoId = [string]$track.media.videoId
+        title = [string]$track.media.filmTitle
+        durationMs = $mediaDurationMs
+    }
     pauseFreezesDisplay = [bool]$track.playbackPolicy.pauseFreezesDisplay
     comments = $runtimeComments
 }

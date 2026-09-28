@@ -92,6 +92,9 @@ public final class OverlayService extends Service {
                     @Override public void onPlayback(boolean playing, boolean freeze) {
                         if (renderer != null) renderer.onPlayback(playing, freeze);
                     }
+                    @Override public void onEligibility(boolean eligible) {
+                        if (renderer != null) renderer.onTrackEligibility(eligible);
+                    }
                 });
                 cloudTrackRepository = new CloudTrackRepository(this);
                 long restored = cloudTrackRepository.restore(trackScheduler);
@@ -114,9 +117,12 @@ public final class OverlayService extends Service {
             }
 
             if (mediaSessionProbe == null) {
-                mediaSessionProbe = new MediaSessionProbe(this, snapshot -> {
-                    if (trackScheduler != null) {
-                        trackScheduler.onPlaybackSnapshot(snapshot);
+                mediaSessionProbe = new MediaSessionProbe(this, new MediaSessionProbe.Listener() {
+                    @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot) {
+                        if (trackScheduler != null) trackScheduler.onPlaybackSnapshot(snapshot);
+                    }
+                    @Override public void onUnavailable() {
+                        if (trackScheduler != null) trackScheduler.onPlaybackUnavailable();
                     }
                 });
                 mediaSessionProbe.start();

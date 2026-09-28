@@ -34,7 +34,7 @@ public class CommentaryServerAuthTest {
             assertFalse(health.toString().contains("token"));
 
             String comment = "{\"type\":\"scenevibe.commentary.v1\",\"id\":\"one\",\"text\":\"Hello\",\"durationMs\":2000}";
-            String track = "{\"type\":\"scenevibe.track.v1\",\"trackId\":\"one\",\"targetPackage\":\"com.test\",\"pauseFreezesDisplay\":true,\"comments\":[{\"id\":\"a\",\"text\":\"Hi\",\"startMs\":0,\"durationMs\":2000}]}";
+            String track = "{\"type\":\"scenevibe.track.v1\",\"trackId\":\"one\",\"targetPackage\":\"com.amazon.amazonvideo.livingroom\",\"mediaIdentity\":{\"platform\":\"prime_video\",\"videoId\":\"video-1\",\"title\":\"Fixture Film\",\"durationMs\":120000},\"pauseFreezesDisplay\":true,\"comments\":[{\"id\":\"a\",\"text\":\"Hi\",\"startMs\":0,\"durationMs\":2000}]}";
             assertStatus(401, send(port, "POST", "/commentary", comment, null));
             assertStatus(401, send(port, "POST", "/track", track, null));
             assertStatus(409, send(port, "POST", "/pair", "{}", null));
