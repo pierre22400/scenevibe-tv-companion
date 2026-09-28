@@ -120,16 +120,20 @@ class PocContractTests(unittest.TestCase):
         """Drive bounded track events from passive playback snapshots only."""
         scheduler = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java").read_text()
         server = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java").read_text()
+        parser = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java").read_text()
         loader = (ROOT / "scripts/load-finaltrack-mediasession.ps1").read_text()
-        self.assertIn("scenevibe.track.v1", server)
+        self.assertIn("scenevibe.track.v1", parser)
+        self.assertIn("TrackParser.parse(json", server)
         self.assertIn("scenevibe.track.ack.v1", server)
-        self.assertIn("MAX_TRACK_COMMENTS = 256", server)
+        self.assertIn("comments.length()>256", parser)
         self.assertIn("targetPackage", server)
         self.assertIn("FORWARD_SEEK_THRESHOLD_MS = 5000L", scheduler)
         self.assertIn("BACKWARD_SEEK_THRESHOLD_MS = 2000L", scheduler)
         self.assertIn("MAX_LATE_MS = 2000L", scheduler)
         self.assertIn("PlaybackState.STATE_PLAYING", scheduler)
         self.assertIn("COMMENT_DUE", scheduler)
+        self.assertIn("MediaIdentityMatcher.matches", scheduler)
+        self.assertIn("mediaIdentity", parser)
         self.assertNotIn("getTransportControls", scheduler)
         self.assertNotIn("dispatchMediaButtonEvent", scheduler)
         self.assertIn("/track", loader)
@@ -161,6 +165,22 @@ class PocContractTests(unittest.TestCase):
             self.assertIn('[Parameter(Mandatory=$true)][string]$Token', script)
             self.assertIn('Authorization = "Bearer $Token"', script)
 
+    def test_cloud_client_uses_canonical_api_v1_and_not_the_obsolete_contract(self):
+        """The outbound Cloud client must speak the canonical /api/v1 base, never /api/tv/v1."""
+        client = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java").read_text()
+        self.assertNotIn("/api/tv/v1/", client)
+        self.assertIn("/api/v1/", client)
+
+    def test_cloud_client_stays_outbound_only_with_no_inbound_receiver(self):
+        """The Cloud client dials out over HTTPS only; there is no listening Cloud endpoint."""
+        client = (ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java").read_text()
+        self.assertIn("HttpsURLConnection", client)
+        # No inbound socket/server surface for Cloud: the LAN receiver (port 8765) is the
+        # only listener and lives in CommentaryServer, not in the outbound Cloud client.
+        self.assertNotIn("ServerSocket", client)
+        self.assertNotIn("BroadcastReceiver", client)
+        self.assertNotIn("8765", client)
+
     def test_track_pause_policy_reaches_renderer_without_player_controls(self):
         """Keep pause-aware display isolated from the direct commentary timer."""
         java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
@@ -170,6 +190,8 @@ class PocContractTests(unittest.TestCase):
         self.assertIn("playbackPolicy.pauseFreezesDisplay", loader)
         self.assertIn("showTrackedCommentary", service)
         self.assertIn("renderer.onPlayback(playing, freeze)", service)
+        self.assertIn("renderer.onTrackEligibility(eligible)", service)
+        self.assertIn("public void onTrackEligibility(boolean eligible)", renderer)
         self.assertIn("displayCountdown.update", renderer)
         self.assertIn("public void showCommentary(", renderer)
         self.assertNotIn("getTransportControls", service)

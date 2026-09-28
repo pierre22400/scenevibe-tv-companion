@@ -175,6 +175,25 @@ public final class OverlayRenderer {
         });
     }
 
+    /**
+     * A tracked card is valid only while the active MediaSession matches its FinalTrack.
+     * Package/episode loss hides it immediately, including a card frozen by pause.
+     */
+    public void onTrackEligibility(boolean eligible) {
+        if (eligible) return;
+        handler.post(() -> {
+            playbackRunning = false;
+            if (!trackedCommentary || commentaryText == null) return;
+            handler.removeCallbacks(commentaryExpiry);
+            commentaryText = null;
+            trackedCommentary = false;
+            displayCountdown.clear();
+            clearMedia();
+            showStatusBadge();
+            Log.i(TAG, "Tracked commentary hidden; media identity no longer matches");
+        });
+    }
+
     private void showCommentaryInternal(String text, long durationMs, Bitmap mediaBitmap,
             boolean fromTrack) {
         handler.post(() -> {
@@ -232,7 +251,7 @@ public final class OverlayRenderer {
     private void showStatusBadge() {
         if (badge == null) return;
         clearMedia();
-        badge.setText("SceneVibe\nTV Companion POC v0.6.0\n"
+        badge.setText("SceneVibe\nTV Companion POC " + BuildConfig.VERSION_NAME + "\n"
                 + DateFormat.format("HH:mm:ss", System.currentTimeMillis()));
     }
 
