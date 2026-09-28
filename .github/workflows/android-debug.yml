@@ -29,15 +29,15 @@ jobs:
         run: python3 -m unittest discover -s tests
       - name: Build and lint debug APK (Cloud not configured)
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
-      - name: Validate configured Cloud BuildConfig path (safe dummy origin)
+      - name: Build Cloud qualification APK
         env:
-          # Literal non-secret dummy HTTPS origin: exercises the configured BuildConfig
-          # path (CLOUD_ORIGIN set) without introducing any credential or real endpoint.
-          SCENEVIBE_CLOUD_ORIGIN: https://cloud.example
+          # Stable public SceneVibe origin (NOT a secret): compiles the uploaded APK
+          # against the real Cloud endpoint so it is usable for physical qualification.
+          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg.vercel.app
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: scenevibe-tv-companion-poc-debug
+          name: scenevibe-tv-companion-cloud-qualification-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
