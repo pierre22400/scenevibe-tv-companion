@@ -32,8 +32,9 @@ public final class CloudTrackRepositoryTest {
         assertEquals("first",parsed.trackId);assertEquals(1,parsed.comments.size());
         assertTrue(parsed.pauseFreezesDisplay);
         assertEquals("video-1", parsed.mediaIdentity.videoId);
-        String missingIdentity=track("unsafe").replace(",\\\"mediaIdentity\\\":{\\\"platform\\\":\\\"prime_video\\\",\\\"videoId\\\":\\\"video-1\\\",\\\"title\\\":\\\"Columbo — Eaux troubles\\\",\\\"durationMs\\\":5884768}","");
-        try {TrackParser.parse(new JSONObject(missingIdentity),media->null);fail("expected missing media identity");}
+        JSONObject missingIdentity=new JSONObject(track("unsafe"));
+        missingIdentity.remove("mediaIdentity");
+        try {TrackParser.parse(missingIdentity,media->null);fail("expected missing media identity");}
         catch(TrackParser.Invalid expected){assertEquals("invalid_track",expected.code);}
         String invalid=track("first").replace("\"durationMs\":6000","\"durationMs\":999");
         try {TrackParser.parse(new JSONObject(invalid),media->null);fail("expected invalid duration");}
