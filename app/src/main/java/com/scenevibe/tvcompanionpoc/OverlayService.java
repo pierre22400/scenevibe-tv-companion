@@ -200,12 +200,12 @@ public final class OverlayService extends Service {
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
             if (ACTION_CLOUD_RESET.equals(action)) {
-                // Coordinated reset: the client flips running=false synchronously (so no
-                // in-flight GET/ACK can rewrite the cache and no post-reset poll uses the old
-                // credential) and then wipes identity/cache/scheduler/diagnostics on its io
-                // executor asynchronously. reset() returns IMMEDIATELY without waiting on the
-                // executor, so onStartCommand never blocks the Android main thread; a bounded
-                // watchdog inside the client surfaces a diagnostic if the wipe does not finish.
+                // Coordinated reset: the client flips running=false synchronously, which blocks
+                // NEW Cloud work and future poll scheduling. A request already executing may
+                // finish before the wipe, but because both share the same single-thread executor
+                // the wipe runs after it and removes any state written before reset completion.
+                // reset() returns IMMEDIATELY without waiting, so onStartCommand never blocks
+                // the Android main thread; a bounded watchdog surfaces incomplete reset work.
                 // The client shuts its io executor down as part of reset(), so it is now a
                 // spent, un-armable instance (a shut-down ScheduledExecutorService cannot be
                 // reused). Drop the reference so the NEXT entry (e.g. a later

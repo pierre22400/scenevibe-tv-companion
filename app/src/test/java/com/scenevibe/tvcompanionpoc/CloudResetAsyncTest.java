@@ -285,10 +285,11 @@ public final class CloudResetAsyncTest {
     }
 
     /**
-     * If the io executor is already shut down (service stopped), the wipe runs inline so the
-     * reset still completes safely - there is no concurrent client in that state.
+     * If the primary io executor is already shut down, reset must STILL never execute the wipe
+     * on the caller. The rejected primary submission is handed to a separate fallback executor;
+     * this test keeps that fallback manual so the non-blocking boundary is deterministic.
      */
-    @Test public void resetRunsInlineWhenExecutorAlreadyShutDown() throws Exception {
+    @Test public void resetUsesAsyncFallbackWhenPrimaryExecutorAlreadyShutDown() throws Exception {
         CloudMemory cloud=new CloudMemory();SecretStore secrets=new SecretStore.InMemorySecretStore();
         CloudDeviceCredentials identity=credentials(cloud,secrets);
         identity.persistActivation("cloud-uuid","device-token","act-1","secret","123456");
@@ -298,16 +299,25 @@ public final class CloudResetAsyncTest {
         assertTrue(cache.install(2,track("active"),scheduler));
 
         ManualExecutor io=new ManualExecutor();
-        io.shutdown(); // simulate a stopped service
-        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler);
+        io.shutdown(); // primary path rejects immediately
+        ManualExecutor fallback=new ManualExecutor();
+        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler,fallback);
 
         final int[] completions={0};
         client.reset(()->completions[0]++);
-        // Rejected on execute() -> inline wipe already ran, no pending work remains.
-        assertFalse(io.hasPending());
-        assertNull("inline wipe cleared the credential",identity.deviceToken());
+
+        // reset() returned while fallback work is still pending: caller was never the worker.
+        assertTrue("fallback wipe must be queued asynchronously",fallback.hasPending());
+        assertEquals("credential must still exist before fallback worker runs",
+                "device-token",identity.deviceToken());
+        assertNotNull(cache.cachedTrackId());
+        assertEquals(0,completions[0]);
+
+        fallback.runAll();
+
+        assertNull("fallback wipe cleared the credential",identity.deviceToken());
         assertNull(cache.cachedTrackId());
-        assertEquals("completion callback still fires on the inline path",1,completions[0]);
+        assertEquals("completion callback fires after asynchronous fallback wipe",1,completions[0]);
     }
 
     /**

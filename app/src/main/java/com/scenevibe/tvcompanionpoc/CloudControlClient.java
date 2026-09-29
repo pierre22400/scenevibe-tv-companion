@@ -24,6 +24,12 @@ final class CloudControlClient {
      */
     private static final long RESET_WATCHDOG_SECONDS=15;
     private final ScheduledExecutorService io;
+    /**
+     * Separate one-shot fallback execution boundary used only if the primary Cloud io executor
+     * is already shut down when Reset is requested. Production always dispatches this work to
+     * a daemon thread so the Android caller is never used as the reset worker.
+     */
+    private final java.util.concurrent.Executor resetFallback;
     private final CloudDeviceCredentials identity;
     private final CloudTrackRepository cache;
     private final MediaSyncedTrackScheduler scheduler;
@@ -35,6 +41,7 @@ final class CloudControlClient {
     /** Links the outbound client to an already created passive MediaSession scheduler. */
     CloudControlClient(Context context, CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
         this.io=Executors.newSingleThreadScheduledExecutor();
+        this.resetFallback=CloudControlClient::startResetFallbackThread;
         this.identity=new CloudDeviceCredentials(context);
         this.cache=cache;
         this.scheduler=scheduler;
@@ -52,7 +59,17 @@ final class CloudControlClient {
      */
     CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
             CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
+        this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread);
+    }
+    /**
+     * Extended injectable seam used only by reset tests so the rejected-primary-executor path
+     * can be driven deterministically without ever running fallback work on the test caller.
+     */
+    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
+            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
+            java.util.concurrent.Executor resetFallback) {
         this.io=io;
+        this.resetFallback=resetFallback;
         this.identity=identity;
         this.cache=cache;
         this.scheduler=scheduler;
@@ -246,13 +263,14 @@ final class CloudControlClient {
      * {@link OverlayService#onStartCommand} invokes this on the Android MAIN thread, reset()
      * must return immediately and complete the wipe asynchronously.
      *
-     * <p>It flips {@code running=false} FIRST and synchronously, so that {@code http()}'s
-     * leading {@code if(!running) throw} stops any in-flight or subsequently scheduled GET/ACK
-     * from completing a write and no new poll can start with the old credential. It then queues
-     * the wipe onto the SAME single-thread io executor, so the wipe is serialized AFTER any
-     * request already executing there, and calls {@code io.shutdown()} (NOT shutdownNow, so the
-     * already-queued wipe still runs). It does NOT call {@code awaitTermination} on the calling
-     * thread - there is no main-thread wait.
+     * <p>It flips {@code running=false} FIRST and synchronously. That prevents new Cloud work
+     * from entering and prevents later polls from being scheduled. A request that had already
+     * passed {@code http()}'s leading running check may still finish its current executor task;
+     * this is safe because the wipe is queued onto the SAME single-thread io executor and thus
+     * runs strictly AFTER that task, removing any state it may have written before reset
+     * completion. The method then calls {@code io.shutdown()} (NOT shutdownNow, so the already-
+     * queued wipe still runs). It does NOT call {@code awaitTermination} on the calling thread -
+     * there is no main-thread wait.
      *
      * <p>The wipe deletes the cloud identity (deviceToken/activationSecret/cloudDeviceId/
      * activationId/userCode) and the cached track, clears the scheduler (dropping any in-memory
@@ -271,9 +289,10 @@ final class CloudControlClient {
      *     be {@code null}. It never receives a secret and must not block.
      */
     void reset(Runnable onComplete) {
-        // Stop first so a mid-flight request cannot complete a write and no new poll runs with
-        // the old credential; http()'s leading running-check enforces this. This is the only
-        // synchronous work on the calling (Android main) thread.
+        // Stop first. This synchronously prevents NEW Cloud work and future poll scheduling.
+        // A request already inside http() may still finish its current single-thread executor
+        // task; the queued wipe below runs after it and removes any state written before reset
+        // completion. This assignment is the only reset work performed on the Android caller.
         running=false;
         // A single latch that both the completion callback and the watchdog observe, so the
         // watchdog only fires when the wipe genuinely did not finish in time.
@@ -295,15 +314,28 @@ final class CloudControlClient {
         };
         // Queue the wipe so it serializes after any request already executing on io, then shut
         // io down WITHOUT waiting: shutdown() lets the queued wipe run but rejects any future
-        // scheduled poll. If io is already shut down (service stopped) there is no concurrent
-        // client, so a direct-but-safe inline wipe is correct.
+        // scheduled poll. If io is already shut down, NEVER fall back to wipe.run() on the
+        // caller: dispatch the wipe to the dedicated asynchronous fallback boundary instead.
         try {
             io.execute(wipe);
             io.shutdown();
             startResetWatchdog(done);
         }catch(java.util.concurrent.RejectedExecutionException stopped) {
-            wipe.run();
+            try {
+                resetFallback.execute(wipe);
+                startResetWatchdog(done);
+            }catch(RuntimeException fallbackFailure) {
+                DiagnosticsStore.INSTANCE.setLastCloudErrorCode(
+                        RuntimeDiagnostics.CloudErrorCode.TIMEOUT);
+                Log.w(TAG,"Cloud reset fallback could not be scheduled");
+            }
         }
+    }
+    /** Production fallback: one daemon worker, never the Android caller thread. */
+    private static void startResetFallbackThread(Runnable wipe) {
+        Thread worker=new Thread(wipe,"scenevibe-cloud-reset-fallback");
+        worker.setDaemon(true);
+        worker.start();
     }
     /**
      * Bounded, non-blocking watchdog for the asynchronous reset. It waits on a throwaway daemon

@@ -216,7 +216,12 @@ errors surface as bounded codes (`NETWORK`, `UNAUTHORIZED`, `PROTOCOL`,
   `InstallationIdentity`, and the FinalTrack cache. It does not revoke the server
   token. The TV can reconnect later without a new code.
 - **Reset SceneVibe Cloud connection** (exceptional, available **only** in
-  Diagnostics): wipes the `SecretStore` secrets (`deviceToken`,
+  Diagnostics): flips the Cloud client to stopped synchronously, then performs the wipe
+  asynchronously. Work already executing on the single Cloud executor is allowed to finish
+  first; the queued wipe then removes any credential/cache/scheduler state written by that
+  work before reset completion. If the primary executor is already shut down, the wipe is
+  dispatched to a separate daemon fallback worker — it is never executed inline on the
+  Android caller thread. The wipe removes the `SecretStore` secrets (`deviceToken`,
   `activationSecret`) plus `cloud_identity` (`cloudDeviceId`, `activationId`,
   `userCode`) and the Cloud/runtime cache, and sets Cloud state to disconnected.
   **Reset never deletes `InstallationIdentity`.** There is **no** auto-reset on
