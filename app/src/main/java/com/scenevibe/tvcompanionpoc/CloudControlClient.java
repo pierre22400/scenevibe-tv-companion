@@ -21,7 +21,7 @@ final class CloudControlClient {
     private final CloudDeviceCredentials identity;
     private final CloudTrackRepository cache;
     private final MediaSyncedTrackScheduler scheduler;
-    /** Local stable id from PairingPolicy.deviceId(); used ONLY as the activation installationId. */
+    /** Local stable id from InstallationIdentity; used ONLY as the activation installationId. */
     private final String installationId;
     private final String origin;
     private volatile boolean running;
@@ -31,7 +31,7 @@ final class CloudControlClient {
         this.identity=new CloudDeviceCredentials(context);
         this.cache=cache;
         this.scheduler=scheduler;
-        this.installationId=PairingRuntime.get(context).deviceId();
+        this.installationId=new InstallationIdentity(context).installationId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
     }
     /** Restores cached media in OverlayService before starting the first network fetch. */
