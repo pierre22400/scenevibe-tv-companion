@@ -18,12 +18,8 @@ preserved intact behind the `SCENEVIBE_ENABLE_LAN_DEV` build flag.
 
 - **Starting SHA:** `c37229809e22e41dc28bdb701d067bd1c9f76aa3`
   (`Merge physically qualified TV cloud client`).
-- **Final SHA:** `<final HEAD of kiro/tv-product-hardening-001 at PR update - set by orchestrator>`.
-  This corrective cycle adds the final commit itself, so the true final HEAD is not
-  known while this file is being written. The orchestrator substitutes the real
-  branch-HEAD SHA and also sets the GitHub PR body at the very end of the cycle. No
-  stale SHA is presented as "final" here.
-- **Commit count:** `<number of commits from the starting SHA to the final HEAD - set by orchestrator>`.
+- **Final code SHA:** `ad04176d05f6147226558038fc21d5aeffe429f4` (the last functional commit of the corrective cycle). This doc-pinning commit sits one above it as the branch tip; the exact branch HEAD and commit count at PR update are stated on the GitHub PR itself.
+- **Commit count:** `16` commits from the starting SHA to the branch tip (`6` in this corrective cycle — 5 functional + this doc pin — on top of the prior `10`).
 - **Branch:** `kiro/tv-product-hardening-001` → base `main`.
 
 ## Files changed (against the starting SHA)
