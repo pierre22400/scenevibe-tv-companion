@@ -18,10 +18,12 @@ preserved intact behind the `SCENEVIBE_ENABLE_LAN_DEV` build flag.
 
 - **Starting SHA:** `c37229809e22e41dc28bdb701d067bd1c9f76aa3`
   (`Merge physically qualified TV cloud client`).
-- **Final SHA:** the branch HEAD of `kiro/tv-product-hardening-001` at PR creation.
-  At the time this file was written that was `8f4dc3e4a5bc93776cf66f38ebeca1343d7aa97a`;
-  if any further commit lands on the branch before the PR is opened, use the current
-  branch HEAD instead.
+- **Final SHA:** `<final HEAD of kiro/tv-product-hardening-001 at PR update - set by orchestrator>`.
+  This corrective cycle adds the final commit itself, so the true final HEAD is not
+  known while this file is being written. The orchestrator substitutes the real
+  branch-HEAD SHA and also sets the GitHub PR body at the very end of the cycle. No
+  stale SHA is presented as "final" here.
+- **Commit count:** `<number of commits from the starting SHA to the final HEAD - set by orchestrator>`.
 - **Branch:** `kiro/tv-product-hardening-001` → base `main`.
 
 ## Files changed (against the starting SHA)
@@ -55,9 +57,31 @@ Added:
 - `app/src/test/java/com/scenevibe/tvcompanionpoc/ConsumerModeTest.java`
 - `app/src/test/java/com/scenevibe/tvcompanionpoc/DiagnosticsNoSecretTest.java`
 - `app/src/test/java/com/scenevibe/tvcompanionpoc/InstallationIdentityTest.java`
+- `app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayArmedNotVisibleTest.java`
 - `app/src/test/java/com/scenevibe/tvcompanionpoc/SecretStoreMigrationTest.java`
 - `docs/tv-hardening-0.8.md`
 - `docs/pr-0.8.0-tv-hardening.md` (this file)
+
+### Corrective cycle 0.8 touches (Corrections 1-5 + doc corrections 7-9)
+
+This corrective cycle changed behavior and tests without adding features. In
+addition to the files above it touched:
+
+- `OverlayService.java` / `OverlayRenderer.java`: Consumer Mode `armed != visible`
+  made real on every entry path; renderer only on a real render; full hide on
+  expiry and on BLOCKED/UNAVAILABLE (Correction 1).
+- `CloudDeviceCredentials.java` / `SecretStore.java`: transactional credential
+  state: all-or-nothing activation persist, retryable `confirmClaimed`, durable
+  verifiable secret removal, fail-closed migration (Correction 2).
+- `CloudControlClient.java` / `DiagnosticsActivity.java` / `RuntimeDiagnostics.java`
+  / `DiagnosticsStore.java` / `BootReceiver.java` / `InstallationIdentity.java`:
+  Reset serialized through the runtime execution boundary; read-only Diagnostics;
+  honest bounded diagnostics for `lastBlockCode` and autostart decisions
+  (Corrections 3 + 5).
+- `.github/workflows/android-debug.yml`: `SIGNING_ENABLED` now requires all four
+  stable-signing secrets non-empty (Correction 4).
+- Tests extended: `SecretStoreMigrationTest`, `CloudResetTest`,
+  `DiagnosticsNoSecretTest`, and the new `OverlayArmedNotVisibleTest`.
 
 ## Architecture per subsystem
 
@@ -98,19 +122,19 @@ Added:
   build+upload; adds a `SCENEVIBE_ENABLE_LAN_DEV=true` compile proof; adds
   secret-gated stable signing that no-ops without secrets.
 
-## Exact test results (this cycle, run locally with JDK 17 forced)
+## Exact test results (this corrective cycle, run locally with JDK 17 forced)
 
 - **Python boundary suite** — `python3 -m unittest discover -s tests` → **Ran 12
   tests, OK**.
 - **Full Android gate** — `gradle :app:assembleDebug :app:lintDebug
   :app:testDebugUnitTest -Dorg.gradle.java.home=…/java/17 --stacktrace` → **BUILD
   SUCCESSFUL**.
-- **JUnit classes run via `testDebugUnitTest`** (13 classes, all green):
+- **JUnit classes run via `testDebugUnitTest`** (14 classes, 95 tests, all green):
   `AutostartPolicyTest`, `CloudDeviceCredentialsTest`, `CloudProtocolTest`,
   `CloudResetTest`, `CloudTrackRepositoryTest`, `CommentaryServerAuthTest`,
   `ConsumerModeTest`, `DiagnosticsNoSecretTest`, `DisplayCountdownTest`,
   `InstallationIdentityTest`, `MediaSyncedTrackSchedulerIdentityTest`,
-  `PairingPolicyTest`, `SecretStoreMigrationTest`.
+  `OverlayArmedNotVisibleTest`, `PairingPolicyTest`, `SecretStoreMigrationTest`.
 - **Four build proofs:**
   1. Full gate (assembleDebug + lintDebug + testDebugUnitTest) — BUILD SUCCESSFUL.
   2. `SCENEVIBE_ENABLE_LAN_DEV=true` assembleDebug — BUILD SUCCESSFUL.
@@ -172,14 +196,37 @@ string is exactly **"TV ACK acknowledged — safe to turn off the PC"**.
 
 Build the qualification APK with
 `SCENEVIBE_CLOUD_ORIGIN=https://interface-scenevibe-3wxg.vercel.app` (stable-signed
-once the four secrets are configured). Run all eight tests on a physical Android 15
-TV (e.g. Sony Bravia) with a real streaming app (e.g. Prime Video).
+once the four secrets are configured). The eight tests split across two distinct
+qualifications, which must not be conflated:
 
-1. **Update / migration with no uninstall (if signature compatible).** Install the
-   previous build, connect, then install the new stable-signed APK over it with
-   `adb install -r` (no uninstall). Confirm the update succeeds and the migrated
-   `installationId`, `cloudDeviceId` and `deviceToken` are preserved (still
-   connected, no re-pairing needed).
+- **(A) Real Sony BRAVIA product qualification** on the actual Sony device with a
+  real streaming app (e.g. Prime Video): autostart, Cloud connect, offline cache,
+  media identity, reset, and on-device UI. This exercises the product on the shipping
+  TV. It does **not** assert the Sony device's OS version, and in particular does not
+  claim the Sony BRAVIA runs Android 15.
+- **(B) Android 15 / API 35 validation** on an Android 15 emulator or a separate
+  Android 15 device: the platform-specific runtime behaviors that need API 35 to be
+  meaningful, namely `FGS_BOOT_COMPLETED_RESTRICTIONS` (the `specialUse` FGS still
+  starts from `BOOT_COMPLETED`), `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED` receiver
+  dispatch. See the FGS-from-boot audit above for why `specialUse` is not on Android
+  15's boot-disallowed-type list.
+
+Tests 2-8 below are the real Sony BRAVIA product qualification (A). Test 1 (update /
+migration) and the FGS-from-boot behavior belong to the Android 15 / API 35
+validation (B); run the boot-start and per-type checks on the A15 emulator or device.
+
+1. **Update / migration with no uninstall (if signature compatible).** Signature
+   compatibility is the precondition, and it is **not** guaranteed for the very first
+   move to the stable key: the prior debug CI signature was an ephemeral debug cert,
+   so a stable-signed 0.8.0 may fail to `adb install -r` over an installed 0.7.1 that
+   carried the old debug signature. In that case the initial move to the stable key
+   needs **one** uninstall of 0.7.1, then a clean install of 0.8.0; after that,
+   subsequent 0.8.x updates install in place. To truly qualify a 0.7.1 -> 0.8.0
+   update **without** uninstall, first install a reference 0.7.1 APK signed with the
+   **same stable cert**, connect it, then `adb install -r` the stable-signed 0.8.0
+   over it. Confirm the in-place update succeeds and the migrated `installationId`,
+   `cloudDeviceId` and `deviceToken` are preserved (still connected, no re-pairing
+   needed).
 2. **Cloud connect with 6-digit code.** On a fresh install, Connect to SceneVibe
    Cloud; the TV shows `Code: <6 digits>` + `Waiting for connection...`. Claim the
    code via the merged harness, push FinalTrack "Eaux troubles"; the TV shows

@@ -157,8 +157,13 @@ on that boot-disallowed list, so the overlay FGS remains startable from boot. Th
 OEM/policy blocks the start, the platform throws
 `ForegroundServiceStartNotAllowedException`; `BootReceiver` catches only that
 start failure, logs a bounded diagnostic, and stays disarmed (no retry loop, no
-silent hiding). This boot/FGS runtime behavior needs physical confirmation on a
-target Android 15 TV; it is compile-/lint-verified only here.
+silent hiding). This boot/FGS runtime behavior needs confirmation on Android 15 /
+API 35 (an Android 15 emulator or an Android 15 device); it is compile-/lint-verified
+only here. Note this Android 15 / API 35 validation is distinct from the real Sony
+BRAVIA product qualification: the Sony device exercises the product end to end
+(autostart, Cloud, cache, media identity, reset, UI), but its OS version is not
+assumed to be Android 15, so the API 35 boot-start and per-type behaviors are
+validated separately on an Android 15 emulator or device.
 
 ## Diagnostics (observational, bounded, no secrets)
 
@@ -195,8 +200,14 @@ errors surface as bounded codes (`NETWORK`, `UNAUTHORIZED`, `PROTOCOL`,
 
 ## Stable APK signing
 
-The Cloud qualification APK can be signed with a **stable** key so a later build
-updates an installed one without an uninstall. Signing is **secret-gated** in CI
+The Cloud qualification APK can be signed with a **stable** key so that, once two
+builds share that same stable certificate, a later build updates an installed one
+without an uninstall. The first move onto the stable key is the exception: a build
+that was previously installed with the ephemeral debug CI signature is not signature
+compatible with the stable-signed build, so that initial transition may need **one**
+uninstall. To qualify a true in-place 0.7.1 -> 0.8.0 update without uninstall,
+install a reference 0.7.1 signed with the **same stable cert** first and then
+`adb install -r` the stable-signed 0.8.0 over it. Signing is **secret-gated** in CI
 and reads material **only** from GitHub Actions secrets — nothing is committed:
 
 - `SCENEVIBE_ANDROID_KEYSTORE_BASE64`

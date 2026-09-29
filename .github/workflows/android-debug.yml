@@ -19,9 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # `secrets` is not available in step-level `if:` expressions, so expose the
-      # "are stable-signing secrets configured" boolean as an env var here and gate
-      # the optional signing steps on it below.
-      SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' }}
+      # "are ALL FOUR stable-signing secrets configured" boolean as an env var here and
+      # gate the optional signing steps on it below. This is true only when every one of
+      # the keystore Base64, keystore password, key alias, and key password secrets is
+      # non-empty; a partial set leaves signing disabled so CI cannot half-configure it.
+      # Only the boolean result is exposed here; no secret value is ever surfaced.
+      SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
