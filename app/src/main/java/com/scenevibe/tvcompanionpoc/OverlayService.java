@@ -86,10 +86,16 @@ public final class OverlayService extends Service {
             return START_NOT_STICKY;
         }
         String action = intent == null ? null : intent.getAction();
-        // "armed != visible": the boot-prepare entry primes the runtime but never draws the
-        // overlay. Every other entry (user-initiated top/bottom, cloud connect, restart with
-        // null action) keeps the original behavior of showing the window immediately.
+        // "armed != visible": in Consumer Mode (ENABLE_LAN_DEV false) EVERY entry path (Start
+        // SceneVibe / ACTION_TOP, ACTION_BOTTOM, ACTION_CLOUD_CONNECT, ACTION_BOOT_PREPARE and
+        // a START_STICKY restart with a null Intent) is ARM-only: it primes the scheduler,
+        // cache, MediaSession probe and Cloud client but never draws the overlay. The renderer
+        // is created lazily only inside the scheduler onRender callback when a comment is due.
+        // In LAN DEV only, ACTION_TOP/ACTION_BOTTOM and a null-Intent restart still show the
+        // window immediately (the permanent POC badge behavior), while ACTION_BOOT_PREPARE
+        // stays armed-not-visible in both modes.
         boolean bootPrepare = ACTION_BOOT_PREPARE.equals(action);
+        boolean showOnEntry = shouldShowOnEntry(action, BuildConfig.ENABLE_LAN_DEV);
         boolean bottom = ACTION_BOTTOM.equals(action)
                 || (!ACTION_TOP.equals(action) && getSharedPreferences("overlay", Context.MODE_PRIVATE)
                         .getBoolean("bottom", false));
@@ -100,7 +106,7 @@ public final class OverlayService extends Service {
                     .putBoolean("bottom", bottom).apply();
         }
         try {
-            if (!bootPrepare) {
+            if (showOnEntry) {
                 showRenderer();
             }
 
@@ -173,8 +179,9 @@ public final class OverlayService extends Service {
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
 
-            String visibility = bootPrepare ? "armed (no overlay shown)"
-                    : "visible; position=" + (bottom ? "bottom" : "top");
+            String visibility = showOnEntry
+                    ? "visible; position=" + (bottom ? "bottom" : "top")
+                    : "armed (no overlay shown)";
             if (BuildConfig.ENABLE_LAN_DEV) {
                 Log.i(TAG, "Overlay " + visibility
                         + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
@@ -200,9 +207,35 @@ public final class OverlayService extends Service {
      */
     private void showRenderer() {
         if (renderer == null) {
-            renderer = new OverlayRenderer(this, this::onPermissionLost);
+            renderer = new OverlayRenderer(this, this::onPermissionLost, BuildConfig.ENABLE_LAN_DEV);
         }
         renderer.show(bottomPosition);
+    }
+
+    /**
+     * Pure, testable decision for whether an {@code onStartCommand} entry should draw the
+     * overlay immediately, or merely arm the runtime. In Consumer Mode ({@code enableLanDev}
+     * false) NO entry path shows the window: every path (Start SceneVibe / ACTION_TOP,
+     * ACTION_BOTTOM, ACTION_CLOUD_CONNECT, ACTION_BOOT_PREPARE and a null-Intent restart) is
+     * ARM-only, and the renderer is created lazily only when a comment is actually due. In LAN
+     * DEV, ACTION_TOP/ACTION_BOTTOM and a null-Intent restart still show immediately, while
+     * ACTION_BOOT_PREPARE stays armed-not-visible.
+     */
+    static boolean shouldShowOnEntry(String action, boolean enableLanDev) {
+        if (!enableLanDev) return false;
+        if (ACTION_BOOT_PREPARE.equals(action)) return false;
+        if (ACTION_CLOUD_CONNECT.equals(action)) return false;
+        // LAN DEV: ACTION_TOP, ACTION_BOTTOM, and a null-Intent START_STICKY restart show now.
+        return true;
+    }
+
+    /**
+     * Pure, testable decision for whether the renderer restores the permanent SceneVibe status
+     * badge on comment expiry / media-identity loss (LAN DEV) or fully removes the overlay
+     * window (Consumer Mode). Mirrors {@link OverlayRenderer}'s {@code permanentBadge} seam.
+     */
+    static boolean shouldRestoreBadgeOnExpiry(boolean enableLanDev) {
+        return enableLanDev;
     }
 
     /** Stop if Android revokes the user's overlay capability during the test. */
