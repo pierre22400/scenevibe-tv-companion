@@ -108,6 +108,7 @@ public final class MainActivity extends Activity {
         addButton(controls, "Connect to SceneVibe Cloud", this::connectCloud);
         addButton(controls, "Disconnect cloud", this::disconnectCloud);
         autostartButton = addButton(controls, autostartLabel(), this::toggleAutostart);
+        addButton(controls, "Diagnostics", this::openDiagnostics);
 
         TextView instruction = new TextView(this);
         instruction.setText(BuildConfig.ENABLE_LAN_DEV
@@ -198,10 +199,20 @@ public final class MainActivity extends Activity {
         startOverlay(OverlayService.ACTION_CLOUD_CONNECT);
     }
 
-    /** Clears the TV-side cloud credential; server revocation is a future account flow. */
+    /**
+     * Disconnect Cloud (normal UI): stops local cloud use and clears the activation
+     * temporaries but KEEPS the durable deviceToken + cloudDeviceId, the InstallationIdentity
+     * and the FinalTrack cache, so a later reconnect reuses the credential. The exceptional
+     * Reset (which deletes those) lives only in DiagnosticsActivity.
+     */
     private void disconnectCloud() {
         new CloudDeviceCredentials(this).disconnect();
         refreshCloud();
+    }
+
+    /** Opens the read-only Diagnostics screen; it is off the normal path (not a launcher entry). */
+    private void openDiagnostics() {
+        startActivity(new Intent(this, DiagnosticsActivity.class));
     }
 
     private String lanIpv4() {

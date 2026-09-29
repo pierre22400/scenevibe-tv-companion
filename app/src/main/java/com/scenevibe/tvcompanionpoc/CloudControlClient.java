@@ -64,7 +64,11 @@ final class CloudControlClient {
         });
     }
     /** Clears only local cloud credentials; the durable cached track remains available offline. */
-    void disconnect() {identity.disconnect();Log.i(TAG,"Cloud identity disconnected locally");}
+    void disconnect() {
+        identity.disconnect();
+        DiagnosticsStore.INSTANCE.setCloudState(RuntimeDiagnostics.CloudState.DISCONNECTED);
+        Log.i(TAG,"Cloud identity disconnected locally");
+    }
     /** Stops network work when the foreground service stops; MediaSession remains independent. */
     void stop() {running=false;io.shutdownNow();}
     /** Performs one conditional fetch and schedules a bounded, backoff-aware subsequent poll. */
@@ -74,10 +78,31 @@ final class CloudControlClient {
             if(identity.activationId()!=null)checkActivation();
             if(identity.connected())fetchAssignment();
             failures=0;identity.setOffline(false);
+            // Observational only: reflect the coarse cloud state after a clean poll.
+            publishCloudState();
         }catch(Exception error){failures=Math.min(4,failures+1);identity.setOffline(true);
+            // Observational only: a failed poll is a bounded NETWORK code, never a raw trace.
+            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NETWORK);
+            publishCloudState();
             Log.w(TAG,"Cloud offline; cached track remains available");}
         long delay=CloudProtocol.backoffSeconds(failures);
         if(running)io.schedule(this::poll,delay,TimeUnit.SECONDS);
+    }
+    /**
+     * Observational only: maps the current credential state to the bounded diagnostics cloud
+     * state. Never influences a decision; the client's behavior is unchanged by this call.
+     */
+    private void publishCloudState() {
+        RuntimeDiagnostics.CloudState state=identity.credentialUnavailable()
+                ? RuntimeDiagnostics.CloudState.DISCONNECTED
+                : identity.userCode()!=null?RuntimeDiagnostics.CloudState.ACTIVATION_PENDING
+                : identity.connected()?(identity.offline()?RuntimeDiagnostics.CloudState.OFFLINE
+                        :RuntimeDiagnostics.CloudState.CONNECTED)
+                : RuntimeDiagnostics.CloudState.DISCONNECTED;
+        DiagnosticsStore.INSTANCE.setCloudState(state);
+        if(identity.credentialUnavailable())
+            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(
+                    RuntimeDiagnostics.CloudErrorCode.CREDENTIAL_UNAVAILABLE);
     }
     /** Reads the activation lifecycle; claimed connects, expired drops only the temporaries. */
     private void checkActivation() throws Exception {
@@ -101,11 +126,20 @@ final class CloudControlClient {
         Reply reply=http("GET","devices/"+cloudDeviceId+"/assignment?afterRevision="+cache.acknowledged(),token,null);
         // 204 = nothing newer, 404 = authenticated but no current assignment: both NORMAL, not offline.
         if(reply.status==204||reply.status==404)return;
-        if(reply.status==401) {Log.w(TAG,"Cloud credential rejected");return;}
+        if(reply.status==401) {
+            // Observational only: a bounded UNAUTHORIZED code. This never auto-resets the
+            // identity - Reset Cloud is a manual Diagnostics-only action.
+            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED);
+            Log.w(TAG,"Cloud credential rejected");return;
+        }
         JSONObject data=reply.body;
-        if(reply.status!=200||data==null||!CloudProtocol.validAssignment(data,cloudDeviceId,cache.revision()))
+        if(reply.status!=200||data==null||!CloudProtocol.validAssignment(data,cloudDeviceId,cache.revision())) {
+            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.PROTOCOL);
             throw new IllegalStateException("Invalid assignment response");
+        }
         long revision=data.optLong("revision",-1), cached=cache.revision();
+        // Observational only: record the highest assignment revision received.
+        DiagnosticsStore.INSTANCE.setLastAssignmentRevisionReceived(revision);
         JSONObject runtime=data.optJSONObject("runtimeTrack");
         String finalTrackId=data.optString("finalTrackId","");
         // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
@@ -118,6 +152,10 @@ final class CloudControlClient {
         if(confirmed.status!=200||!CloudProtocol.validAck(confirmed.body,cloudDeviceId,revision))
             throw new IllegalStateException("Cloud ACK rejected");
         if(!cache.markAcknowledged(revision))throw new IllegalStateException("Cloud ACK state could not be persisted");
+        // Observational only: record the last revision the cloud successfully acknowledged
+        // and clear any prior bounded error code after a fully successful cycle.
+        DiagnosticsStore.INSTANCE.setLastSuccessfulAckRevision(revision);
+        DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NONE);
         Log.i(TAG,"Cloud track loaded; revision="+revision);
     }
     /** Reads at most three megabytes from an explicitly configured HTTPS endpoint. */

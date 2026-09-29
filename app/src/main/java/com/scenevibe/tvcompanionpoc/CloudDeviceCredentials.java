@@ -46,6 +46,13 @@ final class CloudDeviceCredentials {
         boolean confirmClaimed();
         void clearActivationTemporaries();
         void disconnect();
+        /**
+         * EXCEPTIONAL reset of the cloud identity: removes cloudDeviceId, activationId,
+         * userCode and every state flag (connected/offline) so no cloud identity remains
+         * here. It NEVER touches the separate 'installation' identity store. The two
+         * secrets are wiped through the SecretStore by the caller.
+         */
+        void reset();
         /** Deletes a single legacy plaintext secret key AFTER its ciphertext is verified. */
         void removeLegacyPlaintext(String key);
     }
@@ -81,6 +88,12 @@ final class CloudDeviceCredentials {
             @Override public void disconnect() {
                 prefs.edit().remove("activationId").remove("userCode")
                         .putBoolean("connected",false).commit();
+            }
+            @Override public void reset() {
+                // Wipe the whole cloud_identity file: cloudDeviceId, activationId, userCode,
+                // connected/offline flags and any residual legacy plaintext secret keys. The
+                // 'installation' identity store is a DIFFERENT file and is never touched here.
+                prefs.edit().clear().commit();
             }
             @Override public void removeLegacyPlaintext(String key) {
                 prefs.edit().remove(key).commit();
@@ -182,4 +195,21 @@ final class CloudDeviceCredentials {
      * touches the FinalTrack cache.
      */
     void disconnect() {secrets.remove(SECRET_ACTIVATION_SECRET);storage.disconnect();}
+    /**
+     * EXCEPTIONAL "Reset SceneVibe Cloud connection" (user section 14), available ONLY from
+     * Diagnostics and never triggered automatically by any network/timeout/401/error path.
+     * It deletes BOTH encrypted secrets (deviceToken + activationSecret) from the SecretStore
+     * and wipes the non-secret cloud_identity store (cloudDeviceId, activationId, userCode,
+     * connected/offline). It DELIBERATELY leaves the separate 'installation' identity store
+     * untouched, so the stable local installationId survives a cloud reset. The FinalTrack
+     * cache is cleared by the caller (CloudTrackRepository.clear()), not here. After a reset
+     * the cloud state reads as disconnected with no credential. A previously observed
+     * credential-unavailable flag is cleared because there is no longer any secret to read.
+     */
+    void reset() {
+        secrets.remove(SECRET_DEVICE_TOKEN);
+        secrets.remove(SECRET_ACTIVATION_SECRET);
+        storage.reset();
+        credentialUnavailable=false;
+    }
 }

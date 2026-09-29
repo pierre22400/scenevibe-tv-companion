@@ -36,6 +36,7 @@ public final class SecretStoreMigrationTest {
         @Override public void disconnect() {
             values.remove("activationId");values.remove("userCode");flags.put("connected",false);
         }
+        @Override public void reset() {values.clear();flags.clear();}
         @Override public void removeLegacyPlaintext(String key) {values.remove(key);}
     }
 

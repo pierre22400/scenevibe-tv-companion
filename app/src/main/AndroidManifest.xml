@@ -23,6 +23,16 @@
       </intent-filter>
     </activity>
 
+    <!--
+      Read-only Diagnostics screen. It is reachable ONLY from MainActivity (explicit intent)
+      and is deliberately OFF the normal parcours: it is exported=false and declares NO
+      LEANBACK_LAUNCHER category, so it is not a launcher entry and no other app can start it.
+      The exceptional "Reset SceneVibe Cloud connection" action lives only here.
+    -->
+    <activity
+      android:name=".DiagnosticsActivity"
+      android:exported="false" />
+
     <service
       android:name=".MediaSessionAccessService"
       android:label="SceneVibe media-session access"

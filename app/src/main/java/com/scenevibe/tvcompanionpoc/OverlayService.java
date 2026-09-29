@@ -62,6 +62,8 @@ public final class OverlayService extends Service {
                     .build();
             startForeground(NOTIFICATION_ID, notification);
             foregroundReady = true;
+            // Observational only: record that the foreground service is up. Never gates logic.
+            DiagnosticsStore.INSTANCE.setServiceRunning(true);
             Log.i(TAG, "Foreground notification started");
         } catch (RuntimeException error) {
             Log.e(TAG, "Foreground service initialization failed", error);
@@ -115,6 +117,11 @@ public final class OverlayService extends Service {
                         if (renderer != null) renderer.onPlayback(playing, freeze);
                     }
                     @Override public void onEligibility(boolean eligible) {
+                        // Observational only: mirror the last media-identity decision into the
+                        // bounded diagnostics store. This never influences the eligibility rule.
+                        DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible
+                                ? RuntimeDiagnostics.MediaIdentityState.ELIGIBLE
+                                : RuntimeDiagnostics.MediaIdentityState.BLOCKED);
                         // Media no longer matches: hide the tracked card immediately. Never
                         // create a renderer just to hide nothing.
                         if (!eligible && renderer != null) renderer.onTrackEligibility(false);
@@ -146,6 +153,11 @@ public final class OverlayService extends Service {
             if (mediaSessionProbe == null) {
                 mediaSessionProbe = new MediaSessionProbe(this, new MediaSessionProbe.Listener() {
                     @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot) {
+                        // Observational only: record the last foreground media app package
+                        // (a package name, never any content) for the diagnostics screen.
+                        if (snapshot != null) {
+                            DiagnosticsStore.INSTANCE.setLastObservedMediaApp(snapshot.packageName);
+                        }
                         if (trackScheduler != null) trackScheduler.onPlaybackSnapshot(snapshot);
                     }
                     @Override public void onUnavailable() {
@@ -229,6 +241,8 @@ public final class OverlayService extends Service {
             renderer = null;
         }
         stopForeground(STOP_FOREGROUND_REMOVE);
+        // Observational only: the service is no longer running.
+        DiagnosticsStore.INSTANCE.setServiceRunning(false);
         Log.i(TAG, "OverlayService destroyed");
         super.onDestroy();
     }
