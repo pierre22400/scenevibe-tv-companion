@@ -119,6 +119,30 @@ is auto-erased, and the state becomes observable as `CREDENTIAL_UNAVAILABLE`.
   `userCode`, flags, revisions) may remain in plaintext app-private prefs.
 - `allowBackup=false` is preserved, so secrets are not swept into cloud backup.
 
+### Credential state safety contract
+
+The credential write path is designed for a **coherent** credential state, not for
+absolute filesystem-level atomicity. Android offers **no** cross-store transaction
+that fsyncs the AndroidKeyStore-backed `SecretStore` and the several
+`SharedPreferences` records together, so this cycle does **not** claim one. The
+actual contract is:
+
+- A **successful** transition leaves a coherent new credential state: both secrets
+  are encrypted and verified, the non-secret batch is committed, and no old/new
+  mix remains.
+- Any **detected** persistence or keystore uncertainty — a non-durable `commit`, a
+  read-back mismatch, or a keystore/cipher failure — **fails closed**: the code
+  rolls back to the previous tuple where it can and **never operationalizes a mixed
+  or uncertain credential tuple**.
+- Such a state is exposed as `CREDENTIAL_UNAVAILABLE`, and the store **never** falls
+  back to reading legacy plaintext as an operational credential.
+
+The `SecretStore` fault-injection tests model a `commit` failure as leaving the
+previous non-secret values in place. That is the observable behavior of the
+injected in-memory fake used to prove the fail-closed/rollback logic — it is **not**
+a hardware-level atomicity guarantee about production `SharedPreferences` +
+AndroidKeyStore.
+
 ## Autostart and reboot behavior
 
 - **Start SceneVibe with TV** is an explicit opt-in preference

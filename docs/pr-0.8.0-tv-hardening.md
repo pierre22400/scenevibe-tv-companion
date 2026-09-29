@@ -66,9 +66,12 @@ addition to the files above it touched:
 - `OverlayService.java` / `OverlayRenderer.java`: Consumer Mode `armed != visible`
   made real on every entry path; renderer only on a real render; full hide on
   expiry and on BLOCKED/UNAVAILABLE (Correction 1).
-- `CloudDeviceCredentials.java` / `SecretStore.java`: transactional credential
-  state: all-or-nothing activation persist, retryable `confirmClaimed`, durable
-  verifiable secret removal, fail-closed migration (Correction 2).
+- `CloudDeviceCredentials.java` / `SecretStore.java`: application-level coherent
+  credential state (not filesystem-level atomicity): a best-effort
+  encrypt/verify/commit-then-rollback activation persist, retryable
+  `confirmClaimed`, durable verifiable secret removal, fail-closed migration
+  (Correction 2). See "Credential state safety contract" below for the exact
+  guarantee.
 - `CloudControlClient.java` / `DiagnosticsActivity.java` / `RuntimeDiagnostics.java`
   / `DiagnosticsStore.java` / `BootReceiver.java` / `InstallationIdentity.java`:
   Reset serialized through the runtime execution boundary; read-only Diagnostics;
@@ -98,6 +101,21 @@ addition to the files above it touched:
 - **Legacy migration** — value-stable `installationId` migration from the legacy
   `PairingPolicy` `deviceId`; encrypt→persist→verify→then-delete for legacy
   plaintext secrets (never delete-first); fail-closed keeps the old value.
+- **Credential state safety contract** — the credential write path does **not**
+  claim absolute filesystem-level atomicity across the AndroidKeyStore-backed
+  `SecretStore` and the multiple `SharedPreferences` records it touches; no such
+  cross-store fsync transaction exists on Android. What it does guarantee, at the
+  application level, is: a **successful** transition leaves a **coherent new
+  credential state** (secrets encrypted-and-verified, non-secret batch committed,
+  no old/new mix); any **detected** persistence or keystore uncertainty (a
+  non-durable commit, a read-back mismatch, or a keystore/cipher failure) **fails
+  closed** — the code rolls back to the previous tuple where it can and never
+  operationalizes a mixed or uncertain credential tuple. Such a state is exposed
+  as `CREDENTIAL_UNAVAILABLE`, and the store **never** falls back to reading legacy
+  plaintext as an operational credential. The `SecretStore` fault-injection tests
+  model a `commit` failure as leaving the previous non-secret values in place;
+  that is the observable behavior of the injected fake, **not** a hardware-level
+  atomicity claim about production `SharedPreferences`/Keystore.
 - **Consumer cloud-only mode** — CommentaryServer / port 8765 / pairing UI /
   IPv4/port gated behind `ENABLE_LAN_DEV`; Cloud + MediaSession run ungated.
 - **Autostart + boot** — opt-in `AutostartPreference` (default false);

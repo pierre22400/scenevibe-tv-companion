@@ -17,7 +17,13 @@ import javax.net.ssl.HttpsURLConnection;
 final class CloudControlClient {
     private static final String TAG="SceneVibeCloud";
     private static final int LIMIT=3_000_000;
-    private final ScheduledExecutorService io=Executors.newSingleThreadScheduledExecutor();
+    /**
+     * Bounded watchdog for the asynchronous reset: if the queued wipe has not completed within
+     * this window a bounded diagnostic is surfaced. This never blocks the calling (Android
+     * main) thread; it runs on a throwaway daemon thread and only emits an observational code.
+     */
+    private static final long RESET_WATCHDOG_SECONDS=15;
+    private final ScheduledExecutorService io;
     private final CloudDeviceCredentials identity;
     private final CloudTrackRepository cache;
     private final MediaSyncedTrackScheduler scheduler;
@@ -28,11 +34,30 @@ final class CloudControlClient {
     private int failures;
     /** Links the outbound client to an already created passive MediaSession scheduler. */
     CloudControlClient(Context context, CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
+        this.io=Executors.newSingleThreadScheduledExecutor();
         this.identity=new CloudDeviceCredentials(context);
         this.cache=cache;
         this.scheduler=scheduler;
         this.installationId=new InstallationIdentity(context).installationId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
+    }
+    /**
+     * Injectable seam for deterministic JVM tests of the ASYNCHRONOUS reset. It takes the
+     * already-built cloud collaborators plus the single-thread scheduled executor so a test can
+     * drive {@link #reset(Runnable)} without an Android {@link Context} or a live HTTPS stack.
+     * The origin is left empty (so {@link #start()} is a no-op and no network is ever touched)
+     * and the installationId is a fixed non-secret placeholder; only the reset lifecycle -
+     * synchronous running-flip, wipe queued onto io, executor shutdown, async completion - is
+     * exercised. Production code always uses the {@link Context} constructor above.
+     */
+    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
+            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
+        this.io=io;
+        this.identity=identity;
+        this.cache=cache;
+        this.scheduler=scheduler;
+        this.installationId="test-installation";
+        this.origin="";
     }
     /** Restores cached media in OverlayService before starting the first network fetch. */
     void start() {
@@ -211,51 +236,95 @@ final class CloudControlClient {
             }
         } finally {connection.disconnect();}
     }
+    /** Convenience overload: the coordinated reset with no completion callback. */
+    void reset() {
+        reset(null);
+    }
     /**
      * EXCEPTIONAL "Reset SceneVibe Cloud connection" coordinated with the runtime (user
-     * section 14 / Correction 3). It must be safe even while a poll is mid-flight, so it flips
-     * running=false FIRST and then performs the whole wipe on the SAME single-thread io
-     * executor. Because {@code http()} begins with {@code if(!running) throw}, no in-flight or
-     * subsequently scheduled GET/ACK can complete a write once running is false, and running
-     * the wipe on io serializes it after any request already in progress. The wipe deletes the
-     * cloud identity (deviceToken/activationSecret/cloudDeviceId/activationId/userCode) and the
-     * cached track, clears the scheduler (dropping any in-memory runtime track), and zeroes the
-     * Cloud diagnostics. It NEVER touches the separate 'installation' identity store. The
-     * autostart pref is left as-is (AutostartPolicy then concludes NOTHING_TO_RESTORE).
+     * section 14 / Correction 3), corrected so it NEVER blocks the calling thread. Because
+     * {@link OverlayService#onStartCommand} invokes this on the Android MAIN thread, reset()
+     * must return immediately and complete the wipe asynchronously.
      *
-     * <p>reset() also fully tears the io executor down before returning (submit the wipe, then
-     * {@code io.shutdown()} + {@code awaitTermination}) so that (a) the wipe has definitely
-     * completed and no scheduled poll survives, and (b) this instance is a spent, single-use
-     * object. A {@link ScheduledExecutorService} cannot be reused once shut down, so the caller
-     * ({@link OverlayService}) discards this client after reset and reconstructs a fresh one on
-     * the next entry; that keeps the serialization guarantee above without a stale, un-armable
-     * client lingering behind a {@code running==false} flag.
+     * <p>It flips {@code running=false} FIRST and synchronously, so that {@code http()}'s
+     * leading {@code if(!running) throw} stops any in-flight or subsequently scheduled GET/ACK
+     * from completing a write and no new poll can start with the old credential. It then queues
+     * the wipe onto the SAME single-thread io executor, so the wipe is serialized AFTER any
+     * request already executing there, and calls {@code io.shutdown()} (NOT shutdownNow, so the
+     * already-queued wipe still runs). It does NOT call {@code awaitTermination} on the calling
+     * thread - there is no main-thread wait.
+     *
+     * <p>The wipe deletes the cloud identity (deviceToken/activationSecret/cloudDeviceId/
+     * activationId/userCode) and the cached track, clears the scheduler (dropping any in-memory
+     * runtime track), and zeroes the Cloud diagnostics. It NEVER touches the separate
+     * 'installation' identity store, so the stable local installationId survives. The autostart
+     * pref is left as-is (AutostartPolicy then concludes NOTHING_TO_RESTORE).
+     *
+     * <p>Completion is asynchronous: an optional {@code onComplete} callback runs at the end of
+     * the wipe runnable (on the io thread). A bounded daemon watchdog surfaces a bounded
+     * diagnostic if the wipe does not complete within {@link #RESET_WATCHDOG_SECONDS}; it never
+     * blocks the UI thread. This instance is spent after reset: the io executor is shut down and
+     * a {@link ScheduledExecutorService} cannot be reused, so {@link OverlayService} discards
+     * this client and reconstructs a fresh one on the next entry.
+     *
+     * @param onComplete optional callback invoked on the io thread once the wipe finishes; may
+     *     be {@code null}. It never receives a secret and must not block.
      */
-    void reset() {
+    void reset(Runnable onComplete) {
         // Stop first so a mid-flight request cannot complete a write and no new poll runs with
-        // the old credential; http()'s leading running-check enforces this.
+        // the old credential; http()'s leading running-check enforces this. This is the only
+        // synchronous work on the calling (Android main) thread.
         running=false;
+        // A single latch that both the completion callback and the watchdog observe, so the
+        // watchdog only fires when the wipe genuinely did not finish in time.
+        final java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);
         Runnable wipe=()->{
-            identity.reset();
-            cache.clear();
-            scheduler.clear();
-            DiagnosticsStore.INSTANCE.resetCloudObservations();
-            Log.i(TAG,"Cloud reset completed on io executor");
+            try {
+                identity.reset();
+                cache.clear();
+                scheduler.clear();
+                DiagnosticsStore.INSTANCE.resetCloudObservations();
+                Log.i(TAG,"Cloud reset completed on io executor");
+            }finally {
+                done.countDown();
+                if(onComplete!=null) {
+                    try {onComplete.run();}
+                    catch(RuntimeException ignored){Log.w(TAG,"Cloud reset completion callback failed");}
+                }
+            }
         };
-        // Run the wipe on io so it is serialized after any request already executing there,
-        // then shut io down and wait for the wipe to finish. If io is already shut down
-        // (service stopped), run it inline: there is no concurrent client, so a direct-but-safe
-        // wipe is correct. Either way, when reset() returns the wipe has completed and no future
-        // poll can run; the caller may safely drop this now-spent instance.
+        // Queue the wipe so it serializes after any request already executing on io, then shut
+        // io down WITHOUT waiting: shutdown() lets the queued wipe run but rejects any future
+        // scheduled poll. If io is already shut down (service stopped) there is no concurrent
+        // client, so a direct-but-safe inline wipe is correct.
         try {
             io.execute(wipe);
             io.shutdown();
-            io.awaitTermination(15,TimeUnit.SECONDS);
+            startResetWatchdog(done);
         }catch(java.util.concurrent.RejectedExecutionException stopped) {
             wipe.run();
-        }catch(InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
         }
+    }
+    /**
+     * Bounded, non-blocking watchdog for the asynchronous reset. It waits on a throwaway daemon
+     * thread (never the caller) up to {@link #RESET_WATCHDOG_SECONDS}; if the wipe has not
+     * completed by then it surfaces a bounded observational diagnostic. It never carries a
+     * secret and never blocks the UI thread.
+     */
+    private void startResetWatchdog(java.util.concurrent.CountDownLatch done) {
+        Thread watchdog=new Thread(()->{
+            try {
+                if(!done.await(RESET_WATCHDOG_SECONDS,TimeUnit.SECONDS)) {
+                    DiagnosticsStore.INSTANCE.setLastCloudErrorCode(
+                            RuntimeDiagnostics.CloudErrorCode.TIMEOUT);
+                    Log.w(TAG,"Cloud reset did not complete within the bounded window");
+                }
+            }catch(InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        },"scenevibe-cloud-reset-watchdog");
+        watchdog.setDaemon(true);
+        watchdog.start();
     }
     /** Small transport envelope with no credential exposed to logs or activities. */
     private static final class Reply {
