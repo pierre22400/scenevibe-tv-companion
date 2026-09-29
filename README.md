@@ -10,6 +10,22 @@ without controlling, modifying, capturing or replacing the video stream.
 This repository is an installable technical POC, not the final SceneVibe TV
 application.
 
+## Cycle 0.8 — autonomous consumer Cloud runtime (`0.8.0-tv-hardening`)
+
+Cycle 0.8 hardens the TV Companion into an **autonomous, Cloud-first consumer
+runtime**: install once, connect once with a six-digit code, then forget it. No
+IP address, port or pairing screen is shown, and the PC can be powered off once an
+assignment is cached. The developer LAN prototype is kept intact but hidden behind
+the `SCENEVIBE_ENABLE_LAN_DEV` build flag. See
+[**Cycle 0.8 documentation**](docs/tv-hardening-0.8.md) for the full write-up of
+Consumer Cloud Mode, LAN DEV Mode, why no IP is required, the three identities
+(`installationId` / `cloudDeviceId` / `deviceToken`), legacy migration, autostart
+and reboot behavior, the offline cache, the Keystore/SecretStore boundary,
+Diagnostics, Disconnect vs Reset Cloud, stable APK signing, and the build
+variables. `0.8.0-tv-hardening` is compile-, lint- and unit-test-verified but is
+**not yet physically qualified**; the physical qualification protocol is in
+[docs/pr-0.8.0-tv-hardening.md](docs/pr-0.8.0-tv-hardening.md).
+
 ## Current state
 
 The current candidate build is **v0.6.0** (paired authenticated LAN POC).

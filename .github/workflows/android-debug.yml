@@ -2,7 +2,11 @@ name: Android debug APK
 
 on:
   push:
-    branches: [main, work/tv-pairing-authenticated-lan-001, work/tv-cloud-client-001]
+    branches:
+      - main
+      - work/tv-pairing-authenticated-lan-001
+      - work/tv-cloud-client-001
+      - kiro/tv-product-hardening-001
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -29,6 +33,13 @@ jobs:
         run: python3 -m unittest discover -s tests
       - name: Build and lint debug APK (Cloud not configured)
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
+      - name: Build LAN DEV APK (prove SCENEVIBE_ENABLE_LAN_DEV still compiles)
+        env:
+          # Developer-only LAN prototype surface. NOT a consumer build and NOT a secret.
+          # This step only proves the ENABLE_LAN_DEV=true path still compiles; its APK is
+          # not uploaded (the uploaded artifact is the Cloud qualification build below).
+          SCENEVIBE_ENABLE_LAN_DEV: "true"
+        run: gradle :app:assembleDebug --stacktrace
       - name: Build Cloud qualification APK
         env:
           # Stable public SceneVibe origin (NOT a secret): compiles the uploaded APK
@@ -41,3 +52,54 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      # --- Stable APK signing (optional, secret-gated) ---------------------------------
+      # These steps run ONLY when all four stable-signing secrets are configured in the
+      # repository. When they are absent the workflow above already produced and uploaded
+      # the (debug-signed) Cloud qualification APK, so standard CI passes unchanged.
+      # No keystore, private key, password, or Base64 material is committed to the repo:
+      # the keystore is decoded into RUNNER_TEMP at runtime and discarded with the runner.
+      - name: Decode stable signing keystore into RUNNER_TEMP
+        id: stable_keystore
+        if: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/scenevibe-stable.jks"
+          printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          echo "keystore_path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
+      - name: Sign Cloud qualification APK with stable key
+        id: stable_sign
+        if: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+          KEYSTORE_PATH: ${{ steps.stable_keystore.outputs.keystore_path }}
+        run: |
+          BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/35.0.0)"
+          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+          UNSIGNED_APK="app/build/outputs/apk/debug/app-debug.apk"
+          SIGNED_APK="$RUNNER_TEMP/scenevibe-tv-companion-cloud-qualification-stable.apk"
+          cp "$UNSIGNED_APK" "$SIGNED_APK"
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-pass "env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD" \
+            --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" \
+            --key-pass "env:SCENEVIBE_ANDROID_KEY_PASSWORD" \
+            "$SIGNED_APK"
+          "$APKSIGNER" verify --print-certs "$SIGNED_APK"
+          echo "signed_apk=$SIGNED_APK" >> "$GITHUB_OUTPUT"
+      - name: Upload stable-signed Cloud qualification APK
+        if: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-tv-companion-cloud-qualification-stable
+          path: ${{ steps.stable_sign.outputs.signed_apk }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Discard stable signing keystore
+        if: ${{ always() && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_PATH: ${{ steps.stable_keystore.outputs.keystore_path }}
+        run: rm -f "$KEYSTORE_PATH" "$RUNNER_TEMP/scenevibe-tv-companion-cloud-qualification-stable.apk"
