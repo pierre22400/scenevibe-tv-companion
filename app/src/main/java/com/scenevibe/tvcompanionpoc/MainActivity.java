@@ -31,9 +31,16 @@ public final class MainActivity extends Activity {
     private TextView pairingStatus;
     private TextView cloudStatus;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable pairingRefresh = new Runnable() {
+    /**
+     * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
+     * Cloud status; the LAN pairing status is not shown or scheduled. When ENABLE_LAN_DEV
+     * is true it also refreshes the LAN pairing status exactly as before.
+     */
+    private final Runnable statusRefresh = new Runnable() {
         @Override public void run() {
-            refreshPairing();
+            if (BuildConfig.ENABLE_LAN_DEV) {
+                refreshPairing();
+            }
             refreshCloud();
             handler.postDelayed(this, 1000L);
         }
@@ -71,11 +78,14 @@ public final class MainActivity extends Activity {
         mediaAccessStatus.setPadding(0, 0, 0, dp(20));
         controls.addView(mediaAccessStatus);
 
-        pairingStatus = new TextView(this);
-        pairingStatus.setTextColor(0xFFFFFFFF);
-        pairingStatus.setTextSize(18);
-        pairingStatus.setGravity(Gravity.CENTER);
-        controls.addView(pairingStatus);
+        // LAN pairing status label is a LAN DEV surface only; absent in consumer mode.
+        if (BuildConfig.ENABLE_LAN_DEV) {
+            pairingStatus = new TextView(this);
+            pairingStatus.setTextColor(0xFFFFFFFF);
+            pairingStatus.setTextSize(18);
+            pairingStatus.setGravity(Gravity.CENTER);
+            controls.addView(pairingStatus);
+        }
 
         cloudStatus = new TextView(this);
         cloudStatus.setTextColor(0xFFFFFFFF);
@@ -89,14 +99,19 @@ public final class MainActivity extends Activity {
         addButton(controls, "Start overlay · top right", () -> startOverlay(OverlayService.ACTION_TOP));
         addButton(controls, "Start overlay · bottom right", () -> startOverlay(OverlayService.ACTION_BOTTOM));
         addButton(controls, "Stop overlay", this::stopOverlay);
-        addButton(controls, "Start pairing (120 seconds)", this::startPairing);
-        addButton(controls, "Reset pairing", this::resetPairing);
+        // The LAN pairing controls are LAN DEV tools only; absent in consumer mode.
+        if (BuildConfig.ENABLE_LAN_DEV) {
+            addButton(controls, "Start pairing (120 seconds)", this::startPairing);
+            addButton(controls, "Reset pairing", this::resetPairing);
+        }
         addButton(controls, "Connect to SceneVibe Cloud", this::connectCloud);
         addButton(controls, "Disconnect cloud", this::disconnectCloud);
 
         TextView instruction = new TextView(this);
-        instruction.setText("Start the overlay, then open a streaming app. "
-                + "Dynamic commentary and bounded track loading listen on TV port 8765. With MediaSession access granted, loaded tracks are scheduled from the streaming app's passive playback clock.");
+        instruction.setText(BuildConfig.ENABLE_LAN_DEV
+                ? "Start the overlay, then open a streaming app. "
+                        + "Dynamic commentary and bounded track loading listen on TV port 8765. With MediaSession access granted, loaded tracks are scheduled from the streaming app's passive playback clock."
+                : "Start the overlay, then open a streaming app. Connect to SceneVibe Cloud to load tracks. With MediaSession access granted, loaded tracks are scheduled from the streaming app's passive playback clock.");
         instruction.setTextColor(0xFFD0C9BE);
         instruction.setTextSize(16);
         instruction.setGravity(Gravity.CENTER);
@@ -119,12 +134,12 @@ public final class MainActivity extends Activity {
         mediaAccessStatus.setText(NotificationAccess.isGranted(this)
                 ? "MediaSession access: granted"
                 : "MediaSession access: not granted. Open settings to test synchronization.");
-        handler.removeCallbacks(pairingRefresh);
-        pairingRefresh.run();
+        handler.removeCallbacks(statusRefresh);
+        statusRefresh.run();
     }
 
     @Override protected void onPause() {
-        handler.removeCallbacks(pairingRefresh);
+        handler.removeCallbacks(statusRefresh);
         super.onPause();
     }
 

@@ -101,7 +101,10 @@ public final class OverlayService extends Service {
                 if (restored > 0) Log.i(TAG, "Cached cloud track restored; revision=" + restored);
             }
 
-            if (commentaryServer == null) {
+            // The CommentaryServer / port 8765 / LAN pairing surface is a LAN DEV tool only.
+            // In the consumer runtime (ENABLE_LAN_DEV false) it is never constructed and the
+            // port is never opened; Cloud + MediaSession below run unchanged.
+            if (BuildConfig.ENABLE_LAN_DEV && commentaryServer == null) {
                 commentaryServer = new CommentaryServer(
                         (id, text, durationMs, mediaBitmap) -> {
                             if (renderer != null) {
@@ -134,10 +137,16 @@ public final class OverlayService extends Service {
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
 
-            Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
-                    + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
-                    + "; track=http://TV_IP:" + CommentaryServer.PORT + "/track"
-                    + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
+            if (BuildConfig.ENABLE_LAN_DEV) {
+                Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
+                        + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
+                        + "; track=http://TV_IP:" + CommentaryServer.PORT + "/track"
+                        + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
+            } else {
+                Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
+                        + "; mode=cloud-only"
+                        + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
+            }
             return START_STICKY;
         } catch (RuntimeException error) {
             Log.e(TAG, "WindowManager overlay failed", error);
