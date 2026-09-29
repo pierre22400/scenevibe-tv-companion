@@ -191,7 +191,10 @@ public final class OverlayService extends Service {
                 mediaSessionProbe.start();
             }
 
-            if (cloudClient == null && !BuildConfig.CLOUD_ORIGIN.isEmpty()) {
+            if (shouldReconstructCloudClient(cloudClient == null, BuildConfig.CLOUD_ORIGIN.isEmpty())) {
+                // Fresh construction on first entry AND after ACTION_CLOUD_RESET nulled the
+                // field: a reset client's io executor is shut down and cannot be reused, so the
+                // only correct way to re-arm the cloud is a brand-new CloudControlClient here.
                 cloudClient = new CloudControlClient(this, cloudTrackRepository, trackScheduler);
                 cloudClient.start();
             }
@@ -199,9 +202,17 @@ public final class OverlayService extends Service {
             if (ACTION_CLOUD_RESET.equals(action)) {
                 // Coordinated reset: the client wipes identity/cache/scheduler/diagnostics on
                 // its io executor after flipping running=false, so no in-flight GET/ACK can
-                // rewrite the cache and no post-reset poll uses the old credential. Then remove
-                // any visible card so the reset leaves nothing on screen.
-                if (cloudClient != null) cloudClient.reset();
+                // rewrite the cache and no post-reset poll uses the old credential. reset()
+                // fully tears down that io executor before returning, so the client is now a
+                // spent, un-armable instance (a shut-down ScheduledExecutorService cannot be
+                // reused). Drop the reference so the NEXT entry (e.g. a later
+                // ACTION_CLOUD_CONNECT) reconstructs a fresh client via the
+                // "cloudClient == null" path above and calls start() again; without this the
+                // stale client's running==false flag would make activate() a silent no-op.
+                if (cloudClient != null) {
+                    cloudClient.reset();
+                    cloudClient = null;
+                }
                 if (renderer != null) {
                     renderer.dismiss();
                     renderer = null;
@@ -266,6 +277,22 @@ public final class OverlayService extends Service {
      */
     static boolean shouldRestoreBadgeOnExpiry(boolean enableLanDev) {
         return enableLanDev;
+    }
+
+    /**
+     * Pure, testable mirror of the {@code onStartCommand} Cloud-client construction guard
+     * ({@code if (cloudClient == null && !BuildConfig.CLOUD_ORIGIN.isEmpty())}). It exists to
+     * lock the "restartable after reset" contract: {@code ACTION_CLOUD_RESET} tears the client
+     * down and nulls the field, so the next entry MUST reconstruct a fresh client (and call
+     * {@code start()}) rather than leave a spent, {@code running==false} instance behind that
+     * would make {@code activate()} a silent no-op. A configured origin plus a null client field
+     * therefore means "reconstruct now".
+     *
+     * @param cloudClientNull whether the {@code cloudClient} field is currently null
+     * @param cloudOriginEmpty whether {@code BuildConfig.CLOUD_ORIGIN} is empty (cloud disabled)
+     */
+    static boolean shouldReconstructCloudClient(boolean cloudClientNull, boolean cloudOriginEmpty) {
+        return cloudClientNull && !cloudOriginEmpty;
     }
 
     /** Stop if Android revokes the user's overlay capability during the test. */

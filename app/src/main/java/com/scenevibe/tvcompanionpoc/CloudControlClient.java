@@ -222,6 +222,14 @@ final class CloudControlClient {
      * cached track, clears the scheduler (dropping any in-memory runtime track), and zeroes the
      * Cloud diagnostics. It NEVER touches the separate 'installation' identity store. The
      * autostart pref is left as-is (AutostartPolicy then concludes NOTHING_TO_RESTORE).
+     *
+     * <p>reset() also fully tears the io executor down before returning (submit the wipe, then
+     * {@code io.shutdown()} + {@code awaitTermination}) so that (a) the wipe has definitely
+     * completed and no scheduled poll survives, and (b) this instance is a spent, single-use
+     * object. A {@link ScheduledExecutorService} cannot be reused once shut down, so the caller
+     * ({@link OverlayService}) discards this client after reset and reconstructs a fresh one on
+     * the next entry; that keeps the serialization guarantee above without a stale, un-armable
+     * client lingering behind a {@code running==false} flag.
      */
     void reset() {
         // Stop first so a mid-flight request cannot complete a write and no new poll runs with
@@ -234,13 +242,19 @@ final class CloudControlClient {
             DiagnosticsStore.INSTANCE.resetCloudObservations();
             Log.i(TAG,"Cloud reset completed on io executor");
         };
-        // Run the wipe on io so it is serialized after any request already executing there.
-        // If io is already shut down (service stopped), run it inline: there is no concurrent
-        // client, so a direct-but-safe wipe is correct.
+        // Run the wipe on io so it is serialized after any request already executing there,
+        // then shut io down and wait for the wipe to finish. If io is already shut down
+        // (service stopped), run it inline: there is no concurrent client, so a direct-but-safe
+        // wipe is correct. Either way, when reset() returns the wipe has completed and no future
+        // poll can run; the caller may safely drop this now-spent instance.
         try {
             io.execute(wipe);
+            io.shutdown();
+            io.awaitTermination(15,TimeUnit.SECONDS);
         }catch(java.util.concurrent.RejectedExecutionException stopped) {
             wipe.run();
+        }catch(InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
         }
     }
     /** Small transport envelope with no credential exposed to logs or activities. */
