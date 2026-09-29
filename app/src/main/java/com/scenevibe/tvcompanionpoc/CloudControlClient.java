@@ -81,12 +81,27 @@ final class CloudControlClient {
             // Observational only: reflect the coarse cloud state after a clean poll.
             publishCloudState();
         }catch(Exception error){failures=Math.min(4,failures+1);identity.setOffline(true);
-            // Observational only: a failed poll is a bounded NETWORK code, never a raw trace.
-            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NETWORK);
+            // Observational only: map the failure to a bounded code, never a raw trace. A more
+            // specific code carried by the failure (PROTOCOL from a malformed assignment,
+            // TIMEOUT from a genuine transport timeout) is preserved instead of being blindly
+            // clobbered with NETWORK; only a truly generic failure falls back to NETWORK.
+            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(classify(error));
             publishCloudState();
             Log.w(TAG,"Cloud offline; cached track remains available");}
         long delay=CloudProtocol.backoffSeconds(failures);
         if(running)io.schedule(this::poll,delay,TimeUnit.SECONDS);
+    }
+    /**
+     * Observational only: maps a caught poll failure to the bounded diagnostics code. A
+     * {@link CloudException} carries the intended code (e.g. PROTOCOL for a malformed
+     * assignment) so it is preserved rather than clobbered by NETWORK; a genuine transport
+     * timeout maps to TIMEOUT; every other failure is the generic NETWORK code. This is
+     * observational only and never gates behavior.
+     */
+    private static RuntimeDiagnostics.CloudErrorCode classify(Throwable error) {
+        if(error instanceof CloudException) return ((CloudException)error).code;
+        if(error instanceof java.net.SocketTimeoutException) return RuntimeDiagnostics.CloudErrorCode.TIMEOUT;
+        return RuntimeDiagnostics.CloudErrorCode.NETWORK;
     }
     /**
      * Observational only: maps the current credential state to the bounded diagnostics cloud
@@ -134,8 +149,9 @@ final class CloudControlClient {
         }
         JSONObject data=reply.body;
         if(reply.status!=200||data==null||!CloudProtocol.validAssignment(data,cloudDeviceId,cache.revision())) {
-            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.PROTOCOL);
-            throw new IllegalStateException("Invalid assignment response");
+            // A malformed/rejected assignment is a PROTOCOL failure. Carry that code on the
+            // exception so poll's catch reports PROTOCOL and never clobbers it with NETWORK.
+            throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,"Invalid assignment response");
         }
         long revision=data.optLong("revision",-1), cached=cache.revision();
         // Observational only: record the highest assignment revision received.
@@ -182,18 +198,64 @@ final class CloudControlClient {
                 ByteArrayOutputStream output=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int count;
                 long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
                 while((count=input.read(buffer))!=-1){
-                    if(System.nanoTime()>deadline||output.size()+count>LIMIT)
-                        throw new IllegalStateException("Cloud response timeout or too large");
+                    // Distinguish the two manual-limit causes so diagnostics is honest: a
+                    // blown 10s deadline is a genuine TIMEOUT; exceeding the byte cap is a
+                    // PROTOCOL-shaped oversized response. Both still fail closed identically.
+                    if(System.nanoTime()>deadline)
+                        throw new CloudException(RuntimeDiagnostics.CloudErrorCode.TIMEOUT,"Cloud response timeout");
+                    if(output.size()+count>LIMIT)
+                        throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,"Cloud response too large");
                     output.write(buffer,0,count);
                 }
                 return new Reply(status,new JSONObject(output.toString(StandardCharsets.UTF_8.name())));
             }
         } finally {connection.disconnect();}
     }
+    /**
+     * EXCEPTIONAL "Reset SceneVibe Cloud connection" coordinated with the runtime (user
+     * section 14 / Correction 3). It must be safe even while a poll is mid-flight, so it flips
+     * running=false FIRST and then performs the whole wipe on the SAME single-thread io
+     * executor. Because {@code http()} begins with {@code if(!running) throw}, no in-flight or
+     * subsequently scheduled GET/ACK can complete a write once running is false, and running
+     * the wipe on io serializes it after any request already in progress. The wipe deletes the
+     * cloud identity (deviceToken/activationSecret/cloudDeviceId/activationId/userCode) and the
+     * cached track, clears the scheduler (dropping any in-memory runtime track), and zeroes the
+     * Cloud diagnostics. It NEVER touches the separate 'installation' identity store. The
+     * autostart pref is left as-is (AutostartPolicy then concludes NOTHING_TO_RESTORE).
+     */
+    void reset() {
+        // Stop first so a mid-flight request cannot complete a write and no new poll runs with
+        // the old credential; http()'s leading running-check enforces this.
+        running=false;
+        Runnable wipe=()->{
+            identity.reset();
+            cache.clear();
+            scheduler.clear();
+            DiagnosticsStore.INSTANCE.resetCloudObservations();
+            Log.i(TAG,"Cloud reset completed on io executor");
+        };
+        // Run the wipe on io so it is serialized after any request already executing there.
+        // If io is already shut down (service stopped), run it inline: there is no concurrent
+        // client, so a direct-but-safe wipe is correct.
+        try {
+            io.execute(wipe);
+        }catch(java.util.concurrent.RejectedExecutionException stopped) {
+            wipe.run();
+        }
+    }
     /** Small transport envelope with no credential exposed to logs or activities. */
     private static final class Reply {
         final int status;final JSONObject body;
         /** Captures only HTTP status and bounded parsed JSON. */
         Reply(int status,JSONObject body){this.status=status;this.body=body;}
+    }
+    /**
+     * Internal transport failure that carries the intended bounded {@link
+     * RuntimeDiagnostics.CloudErrorCode} so poll's catch reports the specific code (PROTOCOL,
+     * TIMEOUT) instead of clobbering it with NETWORK. It never carries a secret or raw body.
+     */
+    private static final class CloudException extends Exception {
+        final RuntimeDiagnostics.CloudErrorCode code;
+        CloudException(RuntimeDiagnostics.CloudErrorCode code,String message){super(message);this.code=code;}
     }
 }

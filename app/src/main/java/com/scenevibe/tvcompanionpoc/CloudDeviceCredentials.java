@@ -61,6 +61,19 @@ final class CloudDeviceCredentials {
     private volatile boolean credentialUnavailable;
     /** Uses Android private preferences and excludes OS backup through the existing manifest. */
     CloudDeviceCredentials(Context context) {
+        this(context,true);
+    }
+    /**
+     * READ-ONLY peek at the cloud identity for OBSERVATIONAL use (the Diagnostics snapshot).
+     * It binds the SAME app-private stores but does NOT run the legacy plaintext migration on
+     * construction, so opening Diagnostics never mutates the cloud_identity file or the
+     * SecretStore. Reads still fail closed to {@link #credentialUnavailable()} on a
+     * keystore/cipher problem, but nothing is encrypted, deleted or committed here.
+     */
+    static CloudDeviceCredentials peek(Context context) {
+        return new CloudDeviceCredentials(context,false);
+    }
+    private CloudDeviceCredentials(Context context,boolean migrate) {
         SharedPreferences prefs=context.getApplicationContext()
                 .getSharedPreferences("cloud_identity",Context.MODE_PRIVATE);
         storage=new Storage() {
@@ -100,12 +113,20 @@ final class CloudDeviceCredentials {
             }
         };
         this.secrets=new SecretStore.AndroidKeyStoreSecretStore(context);
-        migrateLegacyPlaintext();
+        if(migrate) migrateLegacyPlaintext();
     }
-    /** Injectable persistence boundary for deterministic JVM tests. */
+    /** Injectable persistence boundary for deterministic JVM tests (runs the migration). */
     CloudDeviceCredentials(Storage storage,SecretStore secrets) {
+        this(storage,secrets,true);
+    }
+    /**
+     * Injectable persistence boundary for deterministic JVM tests, with an explicit choice of
+     * whether construction runs the legacy plaintext migration. A read-only peek passes false
+     * so a snapshot never mutates a store.
+     */
+    CloudDeviceCredentials(Storage storage,SecretStore secrets,boolean migrate) {
         this.storage=storage;this.secrets=secrets;
-        migrateLegacyPlaintext();
+        if(migrate) migrateLegacyPlaintext();
     }
     /**
      * Fail-safe migration of a 0.7.1 install (user section 13). For each secret still held

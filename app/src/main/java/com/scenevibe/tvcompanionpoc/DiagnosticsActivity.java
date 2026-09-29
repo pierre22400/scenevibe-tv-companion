@@ -1,6 +1,7 @@
 package com.scenevibe.tvcompanionpoc;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -86,9 +87,21 @@ public final class DiagnosticsActivity extends Activity {
      * only ever run from this explicit button - never automatically on a network/timeout/401.
      */
     private void resetCloud() {
-        new CloudDeviceCredentials(this).reset();
-        new CloudTrackRepository(this).clear();
-        DiagnosticsStore.INSTANCE.resetCloudObservations();
+        if (DiagnosticsStore.INSTANCE.serviceRunning()) {
+            // The service (and thus a CloudControlClient that may be polling) is up. Route the
+            // reset through the runtime so it runs on the client's io executor after
+            // running=false: no in-flight GET/ACK can rewrite the cache and no post-reset poll
+            // uses the old credential. The service also dismisses the renderer.
+            Intent reset = new Intent(this, OverlayService.class)
+                    .setAction(OverlayService.ACTION_CLOUD_RESET);
+            startService(reset);
+        } else {
+            // No running service means no concurrent client, so a direct-but-safe wipe is
+            // correct: nothing can rewrite the cache after we clear it here.
+            new CloudDeviceCredentials(this).reset();
+            new CloudTrackRepository(this).clear();
+            DiagnosticsStore.INSTANCE.resetCloudObservations();
+        }
         Log.i(TAG, "SceneVibe Cloud connection reset by TV user");
         Toast.makeText(this, "SceneVibe Cloud connection reset. Local installation id kept.",
                 Toast.LENGTH_LONG).show();
@@ -112,6 +125,7 @@ public final class DiagnosticsActivity extends Activity {
         line(sb, "Last observed media app", d.lastObservedMediaApp == null ? "-" : d.lastObservedMediaApp);
         line(sb, "Media identity", d.mediaIdentityState.name());
         line(sb, "Last block code", d.lastBlockCode == null ? "-" : d.lastBlockCode);
+        line(sb, "Autostart decision", d.lastAutostartDecision == null ? "-" : d.lastAutostartDecision.name());
         line(sb, "Cloud ever connected", d.hadSuccessfulCloudConnection ? "yes" : "no");
         line(sb, "Last assignment revision", String.valueOf(d.lastAssignmentRevisionReceived));
         line(sb, "Last successful ACK", String.valueOf(d.lastSuccessfulAckRevision));

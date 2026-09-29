@@ -86,6 +86,19 @@ final class InstallationIdentity {
         return id;
     }
 
+    /**
+     * Read-only peek at the installationId for OBSERVATIONAL use (the Diagnostics snapshot).
+     * It returns the already stored id, or the migratable legacy value when no id is stored
+     * yet, or null when neither exists - but it NEVER mints a new id and NEVER persists
+     * anything (it does not call {@code storage.put}). Opening Diagnostics must not mutate any
+     * store, so {@link RuntimeDiagnostics#capture} uses this instead of {@link #installationId()}.
+     */
+    synchronized String peekInstallationId() {
+        String existing = storage.get(KEY_INSTALLATION_ID);
+        if (existing != null) return existing;
+        return legacy != null ? legacy.value() : null;
+    }
+
     /** Strong random id in the same Base64url-of-16-random-bytes format as the legacy value. */
     private String generate() {
         byte[] bytes = new byte[16];

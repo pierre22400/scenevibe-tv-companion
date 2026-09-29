@@ -28,6 +28,7 @@ final class DiagnosticsStore {
     private RuntimeDiagnostics.MediaIdentityState mediaIdentityState =
             RuntimeDiagnostics.MediaIdentityState.UNAVAILABLE;
     private String lastBlockCode;
+    private AutostartPolicy.Decision lastAutostartDecision;
     private boolean hadSuccessfulCloudConnection;
     private long lastAssignmentRevisionReceived;
     private long lastSuccessfulAckRevision;
@@ -58,6 +59,17 @@ final class DiagnosticsStore {
 
     /** Observational: bounded short code for the last fail-closed media identity decision. */
     synchronized void setLastBlockCode(String code) { this.lastBlockCode = code; }
+
+    /**
+     * Observational: the last bounded autostart {@link AutostartPolicy.Decision} the
+     * BootReceiver computed (START or a specific skip reason). It is a bounded enum, never
+     * free-form text, and it never gates behavior; it only surfaces on the diagnostics
+     * screen instead of living solely in Logcat. It is NOT reset by the Cloud reset because
+     * it describes the boot decision, not a live cloud identity/session.
+     */
+    synchronized void setLastAutostartDecision(AutostartPolicy.Decision decision) {
+        if (decision != null) this.lastAutostartDecision = decision;
+    }
 
     /** Observational: the highest assignment revision the client has received from the cloud. */
     synchronized void setLastAssignmentRevisionReceived(long revision) {
@@ -93,6 +105,7 @@ final class DiagnosticsStore {
     synchronized String lastObservedMediaApp() { return lastObservedMediaApp; }
     synchronized RuntimeDiagnostics.MediaIdentityState mediaIdentityState() { return mediaIdentityState; }
     synchronized String lastBlockCode() { return lastBlockCode; }
+    synchronized AutostartPolicy.Decision lastAutostartDecision() { return lastAutostartDecision; }
     synchronized boolean hadSuccessfulCloudConnection() { return hadSuccessfulCloudConnection; }
     synchronized long lastAssignmentRevisionReceived() { return lastAssignmentRevisionReceived; }
     synchronized long lastSuccessfulAckRevision() { return lastSuccessfulAckRevision; }

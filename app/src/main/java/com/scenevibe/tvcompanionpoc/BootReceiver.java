@@ -51,6 +51,11 @@ public final class BootReceiver extends BroadcastReceiver {
                     autostartEnabled, overlayGranted, mediaGranted,
                     hasUsableCloudCredential, hasValidCachedTrack);
 
+            // Observational only: publish the bounded decision (START or a specific skip
+            // reason) into the diagnostics store so it is visible on the Diagnostics screen
+            // and not only in Logcat. This never gates the decision itself.
+            DiagnosticsStore.INSTANCE.setLastAutostartDecision(decision);
+
             if (decision == AutostartPolicy.Decision.START) {
                 arm(app);
             } else {

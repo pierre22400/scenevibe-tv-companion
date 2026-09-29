@@ -28,6 +28,17 @@ public final class OverlayService extends Service {
      * stale comment. The renderer is created lazily only when a comment is actually due.
      */
     public static final String ACTION_BOOT_PREPARE = "com.scenevibe.tvcompanionpoc.BOOT_PREPARE";
+    /**
+     * EXCEPTIONAL "Reset SceneVibe Cloud connection" forwarded from {@link DiagnosticsActivity}
+     * when the service is running. It runs the coordinated reset on the CloudControlClient's io
+     * executor (so no in-flight GET/ACK rewrites the cache) and then dismisses the renderer, so
+     * no stale card/comment survives a reset. It never touches the local InstallationIdentity.
+     */
+    public static final String ACTION_CLOUD_RESET = "com.scenevibe.tvcompanionpoc.CLOUD_RESET";
+    /** Bounded observational block code: the projected media identity no longer matches. */
+    static final String BLOCK_CODE_MEDIA_IDENTITY = "MEDIA_IDENTITY_BLOCKED";
+    /** Bounded observational block code: no active/authorized MediaSession is available. */
+    static final String BLOCK_CODE_SESSION_UNAVAILABLE = "SESSION_UNAVAILABLE";
     private static final String TAG = "SceneVibePoc";
     private static final String CHANNEL_ID = "overlay_poc";
     private static final int NOTIFICATION_ID = 1001;
@@ -128,6 +139,10 @@ public final class OverlayService extends Service {
                         DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible
                                 ? RuntimeDiagnostics.MediaIdentityState.ELIGIBLE
                                 : RuntimeDiagnostics.MediaIdentityState.BLOCKED);
+                        // Observational only: record a bounded block code on the eligibility
+                        // loss transition. The scheduler itself is frozen; this maps the
+                        // observable transition into DiagnosticsStore and never gates logic.
+                        if (!eligible) DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);
                         // Media no longer matches: hide the tracked card immediately. Never
                         // create a renderer just to hide nothing.
                         if (!eligible && renderer != null) renderer.onTrackEligibility(false);
@@ -167,6 +182,9 @@ public final class OverlayService extends Service {
                         if (trackScheduler != null) trackScheduler.onPlaybackSnapshot(snapshot);
                     }
                     @Override public void onUnavailable() {
+                        // Observational only: no active/authorized session. Record a bounded
+                        // block code before forwarding to the frozen scheduler; never gates logic.
+                        DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_SESSION_UNAVAILABLE);
                         if (trackScheduler != null) trackScheduler.onPlaybackUnavailable();
                     }
                 });
@@ -178,6 +196,18 @@ public final class OverlayService extends Service {
                 cloudClient.start();
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
+            if (ACTION_CLOUD_RESET.equals(action)) {
+                // Coordinated reset: the client wipes identity/cache/scheduler/diagnostics on
+                // its io executor after flipping running=false, so no in-flight GET/ACK can
+                // rewrite the cache and no post-reset poll uses the old credential. Then remove
+                // any visible card so the reset leaves nothing on screen.
+                if (cloudClient != null) cloudClient.reset();
+                if (renderer != null) {
+                    renderer.dismiss();
+                    renderer = null;
+                }
+                Log.i(TAG, "Cloud reset requested via runtime");
+            }
 
             String visibility = showOnEntry
                     ? "visible; position=" + (bottom ? "bottom" : "top")

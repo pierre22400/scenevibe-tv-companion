@@ -28,7 +28,9 @@ final class RuntimeDiagnostics {
      * any secret.
      */
     static RuntimeDiagnostics capture(android.content.Context context, DiagnosticsStore observed) {
-        CloudDeviceCredentials credentials = new CloudDeviceCredentials(context);
+        // Read-only peeks: capture() must be truly observational. It must NOT run the credential
+        // migration and must NOT mint/persist an installationId when none exists yet.
+        CloudDeviceCredentials credentials = CloudDeviceCredentials.peek(context);
         CloudTrackRepository cache = new CloudTrackRepository(context);
         long revision = cache.revision();
         boolean credentialUnavailable = credentials.credentialUnavailable();
@@ -44,7 +46,7 @@ final class RuntimeDiagnostics {
                 .serviceRunning(observed.serviceRunning())
                 .autostartEnabled(AutostartPreference.isEnabled(context))
                 .cloudState(cloudState)
-                .installationId(new InstallationIdentity(context).installationId())
+                .installationId(new InstallationIdentity(context).peekInstallationId())
                 .cloudDeviceId(credentials.cloudDeviceId())
                 .cachedTrackPresent(revision > 0)
                 .cachedTrackId(cache.cachedTrackId())
@@ -54,6 +56,7 @@ final class RuntimeDiagnostics {
                 .lastObservedMediaApp(observed.lastObservedMediaApp())
                 .mediaIdentityState(observed.mediaIdentityState())
                 .lastBlockCode(observed.lastBlockCode())
+                .lastAutostartDecision(observed.lastAutostartDecision())
                 .hadSuccessfulCloudConnection(observed.hadSuccessfulCloudConnection())
                 .lastAssignmentRevisionReceived(observed.lastAssignmentRevisionReceived())
                 .lastSuccessfulAckRevision(observed.lastSuccessfulAckRevision())
@@ -96,6 +99,8 @@ final class RuntimeDiagnostics {
     final MediaIdentityState mediaIdentityState;
     /** Bounded block code for the last fail-closed media identity decision; null when none. */
     final String lastBlockCode;
+    /** Bounded last autostart decision published by BootReceiver; null when none observed. */
+    final AutostartPolicy.Decision lastAutostartDecision;
     /** Coarse marker that a successful cloud connection has occurred (no timestamp history). */
     final boolean hadSuccessfulCloudConnection;
     final long lastAssignmentRevisionReceived;
@@ -117,6 +122,7 @@ final class RuntimeDiagnostics {
         this.lastObservedMediaApp = builder.lastObservedMediaApp;
         this.mediaIdentityState = builder.mediaIdentityState;
         this.lastBlockCode = builder.lastBlockCode;
+        this.lastAutostartDecision = builder.lastAutostartDecision;
         this.hadSuccessfulCloudConnection = builder.hadSuccessfulCloudConnection;
         this.lastAssignmentRevisionReceived = builder.lastAssignmentRevisionReceived;
         this.lastSuccessfulAckRevision = builder.lastSuccessfulAckRevision;
@@ -151,6 +157,7 @@ final class RuntimeDiagnostics {
         private String lastObservedMediaApp;
         private MediaIdentityState mediaIdentityState = MediaIdentityState.UNAVAILABLE;
         private String lastBlockCode;
+        private AutostartPolicy.Decision lastAutostartDecision;
         private boolean hadSuccessfulCloudConnection;
         private long lastAssignmentRevisionReceived;
         private long lastSuccessfulAckRevision;
@@ -176,6 +183,7 @@ final class RuntimeDiagnostics {
         Builder lastObservedMediaApp(String value) { this.lastObservedMediaApp = value; return this; }
         Builder mediaIdentityState(MediaIdentityState value) { this.mediaIdentityState = value; return this; }
         Builder lastBlockCode(String value) { this.lastBlockCode = value; return this; }
+        Builder lastAutostartDecision(AutostartPolicy.Decision value) { this.lastAutostartDecision = value; return this; }
         Builder hadSuccessfulCloudConnection(boolean value) { this.hadSuccessfulCloudConnection = value; return this; }
         Builder lastAssignmentRevisionReceived(long value) { this.lastAssignmentRevisionReceived = value; return this; }
         Builder lastSuccessfulAckRevision(long value) { this.lastSuccessfulAckRevision = value; return this; }

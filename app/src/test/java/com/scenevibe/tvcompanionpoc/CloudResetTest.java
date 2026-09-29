@@ -79,6 +79,33 @@ public final class CloudResetTest {
         });
     }
 
+    /** Listener that records the events it observes so a test can assert scheduler activity. */
+    private static final class RecordingListener implements MediaSyncedTrackScheduler.Listener {
+        int renders;
+        int eligibleTrue;
+        int eligibleFalse;
+        String lastRenderedId;
+        @Override public void onRender(ScheduledTrack.Event event) {renders++;lastRenderedId=event.id;}
+        @Override public void onPlayback(boolean playing,boolean freeze) {}
+        @Override public void onEligibility(boolean eligible) {
+            if(eligible)eligibleTrue++;else eligibleFalse++;
+        }
+    }
+
+    /**
+     * A passive playback snapshot matching the cached track's exact media identity (same
+     * targetPackage + prime_video platform + videoId). Constructor order mirrors
+     * MediaSessionProbe.Snapshot: package, state, stateName, positionMs, estimatedPositionMs,
+     * speed, updateAgeMs, mediaId, title, subtitle, durationMs.
+     */
+    private static MediaSessionProbe.Snapshot matchingSnapshot(long positionMs) {
+        return new MediaSessionProbe.Snapshot(
+                "com.amazon.amazonvideo.livingroom",
+                android.media.session.PlaybackState.STATE_PLAYING,"PLAYING",
+                positionMs,positionMs,1.0f,0L,
+                "video-1","Columbo — Eaux troubles","",5884768L);
+    }
+
     /** One text-only valid runtime track. */
     private static String track(String id) {
         return "{\"type\":\"scenevibe.track.v1\",\"trackId\":\""+id+"\",\"targetPackage\":\"com.amazon.amazonvideo.livingroom\",\"mediaIdentity\":{\"platform\":\"prime_video\",\"videoId\":\"video-1\",\"title\":\"Columbo — Eaux troubles\",\"durationMs\":5884768},\"pauseFreezesDisplay\":true,\"comments\":[{\"id\":\"c1\",\"text\":\"Hello\",\"startMs\":1000,\"durationMs\":6000}]}";
@@ -168,6 +195,56 @@ public final class CloudResetTest {
                 installationBefore,installationAfter);
         assertEquals(1,install.values.size());
         assertEquals(installationBefore,install.values.get(InstallationIdentity.KEY_INSTALLATION_ID));
+    }
+
+    /**
+     * Correction 3: an already-loaded/active track must NOT stay active after the coordinated
+     * reset. This loads a track into a real MediaSyncedTrackScheduler, drives it to an active
+     * (eligible, rendering) state via a matching passive snapshot, then performs the reset
+     * boundary (scheduler.clear() + identity.reset() + cache.clear()). After reset the same
+     * matching snapshot produces NO further render or eligibility, proving the scheduler no
+     * longer holds the track and the cache is empty. Uses only public scheduler API.
+     */
+    @Test public void loadedTrackIsNotActiveAfterReset() throws Exception {
+        CloudMemory cloud=new CloudMemory();SecretStore secrets=new SecretStore.InMemorySecretStore();
+        CloudDeviceCredentials identity=credentials(cloud,secrets);
+        identity.persistActivation("cloud-uuid","device-token","act-1","secret","123456");
+        identity.confirmClaimed();
+
+        RecordingListener recorder=new RecordingListener();
+        MediaSyncedTrackScheduler live=new MediaSyncedTrackScheduler(recorder);
+        TrackMemory trackMemory=new TrackMemory();
+        CloudTrackRepository cache=new CloudTrackRepository(trackMemory);
+
+        // Install and load the track into the live scheduler, then make it active: a matching
+        // snapshot anchors the clock (positionMs beyond the first comment at 1000ms => render).
+        assertTrue(cache.install(2,track("active"),live));
+        live.onPlaybackSnapshot(matchingSnapshot(2000));
+        assertTrue("track should be eligible while media matches",recorder.eligibleTrue>=1);
+        assertTrue("the loaded comment should have rendered",recorder.renders>=1);
+        assertEquals("c1",recorder.lastRenderedId);
+
+        int rendersBeforeReset=recorder.renders;
+
+        // The coordinated reset boundary (same work CloudControlClient.reset() runs on io):
+        // clear the scheduler, wipe the identity, delete the cache.
+        live.clear();
+        identity.reset();
+        cache.clear();
+
+        // The cache is empty and no cloud credential remains.
+        assertEquals(0,cache.revision());
+        assertEquals(0,cache.acknowledged());
+        assertNull(cache.cachedTrackId());
+        assertNull(identity.deviceToken());
+
+        // Feeding the SAME matching snapshot after reset must NOT render or re-eligibilize:
+        // the scheduler no longer holds the track (clear() dropped it).
+        int eligibleTrueBefore=recorder.eligibleTrue;
+        live.onPlaybackSnapshot(matchingSnapshot(3000));
+        live.onPlaybackSnapshot(matchingSnapshot(4000));
+        assertEquals("no comment may render after reset",rendersBeforeReset,recorder.renders);
+        assertEquals("no new eligibility after reset",eligibleTrueBefore,recorder.eligibleTrue);
     }
 
     /**
