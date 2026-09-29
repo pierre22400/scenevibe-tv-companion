@@ -18,8 +18,10 @@ preserved intact behind the `SCENEVIBE_ENABLE_LAN_DEV` build flag.
 
 - **Starting SHA:** `c37229809e22e41dc28bdb701d067bd1c9f76aa3`
   (`Merge physically qualified TV cloud client`).
-- **Final SHA:** the branch HEAD of `kiro/tv-product-hardening-001` at PR creation
-  (this feature's commit is that branch HEAD).
+- **Final SHA:** the branch HEAD of `kiro/tv-product-hardening-001` at PR creation.
+  At the time this file was written that was `8f4dc3e4a5bc93776cf66f38ebeca1343d7aa97a`;
+  if any further commit lands on the branch before the PR is opened, use the current
+  branch HEAD instead.
 - **Branch:** `kiro/tv-product-hardening-001` → base `main`.
 
 ## Files changed (against the starting SHA)
