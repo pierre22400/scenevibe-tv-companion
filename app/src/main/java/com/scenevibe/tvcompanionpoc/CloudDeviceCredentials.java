@@ -123,9 +123,18 @@ final class CloudDeviceCredentials {
         String plaintext=storage.getString(name);
         if(plaintext==null)return; // No legacy plaintext to migrate.
         try {
-            if(!secrets.put(name,plaintext))return; // Write not durable: keep plaintext, retry later.
+            if(!secrets.put(name,plaintext)) {
+                // Encrypted write is not durable. Keep the historical plaintext for a later
+                // retry but fail closed: the plaintext is NEVER read back as an operational
+                // credential, so mark the store unavailable rather than pretending success.
+                credentialUnavailable=true;return;
+            }
             // Verify the ciphertext decrypts back to the exact original BEFORE deleting.
-            if(!plaintext.equals(secrets.get(name)))return; // Verification failed: keep plaintext.
+            if(!plaintext.equals(secrets.get(name))) {
+                // Read-back mismatch: the write did not durably round-trip. Same fail-closed
+                // treatment as a non-durable put: keep plaintext, never operationalize it.
+                credentialUnavailable=true;return;
+            }
             storage.removeLegacyPlaintext(name); // Only now is the plaintext safe to remove.
         }catch(SecretStore.Unavailable unavailable) {
             // Fail closed: keep the plaintext, do not fall back, mark unavailable.
@@ -172,29 +181,100 @@ final class CloudDeviceCredentials {
      */
     boolean persistActivation(String cloudDeviceId,String deviceToken,
             String activationId,String activationSecret,String userCode) {
+        // Snapshot the FULL previous secret tuple so any failure can restore it verbatim.
+        // This is the transaction's rollback log: it lets persistActivation be all-or-nothing
+        // even though the SecretStore commits one record at a time. Reading the previous
+        // values fails closed on corruption rather than proceeding on a mixed state.
+        final String previousDeviceToken;
+        final String previousActivationSecret;
         try {
-            // Encrypt-and-verify both secrets first; abort without partial state on failure.
-            if(!secrets.put(SECRET_DEVICE_TOKEN,deviceToken)||!deviceToken.equals(secrets.get(SECRET_DEVICE_TOKEN)))
-                return false;
-            if(!secrets.put(SECRET_ACTIVATION_SECRET,activationSecret)
-                    ||!activationSecret.equals(secrets.get(SECRET_ACTIVATION_SECRET)))
-                return false;
+            previousDeviceToken=secrets.get(SECRET_DEVICE_TOKEN);
+            previousActivationSecret=secrets.get(SECRET_ACTIVATION_SECRET);
         }catch(SecretStore.Unavailable unavailable) {
             credentialUnavailable=true;return false;
         }
-        // The plaintext secret parameters below only erase any legacy plaintext keys.
-        return storage.persistActivation(cloudDeviceId,null,activationId,null,userCode);
+        boolean deviceTokenWritten=false;
+        boolean activationSecretWritten=false;
+        try {
+            // Stage 1: encrypt-and-verify the durable deviceToken.
+            if(!secrets.put(SECRET_DEVICE_TOKEN,deviceToken)
+                    ||!deviceToken.equals(secrets.get(SECRET_DEVICE_TOKEN))) {
+                rollbackSecrets(previousDeviceToken,previousActivationSecret,false,false);
+                return false;
+            }
+            deviceTokenWritten=true;
+            // Stage 2: encrypt-and-verify the temporary activationSecret.
+            if(!secrets.put(SECRET_ACTIVATION_SECRET,activationSecret)
+                    ||!activationSecret.equals(secrets.get(SECRET_ACTIVATION_SECRET))) {
+                rollbackSecrets(previousDeviceToken,previousActivationSecret,true,false);
+                return false;
+            }
+            activationSecretWritten=true;
+            // Stage 3: durably commit the non-secret batch. The plaintext secret parameters
+            // below only erase any legacy plaintext keys. If this commit is not durable the
+            // secrets must NOT be left updated in isolation, so roll them both back.
+            if(!storage.persistActivation(cloudDeviceId,null,activationId,null,userCode)) {
+                rollbackSecrets(previousDeviceToken,previousActivationSecret,true,true);
+                return false;
+            }
+            return true;
+        }catch(SecretStore.Unavailable unavailable) {
+            // Any keystore/cipher problem mid-transaction: restore the previous tuple and fail closed.
+            rollbackSecrets(previousDeviceToken,previousActivationSecret,
+                    deviceTokenWritten,activationSecretWritten);
+            credentialUnavailable=true;
+            return false;
+        }
     }
-    /** Marks the activation claimed: keeps deviceToken+cloudDeviceId, drops the temporaries. */
-    boolean confirmClaimed() {secrets.remove(SECRET_ACTIVATION_SECRET);return storage.confirmClaimed();}
+    /**
+     * Restores the previous secret tuple after a failed persistActivation stage so the whole
+     * previous state stays usable and no old/new mix survives. For each secret that was just
+     * written it re-writes the previous value (or removes the record when there was none),
+     * best-effort: a rollback that itself cannot commit is surfaced via credentialUnavailable
+     * so the mixed state is never reported as a healthy credential.
+     */
+    private void rollbackSecrets(String previousDeviceToken,String previousActivationSecret,
+            boolean deviceTokenWritten,boolean activationSecretWritten) {
+        try {
+            if(activationSecretWritten) restoreSecret(SECRET_ACTIVATION_SECRET,previousActivationSecret);
+            if(deviceTokenWritten) restoreSecret(SECRET_DEVICE_TOKEN,previousDeviceToken);
+        }catch(SecretStore.Unavailable unavailable) {
+            credentialUnavailable=true;
+        }
+    }
+    private void restoreSecret(String name,String previousValue) {
+        if(previousValue==null) {
+            if(!secrets.remove(name)) credentialUnavailable=true;
+        }else if(!secrets.put(name,previousValue)) {
+            credentialUnavailable=true;
+        }
+    }
+    /**
+     * Marks the activation claimed: keeps deviceToken+cloudDeviceId, drops the temporaries.
+     * The claimed-state commit runs FIRST; the activationSecret is removed ONLY after that
+     * commit is durable, so a failed commit leaves the activationSecret intact and the whole
+     * operation retryable (the next poll calls confirmClaimed again). A false removal of the
+     * critical secret is surfaced via credentialUnavailable rather than silently ignored.
+     */
+    boolean confirmClaimed() {
+        if(!storage.confirmClaimed()) return false; // Retryable: activationSecret still present.
+        if(!secrets.remove(SECRET_ACTIVATION_SECRET)) credentialUnavailable=true;
+        return true;
+    }
     /** Drops ONLY the expired activation temporaries; the durable device credential survives. */
-    void clearExpiredActivation() {secrets.remove(SECRET_ACTIVATION_SECRET);storage.clearActivationTemporaries();}
+    void clearExpiredActivation() {
+        if(!secrets.remove(SECRET_ACTIVATION_SECRET)) credentialUnavailable=true;
+        storage.clearActivationTemporaries();
+    }
     /**
      * Stops cloud polling locally. Clears activation temporaries and connected flag but KEEPS
      * cloudDeviceId+deviceToken so reconnection can reuse the durable credential; it never
      * touches the FinalTrack cache.
      */
-    void disconnect() {secrets.remove(SECRET_ACTIVATION_SECRET);storage.disconnect();}
+    void disconnect() {
+        if(!secrets.remove(SECRET_ACTIVATION_SECRET)) credentialUnavailable=true;
+        storage.disconnect();
+    }
     /**
      * EXCEPTIONAL "Reset SceneVibe Cloud connection" (user section 14), available ONLY from
      * Diagnostics and never triggered automatically by any network/timeout/401/error path.
@@ -207,9 +287,15 @@ final class CloudDeviceCredentials {
      * credential-unavailable flag is cleared because there is no longer any secret to read.
      */
     void reset() {
-        secrets.remove(SECRET_DEVICE_TOKEN);
-        secrets.remove(SECRET_ACTIVATION_SECRET);
+        // Removal durability is verified: reset must end with NO secret ciphertext present.
+        // If either critical removal is not durable we surface it via credentialUnavailable
+        // rather than pretending the reset succeeded. Both removals are attempted so a single
+        // stuck record does not skip wiping the other secret.
+        boolean deviceTokenRemoved=secrets.remove(SECRET_DEVICE_TOKEN);
+        boolean activationSecretRemoved=secrets.remove(SECRET_ACTIVATION_SECRET);
         storage.reset();
-        credentialUnavailable=false;
+        // Only clear the fail-closed flag when both secrets are durably gone; a false commit
+        // means ciphertext may remain, which must stay observable and never look healthy.
+        credentialUnavailable=!(deviceTokenRemoved&&activationSecretRemoved);
     }
 }

@@ -58,8 +58,14 @@ interface SecretStore {
      */
     String get(String name);
 
-    /** Removes the ciphertext + IV for {@code name}. Never touches non-secret keys. */
-    void remove(String name);
+    /**
+     * Removes the ciphertext + IV for {@code name}, returning true only when the removal is
+     * durably committed. Never touches non-secret keys. A false return means the ciphertext
+     * may still be present, so callers that depend on a critical secret being gone (reset,
+     * claim transition) must treat false as a fail-closed condition rather than assuming
+     * success.
+     */
+    boolean remove(String name);
 
     /** True when a ciphertext record exists for {@code name} regardless of decryptability. */
     boolean contains(String name);
@@ -121,8 +127,8 @@ interface SecretStore {
             }
         }
 
-        @Override public void remove(String name) {
-            prefs.edit().remove(name + CIPHERTEXT_SUFFIX).remove(name + IV_SUFFIX).commit();
+        @Override public boolean remove(String name) {
+            return prefs.edit().remove(name + CIPHERTEXT_SUFFIX).remove(name + IV_SUFFIX).commit();
         }
 
         @Override public boolean contains(String name) {
@@ -157,17 +163,41 @@ interface SecretStore {
     final class InMemorySecretStore implements SecretStore {
         private final java.util.Map<String, String> values = new java.util.HashMap<>();
         private final java.util.Set<String> corrupt = new java.util.HashSet<>();
+        private final java.util.Set<String> writeFailNames = new java.util.HashSet<>();
+        private final java.util.Set<String> removeFailNames = new java.util.HashSet<>();
         private boolean writesFail;
+        private boolean removesFail;
+        private int failWriteAfter = -1; // -1 disables; otherwise fail the Nth+1 write.
+        private int writeCount;
 
         /** Simulates a keystore/commit failure: every subsequent put returns false. */
         void failWrites(boolean fail) { this.writesFail = fail; }
+
+        /** Fails only the put for the named record; other records still write durably. */
+        void failWrite(String name) { writeFailNames.add(name); }
+
+        /**
+         * Fails the (index)th put counted from now (0-based). Used to inject a
+         * second-secret-write failure: {@code failWriteAtIndex(1)} lets the first put
+         * succeed and makes the second return false with the prior value untouched.
+         */
+        void failWriteAtIndex(int index) { this.failWriteAfter = index; this.writeCount = 0; }
+
+        /** Simulates a non-durable removal commit: every subsequent remove returns false. */
+        void failRemoves(boolean fail) { this.removesFail = fail; }
+
+        /** Fails only the remove for the named record; other removes still commit durably. */
+        void failRemove(String name) { removeFailNames.add(name); }
 
         /** Marks a stored record as unreadable so get() fails closed like GCM corruption. */
         void corrupt(String name) { corrupt.add(name); }
 
         @Override public boolean put(String name, String plaintext) {
             if (plaintext == null) throw new IllegalArgumentException("null secret");
-            if (writesFail) return false; // Prior value is deliberately left untouched.
+            boolean failThis = writesFail || writeFailNames.contains(name)
+                    || (failWriteAfter >= 0 && writeCount == failWriteAfter);
+            writeCount++;
+            if (failThis) return false; // Prior value is deliberately left untouched.
             values.put(name, plaintext);
             corrupt.remove(name);
             return true;
@@ -178,7 +208,12 @@ interface SecretStore {
             return values.get(name);
         }
 
-        @Override public void remove(String name) { values.remove(name); corrupt.remove(name); }
+        @Override public boolean remove(String name) {
+            if (removesFail || removeFailNames.contains(name)) return false; // Prior value untouched.
+            values.remove(name);
+            corrupt.remove(name);
+            return true;
+        }
 
         @Override public boolean contains(String name) {
             return values.containsKey(name) || corrupt.contains(name);
