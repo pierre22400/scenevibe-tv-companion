@@ -1,0 +1,87 @@
+package com.scenevibe.tvcompanionpoc;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.provider.Settings;
+import android.util.Log;
+
+/**
+ * Autostart entry point (user section 9). It listens ONLY to BOOT_COMPLETED and
+ * MY_PACKAGE_REPLACED (declared in the manifest); it is deliberately NOT registered for
+ * LOCKED_BOOT_COMPLETED and is NOT directBootAware, so it only ever runs after the user
+ * has unlocked the device and Credential Encrypted storage (the app-private prefs holding
+ * the opt-in, cache and credentials) is available.
+ *
+ * <p>On a matching broadcast it gathers the real Android signals, delegates the yes/no
+ * decision to the pure {@link AutostartPolicy}, and then EITHER starts {@link OverlayService}
+ * in the boot-prepare (armed, not visible) mode OR records a bounded diagnostic and does
+ * nothing else. It never launches {@link MainActivity}, never loops, never auto-requests a
+ * permission and never crashes: the whole body is wrapped so a failure degrades to a logged
+ * diagnostic rather than a boot-time crash loop.
+ */
+public final class BootReceiver extends BroadcastReceiver {
+    private static final String TAG = "SceneVibePoc";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String action = intent == null ? null : intent.getAction();
+        if (!Intent.ACTION_BOOT_COMPLETED.equals(action)
+                && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            return;
+        }
+        try {
+            Context app = context.getApplicationContext();
+
+            boolean autostartEnabled = AutostartPreference.isEnabled(app);
+            boolean overlayGranted = Settings.canDrawOverlays(app);
+            boolean mediaGranted = NotificationAccess.isGranted(app);
+
+            // A usable Cloud credential = a durable deviceToken + cloudDeviceId that is NOT
+            // in the fail-closed credential-unavailable state (FEAT-003).
+            CloudDeviceCredentials credentials = new CloudDeviceCredentials(app);
+            boolean hasUsableCloudCredential = !credentials.credentialUnavailable()
+                    && notEmpty(credentials.deviceToken())
+                    && notEmpty(credentials.cloudDeviceId());
+
+            // A valid cached runtime track survives reboots and is enough to arm on its own.
+            boolean hasValidCachedTrack = new CloudTrackRepository(app).revision() > 0;
+
+            AutostartPolicy.Decision decision = AutostartPolicy.decide(
+                    autostartEnabled, overlayGranted, mediaGranted,
+                    hasUsableCloudCredential, hasValidCachedTrack);
+
+            if (decision == AutostartPolicy.Decision.START) {
+                arm(app);
+            } else {
+                // Bounded, secret-free diagnostic only; no UI, no permission prompt, no retry loop.
+                Log.i(TAG, "Autostart skipped on " + action + "; decision=" + decision);
+            }
+        } catch (RuntimeException error) {
+            // Fail-closed: a boot receiver must never crash or loop. Record and return.
+            Log.w(TAG, "Autostart evaluation failed; staying disarmed", error);
+        }
+    }
+
+    /**
+     * Starts the overlay service in boot-prepare mode. Uses startForegroundService so the
+     * service can promptly call startForeground with its declared specialUse type, which is
+     * the correct pattern for a specialUse FGS under targetSdk 35 (see FEAT-005 findings).
+     * A failure here is swallowed into a diagnostic so boot never crashes.
+     */
+    private void arm(Context app) {
+        try {
+            Intent prepare = new Intent(app, OverlayService.class)
+                    .setAction(OverlayService.ACTION_BOOT_PREPARE);
+            app.startForegroundService(prepare);
+            Log.i(TAG, "Autostart armed OverlayService in boot-prepare mode");
+        } catch (RuntimeException startFailure) {
+            // e.g. a platform ForegroundServiceStartNotAllowedException: surface, do not crash.
+            Log.w(TAG, "Autostart could not start OverlayService from boot", startFailure);
+        }
+    }
+
+    private static boolean notEmpty(String value) {
+        return value != null && !value.isEmpty();
+    }
+}

@@ -6,6 +6,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
   <application
     android:allowBackup="false"
@@ -40,5 +41,21 @@
         android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
         android:value="User-started, persistent, noninteractive SceneVibe commentary overlay for Android TV testing" />
     </service>
+
+    <!--
+      Autostart entry point. Listens ONLY to BOOT_COMPLETED and MY_PACKAGE_REPLACED; it is
+      intentionally NOT directBootAware and NOT registered for LOCKED_BOOT_COMPLETED, so it
+      runs only after the user unlocks and Credential Encrypted storage is available. The
+      receiver consults AutostartPolicy and either arms OverlayService (boot-prepare) or
+      records a bounded diagnostic; it never launches MainActivity.
+    -->
+    <receiver
+      android:name=".BootReceiver"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>

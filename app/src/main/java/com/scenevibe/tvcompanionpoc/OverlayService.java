@@ -21,11 +21,20 @@ public final class OverlayService extends Service {
     public static final String ACTION_TOP = "com.scenevibe.tvcompanionpoc.SHOW_TOP";
     public static final String ACTION_BOTTOM = "com.scenevibe.tvcompanionpoc.SHOW_BOTTOM";
     public static final String ACTION_CLOUD_CONNECT = "com.scenevibe.tvcompanionpoc.CLOUD_CONNECT";
+    /**
+     * Boot-prepare (armed, not visible) entry used by {@link BootReceiver}. It prepares the
+     * scheduler, cache restore, MediaSession probe and Cloud client WITHOUT creating or
+     * showing the OverlayRenderer, so a reboot shows no card, no parasitic badge and no
+     * stale comment. The renderer is created lazily only when a comment is actually due.
+     */
+    public static final String ACTION_BOOT_PREPARE = "com.scenevibe.tvcompanionpoc.BOOT_PREPARE";
     private static final String TAG = "SceneVibePoc";
     private static final String CHANNEL_ID = "overlay_poc";
     private static final int NOTIFICATION_ID = 1001;
     private OverlayRenderer renderer;
     private boolean foregroundReady;
+    /** Last chosen overlay position, so a lazily created renderer honors the user's choice. */
+    private boolean bottomPosition;
     private CommentaryServer commentaryServer;
     private MediaSessionProbe mediaSessionProbe;
     private MediaSyncedTrackScheduler trackScheduler;
@@ -60,7 +69,10 @@ public final class OverlayService extends Service {
         }
     }
 
-    /** Show or reposition the window; a system restart restores the last position. */
+    /**
+     * Show or reposition the window, or (from the boot path) arm the runtime without showing
+     * anything. A system restart restores the last position for the user-initiated show path.
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!foregroundReady) {
@@ -72,20 +84,30 @@ public final class OverlayService extends Service {
             return START_NOT_STICKY;
         }
         String action = intent == null ? null : intent.getAction();
+        // "armed != visible": the boot-prepare entry primes the runtime but never draws the
+        // overlay. Every other entry (user-initiated top/bottom, cloud connect, restart with
+        // null action) keeps the original behavior of showing the window immediately.
+        boolean bootPrepare = ACTION_BOOT_PREPARE.equals(action);
         boolean bottom = ACTION_BOTTOM.equals(action)
                 || (!ACTION_TOP.equals(action) && getSharedPreferences("overlay", Context.MODE_PRIVATE)
                         .getBoolean("bottom", false));
-        getSharedPreferences("overlay", Context.MODE_PRIVATE).edit()
-                .putBoolean("bottom", bottom).apply();
+        bottomPosition = bottom;
+        // Do not overwrite the persisted user position from the boot path.
+        if (!bootPrepare) {
+            getSharedPreferences("overlay", Context.MODE_PRIVATE).edit()
+                    .putBoolean("bottom", bottom).apply();
+        }
         try {
-            if (renderer == null) {
-                renderer = new OverlayRenderer(this, this::onPermissionLost);
+            if (!bootPrepare) {
+                showRenderer();
             }
-            renderer.show(bottom);
 
             if (trackScheduler == null) {
                 trackScheduler = new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
                     @Override public void onRender(ScheduledTrack.Event event) {
+                        // A comment is due: create the renderer lazily if the boot path has not
+                        // shown it yet, then display the tracked commentary.
+                        showRenderer();
                         if (renderer != null) renderer.showTrackedCommentary(
                                 event.text, event.durationMs, event.mediaBitmap);
                     }
@@ -93,7 +115,9 @@ public final class OverlayService extends Service {
                         if (renderer != null) renderer.onPlayback(playing, freeze);
                     }
                     @Override public void onEligibility(boolean eligible) {
-                        if (renderer != null) renderer.onTrackEligibility(eligible);
+                        // Media no longer matches: hide the tracked card immediately. Never
+                        // create a renderer just to hide nothing.
+                        if (!eligible && renderer != null) renderer.onTrackEligibility(false);
                     }
                 });
                 cloudTrackRepository = new CloudTrackRepository(this);
@@ -137,13 +161,15 @@ public final class OverlayService extends Service {
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
 
+            String visibility = bootPrepare ? "armed (no overlay shown)"
+                    : "visible; position=" + (bottom ? "bottom" : "top");
             if (BuildConfig.ENABLE_LAN_DEV) {
-                Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
+                Log.i(TAG, "Overlay " + visibility
                         + "; commentary=http://TV_IP:" + CommentaryServer.PORT + "/commentary"
                         + "; track=http://TV_IP:" + CommentaryServer.PORT + "/track"
                         + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
             } else {
-                Log.i(TAG, "Overlay visible; position=" + (bottom ? "bottom" : "top")
+                Log.i(TAG, "Overlay " + visibility
                         + "; mode=cloud-only"
                         + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
             }
@@ -153,6 +179,18 @@ public final class OverlayService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+    }
+
+    /**
+     * Creates the OverlayRenderer on first need and shows it at the current position. This is
+     * the single lazy-creation point: the boot path never calls it, so an armed-but-idle boot
+     * draws no card until a comment is actually due and the scheduler triggers a render.
+     */
+    private void showRenderer() {
+        if (renderer == null) {
+            renderer = new OverlayRenderer(this, this::onPermissionLost);
+        }
+        renderer.show(bottomPosition);
     }
 
     /** Stop if Android revokes the user's overlay capability during the test. */

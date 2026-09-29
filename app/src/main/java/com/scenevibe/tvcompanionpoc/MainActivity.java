@@ -30,6 +30,7 @@ public final class MainActivity extends Activity {
     private TextView mediaAccessStatus;
     private TextView pairingStatus;
     private TextView cloudStatus;
+    private Button autostartButton;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
      * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
@@ -106,6 +107,7 @@ public final class MainActivity extends Activity {
         }
         addButton(controls, "Connect to SceneVibe Cloud", this::connectCloud);
         addButton(controls, "Disconnect cloud", this::disconnectCloud);
+        autostartButton = addButton(controls, autostartLabel(), this::toggleAutostart);
 
         TextView instruction = new TextView(this);
         instruction.setText(BuildConfig.ENABLE_LAN_DEV
@@ -218,8 +220,30 @@ public final class MainActivity extends Activity {
         return null;
     }
 
+    /**
+     * Toggles the "Start SceneVibe with TV" opt-in. This only records the user's choice; it
+     * never starts the service now. On the next boot the BootReceiver consults AutostartPolicy
+     * and arms the overlay only if the opt-in is on and all runtime preconditions hold.
+     */
+    private void toggleAutostart() {
+        boolean next = !AutostartPreference.isEnabled(this);
+        AutostartPreference.setEnabled(this, next);
+        if (autostartButton != null) autostartButton.setText(autostartLabel());
+        Toast.makeText(this, next
+                ? "SceneVibe will arm on TV start (when permissions and a track or credential are present)."
+                : "SceneVibe will not start automatically with the TV.",
+                Toast.LENGTH_LONG).show();
+    }
+
+    /** Reflects the persisted opt-in state on the toggle button label. */
+    private String autostartLabel() {
+        return AutostartPreference.isEnabled(this)
+                ? "Start SceneVibe with TV: On"
+                : "Start SceneVibe with TV: Off";
+    }
+
     /** Make each control keyboard and TV D-pad accessible. */
-    private void addButton(LinearLayout parent, String label, Runnable action) {
+    private Button addButton(LinearLayout parent, String label, Runnable action) {
         Button button = new Button(this);
         button.setText(label);
         button.setTextSize(18);
@@ -229,6 +253,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(440), dp(56));
         params.topMargin = dp(8);
         parent.addView(button, params);
+        return button;
     }
 
     /** Request the system settings page; Android 11+ may show the top-level list. */
