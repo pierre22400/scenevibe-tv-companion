@@ -7,6 +7,9 @@ if (cloudOrigin && !(cloudOrigin ==~ /https:\/\/[^\/:?#]+/)) {
     throw new GradleException("SCENEVIBE_CLOUD_ORIGIN must be an exact HTTPS origin on port 443")
 }
 
+def enableLanDev = providers.environmentVariable("SCENEVIBE_ENABLE_LAN_DEV").orElse("false").get()
+def enableLanDevLiteral = enableLanDev.equalsIgnoreCase("true") ? "true" : "false"
+
 android {
     buildFeatures { buildConfig true }
     namespace "com.scenevibe.tvcompanionpoc"
@@ -16,9 +19,10 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc"
         minSdk 26
         targetSdk 35
-        versionCode 9
-        versionName "0.7.1-cloud-media-bound"
+        versionCode 10
+        versionName "0.8.0-tv-hardening"
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
+        buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
     }
 
     compileOptions {

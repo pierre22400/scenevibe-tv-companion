@@ -24,6 +24,35 @@ class PocContractTests(unittest.TestCase):
                 "android.permission.FOREGROUND_SERVICE",
                 "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
                 "android.permission.INTERNET",
+                # Autostart opt-in (FEAT-005): required for the BootReceiver that listens only
+                # to BOOT_COMPLETED / MY_PACKAGE_REPLACED and arms the overlay in boot-prepare
+                # mode. Never launches UI; the opt-in defaults to off.
+                "android.permission.RECEIVE_BOOT_COMPLETED",
+            },
+        )
+
+    def test_boot_receiver_listens_only_to_allowed_boot_actions(self):
+        """The autostart receiver may listen ONLY to BOOT_COMPLETED and MY_PACKAGE_REPLACED."""
+        root = ET.parse(MANIFEST).getroot()
+        application = root.find("application")
+        receivers = {
+            node.attrib[ANDROID + "name"]: node
+            for node in application.findall("receiver")
+        }
+        boot = receivers[".BootReceiver"]
+        # A system broadcast receiver must be exported to receive BOOT_COMPLETED.
+        self.assertEqual(boot.attrib[ANDROID + "exported"], "true")
+        # Must NOT be directBootAware (no Device Protected Storage / LOCKED_BOOT_COMPLETED).
+        self.assertNotIn(ANDROID + "directBootAware", boot.attrib)
+        actions = {
+            node.attrib[ANDROID + "name"]
+            for node in boot.findall("intent-filter/action")
+        }
+        self.assertEqual(
+            actions,
+            {
+                "android.intent.action.BOOT_COMPLETED",
+                "android.intent.action.MY_PACKAGE_REPLACED",
             },
         )
 
@@ -190,7 +219,10 @@ class PocContractTests(unittest.TestCase):
         self.assertIn("playbackPolicy.pauseFreezesDisplay", loader)
         self.assertIn("showTrackedCommentary", service)
         self.assertIn("renderer.onPlayback(playing, freeze)", service)
-        self.assertIn("renderer.onTrackEligibility(eligible)", service)
+        # "armed != visible" (FEAT-005): eligibility loss must reach the renderer to hide the
+        # tracked card immediately. The service now only hides on ineligibility (and never
+        # creates a renderer just to hide nothing), so it forwards onTrackEligibility(false).
+        self.assertIn("renderer.onTrackEligibility(false)", service)
         self.assertIn("public void onTrackEligibility(boolean eligible)", renderer)
         self.assertIn("displayCountdown.update", renderer)
         self.assertIn("public void showCommentary(", renderer)

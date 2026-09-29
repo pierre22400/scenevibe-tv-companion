@@ -22,6 +22,13 @@ public final class OverlayRenderer {
     private static final String TAG = "SceneVibePoc";
     private final Context context;
     private final Runnable permissionLost;
+    /**
+     * LAN DEV keeps a permanent 'SceneVibe / TV Companion POC' status badge on the overlay
+     * when no commentary is showing (on expiry, on ineligibility, and on idle heartbeat). In
+     * Consumer Mode (ENABLE_LAN_DEV false) the overlay must never show a permanent badge:
+     * expiry and media-identity loss fully remove the window instead. See FEAT-002.
+     */
+    private final boolean permanentBadge;
     private final WindowManager windows;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LinearLayout panel;
@@ -44,10 +51,18 @@ public final class OverlayRenderer {
             commentaryText = null;
             trackedCommentary = false;
             displayCountdown.clear();
-            if (badge != null) {
-                clearMedia();
-                showStatusBadge();
-                Log.i(TAG, "Dynamic commentary expired; status badge restored");
+            if (permanentBadge) {
+                if (badge != null) {
+                    clearMedia();
+                    showStatusBadge();
+                    Log.i(TAG, "Dynamic commentary expired; status badge restored");
+                }
+            } else {
+                // Consumer Mode: armed != visible. The window is fully removed on expiry so
+                // no permanent SceneVibe badge is ever shown; a later comment lazily recreates
+                // the renderer via OverlayService.showRenderer().
+                dismiss();
+                Log.i(TAG, "Dynamic commentary expired; overlay window removed (consumer mode)");
             }
         }
     };
@@ -56,7 +71,7 @@ public final class OverlayRenderer {
         @Override
         public void run() {
             if (panel == null) return;
-            if (commentaryText == null) {
+            if (commentaryText == null && permanentBadge) {
                 showStatusBadge();
             }
             ticks++;
@@ -71,9 +86,10 @@ public final class OverlayRenderer {
         }
     };
 
-    public OverlayRenderer(Context context, Runnable permissionLost) {
+    public OverlayRenderer(Context context, Runnable permissionLost, boolean permanentBadge) {
         this.context = context;
         this.permissionLost = permissionLost;
+        this.permanentBadge = permanentBadge;
         windows = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         if (windows == null) throw new IllegalStateException("WindowManager unavailable");
     }
@@ -140,7 +156,7 @@ public final class OverlayRenderer {
         badge = text;
         mediaView = image;
         params = layout;
-        showStatusBadge();
+        if (permanentBadge) showStatusBadge();
         heartbeat.run();
         Log.i(TAG, "Overlay view attached");
     }
@@ -188,9 +204,17 @@ public final class OverlayRenderer {
             commentaryText = null;
             trackedCommentary = false;
             displayCountdown.clear();
-            clearMedia();
-            showStatusBadge();
-            Log.i(TAG, "Tracked commentary hidden; media identity no longer matches");
+            if (permanentBadge) {
+                clearMedia();
+                showStatusBadge();
+                Log.i(TAG, "Tracked commentary hidden; media identity no longer matches");
+            } else {
+                // Consumer Mode: media identity BLOCKED/UNAVAILABLE fully removes the window;
+                // the next due comment lazily recreates the renderer.
+                dismiss();
+                Log.i(TAG, "Tracked commentary removed; media identity no longer matches"
+                        + " (consumer mode)");
+            }
         });
     }
 

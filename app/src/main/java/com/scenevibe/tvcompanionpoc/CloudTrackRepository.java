@@ -61,6 +61,20 @@ final class CloudTrackRepository {
         try {return Long.parseLong(storage.get("revision"));}
         catch(Exception invalid) {return 0;}
     }
+    /**
+     * The trackId of the cached runtime track (a bounded, non-secret identifier), or null
+     * when nothing is cached or the cache is corrupt. It returns ONLY the trackId string,
+     * never the full FinalTrack, comment text or any other payload, so it is safe to surface
+     * in diagnostics. Corruption fails closed to null.
+     */
+    synchronized String cachedTrackId() {
+        try {
+            String json=storage.get("runtime");
+            if(json==null)return null;
+            String id=new JSONObject(json).optString("trackId",null);
+            return id==null||id.isEmpty()?null:id;
+        } catch(Exception invalid) {return null;}
+    }
     /** Revisions lacking a confirmed ACK remain eligible for redelivery and retry. */
     synchronized long acknowledged() {
         try {return Long.parseLong(storage.get("ackRevision"));}
@@ -70,6 +84,12 @@ final class CloudTrackRepository {
     synchronized boolean markAcknowledged(long revision) {
         return revision==revision() && storage.saveAck(revision);
     }
+    /**
+     * Erases the entire cached runtime track, its revision and ACK state. This is used ONLY
+     * by the exceptional "Reset SceneVibe Cloud connection" flow; the normal Disconnect Cloud
+     * path never calls it, so a disconnected TV keeps playing its last cached track offline.
+     */
+    synchronized void clear() {storage.clear();}
     /** Applies the exact parser used by LAN; cloud runtime is text-only. */
     private ScheduledTrack parse(String json) throws Exception {
         JSONObject envelope=new JSONObject(json);
