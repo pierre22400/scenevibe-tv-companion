@@ -1,9 +1,9 @@
 # SceneVibe TV Companion — Cycle 0.8 (`0.8.0-tv-hardening`)
 
-> **Status.** This document describes the `0.8.0-tv-hardening` consumer-hardening
-> cycle. The build is compile-, lint- and unit-test-verified in CI. It has **not**
-> been physically qualified on a TV yet; the physical qualification protocol lives
-> in [`docs/pr-0.8.0-tv-hardening.md`](pr-0.8.0-tv-hardening.md).
+> **Status.** `0.8.0-tv-hardening` is merged and physically qualified on Sony
+> BRAVIA for the observed Cloud, media identity, offline cache and reboot paths.
+> Stable-certificate 0.7.1 → 0.8.0 migration and Android 15 / API 35 validation
+> remain open. See the [final qualification record](pr-0.8.0-tv-hardening.md).
 
 Cycle 0.8 turns the LAN pairing POC into an **autonomous, Cloud-first consumer
 runtime** that a non-technical user can install once, connect once with a

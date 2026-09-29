@@ -1,10 +1,11 @@
 # feat(tv): harden autonomous Cloud runtime for consumer use
 
-> **This file is the PR body + physical qualification protocol for cycle 0.8**
-> (`0.8.0-tv-hardening`). `0.8.0-tv-hardening` is **NOT yet physically
-> qualified** — the APK has not been run on a TV. Everything below is compile-,
-> lint- and unit-test-verified in CI only. Do **not** describe 0.8.0 as
-> "physically qualified" anywhere.
+> **Final cycle 0.8 qualification record.** Code HEAD
+> `6d14f9065d746750597a2e2f923a8d319c896ab6` was physically qualified on
+> Sony BRAVIA and merged to `main` at
+> `396e1bb02fed57af1b7219a2435f691d2fa52c2c`. The original protocol is
+> retained below; the observed verdict and separate unqualified validations are
+> recorded after it.
 
 ## Summary
 
@@ -18,8 +19,9 @@ preserved intact behind the `SCENEVIBE_ENABLE_LAN_DEV` build flag.
 
 - **Starting SHA:** `c37229809e22e41dc28bdb701d067bd1c9f76aa3`
   (`Merge physically qualified TV cloud client`).
-- **Final code SHA:** `ad04176d05f6147226558038fc21d5aeffe429f4` (the last functional commit of the corrective cycle). This doc-pinning commit sits one above it as the branch tip; the exact branch HEAD and commit count at PR update are stated on the GitHub PR itself.
-- **Commit count:** `16` commits from the starting SHA to the branch tip (`6` in this corrective cycle — 5 functional + this doc pin — on top of the prior `10`).
+- **Physically qualified code HEAD:** `6d14f9065d746750597a2e2f923a8d319c896ab6`.
+- **Merged `main` SHA:** `396e1bb02fed57af1b7219a2435f691d2fa52c2c`.
+- **Commit count:** `18` commits from starting SHA to qualified code HEAD (GitHub compare). The merge commit is separate.
 - **Branch:** `kiro/tv-product-hardening-001` → base `main`.
 
 ## Files changed (against the starting SHA)
@@ -173,18 +175,17 @@ only that start failure, logs a bounded diagnostic and stays disarmed (no retry
 loop). The correct future fix is to keep `specialUse` and surface a user-facing
 "autostart blocked by system" diagnostic, not to downgrade the type.
 
-**Sandbox limitation:** there is no Android device/emulator here, so real boot
-dispatch, the ~10 s `startForeground` window, the Android 15 per-type boot start
-behavior, real AndroidKeyStore AES/GCM round-trip and GCM-tag-mismatch fail-closed,
-and all on-device UI/D-pad rendering are **not** executed. They are validated by
-pure-JVM tests against injectable boundaries plus successful compile + lint, and
-require physical qualification.
+**Original pre-hardware test limitation:** the development sandbox had no
+Android device/emulator. The later Sony BRAVIA test qualified the observed
+product paths described in the final verdict below; it did not exercise Android
+15 / API 35 boot restrictions or establish a hardware-level cross-store
+atomicity guarantee. Those platform-specific validations remain open.
 
 ## APK signing status
 
 - The workflow builds and uploads the debug-signed Cloud qualification APK
   unconditionally.
-- **Stable signing is prepared but NOT yet active**, because it is gated on four
+- **Stable signing is prepared; the 0.7.1 → 0.8.0 same-certificate migration is NOT qualified.** Signing is gated on four
   GitHub Actions secrets that a human must configure. When they are present, CI
   decodes the keystore into `RUNNER_TEMP`, signs the qualification APK with
   `apksigner`, uploads
@@ -201,7 +202,7 @@ require physical qualification.
 
 ---
 
-## Section 23 — Physical qualification protocol (run later; 8 tests)
+## Section 23 — Original physical qualification protocol (retained)
 
 **Reference Cloud harness:** the official merged harness at `interface-scenevibe`
 `main` commit `67f6536600d386a4e6f818055803a5468f6e8c33`, canonical `/api/v1`
@@ -271,5 +272,35 @@ validation (B); run the boot-start and per-type checks on the A15 emulator or de
    reset. Confirm **Disconnect Cloud** (normal UI) instead keeps `deviceToken`,
    `cloudDeviceId`, `installationId` and the cache.
 
-> Until all eight pass on a physical TV, `0.8.0-tv-hardening` is **NOT physically
-> qualified**. Do not claim PC-off success before test 5 passes on real hardware.
+## Final observed verdict — Sony BRAVIA
+
+**0.8.0-tv-hardening physically qualified for the observed Sony product path.**
+The installed 0.8 APK had **Display over other apps: Granted** and **Media access:
+Granted**. Six-digit Cloud activation and claim succeeded; the real FinalTrack
+was stored, assignment revision 1 was fetched by the TV, and the Vercel harness
+reported **TV ACK acknowledged — safe to turn off the PC**.
+
+With Prime Video playing Columbo *Eaux troubles*, scheduled comments appeared.
+Switching to Netflix immediately removed the visible comment, and Netflix
+playback showed no Columbo comments at corresponding timecodes. Returning to
+*Eaux troubles* resumed comments; playing a different Columbo episode showed
+none. The FinalTrack remained cached after the PC was fully powered off; after
+restarting SceneVibe TV, commentary still worked. With autostart enabled, a
+hard reboot rearmed the service without a stray badge and it rendered on
+eligible media. With autostart disabled, a hard reboot did not arm it.
+
+Diagnostics displayed no device token, activation secret, LAN token, full
+FinalTrack, comment text or raw stack trace. Disconnect Cloud preserved
+`installationId`, `cloudDeviceId`, cached track and revision. After Reset
+Cloud and Refresh Diagnostics, `installationId` remained, `cloudDeviceId`
+was removed, cached track was absent and cached revision was 0.
+
+**Separate validations remain open.** A direct debug APK 0.7.1 → 0.8.0
+`adb install -r` returned `INSTALL_FAILED_UPDATE_INCOMPATIBLE` because
+the ephemeral debug signing certificates differed. To test in-place migration,
+both APKs must use the same stable certificate; the four secret names above
+are still for a human to configure. The Sony product test does not establish
+Android 15 / API 35 behavior. Run the `BOOT_COMPLETED`,
+`MY_PACKAGE_REPLACED`, `specialUse` foreground-service and update checks
+on an Android 15 emulator or device. The original numbered protocol above is
+retained as a checklist, not as a claim that every subcheck was observed.
