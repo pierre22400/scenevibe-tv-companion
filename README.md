@@ -1,6 +1,6 @@
 # SceneVibe TV Companion POC
 
-> **STATUS — ACTIVE ANDROID TV REPOSITORY.** Together with `pierre22400/interface-scenevibe`, this is part of the default active SceneVibe working set. `main` is the physically qualified v0.6 LAN baseline. PR #7 is the active outbound-cloud candidate, but it must be aligned to the canonical `/api/v1` cloud protocol merged in the monorepo before it can be merged here.
+> **STATUS — ACTIVE ANDROID TV REPOSITORY.** Together with `pierre22400/interface-scenevibe`, this is part of the default active SceneVibe working set. `main` includes `0.8.0-tv-hardening` (merge `396e1bb02fed57af1b7219a2435f691d2fa52c2c`), physically qualified on Sony BRAVIA with the canonical `/api/v1` Cloud. The earlier PR #7 Cloud client is integrated.
 
 
 **Purpose:** verify on a physical Android TV / Google TV that SceneVibe can keep
@@ -22,13 +22,40 @@ Consumer Cloud Mode, LAN DEV Mode, why no IP is required, the three identities
 (`installationId` / `cloudDeviceId` / `deviceToken`), legacy migration, autostart
 and reboot behavior, the offline cache, the Keystore/SecretStore boundary,
 Diagnostics, Disconnect vs Reset Cloud, stable APK signing, and the build
-variables. `0.8.0-tv-hardening` is compile-, lint- and unit-test-verified but is
-**not yet physically qualified**; the physical qualification protocol is in
-[docs/pr-0.8.0-tv-hardening.md](docs/pr-0.8.0-tv-hardening.md).
+variables. `0.8.0-tv-hardening` is physically qualified on Sony BRAVIA. See the observed
+results and remaining limits in [the qualification record](docs/pr-0.8.0-tv-hardening.md).
 
-## Current state
+## Current qualified state — 0.8.0
 
-The current candidate build is **v0.6.0** (paired authenticated LAN POC).
+On the Sony BRAVIA, overlay and media permissions were granted; six-digit Cloud
+activation and claim, FinalTrack assignment revision 1, TV fetch and a real Vercel
+ACK succeeded: **TV ACK acknowledged — safe to turn off the PC**. Commentary
+continued from the cached FinalTrack after the PC was completely powered off and
+SceneVibe TV was restarted. Prime Video / Columbo *Eaux troubles* rendered its
+comments; switching to Netflix hid the visible comment immediately, Netflix
+playback at matching timecodes rendered none, returning to *Eaux troubles*
+resumed comments, and a different Columbo episode rendered none. Autostart on
+rearmed cleanly after a hard reboot, and autostart off left the service disarmed.
+Diagnostics showed no secrets or full track/comment text. Disconnect retained
+the installation identity, Cloud device and cache/revision; Reset removed the
+Cloud device and cache/revision while retaining the installation identity.
+
+**Separate validations still open:** an in-place 0.7.1 → 0.8.0 update with the
+same stable signing certificate, and Android 15 / API 35 boot and foreground
+service behavior. An attempted debug APK `adb install -r` returned
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE` because the debug certificates differed;
+that does not reflect a runtime failure. The stable signing workflow requires
+four human-configured GitHub Actions secrets:
+`SCENEVIBE_ANDROID_KEYSTORE_BASE64`, `SCENEVIBE_ANDROID_KEYSTORE_PASSWORD`,
+`SCENEVIBE_ANDROID_KEY_ALIAS`, and `SCENEVIBE_ANDROID_KEY_PASSWORD`.
+
+## Historical v0.6 LAN POC
+
+The following versioned details describe the earlier **v0.6.0** paired LAN
+baseline; the consumer 0.8 build defaults to Cloud-only mode and has a boot
+receiver. Its LAN DEV surface is opt-in via `SCENEVIBE_ENABLE_LAN_DEV`.
+
+The v0.6 build provided:
 
 - A TV-friendly activity checks the user-granted **Display over other apps**
   capability and starts/stops the overlay.
@@ -678,9 +705,9 @@ Android does not notify the app merely because another application or compositor
 conceals a still-attached overlay, so physical observation remains part of the
 qualification procedure.
 
-## Outbound SceneVibe Cloud candidate (physical qualification pending)
+## Historical outbound Cloud candidate (subsequently qualified in 0.8)
 
-This branch adds a **separate** outbound HTTPS cloud route alongside the v0.6 LAN pairing/receiver. Build the Android APK with `SCENEVIBE_CLOUD_ORIGIN=https://<your-domain>` (an exact HTTPS host on port 443); without it, the v0.6 LAN app builds and the UI reports **Cloud: Not configured**.
+The earlier Cloud-client branch added a **separate** outbound HTTPS cloud route alongside the v0.6 LAN pairing/receiver. This architecture was subsequently hardened and merged in 0.8. Build the Android APK with `SCENEVIBE_CLOUD_ORIGIN=https://<your-domain>` (an exact HTTPS host on port 443); without it, the v0.6 LAN app builds and the UI reports **Cloud: Not configured**.
 
 The canonical server is now `pierre22400/interface-scenevibe` on `main` at or after commit `2d3d34de64b23808c52220e3bf051c34dd281481`. The TV client speaks that server's canonical `/api/v1` contract. The earlier obsolete cloud contract, the previous Chrome "Connect TV" claim flow that depended on it, and the old monorepo control-plane document are no longer part of this candidate. The Neon + Vercel Cloud foundation is qualified. Account authentication is **not yet integrated**, so there is no signed-in web claim path in this candidate.
 
@@ -693,6 +720,6 @@ The canonical `/api/v1` flow is:
 
 The device credential remains in app-private Android storage and is distinct from the LAN bearer token. **Disconnect cloud** stops polling locally but retains the durable device proof for later TV-initiated reconnection; cached commentary survives. It does not revoke the server token.
 
-Each cloud revision uses the same track parser as LAN; the TV commits the validated text-only runtime JSON and revision before loading its MediaSession scheduler and sending a correlated ACK with the envelope `finalTrackId`. At service restart, it restores the cached track before any network request, even with the desktop offline. The TV never controls Prime Video. There is no phone, boot receiver or cloud playback timer in this candidate.
+Each cloud revision uses the same track parser as LAN; the TV commits the validated text-only runtime JSON and revision before loading its MediaSession scheduler and sending a correlated ACK with the envelope `finalTrackId`. At service restart, it restores the cached track before any network request, even with the desktop offline. The TV never controls Prime Video. That earlier candidate had no boot receiver; the merged 0.8 runtime has one. There is no phone or cloud playback timer.
 
-Physical Cloud Sony/Prime qualification remains **PENDING**: it has not been run. No PC-off success may be claimed before a real physical test on the TV. The qualification, once run, would queue a real Prime track through the canonical server, observe Loaded on the TV, power off or disconnect the PC, and verify normal playback and commentary plus pause/resume and both seek directions across a SceneVibe restart while the PC stays off.
+The subsequent 0.8 Sony qualification passed real Cloud assignment and ACK, Prime playback, media identity fail-closed behavior, and PC-off cache restoration. See the [final 0.8 qualification record](docs/pr-0.8.0-tv-hardening.md) for the exact observed scope and remaining limits.
