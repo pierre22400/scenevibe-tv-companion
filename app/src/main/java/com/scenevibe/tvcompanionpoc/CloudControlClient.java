@@ -93,16 +93,34 @@ final class CloudControlClient {
                 if(existing!=null)request.put("deviceToken",existing);
                 Reply reply=http("POST","device-activations",existing,request);
                 JSONObject data=reply.body;
-                if(reply.status!=201||!CloudProtocol.validActivation(data)) {
-                    Log.w(TAG,"Activation rejected or malformed");return;
+                if(reply.status!=201) {
+                    // Observational only: preserve the server's bounded device-proof refusal
+                    // instead of swallowing every activation failure behind a generic Logcat
+                    // line. Never surface a raw body, token, installationId or account detail.
+                    DiagnosticsStore.INSTANCE.setLastCloudErrorCode(
+                            activationErrorCode(reply.status,data));
+                    publishCloudState();
+                    Log.w(TAG,"Activation rejected");return;
+                }
+                if(!CloudProtocol.validActivation(data)) {
+                    DiagnosticsStore.INSTANCE.setLastCloudErrorCode(
+                            RuntimeDiagnostics.CloudErrorCode.PROTOCOL);
+                    publishCloudState();
+                    Log.w(TAG,"Activation response malformed");return;
                 }
                 // A valid 201 durable-persists deviceToken+cloudDeviceId IMMEDIATELY plus the
                 // temporary activation state; do NOT wait for a claimed status.
                 if(!identity.persistActivation(data.getString("deviceId"),data.getString("deviceToken"),
                         data.getString("activationId"),data.getString("activationSecret"),data.getString("userCode")))
                     throw new IllegalStateException("Private credential write failed");
+                DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NONE);
+                publishCloudState();
                 Log.i(TAG,"Cloud activation open");
-            }catch(Exception error){Log.w(TAG,"Cloud activation unavailable");}
+            }catch(Exception error){
+                DiagnosticsStore.INSTANCE.setLastCloudErrorCode(classify(error));
+                publishCloudState();
+                Log.w(TAG,"Cloud activation unavailable");
+            }
         });
     }
     /** Clears only local cloud credentials; the durable cached track remains available offline. */
@@ -144,6 +162,19 @@ final class CloudControlClient {
         if(error instanceof CloudException) return ((CloudException)error).code;
         if(error instanceof java.net.SocketTimeoutException) return RuntimeDiagnostics.CloudErrorCode.TIMEOUT;
         return RuntimeDiagnostics.CloudErrorCode.NETWORK;
+    }
+    /**
+     * Observational-only activation error mapping. DEVICE_PROOF_REQUIRED is the one recovery
+     * signal the TV must make visible when its stable installationId is still known but the
+     * durable device credential has been lost. Every other response stays coarse; no raw
+     * response body is exposed to Diagnostics.
+     */
+    static RuntimeDiagnostics.CloudErrorCode activationErrorCode(int status,JSONObject body) {
+        if(status==401 && body!=null
+                && "DEVICE_PROOF_REQUIRED".equals(body.optString("error")))
+            return RuntimeDiagnostics.CloudErrorCode.DEVICE_PROOF_REQUIRED;
+        if(status==401)return RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED;
+        return RuntimeDiagnostics.CloudErrorCode.PROTOCOL;
     }
     /**
      * Observational only: maps the current credential state to the bounded diagnostics cloud
