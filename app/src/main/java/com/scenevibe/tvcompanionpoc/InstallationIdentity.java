@@ -13,9 +13,10 @@ import java.util.Base64;
  * the durable deviceToken (the cloud secret). It is NEVER derived from IP, MAC, or TV
  * model: the class performs no network or device-fingerprint lookups of any kind.
  *
- * <p>The identity lives in its own 'installation' app-private preferences file so a later
- * "Reset Cloud" can wipe cloud state without touching it. On first read the mandated
- * migration order runs: (1) reuse an already stored InstallationIdentity value; (2) else
+ * <p>The identity lives in its own 'installation' app-private preferences file so normal
+ * Cloud credential operations cannot mutate it. The exceptional user-initiated "Reset Cloud"
+ * is the sole deliberate rotation path, allowing safe re-pairing after the durable device
+ * credential is destroyed. On first read the mandated migration order runs: (1) reuse an already stored InstallationIdentity value; (2) else
  * migrate EXACTLY the legacy PairingPolicy deviceId (key 'deviceId' in the 'pairing'
  * prefs) so an existing 0.7.1 install keeps its id; (3) else mint a strong random id in
  * the same Base64url-of-16-random-bytes format as the legacy value; then persist the
