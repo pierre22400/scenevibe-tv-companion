@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-005",
+  "type": "docs",
+  "description": "Finalize the cycle: bump the version to 0.8.2 now that the release architecture is stabilized, and write the qualification document docs/tv-release-hardening-0.8.2.md using the required status categories. Depends on FEAT-002/003/004 being complete so the doc reflects the real, built artifacts and audit conclusions. This must honestly distinguish AUTOMATED PASS / EMULATOR PASS / PHYSICAL PASS / HUMAN ACTION REQUIRED / NOT YET QUALIFIED and never label a CI/emulator result as physically qualified.",
+  "status": "pending",
+  "steps": [
+    "Bump app/build.gradle defaultConfig: versionCode 12 and versionName \"0.8.2-tv-release-hardening\" (only now, after the release variant + workflows exist). Change nothing else in the gradle file.",
+    "Re-run the full local gate set after the bump to confirm green: python tests; `gradle :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest`; confirm the release APK is still non-debuggable; confirm MainActivity title/version surface still compiles (BuildConfig.VERSION_NAME is used in MainActivity).",
+    "Create docs/tv-release-hardening-0.8.2.md following the house style of docs/tv-recovery-0.8.1.md. Header with date, branch kiro/tv-release-hardening-0.8.2-001, baseline SHA 0b6f1f8398b49d352b9d0046f1bb020d537098e7. Sections organized under the EXACT status labels: AUTOMATED PASS (python boundary tests, assembleDebug, testDebugUnitTest, LAN DEV build, Cloud qualification build, assembleRelease, release-non-debuggable validation; note which gradle version each ran under and that lint is CI-only or locally-qualified under 8.9 per FEAT-001 findings); EMULATOR PASS (what the android-15-smoke workflow actually verifies in CI, with the Android-TV-vs-standard-image limitation stated); PHYSICAL PASS (explicitly: NONE performed in this cycle; the 0.8.1 Sony BRAVIA recovery qualification remains the prior physical record and is unchanged); HUMAN ACTION REQUIRED (configure the four GitHub signing secrets per docs/stable-signing.md; run the signature-continuity protocol per docs/signature-continuity-protocol.md on the Sony; physically qualify API 35 FGS/overlay/boot on a real Android 15 device; any smoke-test items marked HUMAN/PHYSICAL); NOT YET QUALIFIED (signed release artifact — cannot be produced until secrets exist; physical API 35 runtime). Include the Android 15 audit conclusions (specialUse FGS permitted at boot, SYSTEM_ALERT_WINDOW narrowing analysis, zero-or-minimal code changes with justification). Include the signing architecture decision (self-managed stable sideload/qualification key via four GitHub secrets + apksigner post-build; Play upload key / Play App Signing deferred). Include the exact next physical qualification command(s): the adb install / adb install -r continuity commands and the apksigner verify --print-certs comparison.",
+    "Do NOT write 'physically qualified' for any CI or emulator result anywhere in the doc. Cross-check the wording."
+  ],
+  "acceptance_criteria": [
+    "app/build.gradle has versionCode 12 and versionName \"0.8.2-tv-release-hardening\"; nothing else changed in gradle beyond this and the FEAT-002 release block.",
+    "All local gates still pass after the bump (python, assembleDebug, assembleRelease non-debuggable, testDebugUnitTest).",
+    "docs/tv-release-hardening-0.8.2.md exists and uses the exact categories AUTOMATED PASS / EMULATOR PASS / PHYSICAL PASS / HUMAN ACTION REQUIRED / NOT YET QUALIFIED, records the Android 15 audit conclusions and the signing-key architecture decision, and gives the exact next physical qualification commands.",
+    "The doc never labels any CI/emulator result as physically qualified; PHYSICAL PASS section explicitly states no new physical qualification was performed this cycle."
+  ],
+  "verification": [
+    "ANDROID_HOME=/opt/android-sdk JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2 gradle :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest --stacktrace",
+    "python3 -m unittest discover -s tests",
+    "grep -c 'physically qualified' docs/tv-release-hardening-0.8.2.md || echo 'OK: no forbidden phrase'"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

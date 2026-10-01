@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish and record the green baseline on branch kiro/tv-release-hardening-0.8.2-001 before any change. Confirm the sandbox toolchain (JDK 17 via mise, Android SDK 35 at /opt/android-sdk, gradle on PATH) runs the existing gates and document exactly which gates run locally vs CI-only. This feature changes NO product code; it only verifies the pre-existing state so later regressions are attributable.",
+  "status": "pending",
+  "steps": [
+    "Confirm branch is kiro/tv-release-hardening-0.8.2-001 (git branch --show-current) and HEAD baseline is 0b6f1f8398b49d352b9d0046f1bb020d537098e7 (git log -1 --format=%H).",
+    "Run the Python boundary tests: `python3 -m unittest discover -s tests`. Expect 12 tests OK. Record output.",
+    "Set env for all Gradle commands: `export ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2`. gradle 8.14.5 is already on PATH via mise shims.",
+    "Run `gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace` and confirm BUILD SUCCESSFUL and app/build/outputs/apk/debug/app-debug.apk is produced. Record output.",
+    "Run `gradle :app:lintDebug` once and observe the known IntelliJ/UAST MessageBusImpl 'Already disposed' failure under gradle 8.14.5. Then attempt to run lint under gradle 8.9 to qualify it locally: download gradle 8.9 (e.g. `curl -sS -o /tmp/gradle-8.9-bin.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip` then unzip to /opt/gradle-8.9) and run `/opt/gradle-8.9/gradle-8.9/bin/gradle :app:lintDebug --stacktrace`. If lint passes under 8.9, record it as LOCALLY QUALIFIED under gradle 8.9; if it still fails, record lint as CI-ONLY with the exact error class. Do NOT modify lint rules or suppress anything.",
+    "Run the two env-conditioned builds to prove both config paths compile: `SCENEVIBE_ENABLE_LAN_DEV=true gradle :app:assembleDebug` and `SCENEVIBE_CLOUD_ORIGIN=https://interface-scenevibe-3wxg.vercel.app gradle :app:assembleDebug`.",
+    "Write findings into this feature file documenting each gate result and the exact gradle version used for each. Do not commit yet beyond the already-created .agents/ task state (that is fine to commit)."
+  ],
+  "acceptance_criteria": [
+    "Python boundary tests pass (12 tests, OK).",
+    "gradle :app:assembleDebug and :app:testDebugUnitTest succeed locally with JDK 17 and Android SDK 35 and produce app-debug.apk.",
+    "LAN DEV and Cloud-origin assembleDebug variants both compile.",
+    "The lint gate status (locally-qualified under gradle 8.9 OR CI-only with its exact failure signature) is recorded in findings.",
+    "No product source, manifest, or test file is modified in this feature."
+  ],
+  "verification": [
+    "python3 -m unittest discover -s tests",
+    "ANDROID_HOME=/opt/android-sdk JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2 gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

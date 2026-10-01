@@ -1,0 +1,7 @@
+{
+  "task_id": "task-tv-release-hardening-0.8.2",
+  "task_description": "SceneVibe TV 0.8.2 release hardening: audit the signing/release chain, add a real non-debuggable RELEASE variant and a dedicated workflow_dispatch release CI that apksigner-signs with secret-gated explicit failure, author human stable-signing + signature-continuity docs, perform an Android 15/API 35 behavioral audit with minimal necessary changes and an API 35 emulator smoke-test workflow, bump to versionCode 12 / 0.8.2-tv-release-hardening, and write docs/tv-release-hardening-0.8.2.md. Must not regress the physically-qualified 0.8.1 TV core, must not touch interdicted files, must never generate/commit/log secrets, and must never label CI/emulator results as physically qualified. Baseline SHA 0b6f1f8398b49d352b9d0046f1bb020d537098e7 on branch kiro/tv-release-hardening-0.8.2-001.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}

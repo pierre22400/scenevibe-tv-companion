@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Introduce a real, non-debuggable RELEASE build variant in app/build.gradle. Today the module has NO buildTypes/signingConfigs block, so only the implicit debuggable debug variant exists and the current CI signs that debug APK with the stable key — which is NOT a correct production artifact. Add an explicit release buildType that is non-debuggable, with minify disabled (POC keeps behavior identical; no shrinker to avoid changing qualified runtime behavior), and NO embedded signingConfig (signing is performed post-build by apksigner in CI using GitHub secrets, per the audit decision). assembleRelease must produce an UNSIGNED release APK that is non-debuggable. This feature must not change any BuildConfig field semantics (CLOUD_ORIGIN / ENABLE_LAN_DEV) or any runtime behavior of the qualified 0.8.1 core.",
+  "status": "pending",
+  "steps": [
+    "Read app/build.gradle. Add an `android { buildTypes { ... } }` block. Define `release { debuggable false; minifyEnabled false; shrinkResources false; signingConfig null }`. Rationale to put in a code comment: the POC keeps minify/shrink OFF so the qualified 0.8.1 runtime behavior is byte-for-byte unchanged except for the debuggable flag and signing; a real release signature is applied by apksigner in CI from GitHub secrets (NOT a gradle signingConfig that would require the key material at configure time). Keep the existing `debug` behavior implicit/default (do not add a debug block that changes anything).",
+    "Keep buildFeatures.buildConfig true. Do NOT touch the env-var validation logic or the buildConfigField lines; the release variant must inherit the exact same CLOUD_ORIGIN / ENABLE_LAN_DEV defaultConfig fields so a Cloud-origin release build embeds the real origin.",
+    "Do NOT add any keystore path, storePassword, keyAlias, or keyPassword to the gradle files. There must be zero secret material referenced in version-controlled gradle.",
+    "Build locally to prove the release variant assembles unsigned and non-debuggable: `export ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2`; `gradle :app:assembleRelease --stacktrace`. Expect app/build/outputs/apk/release/app-release-unsigned.apk (unsigned release output).",
+    "Validate non-debuggable: run `/opt/android-sdk/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/release/app-release-unsigned.apk | grep -i debuggable` and confirm there is NO `application-debuggable` line. Also confirm the merged release manifest does not set android:debuggable=true (inspect app/build/intermediates/merged_manifests/release/AndroidManifest.xml).",
+    "Build the Cloud-origin release to confirm the origin is embedded: `SCENEVIBE_CLOUD_ORIGIN=https://interface-scenevibe-3wxg.vercel.app gradle :app:assembleRelease` and confirm it produces an unsigned release APK.",
+    "Confirm the existing debug gates still pass unchanged: `gradle :app:assembleDebug :app:testDebugUnitTest`. Confirm Python boundary tests still pass. Do NOT weaken or edit tests."
+  ],
+  "acceptance_criteria": [
+    "app/build.gradle declares an explicit release buildType with debuggable=false and no embedded signingConfig / no keystore references.",
+    "`gradle :app:assembleRelease` produces an unsigned, non-debuggable release APK (app/build/outputs/apk/release/app-release-unsigned.apk).",
+    "aapt dump badging on the release APK shows NO application-debuggable flag.",
+    "The Cloud-origin release build embeds https://interface-scenevibe-3wxg.vercel.app and compiles.",
+    "assembleDebug, testDebugUnitTest, and the Python boundary tests all still pass; no test assertion weakened; no interdicted file modified."
+  ],
+  "verification": [
+    "ANDROID_HOME=/opt/android-sdk JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2 gradle :app:assembleRelease --stacktrace",
+    "/opt/android-sdk/build-tools/35.0.0/aapt dump badging app/build/outputs/apk/release/app-release-unsigned.apk | grep -i debuggable || echo 'NON-DEBUGGABLE (no debuggable flag) OK'",
+    "ANDROID_HOME=/opt/android-sdk JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2 gradle :app:assembleDebug :app:testDebugUnitTest && python3 -m unittest discover -s tests"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
