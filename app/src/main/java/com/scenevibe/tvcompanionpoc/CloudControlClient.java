@@ -164,15 +164,12 @@ final class CloudControlClient {
         return RuntimeDiagnostics.CloudErrorCode.NETWORK;
     }
     /**
-     * Observational-only activation error mapping. DEVICE_PROOF_REQUIRED is the one recovery
-     * signal the TV must make visible when its stable installationId is still known but the
-     * durable device credential has been lost. Every other response stays coarse; no raw
-     * response body is exposed to Diagnostics.
+     * Observational-only activation error mapping. The Cloud deliberately collapses device-proof
+     * failures and other activation authentication failures to the SAME public 401/UNAUTHORIZED
+     * contract, so Diagnostics preserves that opaque boundary rather than trying to infer or
+     * expose the server's internal reason. No raw response body is surfaced.
      */
     static RuntimeDiagnostics.CloudErrorCode activationErrorCode(int status,JSONObject body) {
-        if(status==401 && body!=null
-                && "DEVICE_PROOF_REQUIRED".equals(body.optString("error")))
-            return RuntimeDiagnostics.CloudErrorCode.DEVICE_PROOF_REQUIRED;
         if(status==401)return RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED;
         return RuntimeDiagnostics.CloudErrorCode.PROTOCOL;
     }
