@@ -30,6 +30,8 @@ final class CloudControlClient {
      * a daemon thread so the Android caller is never used as the reset worker.
      */
     private final java.util.concurrent.Executor resetFallback;
+    /** Destructive-reset hook that rotates ONLY the non-secret local installation identity. */
+    private final Runnable resetInstallationIdentity;
     private final CloudDeviceCredentials identity;
     private final CloudTrackRepository cache;
     private final MediaSyncedTrackScheduler scheduler;
@@ -42,6 +44,7 @@ final class CloudControlClient {
     CloudControlClient(Context context, CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
         this.io=Executors.newSingleThreadScheduledExecutor();
         this.resetFallback=CloudControlClient::startResetFallbackThread;
+        this.resetInstallationIdentity=()->new InstallationIdentity(context).rotateForCloudReset();
         this.identity=new CloudDeviceCredentials(context);
         this.cache=cache;
         this.scheduler=scheduler;
@@ -59,7 +62,7 @@ final class CloudControlClient {
      */
     CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
             CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
-        this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread);
+        this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread,()->{});
     }
     /**
      * Extended injectable seam used only by reset tests so the rejected-primary-executor path
@@ -68,8 +71,18 @@ final class CloudControlClient {
     CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
             CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
             java.util.concurrent.Executor resetFallback) {
+        this(io,identity,cache,scheduler,resetFallback,()->{});
+    }
+    /**
+     * Full reset seam: tests may observe the installation-id rotation without Android storage.
+     * Production supplies a durable {@link InstallationIdentity#rotateForCloudReset()} hook.
+     */
+    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
+            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
+            java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity) {
         this.io=io;
         this.resetFallback=resetFallback;
+        this.resetInstallationIdentity=resetInstallationIdentity;
         this.identity=identity;
         this.cache=cache;
         this.scheduler=scheduler;
@@ -302,9 +315,12 @@ final class CloudControlClient {
      *
      * <p>The wipe deletes the cloud identity (deviceToken/activationSecret/cloudDeviceId/
      * activationId/userCode) and the cached track, clears the scheduler (dropping any in-memory
-     * runtime track), and zeroes the Cloud diagnostics. It NEVER touches the separate
-     * 'installation' identity store, so the stable local installationId survives. The autostart
-     * pref is left as-is (AutostartPolicy then concludes NOTHING_TO_RESTORE).
+     * runtime track), zeroes the Cloud diagnostics, and deliberately rotates the separate
+     * local installation identity. Rotation is the secure recovery boundary: once the durable
+     * device credential is deleted, reusing the old installationId would require proof that no
+     * longer exists. A fresh random id lets the TV pair as a new device without weakening Cloud
+     * proof-of-possession. The historical account device remains until explicitly removed.
+     * The autostart pref is left as-is (AutostartPolicy then concludes NOTHING_TO_RESTORE).
      *
      * <p>Completion is asynchronous: an optional {@code onComplete} callback runs at the end of
      * the wipe runnable (on the io thread). A bounded daemon watchdog surfaces a bounded
@@ -327,11 +343,17 @@ final class CloudControlClient {
         final java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);
         Runnable wipe=()->{
             try {
+                // Rotate FIRST: after the durable device credential is deliberately deleted,
+                // reusing the old installationId would make the Cloud correctly require proof
+                // that no longer exists. A fresh random installation identity lets the user
+                // pair as a NEW TV without weakening server-side device proof. The historical
+                // account-owned device remains server-side until explicitly removed there.
+                resetInstallationIdentity.run();
                 identity.reset();
                 cache.clear();
                 scheduler.clear();
                 DiagnosticsStore.INSTANCE.resetCloudObservations();
-                Log.i(TAG,"Cloud reset completed on io executor");
+                Log.i(TAG,"Cloud reset completed with fresh installation identity");
             }finally {
                 done.countDown();
                 if(onComplete!=null) {
