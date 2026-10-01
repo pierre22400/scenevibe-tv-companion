@@ -1,7 +1,28 @@
 {
   "task_id": "task-tv-release-hardening-0.8.2",
   "task_description": "SceneVibe TV 0.8.2 release hardening: audit the signing/release chain, add a real non-debuggable RELEASE variant and a dedicated workflow_dispatch release CI that apksigner-signs with secret-gated explicit failure, author human stable-signing + signature-continuity docs, perform an Android 15/API 35 behavioral audit with minimal necessary changes and an API 35 emulator smoke-test workflow, bump to versionCode 12 / 0.8.2-tv-release-hardening, and write docs/tv-release-hardening-0.8.2.md. Must not regress the physically-qualified 0.8.1 TV core, must not touch interdicted files, must never generate/commit/log secrets, and must never label CI/emulator results as physically qualified. Baseline SHA 0b6f1f8398b49d352b9d0046f1bb020d537098e7 on branch kiro/tv-release-hardening-0.8.2-001.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "baseline_sha": "0b6f1f8398b49d352b9d0046f1bb020d537098e7",
+  "final_head_sha": "59ac913b53ba32e2d6985dc331dd2a598d5d56a1",
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "All locally-runnable gates green against final HEAD 59ac913. Python boundary tests 12/12 OK. JVM unit tests: all 17 existing test classes, 108 test methods, 0 failures / 0 errors (no test deleted or weakened; the diff touches no test file). assembleDebug + testDebugUnitTest BUILD SUCCESSFUL under gradle 8.14.5. assembleRelease + lintDebug BUILD SUCCESSFUL under gradle 8.9 (lintVital crashes under 8.14.5 locally — a known sandbox toolchain quirk, not a code defect; CI uses 8.9). LAN DEV build and Cloud qualification build both BUILD SUCCESSFUL. Release APK confirmed versionCode 12 / versionName 0.8.2-tv-release-hardening / targetSdk 35 / non-debuggable / unsigned (signing is CI-only via apksigner + the four GitHub secrets, which are absent in the sandbox). No Docker in this project (docker_build not applicable). CI-ONLY gates (not runnable locally and honestly declared): the signed-release production chain (needs the four GitHub repo signing secrets) and the Android 15 / API 35 emulator smoke test (no KVM/AVD locally). Semantic review: v1 NEEDS_CHANGES (one fail-open validation step) -> fixed in commit 59ac913 -> v2 APPROVED with zero issues. No interdicted file touched; no secret generated/committed/logged.",
+    "gates": {
+      "python_boundary_tests": "pass (local, 12/12)",
+      "jvm_unit_tests": "pass (local, 17 classes / 108 methods, 0 fail)",
+      "lint": "pass (local under gradle 8.9; CI-only under 8.14.5 due to lint-runtime MessageBus quirk)",
+      "assembleDebug": "pass (local, gradle 8.14.5)",
+      "lan_dev_build": "pass (local)",
+      "cloud_qualification_build": "pass (local)",
+      "assembleRelease": "pass (local, gradle 8.9)",
+      "release_non_debuggable_validation": "pass (local; aapt shows no application-debuggable flag; release APK unsigned)",
+      "signature_validation": "CI-only (four GitHub signing secrets absent locally; release workflow fails fast when absent)",
+      "android15_emulator_smoke": "CI-only (no KVM/AVD locally; standard API 35 google_apis image, platform invariants only, NOT Android TV, NOT physical)"
+    }
+  }
 }
