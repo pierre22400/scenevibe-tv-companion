@@ -74,10 +74,27 @@ jobs:
 
       - name: Validate release APK is NOT debuggable
         run: |
+          # Fail CLOSED: this gate must prove the shipped artifact is non-debuggable,
+          # so every way the check could silently no-op is turned into a hard failure.
+          # set -euo pipefail stops the step on any unset var or failed command; the
+          # explicit APK-exists and non-empty-badging assertions prove aapt actually
+          # ran and produced output BEFORE we grep for the debuggable flag (otherwise a
+          # failed aapt would feed empty input to grep, grep would find nothing, and the
+          # old pipeline would have falsely reported "NON-DEBUGGABLE OK").
+          set -euo pipefail
           BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/35.0.0)"
           AAPT="$BUILD_TOOLS_DIR/aapt"
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          if "$AAPT" dump badging "$UNSIGNED_APK" | grep -q 'application-debuggable'; then
+          if [ ! -f "$UNSIGNED_APK" ]; then
+            echo "::error::Unsigned release APK not found at $UNSIGNED_APK. assembleRelease did not produce the expected artifact."
+            exit 1
+          fi
+          BADGING="$("$AAPT" dump badging "$UNSIGNED_APK")"
+          if [ -z "$BADGING" ]; then
+            echo "::error::aapt dump badging produced no output for $UNSIGNED_APK. Cannot validate the debuggable flag; failing closed."
+            exit 1
+          fi
+          if echo "$BADGING" | grep -q 'application-debuggable'; then
             echo '::error::Release APK is debuggable. assembleRelease must emit a non-debuggable APK.'
             exit 1
           fi
@@ -138,6 +155,12 @@ jobs:
           echo "$APK_SHA256  scenevibe-tv-companion-release.apk" > "$STAGE/apk-sha256.txt"
 
           # (4) certificate SHA-256 fingerprint, extracted from the verify output.
+          # NOTE: this matches the literal label "certificate SHA-256 digest:" emitted
+          # by apksigner from build-tools 35.0.0 (the version pinned above via
+          # sdkmanager "build-tools;35.0.0"). If a future build-tools version changes
+          # that wording, this extraction would yield an empty digest, which the
+          # hard-fail below catches, so the step fails loudly rather than shipping an
+          # empty certificateSha256. Re-confirm the label if the pinned version changes.
           CERT_SHA256="$(grep -i 'certificate SHA-256 digest:' "$STAGE/release-apksigner-verify.txt" | head -n1 | sed 's/.*digest:[[:space:]]*//' | tr -d '[:space:]')"
           if [ -z "$CERT_SHA256" ]; then
             echo '::error::Could not extract certificate SHA-256 digest from apksigner verify output.'
