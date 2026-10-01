@@ -321,6 +321,36 @@ public final class CloudResetAsyncTest {
     }
 
     /**
+     * Recovery identity rotation is serialized INSIDE the same asynchronous wipe: reset()
+     * returns before it runs, then the io worker rotates exactly once before deleting the
+     * Cloud credential. This prevents a main-thread write and guarantees the next client is
+     * constructed from a fresh installation id.
+     */
+    @Test public void resetRotatesRecoveryIdentityOnlyWhenAsyncWipeRuns() throws Exception {
+        CloudMemory cloud=new CloudMemory();SecretStore secrets=new SecretStore.InMemorySecretStore();
+        CloudDeviceCredentials identity=credentials(cloud,secrets);
+        identity.persistActivation("cloud-uuid","device-token","act-1","secret","123456");
+        MediaSyncedTrackScheduler scheduler=new MediaSyncedTrackScheduler(new RecordingListener());
+        CloudTrackRepository cache=new CloudTrackRepository(new TrackMemory());
+
+        ManualExecutor io=new ManualExecutor();
+        final int[] rotations={0};
+        CloudControlClient client=new CloudControlClient(
+                io,identity,cache,scheduler,Runnable::run,
+                ()->rotations[0]++);
+
+        client.reset();
+        assertEquals("rotation must not run on the reset caller",0,rotations[0]);
+        assertEquals("credential remains until asynchronous wipe runs",
+                "device-token",identity.deviceToken());
+
+        io.runAll();
+
+        assertEquals("installation identity rotates exactly once",1,rotations[0]);
+        assertNull("credential is deleted after rotation",identity.deviceToken());
+    }
+
+    /**
      * Restartability contract (unchanged by the async fix): after reset the client is spent
      * (io shut down, cannot poll), OverlayService nulls the reference, and the pure guard
      * mirror says a later entry with a configured origin reconstructs a fresh client.

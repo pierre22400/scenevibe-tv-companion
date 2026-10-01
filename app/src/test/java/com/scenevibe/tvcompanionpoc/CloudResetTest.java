@@ -17,8 +17,8 @@ import static org.junit.Assert.*;
  *       InstallationIdentity and the FinalTrack cache (revision + ACK).</li>
  *   <li><b>Reset SceneVibe Cloud connection</b> (Diagnostics-only, exceptional): deletes
  *       deviceToken, cloudDeviceId, activationId, activationSecret, userCode AND the cache,
- *       and sets cloud state to disconnected - but MUST leave the InstallationIdentity
- *       identical (same value before and after).</li>
+ *       and rotates InstallationIdentity so the TV can pair as a new device without weakening
+ *       the server's proof-of-possession rule.</li>
  * </ul>
  *
  * All boundaries are the injectable Storage / SecretStore seams, so the whole thing runs on
@@ -65,7 +65,7 @@ public final class CloudResetTest {
         @Override public void clear(){values.clear();}
     }
 
-    /** In-memory 'installation' store; a Cloud reset must never touch this. */
+    /** In-memory 'installation' store used to prove normal stability and explicit rotation. */
     private static final class InstallMemory implements InstallationIdentity.Storage {
         final Map<String,String> values=new HashMap<>();
         @Override public String get(String key){return values.get(key);}
@@ -147,9 +147,9 @@ public final class CloudResetTest {
 
     /**
      * Reset Cloud deletes deviceToken/cloudDeviceId/activationId/activationSecret/userCode and
-     * the cache, sets state to disconnected, but leaves the InstallationIdentity IDENTICAL.
+     * the cache, sets state to disconnected, and deliberately rotates InstallationIdentity.
      */
-    @Test public void resetDeletesCloudStateButKeepsInstallationIdentity() throws Exception {
+    @Test public void resetDeletesCloudStateAndRotatesInstallationIdentity() throws Exception {
         CloudMemory cloud=new CloudMemory();SecretStore secrets=new SecretStore.InMemorySecretStore();
         CloudDeviceCredentials identity=credentials(cloud,secrets);
         identity.persistActivation("cloud-uuid","device-token","act-1","secret","123456");
@@ -169,7 +169,9 @@ public final class CloudResetTest {
         assertTrue(cache.install(2,track("cached"),scheduler()));
         assertTrue(cache.markAcknowledged(2));
 
-        // The exceptional Reset: wipe both secrets + cloud identity + cache.
+        // The exceptional Reset: rotate installation identity, then wipe both secrets +
+        // cloud identity + cache. This is the secure recovery boundary used in production.
+        new InstallationIdentity(install,()->null,new SecureRandom()).rotateForCloudReset();
         identity.reset();
         cache.clear();
 
@@ -189,12 +191,12 @@ public final class CloudResetTest {
         assertEquals(0,cache.acknowledged());
         assertNull(cache.cachedTrackId());
 
-        // The InstallationIdentity store was never touched: same value, byte for byte.
+        // The exceptional reset MUST produce a different durable installation identity.
         String installationAfter=new InstallationIdentity(install,()->null,new SecureRandom()).installationId();
-        assertEquals("Reset Cloud MUST preserve the local InstallationIdentity",
+        assertNotEquals("Reset Cloud must rotate the local InstallationIdentity",
                 installationBefore,installationAfter);
         assertEquals(1,install.values.size());
-        assertEquals(installationBefore,install.values.get(InstallationIdentity.KEY_INSTALLATION_ID));
+        assertEquals(installationAfter,install.values.get(InstallationIdentity.KEY_INSTALLATION_ID));
     }
 
     /**

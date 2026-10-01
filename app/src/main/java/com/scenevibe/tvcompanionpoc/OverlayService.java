@@ -31,8 +31,9 @@ public final class OverlayService extends Service {
     /**
      * EXCEPTIONAL "Reset SceneVibe Cloud connection" forwarded from {@link DiagnosticsActivity}
      * when the service is running. It runs the coordinated reset on the CloudControlClient's io
-     * executor (so no in-flight GET/ACK rewrites the cache) and then dismisses the renderer, so
-     * no stale card/comment survives a reset. It never touches the local InstallationIdentity.
+     * executor (so no in-flight GET/ACK rewrites the cache), rotates the local installation
+     * identity for safe re-pairing, and then dismisses the renderer so no stale card/comment
+     * survives a reset.
      */
     public static final String ACTION_CLOUD_RESET = "com.scenevibe.tvcompanionpoc.CLOUD_RESET";
     /** Bounded observational block code: the projected media identity no longer matches. */

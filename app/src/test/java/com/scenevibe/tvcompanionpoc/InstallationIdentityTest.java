@@ -7,9 +7,10 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 /**
- * JVM tests for the stable local installation identity: stable generation, stable
- * re-read, EXACT legacy PairingPolicy deviceId migration, no re-mint once a legacy value
- * exists, no IP/network derivation, and strict separation from cloudDeviceId + deviceToken.
+ * JVM tests for the local installation identity: stable generation/re-read during normal
+ * operation, EXACT legacy PairingPolicy deviceId migration, no accidental re-mint on update,
+ * explicit destructive-reset rotation, no IP/network derivation, and strict separation from
+ * cloudDeviceId + deviceToken.
  */
 public final class InstallationIdentityTest {
     /** In-memory store faithfully reproducing the 'installation' SharedPreferences file. */
@@ -84,6 +85,24 @@ public final class InstallationIdentityTest {
         String afterUpdate=new InstallationIdentity(memory,none(),new SecureRandom()).installationId();
         assertEquals(legacyValue,migrated);
         assertEquals(migrated,afterUpdate);
+    }
+
+    /**
+     * The exceptional Cloud reset is the ONLY path allowed to rotate the installation id.
+     * Rotation overwrites the stored value with a fresh random id so a TV that deliberately
+     * deleted its durable Cloud credential can pair as a new device without bypassing proof.
+     */
+    @Test public void explicitCloudResetRotationMintsAndPersistsFreshIdentity() {
+        Memory memory=new Memory();
+        memory.values.put(InstallationIdentity.KEY_INSTALLATION_ID,"old-installation-id");
+        InstallationIdentity identity=new InstallationIdentity(memory,none(),fixedRandom());
+
+        String rotated=identity.rotateForCloudReset();
+
+        assertNotEquals("old-installation-id",rotated);
+        assertEquals(rotated,memory.values.get(InstallationIdentity.KEY_INSTALLATION_ID));
+        assertEquals("subsequent normal reads keep the rotated identity",
+                rotated,identity.installationId());
     }
 
     /**

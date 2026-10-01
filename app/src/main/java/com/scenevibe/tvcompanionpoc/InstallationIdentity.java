@@ -13,9 +13,10 @@ import java.util.Base64;
  * the durable deviceToken (the cloud secret). It is NEVER derived from IP, MAC, or TV
  * model: the class performs no network or device-fingerprint lookups of any kind.
  *
- * <p>The identity lives in its own 'installation' app-private preferences file so a later
- * "Reset Cloud" can wipe cloud state without touching it. On first read the mandated
- * migration order runs: (1) reuse an already stored InstallationIdentity value; (2) else
+ * <p>The identity lives in its own 'installation' app-private preferences file so normal
+ * Cloud credential operations cannot mutate it. The exceptional user-initiated "Reset Cloud"
+ * is the sole deliberate rotation path, allowing safe re-pairing after the durable device
+ * credential is destroyed. On first read the mandated migration order runs: (1) reuse an already stored InstallationIdentity value; (2) else
  * migrate EXACTLY the legacy PairingPolicy deviceId (key 'deviceId' in the 'pairing'
  * prefs) so an existing 0.7.1 install keeps its id; (3) else mint a strong random id in
  * the same Base64url-of-16-random-bytes format as the legacy value; then persist the
@@ -97,6 +98,24 @@ final class InstallationIdentity {
         String existing = storage.get(KEY_INSTALLATION_ID);
         if (existing != null) return existing;
         return legacy != null ? legacy.value() : null;
+    }
+
+    /**
+     * Destructive recovery primitive used ONLY by the explicit Diagnostics Cloud reset.
+     *
+     * <p>A normal installation keeps one stable id forever. Reset is different: once the TV
+     * user deliberately deletes the Cloud credential, preserving the old installationId would
+     * make the server correctly demand proof of the now-deleted device token and the TV could
+     * never pair again. Recovery therefore mints and durably stores a fresh random installation
+     * id. The previous server-side device remains account-owned until the user removes it from
+     * the account; this method never attempts a silent takeover or weakens device proof.
+     *
+     * @return the newly persisted non-secret installation id
+     */
+    synchronized String rotateForCloudReset() {
+        String id = generate();
+        storage.put(KEY_INSTALLATION_ID, id);
+        return id;
     }
 
     /** Strong random id in the same Base64url-of-16-random-bytes format as the legacy value. */

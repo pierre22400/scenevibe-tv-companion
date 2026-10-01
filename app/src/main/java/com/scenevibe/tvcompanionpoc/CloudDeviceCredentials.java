@@ -301,9 +301,9 @@ final class CloudDeviceCredentials {
      * Diagnostics and never triggered automatically by any network/timeout/401/error path.
      * It deletes BOTH encrypted secrets (deviceToken + activationSecret) from the SecretStore
      * and wipes the non-secret cloud_identity store (cloudDeviceId, activationId, userCode,
-     * connected/offline). It DELIBERATELY leaves the separate 'installation' identity store
-     * untouched, so the stable local installationId survives a cloud reset. The FinalTrack
-     * cache is cleared by the caller (CloudTrackRepository.clear()), not here. After a reset
+     * connected/offline). This class itself does not edit the separate 'installation' store;
+     * the explicit higher-level reset rotates that identity as a separate recovery step. The
+     * FinalTrack cache is cleared by the caller (CloudTrackRepository.clear()), not here. After a reset
      * the cloud state reads as disconnected with no credential. A previously observed
      * credential-unavailable flag is cleared because there is no longer any secret to read.
      */

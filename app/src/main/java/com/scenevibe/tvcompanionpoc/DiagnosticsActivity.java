@@ -55,8 +55,9 @@ public final class DiagnosticsActivity extends Activity {
         addButton(controls, "Reset SceneVibe Cloud connection", this::resetCloud);
 
         TextView note = new TextView(this);
-        note.setText("Reset deletes this TV's SceneVibe Cloud credential and cached track. "
-                + "The local installation id is kept. Reconnect from the main screen afterwards.");
+        note.setText("Reset deletes this TV's SceneVibe Cloud credential and cached track, "
+                + "then creates a fresh local installation id so the TV can pair again safely. "
+                + "The previous TV entry remains in your SceneVibe account until you remove it.");
         note.setTextColor(0xFFA89F92);
         note.setTextSize(13);
         note.setGravity(Gravity.CENTER);
@@ -82,9 +83,11 @@ public final class DiagnosticsActivity extends Activity {
     }
 
     /**
-     * Executes the EXCEPTIONAL Cloud reset: wipe the cloud credential + cloud identity and
-     * clear the runtime cache, while leaving the local InstallationIdentity untouched. It is
-     * only ever run from this explicit button - never automatically on a network/timeout/401.
+     * Executes the EXCEPTIONAL Cloud reset: rotate the local InstallationIdentity, wipe the
+     * cloud credential + cloud identity and clear the runtime cache. Rotation is intentional:
+     * after deleting the device credential, reusing the old installation id would require proof
+     * the TV no longer owns. It is only ever run from this explicit button - never automatically
+     * on a network/timeout/401.
      */
     private void resetCloud() {
         if (DiagnosticsStore.INSTANCE.serviceRunning()) {
@@ -98,12 +101,13 @@ public final class DiagnosticsActivity extends Activity {
         } else {
             // No running service means no concurrent client, so a direct-but-safe wipe is
             // correct: nothing can rewrite the cache after we clear it here.
+            new InstallationIdentity(this).rotateForCloudReset();
             new CloudDeviceCredentials(this).reset();
             new CloudTrackRepository(this).clear();
             DiagnosticsStore.INSTANCE.resetCloudObservations();
         }
         Log.i(TAG, "SceneVibe Cloud connection reset by TV user");
-        Toast.makeText(this, "SceneVibe Cloud connection reset. Local installation id kept.",
+        Toast.makeText(this, "SceneVibe Cloud reset. A fresh TV identity is ready to pair.",
                 Toast.LENGTH_LONG).show();
         refresh();
     }
