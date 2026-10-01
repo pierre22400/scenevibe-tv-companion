@@ -98,7 +98,7 @@ final class CloudControlClient {
                     // instead of swallowing every activation failure behind a generic Logcat
                     // line. Never surface a raw body, token, installationId or account detail.
                     DiagnosticsStore.INSTANCE.setLastCloudErrorCode(
-                            activationErrorCode(reply.status,data));
+                            activationErrorCode(reply.status));
                     publishCloudState();
                     Log.w(TAG,"Activation rejected");return;
                 }
@@ -169,7 +169,7 @@ final class CloudControlClient {
      * contract, so Diagnostics preserves that opaque boundary rather than trying to infer or
      * expose the server's internal reason. No raw response body is surfaced.
      */
-    static RuntimeDiagnostics.CloudErrorCode activationErrorCode(int status,JSONObject body) {
+    static RuntimeDiagnostics.CloudErrorCode activationErrorCode(int status) {
         if(status==401)return RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED;
         return RuntimeDiagnostics.CloudErrorCode.PROTOCOL;
     }
