@@ -19,8 +19,8 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc"
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName "0.8.1-tv-recovery"
+        versionCode 12
+        versionName "0.8.2-tv-release-hardening"
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
     }
