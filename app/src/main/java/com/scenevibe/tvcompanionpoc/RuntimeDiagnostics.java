@@ -78,7 +78,7 @@ final class RuntimeDiagnostics {
      * values; a raw HTTP body, stack trace or credential is never surfaced. NONE means the
      * last cloud interaction had no error to report.
      */
-    enum CloudErrorCode { NONE, NETWORK, TIMEOUT, UNAUTHORIZED, DEVICE_PROOF_REQUIRED, PROTOCOL, CREDENTIAL_UNAVAILABLE }
+    enum CloudErrorCode { NONE, NETWORK, TIMEOUT, UNAUTHORIZED, PROTOCOL, CREDENTIAL_UNAVAILABLE }
 
     final String appVersion;
     final boolean serviceRunning;
