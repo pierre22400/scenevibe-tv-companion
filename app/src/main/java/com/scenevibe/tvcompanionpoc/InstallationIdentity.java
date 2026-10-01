@@ -99,6 +99,24 @@ final class InstallationIdentity {
         return legacy != null ? legacy.value() : null;
     }
 
+    /**
+     * Destructive recovery primitive used ONLY by the explicit Diagnostics Cloud reset.
+     *
+     * <p>A normal installation keeps one stable id forever. Reset is different: once the TV
+     * user deliberately deletes the Cloud credential, preserving the old installationId would
+     * make the server correctly demand proof of the now-deleted device token and the TV could
+     * never pair again. Recovery therefore mints and durably stores a fresh random installation
+     * id. The previous server-side device remains account-owned until the user removes it from
+     * the account; this method never attempts a silent takeover or weakens device proof.
+     *
+     * @return the newly persisted non-secret installation id
+     */
+    synchronized String rotateForCloudReset() {
+        String id = generate();
+        storage.put(KEY_INSTALLATION_ID, id);
+        return id;
+    }
+
     /** Strong random id in the same Base64url-of-16-random-bytes format as the legacy value. */
     private String generate() {
         byte[] bytes = new byte[16];
