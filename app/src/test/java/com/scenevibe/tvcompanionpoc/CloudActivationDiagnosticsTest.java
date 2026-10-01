@@ -1,6 +1,5 @@
 package com.scenevibe.tvcompanionpoc;
 
-import org.json.JSONObject;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -17,25 +16,13 @@ public final class CloudActivationDiagnosticsTest {
 
     /** A public 401 is surfaced as the existing bounded UNAUTHORIZED diagnostic. */
     @Test public void unauthorizedActivationIsVisibleButOpaque() {
-        JSONObject body=new JSONObject()
-                .put("type","scenevibe.cloud.error.v1")
-                .put("code","UNAUTHORIZED");
         assertEquals(RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED,
-                CloudControlClient.activationErrorCode(401,body));
+                CloudControlClient.activationErrorCode(401));
     }
 
     /** Non-auth activation rejection remains a coarse protocol-shaped diagnostic. */
     @Test public void otherActivationRejectionStaysProtocolShaped() {
-        JSONObject body=new JSONObject()
-                .put("type","scenevibe.cloud.error.v1")
-                .put("code","BAD_REQUEST");
         assertEquals(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,
-                CloudControlClient.activationErrorCode(400,body));
-    }
-
-    /** No body is required to classify the HTTP authentication boundary. */
-    @Test public void unauthorizedClassificationNeverDependsOnRawBody() {
-        assertEquals(RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED,
-                CloudControlClient.activationErrorCode(401,null));
+                CloudControlClient.activationErrorCode(400));
     }
 }
