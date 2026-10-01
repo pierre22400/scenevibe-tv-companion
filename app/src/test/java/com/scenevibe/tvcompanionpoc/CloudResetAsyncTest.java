@@ -336,7 +336,7 @@ public final class CloudResetAsyncTest {
         ManualExecutor io=new ManualExecutor();
         final int[] rotations={0};
         CloudControlClient client=new CloudControlClient(
-                io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread,
+                io,identity,cache,scheduler,Runnable::run,
                 ()->rotations[0]++);
 
         client.reset();
