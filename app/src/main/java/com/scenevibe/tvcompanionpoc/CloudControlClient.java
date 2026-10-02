@@ -426,7 +426,8 @@ final class CloudControlClient {
             long cached=cache.revision();
             if(revision<cached)return false;
             if(manifestJson!=null) {
-                if(installer==null)return false;
+                if(installer==null)throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,
+                        "Manifested assignment without installer");
                 return revision>cached
                         ?installer.install(revision,runtimeJson,manifestJson)
                         :installer.confirmArmed(revision);
