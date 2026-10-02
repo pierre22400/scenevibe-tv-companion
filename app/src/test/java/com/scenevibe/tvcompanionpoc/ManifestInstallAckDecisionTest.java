@@ -18,8 +18,9 @@ import static org.junit.Assert.*;
  * decision that gates the ACK. A manifested revision is "ACK-able" (helper returns a positive
  * revision) ONLY after runtimeTrack valid + manifest valid + cross-contract valid + atomic
  * durable persist + scheduler accept + regie accept. Any failure returns 0 => NO ACK, prior
- * cache intact, bounded diagnostic. Case A (no manifest) is unchanged legacy behavior and
- * never engages the regie.
+ * cache intact, bounded diagnostic. Case A (no manifest) keeps the legacy renderer; when a
+ * newer legacy revision follows a manifested revision, the regie is engaged only to DISARM
+ * the prior manifest before ACK so visual ownership returns deterministically to Case A.
  */
 public final class ManifestInstallAckDecisionTest {
 
@@ -251,6 +252,53 @@ public final class ManifestInstallAckDecisionTest {
         long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,4);
         assertEquals("no durable manifest => not armable => fail closed",0,armed);
         assertFalse(regie.hasActiveManifest());
+    }
+
+    // ---- manifested -> legacy transition regression (Work audit P1) --------------------
+
+    /**
+     * A newer legacy revision following a manifested revision must atomically replace the
+     * durable runtime/cache, then disarm the manifested regie BEFORE the assignment is ACK-able.
+     * This is the exact transition that previously left activeRevision/manifest ownership stale
+     * and could route the new legacy track into SceneRenderer.
+     */
+    @Test public void manifestedThenLegacyRevisionReturnsVisualOwnershipToCaseA() throws Exception {
+        Memory memory=new Memory();
+        CloudTrackRepository repository=new CloudTrackRepository(memory);
+        MediaSyncedTrackScheduler scheduler=scheduler();
+        RecordingSink sink=new RecordingSink();
+        SceneRuntimeController regie=new SceneRuntimeController(sink);
+
+        assertEquals(4,OverlayService.installManifestedRevision(repository,scheduler,regie,
+                new DiagnosticsStore(),4,runtimeJson("track-1"),manifestJson("track-1")));
+        assertTrue(regie.hasActiveManifest());
+        assertTrue(regie.isSceneRendererActiveFor(4));
+
+        // Prove there is an actually visible Case-B scene to remove, not only armed metadata.
+        regie.onCommentDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null));
+        assertTrue(regie.hasVisibleScene());
+
+        CloudControlClient.ManifestInstaller transition=new CloudControlClient.ManifestInstaller() {
+            @Override public boolean install(long revision,String runtime,String manifest) {
+                return false;
+            }
+            @Override public boolean confirmArmed(long revision) {
+                return false;
+            }
+            @Override public boolean activateLegacy(long revision) {
+                return OverlayService.activateLegacyRevision(regie,revision)==revision;
+            }
+        };
+
+        boolean ackable=CloudControlClient.installLegacyRevision(
+                5,4,runtimeJson("track-2"),repository,scheduler,transition);
+
+        assertTrue("legacy revision is ACK-able only after Case-B disarm",ackable);
+        assertEquals(5,repository.revision());
+        assertNull("legacy revision removes prior durable manifest",memory.values.get("manifest"));
+        assertFalse("regie manifest must be unloaded",regie.hasActiveManifest());
+        assertFalse("old manifested scene must be hidden",regie.hasVisibleScene());
+        assertFalse("new revision must select legacy path",regie.isSceneRendererActiveFor(5));
     }
 
     // ---- section 20-A (cases 1-3): no manifest => legacy path, regie not engaged --------
