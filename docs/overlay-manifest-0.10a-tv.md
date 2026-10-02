@@ -197,8 +197,12 @@ records `MANIFEST_INCONSISTENT`; a durable persistence failure records `MANIFEST
   nothing.
 - **Stale-callback neutralization.** The controller carries a generation guard: a callback from a
   superseded revision/scene is ignored, so a late async tick can never resurrect a dismissed scene.
-- **Revision replacement.** Installing a new revision replaces the armed manifest; the previous
-  scene is dismissed and the new revision arms armed-not-visible.
+- **Revision replacement.** Installing a new manifested revision replaces the armed manifest; the
+  previous scene is dismissed and the new revision arms armed-not-visible. A newer LEGACY
+  no-manifest revision takes the opposite transition explicitly: after its runtimeTrack is
+  durable and loaded in the scheduler, the regie unloads the prior manifest, removes any
+  SceneRenderer window immediately, transfers active visual ownership to the legacy revision,
+  and only then permits ACK. Re-delivery of the cached legacy revision re-confirms that state.
 - **Teardown.** `onDestroy`/reset unload the regie and `dismissNow()` so a stopped service leaves
   no overlay window behind.
 
