@@ -139,17 +139,18 @@ public final class MediaSyncedTrackSchedulerExpiryTest {
         scheduler.onPlaybackSnapshot(playing(4_000L)); // advance inside window
         assertTrue(listener.expired.isEmpty());
 
-        // Seek back before c1 start (delta < -BACKWARD_SEEK_THRESHOLD_MS): it is re-armed and
-        // its pending window is dropped.
+        // Seek back before c1 start (delta < -BACKWARD_SEEK_THRESHOLD_MS): the
+        // currently shown scene must hide immediately, then its comment re-arms.
         scheduler.onPlaybackSnapshot(playing(0L));
-        // No stale expiry fired from the dropped window.
-        assertTrue(listener.expired.isEmpty());
+        assertEquals("seek before start hides the old scene", 1, listener.expired.size());
+        assertEquals("c1", listener.expired.get(0));
 
-        // Replay forward: c1 renders again, then expires again at its window end.
+        // Replay forward: c1 renders again and gets a fresh expiry at its window end.
         scheduler.onPlaybackSnapshot(playing(1_000L));
         assertEquals("c1 re-rendered after re-arm", 2, listener.rendered.size());
         scheduler.onPlaybackSnapshot(playing(7_000L));
-        assertEquals(1, listener.expired.size());
+        assertEquals(2, listener.expired.size());
+        assertEquals("c1", listener.expired.get(1));
         assertEquals("c1", listener.expired.get(0));
     }
 
