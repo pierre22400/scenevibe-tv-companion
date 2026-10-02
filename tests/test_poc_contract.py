@@ -210,6 +210,21 @@ class PocContractTests(unittest.TestCase):
         self.assertNotIn("BroadcastReceiver", client)
         self.assertNotIn("8765", client)
 
+    def test_overlay_manifest_router_is_allowlisted_metadata_only(self):
+        """Renderer routing must never become dynamic code loading or remote payload fetching."""
+        router = (
+            ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestRouter.java"
+        ).read_text()
+        self.assertIn("scenevibe.overlay-manifest.v1", router)
+        self.assertIn("scenevibe.renderer.commentary.v1", router)
+        self.assertIn("assignment.runtimeTrack", router)
+        self.assertIn("LEGACY_COMMENTARY", router)
+        self.assertNotIn("Class.forName", router)
+        self.assertNotIn("DexClassLoader", router)
+        self.assertNotIn("PathClassLoader", router)
+        self.assertNotIn("java.net.URL", router)
+        self.assertNotIn("HttpURLConnection", router)
+
     def test_track_pause_policy_reaches_renderer_without_player_controls(self):
         """Keep pause-aware display isolated from the direct commentary timer."""
         java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
