@@ -31,26 +31,30 @@ final class OverlayManifestParser {
     /** Parse and fully validate one manifest snapshot. */
     static OverlayManifest parse(JSONObject json) throws Invalid {
         if(json==null
-                ||!OverlayManifest.TYPE.equals(json.optString("type"))
-                ||!OverlayManifest.SCHEMA_VERSION.equals(json.optString("schemaVersion")))
+                ||!OverlayManifest.TYPE.equals(string(json,"type"))
+                ||!OverlayManifest.SCHEMA_VERSION.equals(string(json,"schemaVersion")))
             throw new Invalid("Invalid manifest contract");
 
-        String manifestId=safeId(json.optString("manifestId",""),"manifestId");
+        onlyKeys(json,"type","schemaVersion","manifestId","source","canvas","clock","scenes");
+        String manifestId=safeId(string(json,"manifestId"),"manifestId");
         JSONObject source=requireObject(json,"source");
-        String product=source.optString("product","");
+        onlyKeys(source,"product","sourceId");
+        String product=string(source,"product");
         if(!product.equals("video")&&!product.equals("banner")
                 &&!product.equals("language")&&!product.equals("other"))
             throw new Invalid("Invalid product");
-        String sourceId=safeId(source.optString("sourceId",""),"sourceId");
+        String sourceId=safeId(string(source,"sourceId"),"sourceId");
 
         JSONObject canvas=requireObject(json,"canvas");
-        if(canvas.optInt("width",-1)!=OverlayManifest.CANVAS_WIDTH
-                ||canvas.optInt("height",-1)!=OverlayManifest.CANVAS_HEIGHT)
+        onlyKeys(canvas,"width","height");
+        if(exactInt(canvas,"width",1920,1920)!=OverlayManifest.CANVAS_WIDTH
+                ||exactInt(canvas,"height",1080,1080)!=OverlayManifest.CANVAS_HEIGHT)
             throw new Invalid("Invalid canvas");
 
         JSONObject clock=requireObject(json,"clock");
-        String clockMode=clock.optString("mode","");
-        String pause=clock.optString("pauseBehavior","");
+        onlyKeys(clock,"mode","pauseBehavior");
+        String clockMode=string(clock,"mode");
+        String pause=string(clock,"pauseBehavior");
         if((!clockMode.equals("media")&&!clockMode.equals("wall"))
                 ||(!pause.equals("freeze")&&!pause.equals("continue")))
             throw new Invalid("Invalid clock");
@@ -64,12 +68,13 @@ final class OverlayManifestParser {
         for(int i=0;i<rawScenes.length();i++) {
             JSONObject scene=rawScenes.optJSONObject(i);
             if(scene==null)throw new Invalid("Scene must be object");
-            String sceneId=safeId(scene.optString("id",""),"scene id");
+            onlyKeys(scene,"id","startMs","durationMs","elements");
+            String sceneId=safeId(string(scene,"id"),"scene id");
             if(!sceneIds.add(sceneId))throw new Invalid("Duplicate scene id");
             long start=exactLong(scene,"startMs",0,43_200_000L);
             long duration=exactLong(scene,"durationMs",250,3_600_000L);
             JSONArray elements=scene.optJSONArray("elements");
-            if(elements==null||elements.length()<1)
+            if(elements==null||elements.length()<1||elements.length()>MAX_ELEMENTS)
                 throw new Invalid("Scene elements missing");
             Counter counter=new Counter();
             Set<String> elementIds=new HashSet<>();
@@ -99,24 +104,35 @@ final class OverlayManifestParser {
     /** Parse one allow-listed primitive; no reflection or dynamic renderer lookup exists. */
     private static OverlayManifest.Element parseElement(JSONObject item,int parentWidth,
             int parentHeight,int depth,Counter counter,Set<String> ids) throws Invalid {
-        String id=safeId(item.optString("id",""),"element id");
+        String primitiveType=string(item,"type");
+        String[] allowed=switch(primitiveType) {
+            case "text" -> new String[]{"id","type","frame","zIndex","opacity","animation","text","style"};
+            case "image" -> new String[]{"id","type","frame","zIndex","opacity","animation","assetRef","fit"};
+            case "rectangle" -> new String[]{"id","type","frame","zIndex","opacity","animation","style"};
+            case "table" -> new String[]{"id","type","frame","zIndex","opacity","animation","rows","style"};
+            case "group" -> new String[]{"id","type","frame","zIndex","opacity","animation","children"};
+            default -> throw new Invalid("Unsupported primitive");
+        };
+        onlyKeys(item,allowed);
+        String id=safeId(string(item,"id"),"element id");
         if(!ids.add(id))throw new Invalid("Duplicate element id");
         OverlayManifest.Frame frame=parseFrame(requireObject(item,"frame"),parentWidth,parentHeight);
         int zIndex=exactInt(item,"zIndex",-1000,1000);
         float opacity=exactFloat(item,"opacity",0f,1f);
-        OverlayManifest.Animation animation=parseAnimation(item.optJSONObject("animation"));
-        String type=item.optString("type","");
+        OverlayManifest.Animation animation=parseAnimation(item.has("animation")?requireObject(item,"animation"):null);
+        String type=string(item,"type");
 
         if("text".equals(type)) {
             JSONObject style=requireObject(item,"style");
-            String text=item.optString("text","");
-            if(text.trim().isEmpty()||text.length()>2000)throw new Invalid("Invalid text");
-            String color=color(style.optString("color",""));
-            String background=color(style.optString("backgroundColor",""));
+            onlyKeys(style,"color","backgroundColor","fontSize","fontWeight","textAlign","padding","cornerRadius");
+            String text=string(item,"text");
+            if(blankText(text)||text.codePointCount(0,text.length())>2000)throw new Invalid("Invalid text");
+            String color=color(string(style,"color"));
+            String background=color(string(style,"backgroundColor"));
             int fontSize=exactInt(style,"fontSize",8,180);
-            String weight=style.optString("fontWeight","");
+            String weight=string(style,"fontWeight");
             if(!weight.equals("normal")&&!weight.equals("bold"))throw new Invalid("Invalid font weight");
-            String align=style.optString("textAlign","");
+            String align=string(style,"textAlign");
             if(!align.equals("start")&&!align.equals("center")&&!align.equals("end"))
                 throw new Invalid("Invalid text alignment");
             int padding=exactInt(style,"padding",0,200);
@@ -127,9 +143,9 @@ final class OverlayManifestParser {
         }
 
         if("image".equals(type)) {
-            String assetRef=item.optString("assetRef","");
+            String assetRef=string(item,"assetRef");
             if(!SAFE_ASSET.matcher(assetRef).matches())throw new Invalid("Invalid asset ref");
-            String fit=item.optString("fit","");
+            String fit=string(item,"fit");
             if(!fit.equals("contain")&&!fit.equals("cover"))throw new Invalid("Invalid image fit");
             return element(id,OverlayManifest.PrimitiveType.IMAGE,frame,zIndex,opacity,animation,
                     null,assetRef,fit,null,null,0,false,null,0,0,null,null,java.util.Collections.emptyList(),java.util.Collections.emptyList());
@@ -137,7 +153,8 @@ final class OverlayManifestParser {
 
         if("rectangle".equals(type)) {
             JSONObject style=requireObject(item,"style");
-            String fill=color(style.optString("fillColor",""));
+            onlyKeys(style,"fillColor","cornerRadius");
+            String fill=color(string(style,"fillColor"));
             int radius=exactInt(style,"cornerRadius",0,300);
             return element(id,OverlayManifest.PrimitiveType.RECTANGLE,frame,zIndex,opacity,animation,
                     null,null,null,null,null,0,false,null,0,radius,fill,null,java.util.Collections.emptyList(),java.util.Collections.emptyList());
@@ -145,10 +162,11 @@ final class OverlayManifestParser {
 
         if("table".equals(type)) {
             JSONObject style=requireObject(item,"style");
+            onlyKeys(style,"color","backgroundColor","gridColor","fontSize","padding");
             List<List<String>> rows=parseRows(item.optJSONArray("rows"));
-            String color=color(style.optString("color",""));
-            String background=color(style.optString("backgroundColor",""));
-            String grid=color(style.optString("gridColor",""));
+            String color=color(string(style,"color"));
+            String background=color(string(style,"backgroundColor"));
+            String grid=color(string(style,"gridColor"));
             int fontSize=exactInt(style,"fontSize",8,120);
             int padding=exactInt(style,"padding",0,120);
             return element(id,OverlayManifest.PrimitiveType.TABLE,frame,zIndex,opacity,animation,
@@ -182,7 +200,7 @@ final class OverlayManifestParser {
             ArrayList<String> cells=new ArrayList<>();
             for(int c=0;c<row.length();c++) {
                 Object raw=row.opt(c);
-                if(!(raw instanceof String)||((String)raw).length()>500)
+                if(!(raw instanceof String)||((String)raw).codePointCount(0,((String)raw).length())>500)
                     throw new Invalid("Invalid table cell");
                 cells.add((String)raw);
             }
@@ -194,6 +212,7 @@ final class OverlayManifestParser {
     /** Parse one frame and require it to remain inside its parent. */
     private static OverlayManifest.Frame parseFrame(JSONObject frame,int parentWidth,
             int parentHeight) throws Invalid {
+        onlyKeys(frame,"x","y","width","height");
         int x=exactInt(frame,"x",0,parentWidth);
         int y=exactInt(frame,"y",0,parentHeight);
         int width=exactInt(frame,"width",1,parentWidth);
@@ -205,8 +224,9 @@ final class OverlayManifestParser {
     /** Parse optional bounded fade metadata. */
     private static OverlayManifest.Animation parseAnimation(JSONObject animation) throws Invalid {
         if(animation==null)return null;
-        String enter=animation.optString("enter","");
-        String exit=animation.optString("exit","");
+        onlyKeys(animation,"enter","exit","durationMs");
+        String enter=string(animation,"enter");
+        String exit=string(animation,"exit");
         if((!enter.equals("none")&&!enter.equals("fade"))
                 ||(!exit.equals("none")&&!exit.equals("fade")))
             throw new Invalid("Invalid animation");
@@ -230,6 +250,24 @@ final class OverlayManifestParser {
         JSONObject value=parent.optJSONObject(key);
         if(value==null)throw new Invalid("Missing object");
         return value;
+    }
+
+    /** Reject undeclared properties without recursing into their values. */
+    private static void onlyKeys(JSONObject object,String... allowed) throws Invalid {
+        Set<String> keys=Set.of(allowed);
+        for(String key:object.keySet())if(!keys.contains(key))throw new Invalid("Unknown property");
+    }
+
+    /** Require an actual JSON string; org.json coercion is deliberately forbidden. */
+    private static String string(JSONObject object,String key) throws Invalid {
+        Object raw=object.opt(key);
+        if(!(raw instanceof String))throw new Invalid("Invalid string");
+        return (String)raw;
+    }
+
+    /** Match ECMAScript trim's whitespace set, including BOM and nonbreaking space. */
+    private static boolean blankText(String text) {
+        return text.matches("[\\x09-\\x0D\\x20\\xA0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]*");
     }
 
     /** Validate a bounded identifier. */

@@ -1,0 +1,491 @@
+{
+  "sourceRepository": "pierre22400/interface-scenevibe",
+  "sourceCommit": "402f781d7e3bccd10807de8e8ce1dd0d81ec5162",
+  "corpusSha256": "c78addf877b277e38f66c12274e4c8ed2ce12a503d883e27fd9950215cafbf30",
+  "producerFiles": [
+    {
+      "file": "packages/cloud/src/services/assignment-service.ts",
+      "sha256": "e307ca1a4b22c022aca3f0148513da64e6df0fb83d2b671d9193c5832563581f"
+    },
+    {
+      "file": "packages/contracts/src/tv/overlay-manifest.ts",
+      "sha256": "19450cccc52824f04505b7e2674969a5a737a6fdebd06af38bffd2ef80016bd4"
+    },
+    {
+      "file": "packages/contracts/src/tv/overlay-manifest-browser-validation.ts",
+      "sha256": "1c0ac8f5a5e82a3b53821bd88c8ac52aa651cb8b9ea357d31ddd1604b25d5362"
+    }
+  ],
+  "cases": [
+    {
+      "name": "baseline",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "track-1",
+        "visualMode": "overlay-manifest-v1",
+        "overlayManifest": {
+          "type": "scenevibe.overlay-manifest.v1",
+          "schemaVersion": "1.0.0",
+          "manifestId": "track-1",
+          "source": {
+            "product": "video",
+            "sourceId": "track-1"
+          },
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "clock": {
+            "mode": "media",
+            "pauseBehavior": "freeze"
+          },
+          "scenes": [
+            {
+              "id": "comment-1",
+              "startMs": 12000,
+              "durationMs": 6000,
+              "elements": [
+                {
+                  "id": "video:scene:0:card",
+                  "type": "group",
+                  "frame": {
+                    "x": 140,
+                    "y": 70,
+                    "width": 1640,
+                    "height": 210
+                  },
+                  "zIndex": 10,
+                  "opacity": 1,
+                  "animation": {
+                    "enter": "fade",
+                    "exit": "fade",
+                    "durationMs": 180
+                  },
+                  "children": [
+                    {
+                      "id": "video:scene:0:background",
+                      "type": "rectangle",
+                      "frame": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 1640,
+                        "height": 210
+                      },
+                      "zIndex": 0,
+                      "opacity": 0.88,
+                      "style": {
+                        "fillColor": "#17130F",
+                        "cornerRadius": 24
+                      }
+                    },
+                    {
+                      "id": "video:scene:0:text",
+                      "type": "text",
+                      "frame": {
+                        "x": 46,
+                        "y": 28,
+                        "width": 1548,
+                        "height": 154
+                      },
+                      "zIndex": 1,
+                      "opacity": 1,
+                      "text": "Documented comment.",
+                      "style": {
+                        "color": "#FFFFFF",
+                        "backgroundColor": "#00000000",
+                        "fontSize": 42,
+                        "fontWeight": "normal",
+                        "textAlign": "center",
+                        "padding": 0,
+                        "cornerRadius": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "track-1",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": "comment-1",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "track-id-128",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "visualMode": "overlay-manifest-v1",
+        "overlayManifest": {
+          "type": "scenevibe.overlay-manifest.v1",
+          "schemaVersion": "1.0.0",
+          "manifestId": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+          "source": {
+            "product": "video",
+            "sourceId": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+          },
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "clock": {
+            "mode": "media",
+            "pauseBehavior": "freeze"
+          },
+          "scenes": [
+            {
+              "id": "comment-1",
+              "startMs": 12000,
+              "durationMs": 6000,
+              "elements": [
+                {
+                  "id": "video:scene:0:card",
+                  "type": "group",
+                  "frame": {
+                    "x": 140,
+                    "y": 70,
+                    "width": 1640,
+                    "height": 210
+                  },
+                  "zIndex": 10,
+                  "opacity": 1,
+                  "animation": {
+                    "enter": "fade",
+                    "exit": "fade",
+                    "durationMs": 180
+                  },
+                  "children": [
+                    {
+                      "id": "video:scene:0:background",
+                      "type": "rectangle",
+                      "frame": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 1640,
+                        "height": 210
+                      },
+                      "zIndex": 0,
+                      "opacity": 0.88,
+                      "style": {
+                        "fillColor": "#17130F",
+                        "cornerRadius": 24
+                      }
+                    },
+                    {
+                      "id": "video:scene:0:text",
+                      "type": "text",
+                      "frame": {
+                        "x": 46,
+                        "y": 28,
+                        "width": 1548,
+                        "height": 154
+                      },
+                      "zIndex": 1,
+                      "opacity": 1,
+                      "text": "Documented comment.",
+                      "style": {
+                        "color": "#FFFFFF",
+                        "backgroundColor": "#00000000",
+                        "fontSize": 42,
+                        "fontWeight": "normal",
+                        "textAlign": "center",
+                        "padding": 0,
+                        "cornerRadius": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": "comment-1",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "comment-id-128",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "track-1",
+        "visualMode": "overlay-manifest-v1",
+        "overlayManifest": {
+          "type": "scenevibe.overlay-manifest.v1",
+          "schemaVersion": "1.0.0",
+          "manifestId": "track-1",
+          "source": {
+            "product": "video",
+            "sourceId": "track-1"
+          },
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "clock": {
+            "mode": "media",
+            "pauseBehavior": "freeze"
+          },
+          "scenes": [
+            {
+              "id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "startMs": 12000,
+              "durationMs": 6000,
+              "elements": [
+                {
+                  "id": "video:scene:0:card",
+                  "type": "group",
+                  "frame": {
+                    "x": 140,
+                    "y": 70,
+                    "width": 1640,
+                    "height": 210
+                  },
+                  "zIndex": 10,
+                  "opacity": 1,
+                  "animation": {
+                    "enter": "fade",
+                    "exit": "fade",
+                    "durationMs": 180
+                  },
+                  "children": [
+                    {
+                      "id": "video:scene:0:background",
+                      "type": "rectangle",
+                      "frame": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 1640,
+                        "height": 210
+                      },
+                      "zIndex": 0,
+                      "opacity": 0.88,
+                      "style": {
+                        "fillColor": "#17130F",
+                        "cornerRadius": 24
+                      }
+                    },
+                    {
+                      "id": "video:scene:0:text",
+                      "type": "text",
+                      "frame": {
+                        "x": 46,
+                        "y": 28,
+                        "width": 1548,
+                        "height": 154
+                      },
+                      "zIndex": 1,
+                      "opacity": 1,
+                      "text": "Documented comment.",
+                      "style": {
+                        "color": "#FFFFFF",
+                        "backgroundColor": "#00000000",
+                        "fontSize": 42,
+                        "fontWeight": "normal",
+                        "textAlign": "center",
+                        "padding": 0,
+                        "cornerRadius": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "track-1",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "comment-id-slash",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "track-1",
+        "visualMode": "legacy-v1",
+        "manifestFallbackReason": "VIDEO_V1_NOT_REPRESENTABLE",
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "track-1",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": "comment/1",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "track-id-slash",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "track/1",
+        "visualMode": "legacy-v1",
+        "manifestFallbackReason": "VIDEO_V1_NOT_REPRESENTABLE",
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "track/1",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": "comment-1",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "comment-id-unicode",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "track-1",
+        "visualMode": "legacy-v1",
+        "manifestFallbackReason": "VIDEO_V1_NOT_REPRESENTABLE",
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "track-1",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": "comment-é",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "comment-id-whitespace",
+      "envelope": {
+        "type": "scenevibe.cloud.assignment.v1",
+        "deviceId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "finalTrackId": "m1-finaltrack-reference",
+        "trackId": "track-1",
+        "visualMode": "legacy-v1",
+        "manifestFallbackReason": "VIDEO_V1_NOT_REPRESENTABLE",
+        "runtimeTrack": {
+          "type": "scenevibe.track.v1",
+          "trackId": "track-1",
+          "targetPackage": "com.amazon.amazonvideo.livingroom",
+          "mediaIdentity": {
+            "platform": "prime_video",
+            "videoId": "video-1",
+            "title": "Fixture Film",
+            "durationMs": 120000
+          },
+          "pauseFreezesDisplay": true,
+          "comments": [
+            {
+              "id": " comment-1 ",
+              "text": "Documented comment.",
+              "startMs": 12000,
+              "durationMs": 6000
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
