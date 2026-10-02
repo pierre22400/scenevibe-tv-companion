@@ -15,6 +15,17 @@ import javax.net.ssl.HttpsURLConnection;
 
 /** Outbound HTTPS client; never handles video, subtitles, player controls or browser timecodes. */
 final class CloudControlClient {
+    /**
+     * Durable manifested-install seam supplied by {@link OverlayService} (section 7). The
+     * client only moves bytes; this installer performs the cross-contract validation (via the
+     * bridge), the atomic runtime+manifest persistence (via {@link CloudTrackRepository}), the
+     * scheduler load and the regie arm. It returns true only when ALL of those succeeded for
+     * the given revision; a false result means the client must NOT ACK and must keep the prior
+     * cache intact. It never receives or returns comment/scene content or a secret.
+     */
+    interface ManifestInstaller {
+        boolean install(long revision,String runtimeJson,String manifestJson);
+    }
     private static final String TAG="SceneVibeCloud";
     private static final int LIMIT=3_000_000;
     /**
@@ -35,6 +46,17 @@ final class CloudControlClient {
     private final CloudDeviceCredentials identity;
     private final CloudTrackRepository cache;
     private final MediaSyncedTrackScheduler scheduler;
+    /**
+     * Smallest possible seam for the regie-accept step of the ACK invariant (section 7). The
+     * client never contains graphics or cross-contract rules; when an assignment carries an
+     * OverlayManifest the client hands the raw runtime+manifest JSON to this installer, which
+     * (in {@link OverlayService}) validates cross-contract via {@link VideoOverlayManifestBridge},
+     * persists atomically via the FEAT-002 repository, loads the scheduler and arms the
+     * {@link SceneRuntimeController}. It returns true ONLY when the whole durable install +
+     * scheduler accept + regie accept chain succeeded; false means NO ACK. It is null in the
+     * no-manifest/legacy test constructors, in which case a manifested assignment fails closed.
+     */
+    private final ManifestInstaller manifestInstaller;
     /** Local stable id from InstallationIdentity; used ONLY as the activation installationId. */
     private final String installationId;
     private final String origin;
@@ -42,12 +64,23 @@ final class CloudControlClient {
     private int failures;
     /** Links the outbound client to an already created passive MediaSession scheduler. */
     CloudControlClient(Context context, CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
+        this(context,cache,scheduler,null);
+    }
+    /**
+     * Production constructor used by {@link OverlayService}: in addition to the scheduler it
+     * takes the {@link ManifestInstaller} seam so a manifested assignment can be installed
+     * atomically and armed in the regie before the ACK (section 7). A null installer keeps the
+     * legacy no-manifest behavior and fails a manifested assignment closed (no ACK).
+     */
+    CloudControlClient(Context context, CloudTrackRepository cache,
+            MediaSyncedTrackScheduler scheduler,ManifestInstaller manifestInstaller) {
         this.io=Executors.newSingleThreadScheduledExecutor();
         this.resetFallback=CloudControlClient::startResetFallbackThread;
         this.resetInstallationIdentity=()->new InstallationIdentity(context).rotateForCloudReset();
         this.identity=new CloudDeviceCredentials(context);
         this.cache=cache;
         this.scheduler=scheduler;
+        this.manifestInstaller=manifestInstaller;
         this.installationId=new InstallationIdentity(context).installationId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
     }
@@ -65,6 +98,18 @@ final class CloudControlClient {
         this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread,()->{});
     }
     /**
+     * Injectable seam carrying a {@link ManifestInstaller}, used only by the FEAT-004
+     * ACK-ordering tests so the manifested install+ack-decision can be driven deterministically
+     * without an Android {@link Context} or a live HTTPS stack. The origin is left empty so no
+     * network is ever touched.
+     */
+    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
+            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
+            ManifestInstaller manifestInstaller) {
+        this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread,()->{},
+                manifestInstaller);
+    }
+    /**
      * Extended injectable seam used only by reset tests so the rejected-primary-executor path
      * can be driven deterministically without ever running fallback work on the test caller.
      */
@@ -80,12 +125,20 @@ final class CloudControlClient {
     CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
             CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
             java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity) {
+        this(io,identity,cache,scheduler,resetFallback,resetInstallationIdentity,null);
+    }
+    /** Full test seam including the manifested-install installer. */
+    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
+            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
+            java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity,
+            ManifestInstaller manifestInstaller) {
         this.io=io;
         this.resetFallback=resetFallback;
         this.resetInstallationIdentity=resetInstallationIdentity;
         this.identity=identity;
         this.cache=cache;
         this.scheduler=scheduler;
+        this.manifestInstaller=manifestInstaller;
         this.installationId="test-installation";
         this.origin="";
     }
@@ -244,9 +297,25 @@ final class CloudControlClient {
         // OverlayManifest scene; SceneRenderer hand-off is layered beside this scheduler path.
         JSONObject runtime=data.optJSONObject("runtimeTrack");
         String finalTrackId=data.optString("finalTrackId","");
-        // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
-        if(revision>cached && !cache.install(revision,runtime.toString(),scheduler))
+        // 0.10A: an assignment MAY additively carry an OverlayManifest. Case B (manifested
+        // revision) must install runtimeTrack + manifest ATOMICALLY and arm the regie BEFORE
+        // the ACK (section 7). Case A (no manifest) stays exactly as before. The cross-contract
+        // rules live in VideoOverlayManifestBridge via the installer seam, never in this client.
+        JSONObject overlayManifest=data.optJSONObject("overlayManifest");
+        if(overlayManifest!=null) {
+            // A manifested assignment with no installer wired fails CLOSED: no ACK, prior cache
+            // intact. The installer performs cross-contract validate + atomic persist +
+            // scheduler accept + regie accept; false means any of those failed.
+            if(manifestInstaller==null)
+                throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,
+                        "Manifested assignment without installer");
+            if(revision>cached
+                    && !manifestInstaller.install(revision,runtime.toString(),overlayManifest.toString()))
+                throw new IllegalStateException("Manifested revision could not be installed durably");
+        } else if(revision>cached && !cache.install(revision,runtime.toString(),scheduler)) {
+            // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
             throw new IllegalStateException("Invalid or non-durable runtime track");
+        }
         // A cached, unacknowledged revision was already restored when service started.
         // ACK sends finalTrackId (NOT trackId) and only after the scheduler load succeeded.
         JSONObject ack=new JSONObject().put("revision",revision).put("finalTrackId",finalTrackId);

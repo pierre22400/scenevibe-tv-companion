@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
@@ -52,6 +53,17 @@ public final class OverlayService extends Service {
     private MediaSyncedTrackScheduler trackScheduler;
     private CloudTrackRepository cloudTrackRepository;
     private CloudControlClient cloudClient;
+    /**
+     * 0.10A generic scene path (Case B). The {@link SceneRenderer} draws manifested Video
+     * scenes and the {@link SceneRuntimeController} is the regie that decides WHEN. Both are
+     * created lazily beside the existing scheduler and never run simultaneously with the legacy
+     * {@link OverlayRenderer} for the same comment. The revision whose manifest the regie
+     * currently holds is tracked so onRender can pick Case A vs Case B deterministically.
+     */
+    private SceneRenderer sceneRenderer;
+    private SceneRuntimeController sceneController;
+    /** The active revision currently driving the scheduler (0 when none restored/installed). */
+    private long activeRevision;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -123,16 +135,34 @@ public final class OverlayService extends Service {
             }
 
             if (trackScheduler == null) {
+                // Regie (Case B) created beside the legacy path. It draws nothing itself; the
+                // SceneSink below delegates to a lazily created SceneRenderer and is the ONLY
+                // bridge between the Android-free controller and the overlay window.
+                sceneController = new SceneRuntimeController(sceneSink);
                 trackScheduler = new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
                     @Override public void onRender(ScheduledTrack.Event event) {
-                        // A comment is due: create the renderer lazily if the boot path has not
-                        // shown it yet, then display the tracked commentary.
+                        // Exactly one visual path per comment (section 10/30). When the regie
+                        // holds a valid manifest for the active revision this is Case B: forward
+                        // the due event to the controller (which drives SceneRenderer) and do
+                        // NOT touch the legacy OverlayRenderer. Otherwise Case A is unchanged.
+                        if (isSceneRendererActive()) {
+                            sceneController.onCommentDue(event);
+                            return;
+                        }
+                        // Case A: create the renderer lazily if the boot path has not shown it
+                        // yet, then display the tracked commentary (legacy behavior unchanged).
                         showRenderer();
                         if (renderer != null) renderer.showTrackedCommentary(
                                 event.text, event.durationMs, event.mediaBitmap);
                     }
                     @Override public void onPlayback(boolean playing, boolean freeze) {
-                        if (renderer != null) renderer.onPlayback(playing, freeze);
+                        // Forward playback to whichever path is active; the controller records
+                        // the state without adding a second clock, the legacy renderer freezes.
+                        if (isSceneRendererActive()) {
+                            if (sceneController != null) sceneController.onPlayback(playing, freeze);
+                        } else if (renderer != null) {
+                            renderer.onPlayback(playing, freeze);
+                        }
                     }
                     @Override public void onEligibility(boolean eligible) {
                         // Observational only: mirror the last media-identity decision into the
@@ -144,14 +174,33 @@ public final class OverlayService extends Service {
                         // loss transition. The scheduler itself is frozen; this maps the
                         // observable transition into DiagnosticsStore and never gates logic.
                         if (!eligible) DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);
-                        // Media no longer matches: hide the tracked card immediately. Never
-                        // create a renderer just to hide nothing.
-                        if (!eligible && renderer != null) renderer.onTrackEligibility(false);
+                        // Media no longer matches: hide the active path immediately, never both.
+                        // The controller always receives the transition so a loaded manifest is
+                        // disarmed; the legacy renderer hides only when it owns the comment.
+                        if (sceneController != null) sceneController.onEligibility(eligible);
+                        if (!eligible && !isSceneRendererActive() && renderer != null) {
+                            renderer.onTrackEligibility(false);
+                        }
                     }
                 });
                 cloudTrackRepository = new CloudTrackRepository(this);
-                long restored = cloudTrackRepository.restore(trackScheduler);
-                if (restored > 0) Log.i(TAG, "Cached cloud track restored; revision=" + restored);
+                // Restart recovery (section 8): prefer the manifested restore so a revision that
+                // has a durable valid manifest re-arms the regie armed-not-visible. A revision
+                // with no manifest returns a failed result WITHOUT clearing, so the legacy
+                // restore() below stays the Case A authority and nothing is lost.
+                CloudTrackRepository.RestoreResult manifested =
+                        cloudTrackRepository.restoreWithManifest(trackScheduler);
+                if (manifested.ok) {
+                    activeRevision = manifested.revision;
+                    sceneController.loadManifest(manifested.revision, manifested.manifest);
+                    Log.i(TAG, "Cached manifested revision restored; revision=" + manifested.revision);
+                } else {
+                    long restored = cloudTrackRepository.restore(trackScheduler);
+                    if (restored > 0) {
+                        activeRevision = restored;
+                        Log.i(TAG, "Cached cloud track restored; revision=" + restored);
+                    }
+                }
             }
 
             // The CommentaryServer / port 8765 / LAN pairing surface is a LAN DEV tool only.
@@ -196,7 +245,8 @@ public final class OverlayService extends Service {
                 // Fresh construction on first entry AND after ACTION_CLOUD_RESET nulled the
                 // field: a reset client's io executor is shut down and cannot be reused, so the
                 // only correct way to re-arm the cloud is a brand-new CloudControlClient here.
-                cloudClient = new CloudControlClient(this, cloudTrackRepository, trackScheduler);
+                cloudClient = new CloudControlClient(this, cloudTrackRepository, trackScheduler,
+                        manifestInstaller);
                 cloudClient.start();
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
@@ -221,6 +271,11 @@ public final class OverlayService extends Service {
                     renderer.dismiss();
                     renderer = null;
                 }
+                // The reset wipe clears the cache + scheduler; disarm the regie and drop any
+                // visible scene too, so no stale manifested scene survives a reset.
+                if (sceneController != null) sceneController.unload();
+                if (sceneRenderer != null) sceneRenderer.dismissNow();
+                activeRevision = 0;
                 Log.i(TAG, "Cloud reset requested via runtime");
             }
 
@@ -255,6 +310,118 @@ public final class OverlayService extends Service {
             renderer = new OverlayRenderer(this, this::onPermissionLost, BuildConfig.ENABLE_LAN_DEV);
         }
         renderer.show(bottomPosition);
+    }
+
+    /**
+     * Local-only asset seam for {@link SceneRenderer} (section 15). The 0.10A POC ships NO
+     * Cloud asset transport: there is no download manager, CDN, HTTP prefetch or network path
+     * here. Until a trusted local asset cache exists this resolver returns null for every
+     * reference, so a Video scene that needs an image fails bounded in the regie's preflight
+     * (no crash, no partial render) rather than reaching for the network.
+     */
+    private Bitmap resolveLocalAsset(String assetRef) {
+        return null;
+    }
+
+    /**
+     * Lazily creates the {@link SceneRenderer} on first Case B show, mirroring the lazy
+     * creation of the legacy OverlayRenderer so an armed-but-idle service draws nothing until a
+     * manifested comment is actually due.
+     */
+    private SceneRenderer ensureSceneRenderer() {
+        if (sceneRenderer == null) {
+            sceneRenderer = new SceneRenderer(this, this::resolveLocalAsset, this::onPermissionLost);
+        }
+        return sceneRenderer;
+    }
+
+    /**
+     * True when the regie currently holds a valid manifest for the active revision (Case B).
+     * This is the single deterministic switch the scheduler Listener consults so Case A (legacy
+     * OverlayRenderer) and Case B (regie + SceneRenderer) are never both visible for one comment.
+     */
+    private boolean isSceneRendererActive() {
+        return sceneController != null && sceneController.isSceneRendererActiveFor(activeRevision);
+    }
+
+    /**
+     * Bridge from the Android-free {@link SceneRuntimeController} to the overlay window. The
+     * controller preflights before each show and suppresses a show whose local assets are
+     * missing, so a half-rendered scene is never displayed. All methods are null-safe against a
+     * service that has begun tearing down.
+     */
+    private final SceneRuntimeController.SceneSink sceneSink =
+            new SceneRuntimeController.SceneSink() {
+        @Override public boolean preflight(OverlayManifest.Scene scene) {
+            boolean ok = ensureSceneRenderer().preflight(scene);
+            if (!ok) {
+                // Bounded diagnostic only: a required local asset is missing. Never log the
+                // scene/comment content or the manifest JSON (section 19).
+                DiagnosticsStore.INSTANCE.setLastManifestCode(
+                        RuntimeDiagnostics.ManifestCode.MANIFEST_INCONSISTENT);
+            }
+            return ok;
+        }
+        @Override public void show(OverlayManifest.Scene scene) {
+            ensureSceneRenderer().render(scene);
+        }
+        @Override public void hide(OverlayManifest.Scene scene) {
+            if (sceneRenderer != null) sceneRenderer.dismiss(scene);
+        }
+        @Override public void hideAll() {
+            if (sceneRenderer != null) sceneRenderer.dismissNow();
+        }
+    };
+
+    /**
+     * Manifested-install seam supplied to {@link CloudControlClient} (section 7). The client
+     * only moves bytes; this installer owns the regie-accept half of the ACK invariant. It
+     * installs runtimeTrack + manifest ATOMICALLY and cross-contract-validated via the FEAT-002
+     * repository (which runs {@link VideoOverlayManifestBridge}, persists durably and loads the
+     * scheduler), then arms the regie by loading the manifest. It returns true ONLY when the
+     * whole chain succeeded; any failure leaves the prior cache intact, records a bounded
+     * diagnostic and returns false so the client does NOT ACK. No comment/scene content or
+     * secret is ever logged here.
+     */
+    private final CloudControlClient.ManifestInstaller manifestInstaller =
+            new CloudControlClient.ManifestInstaller() {
+        @Override public boolean install(long revision, String runtimeJson, String manifestJson) {
+            if (cloudTrackRepository == null || trackScheduler == null) return false;
+            long armedRevision = installManifestedRevision(cloudTrackRepository, trackScheduler,
+                    sceneController, DiagnosticsStore.INSTANCE, revision, runtimeJson, manifestJson);
+            if (armedRevision <= 0) return false;
+            activeRevision = armedRevision;
+            return true;
+        }
+    };
+
+    /**
+     * Android-free, unit-testable core of the manifested-install ACK decision (section 7). It
+     * installs runtimeTrack + manifest ATOMICALLY and cross-contract-validated via the FEAT-002
+     * repository (which runs {@link VideoOverlayManifestBridge}, persists durably and loads the
+     * scheduler), records the bounded outcome into {@code diagnostics}, then arms the regie by
+     * replacing the controller's active revision from the just-committed durable copy. It
+     * returns the armed revision (&gt; 0) ONLY when the whole durable install + scheduler accept
+     * + regie accept chain succeeded; it returns 0 on ANY failure, in which case the prior cache
+     * is left intact and the client must NOT ACK. No comment/scene content or secret is logged.
+     *
+     * @return the armed revision on full success, or 0 when the install/arm chain failed
+     */
+    static long installManifestedRevision(CloudTrackRepository repository,
+            MediaSyncedTrackScheduler scheduler, SceneRuntimeController controller,
+            DiagnosticsStore diagnostics, long revision, String runtimeJson, String manifestJson) {
+        CloudTrackRepository.InstallResult result =
+                repository.install(revision, runtimeJson, manifestJson, scheduler);
+        // Observational only: record the bounded install outcome, never any content.
+        diagnostics.setLastManifestCode(result.code);
+        if (!result.ok) return 0;
+        // Durable install + scheduler accept succeeded; now arm the regie from the just-committed
+        // durable copy so the bridge stays the sole owner of the cross-contract rules (it already
+        // ran inside install()).
+        CloudTrackRepository.RestoreResult armed = repository.restoreWithManifest(scheduler);
+        if (!armed.ok) return 0;
+        if (controller != null) controller.replaceRevision(armed.revision, armed.manifest);
+        return armed.revision;
     }
 
     /**
@@ -334,6 +501,17 @@ public final class OverlayService extends Service {
             renderer.dismiss();
             renderer = null;
         }
+        // Case B teardown: unload the regie first so a late scheduler callback is ignored
+        // (FEAT-003 generation guard), then drop any visible scene and release the window.
+        if (sceneController != null) {
+            sceneController.unload();
+            sceneController = null;
+        }
+        if (sceneRenderer != null) {
+            sceneRenderer.dismissNow();
+            sceneRenderer = null;
+        }
+        activeRevision = 0;
         stopForeground(STOP_FOREGROUND_REMOVE);
         // Observational only: the service is no longer running.
         DiagnosticsStore.INSTANCE.setServiceRunning(false);

@@ -53,12 +53,73 @@ final class SceneRenderer {
         if(windows==null)throw new IllegalStateException("WindowManager unavailable");
     }
 
+    /**
+     * Scene-asset preflight (section 15). Before any window mutation the regie calls this to
+     * check that EVERY image element in the scene tree (including group children) resolves to
+     * a locally cached bitmap. If any required asset is missing it returns false so the
+     * controller suppresses the show with a bounded diagnostic
+     * ({@link RuntimeDiagnostics.ManifestCode}) instead of starting a partial render that would
+     * later throw in {@link #buildImage}. It performs NO network access and NO window mutation;
+     * it only probes the local {@link AssetResolver}. A null scene fails closed (false).
+     */
+    boolean preflight(OverlayManifest.Scene scene) {
+        if(scene==null)return false;
+        try {
+            for(String assetRef:imageAssetRefs(scene)) {
+                if(assets.resolve(assetRef)==null)return false;
+            }
+            return true;
+        } catch(RuntimeException assetFailure) {
+            // A local resolver fault is a bounded scene failure, never a crash or partial render.
+            return false;
+        }
+    }
+
+    /**
+     * Pure, Android-free collector of every IMAGE element {@code assetRef} in a scene tree,
+     * walking group children recursively. Extracted so the preflight asset-check is unit
+     * testable without a real {@link Context} or Android View. Order is the manifest's
+     * declared element order (depth-first); it carries no scene/comment text, only bounded
+     * {@code asset:} references.
+     */
+    static List<String> imageAssetRefs(OverlayManifest.Scene scene) {
+        ArrayList<String> refs=new ArrayList<>();
+        if(scene!=null)collectImageAssetRefs(scene.elements,refs);
+        return refs;
+    }
+
+    /** Recursively gather image asset references from an element list and its groups. */
+    private static void collectImageAssetRefs(List<OverlayManifest.Element> elements,
+            List<String> into) {
+        if(elements==null)return;
+        for(OverlayManifest.Element element:elements) {
+            if(element.type==OverlayManifest.PrimitiveType.IMAGE&&element.assetRef!=null) {
+                into.add(element.assetRef);
+            } else if(element.type==OverlayManifest.PrimitiveType.GROUP) {
+                collectImageAssetRefs(element.children,into);
+            }
+        }
+    }
+
+    /**
+     * Pure, Android-free stable z-order used by {@link #render}: lower zIndex first, then id as
+     * a deterministic tie-break. Exposed package-private so the ordering contract can be unit
+     * tested without constructing real Android Views.
+     */
+    static List<OverlayManifest.Element> orderedForTest(List<OverlayManifest.Element> source) {
+        return ordered(source);
+    }
+
     /** Render one already-validated scene into a full-screen transparent overlay. */
     void render(OverlayManifest.Scene scene) {
         if(!Settings.canDrawOverlays(context)) {
             permissionLost.run();
             return;
         }
+        // Second line of defense behind the controller's preflight: never begin mutating the
+        // window for a scene whose local assets are missing (section 15). The controller
+        // already gates on preflight(), but a direct caller must not get a partial render.
+        if(!preflight(scene))return;
         ensureWindow();
         root.setAlpha(1f);
         root.removeAllViews();
