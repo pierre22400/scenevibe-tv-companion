@@ -260,6 +260,24 @@ final class CloudControlClient {
         return RuntimeDiagnostics.CloudErrorCode.PROTOCOL;
     }
     /**
+     * Android-free/testable Case-A transition used by {@link #fetchAssignment}. A NEW legacy
+     * revision first installs the runtimeTrack durably and loads the existing scheduler. After
+     * that succeeds, a production regie seam (when present) must disarm any previously loaded
+     * manifested revision and adopt the legacy revision before ACK is allowed. A re-delivered
+     * cached legacy revision skips persistence but re-confirms the same visual ownership.
+     *
+     * <p>Legacy-only clients/tests that have no regie installer preserve their historical
+     * behavior. Failure at either step returns false so the caller does not ACK.</p>
+     */
+    static boolean installLegacyRevision(long revision,long cached,String runtimeJson,
+            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
+            ManifestInstaller installer) {
+        if(revision<1||runtimeJson==null||cache==null||scheduler==null)return false;
+        if(revision>cached && !cache.install(revision,runtimeJson,scheduler))return false;
+        return installer==null || installer.activateLegacy(revision);
+    }
+
+    /**
      * Observational only: maps the current credential state to the bounded diagnostics cloud
      * state. Never influences a decision; the client's behavior is unchanged by this call.
      */
@@ -340,19 +358,12 @@ final class CloudControlClient {
                 // the regie cannot drive. The ACK protocol itself is unchanged.
                 throw new IllegalStateException("Cached manifested revision not armable");
             }
-        } else {
-            // Legacy Case A. A NEW legacy revision must first replace the durable cache/scheduler,
-            // then the production regie must explicitly disarm any previously manifested
-            // revision and adopt this revision BEFORE ACK. Re-delivery of an already-cached
-            // legacy revision re-confirms that same visual state. Without a regie installer
-            // (legacy-only tests/clients), historical behavior remains unchanged.
-            if(revision>cached && !cache.install(revision,runtime.toString(),scheduler)) {
-                // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
-                throw new IllegalStateException("Invalid or non-durable runtime track");
-            }
-            if(manifestInstaller!=null && !manifestInstaller.activateLegacy(revision)) {
-                throw new IllegalStateException("Legacy revision could not become active");
-            }
+        } else if(!installLegacyRevision(revision,cached,runtime.toString(),cache,
+                scheduler,manifestInstaller)) {
+            // Legacy install/activation is one ACK gate: a newer runtime must be durable in the
+            // scheduler AND any prior manifested regie must be disarmed before this revision is
+            // allowed to ACK.
+            throw new IllegalStateException("Legacy revision could not become active");
         }
         // A cached, unacknowledged revision was already restored when service started.
         // ACK sends finalTrackId (NOT trackId) and only after the scheduler load succeeded.
