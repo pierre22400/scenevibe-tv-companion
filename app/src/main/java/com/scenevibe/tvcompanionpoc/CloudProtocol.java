@@ -40,7 +40,7 @@ final class CloudProtocol {
         Object rawDuration=media==null?null:media.opt("durationMs");
         String finalTrackId=data.optString("finalTrackId","");
         String trackId=data.optString("trackId","");
-        return revision>=1&&revision>=cached&&runtime!=null&&media!=null
+        boolean coreValid=revision>=1&&revision>=cached&&runtime!=null&&media!=null
             &&!finalTrackId.isEmpty()&&!trackId.isEmpty()
             &&"scenevibe.track.v1".equals(runtime.optString("type"))
             &&trackId.equals(runtime.optString("trackId"))
@@ -48,6 +48,11 @@ final class CloudProtocol {
             &&"prime_video".equals(media.optString("platform"))
             &&bounded(media.optString("videoId"),256)&&bounded(media.optString("title"),500)
             &&rawDuration instanceof Number&&((Number)rawDuration).longValue()>0;
+        if(!coreValid)return false;
+        // 0.10A additive routing: legacy assignments without a manifest stay valid, while
+        // any PRESENT manifest must resolve to an allow-listed renderer/payload mapping.
+        try {OverlayManifestRouter.resolve(data);return true;}
+        catch(OverlayManifestRouter.Invalid invalid) {return false;}
     }
 
     private static boolean bounded(String value,int max) {
