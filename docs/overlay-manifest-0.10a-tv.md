@@ -1,70 +1,143 @@
-# SceneVibe TV 0.10A — OverlayManifest routing seam
+# SceneVibe TV 0.10A — OverlayManifest scene foundation
 
 ## Scope
 
-This branch is stacked on the still-pending 0.8.2 release-hardening branch so it cannot alter the
+This branch is stacked on the still-pending 0.8.2 release-hardening branch. It must not alter the
 stable-signed 0.8.2 APK that will be physically qualified on the Sony.
 
-0.10A adds only the TV-side routing seam for the additive
-`scenevibe.overlay-manifest.v1` contract.
+0.10A starts the architectural transition from a commentary-specific overlay renderer to a
+generic local graphical and temporal regie.
 
-## Compatibility rule
+## Companion role
 
-Two assignment generations are accepted:
+SceneVibe Companion remains responsible for:
 
-1. **Legacy 0.9D/0.8.2 assignment** — no `overlayManifest`: route explicitly as
-   `LEGACY_COMMENTARY`.
-2. **0.10A assignment** — manifest present: it must match the allow-listed commentary mapping.
+- TV identity and pairing;
+- Cloud communication;
+- assignment and ACK lifecycle;
+- local validation/cache;
+- timing and priorities;
+- media synchronisation when required;
+- handing validated scenes to the graphical renderer.
 
-A present-but-invalid manifest never falls back to legacy mode. It fails closed as a protocol
-error, so a future or malicious renderer identifier can never be interpreted as commentary.
+The existing Android overlay foundation is extended, not rewritten.
 
-## Allow-listed 0.10A mapping
+## OverlayManifest is a scene language
 
-- manifest type: `scenevibe.overlay-manifest.v1`
-- surface: `system_overlay`
-- renderer: `scenevibe.renderer.commentary.v1`
-- payload contract: `scenevibe.track.v1`
-- payload ref: `assignment.runtimeTrack`
-- payload id: must equal `runtimeTrack.trackId`
+`scenevibe.overlay-manifest.v1` describes:
 
-No URL is resolved, no class name is loaded dynamically and no renderer code is downloaded.
+- a logical 1920 × 1080 canvas;
+- product/source identity;
+- media or wall clock;
+- pause behaviour;
+- timed scenes;
+- graphical primitives and layout/style.
 
-## Runtime behavior
+Initial primitive family:
 
-`OverlayManifestRouter.resolve(...)` returns the already-present sibling `runtimeTrack`. The
-existing `CloudTrackRepository`, `TrackParser`, `MediaSyncedTrackScheduler` and
-`OverlayRenderer` path then runs unchanged.
+- text
+- image
+- rectangle
+- table
+- group
 
-The manifest is not cached as a new source of truth. For the current commentary renderer, the
-durable cache remains the already-qualified runtime track + revision/ACK state.
+The contract contains no renderer class name or executable plugin reference.
 
-## Explicitly unchanged
+## Parser
 
-- `scenevibe.track.v1`
-- FinalTrack
-- cloud revision / ACK rules
-- device authentication / pairing / revocation
-- `MediaIdentityMatcher`
-- `MediaSyncedTrackScheduler`
-- `OverlayRenderer` visual behavior
-- boot/autostart behavior
-- stable signing
-- Banner implementation
+`OverlayManifestParser` is a strict, fail-closed parser. It bounds:
 
-## Tests
+- scene and primitive counts;
+- recursive group depth;
+- x/y/width/height inside the parent coordinate space;
+- zIndex and opacity;
+- text/table sizes;
+- colors;
+- fade animation durations;
+- asset references.
 
-Pure JVM tests lock:
+Image refs must be opaque `asset:...` identifiers. Direct network URLs fail validation.
 
-- legacy assignment routing;
-- canonical manifest routing;
-- unknown renderer rejection;
-- arbitrary payload-ref rejection;
-- payload-id mismatch rejection;
-- malformed manifest rejection;
-- CloudProtocol acceptance of both legacy and canonical manifested assignments.
+## SceneRenderer
+
+`SceneRenderer` is the first generic Android interpreter. It uses only native Android primitives:
+
+- FrameLayout
+- TextView
+- ImageView
+- TableLayout / TableRow
+- View + GradientDrawable
+- TYPE_APPLICATION_OVERLAY
+
+It scales the logical canvas to the TV display, applies position/z-order/opacity, supports bounded
+fade entry/exit and recursively renders groups.
+
+The renderer never evaluates HTML/JavaScript, never dynamically loads classes and never performs
+network requests.
+
+Images come through an `AssetResolver` local-cache seam. Asset transport/download is a later
+bounded cycle; the current text-only Cloud qualification remains intact.
+
+## Video migration
+
+The existing FinalTrack/runtime path remains valid while the generic scene path is introduced.
+
+For the 0.10A transition:
+
+```text
+FinalTrack
+   |\
+   | \----> scenevibe.track.v1 -> MediaSyncedTrackScheduler
+   |
+   +-------> OverlayManifest -> SceneRenderer
+```
+
+`scenevibe.track.v1` is not removed in this cycle. MediaIdentityMatcher and
+MediaSyncedTrackScheduler remain untouched.
+
+A Video manifest carried on the current FinalTrack assignment must:
+
+- have `source.product = video`;
+- have `source.sourceId = runtimeTrack.trackId`;
+- use `clock.mode = media`.
+
+Legacy 0.8.2 assignments with no manifest remain accepted.
+
+## Banner
+
+Banner is no longer modelled as a special renderer id. It is another producer of
+OverlayManifest scenes.
+
+The first Cloud-side fixture is `fixtures/overlay/banner-sony-demo-001.json`. It uses wall-clock
+timing and demonstrates group, rectangle, image, text and table.
+
+The image uses only an opaque asset id. Until the asset cache/transport cycle lands, physical
+Banner qualification can use the text/rectangle/table subset or pre-seeded local assets.
+
+## What is deliberately not wired yet
+
+This foundation creates the parser/model/renderer boundary but does not yet replace the existing
+OverlayRenderer path inside OverlayService. That hand-off must happen after 0.8.2 has passed the
+Sony stable-signing gate so the qualified release is not contaminated.
+
+The next TV-side step is to cache the validated manifest alongside the assignment revision and let
+the regie select the scene due at a scheduler event / wall-clock tick before invoking
+SceneRenderer.
+
+## Security invariants retained
+
+- device token / account ownership / revocation unchanged;
+- assignment revision and ACK unchanged;
+- no arbitrary URL rendering;
+- no WebView/Rive/Lottie dependency;
+- no dynamic code/plugin loading;
+- no player transport controls;
+- no FinalTrack/LLM/pipeline changes.
 
 ## Merge ordering
 
 Do not merge this branch before PR #11 / 0.8.2 has passed its physical Sony gate and landed on
-`main`. After that merge, retarget/rebase this PR onto `main` and run the standard Android CI.
+`main`.
+
+After that, retarget/rebase this PR onto `main`, run normal Android CI, then qualify the scene
+path together with the Cloud/contracts OverlayManifest PR.
