@@ -121,6 +121,12 @@ final class SceneRenderer {
         // already gates on preflight(), but a direct caller must not get a partial render.
         if(!preflight(scene))return;
         ensureWindow();
+        // A previous scene may still be running its bounded fade-out with a withEndAction
+        // that removes the shared root window. Cancel it before reusing that same root for a
+        // replacement scene; Android guarantees a canceled ViewPropertyAnimator does not run
+        // its withEndAction. Without this, a fast scene/revision replacement could render the
+        // new scene and then have the OLD fade remove its window a few milliseconds later.
+        root.animate().cancel();
         root.setAlpha(1f);
         root.removeAllViews();
         for(OverlayManifest.Element element:ordered(scene.elements)) {
