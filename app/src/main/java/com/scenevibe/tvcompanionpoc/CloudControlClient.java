@@ -25,6 +25,18 @@ final class CloudControlClient {
      */
     interface ManifestInstaller {
         boolean install(long revision,String runtimeJson,String manifestJson);
+        /**
+         * Defensive re-arm for a re-delivered manifested assignment at {@code revision <= cached}
+         * (section 7/14): the durable install already happened on a prior cycle, so NOTHING is
+         * re-persisted and the ACK protocol is unchanged, but the regie must be confirmed armed
+         * for the cached manifested revision before this benign idempotent re-ACK fires. It
+         * returns true when the regie holds (or was armed to hold) the cached manifested
+         * revision; false means the cache has no durable manifest for it, so the manifested
+         * re-delivery must fail closed (no ACK) rather than ACK a revision the regie cannot
+         * drive. It never re-persists, never changes the active revision downward, and never
+         * carries comment/scene content or a secret.
+         */
+        boolean confirmArmed(long revision);
     }
     private static final String TAG="SceneVibeCloud";
     private static final int LIMIT=3_000_000;
@@ -309,9 +321,17 @@ final class CloudControlClient {
             if(manifestInstaller==null)
                 throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,
                         "Manifested assignment without installer");
-            if(revision>cached
-                    && !manifestInstaller.install(revision,runtime.toString(),overlayManifest.toString()))
-                throw new IllegalStateException("Manifested revision could not be installed durably");
+            if(revision>cached) {
+                if(!manifestInstaller.install(revision,runtime.toString(),overlayManifest.toString()))
+                    throw new IllegalStateException("Manifested revision could not be installed durably");
+            } else if(!manifestInstaller.confirmArmed(revision)) {
+                // Re-delivered manifested revision (revision <= cached): the installer is
+                // correctly skipped (nothing new to persist), but the regie must be confirmed
+                // armed for the cached manifested revision before this idempotent re-ACK. If the
+                // cache holds no durable manifest for it, fail closed rather than ACK a scene
+                // the regie cannot drive. The ACK protocol itself is unchanged.
+                throw new IllegalStateException("Cached manifested revision not armable");
+            }
         } else if(revision>cached && !cache.install(revision,runtime.toString(),scheduler)) {
             // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
             throw new IllegalStateException("Invalid or non-durable runtime track");

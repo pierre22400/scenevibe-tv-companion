@@ -183,6 +183,15 @@ records `MANIFEST_INCONSISTENT`; a durable persistence failure records `MANIFEST
 
 ### Scene lifecycle
 
+- **Window expiry (media-driven).** A shown Case B scene disappears at the end of its own window.
+  When the scheduler renders a comment it arms a media-time window `startMs + durationMs`; once the
+  MediaSession position reaches that end the scheduler fires `Listener.onExpire(event)` and the
+  regie hides the scene via `onCommentExpired` under the generation guard. This is driven by the
+  existing media clock, not a wall-clock timer: a pause (position does not advance) freezes the
+  window so the qualified Video freeze behavior holds (section 12), a forward seek past the end
+  expires the scene, and a backward seek before the start re-arms it. Case A (legacy
+  `OverlayRenderer`) is unchanged: it self-expires via its own freeze-aware countdown and ignores
+  `onExpire`.
 - **Eligibility hide.** When the scheduler reports the media identity is no longer eligible, the
   regie hides the scene immediately (`hideAll`). The service never creates a renderer just to hide
   nothing.

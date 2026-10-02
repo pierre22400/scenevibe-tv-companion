@@ -164,6 +164,17 @@ public final class OverlayService extends Service {
                             renderer.onPlayback(playing, freeze);
                         }
                     }
+                    @Override public void onExpire(ScheduledTrack.Event event) {
+                        // Case B ONLY: the scheduler (sole temporal authority) signals that a
+                        // scene's media-time window elapsed; the regie hides it under the
+                        // generation guard, so a stale/late expire from a superseded revision is
+                        // a no-op and never resurrects or wrongly hides a new-revision scene.
+                        // Case A is untouched: the legacy OverlayRenderer self-expires via its
+                        // own freeze-aware countdown, so onExpire is ignored for it.
+                        if (isSceneRendererActive() && sceneController != null) {
+                            sceneController.onCommentExpired(event);
+                        }
+                    }
                     @Override public void onEligibility(boolean eligible) {
                         // Observational only: mirror the last media-identity decision into the
                         // bounded diagnostics store. This never influences the eligibility rule.
@@ -395,6 +406,14 @@ public final class OverlayService extends Service {
             activeRevision = armedRevision;
             return true;
         }
+        @Override public boolean confirmArmed(long revision) {
+            if (cloudTrackRepository == null || trackScheduler == null) return false;
+            long armedRevision = confirmManifestedRevisionArmed(cloudTrackRepository,
+                    trackScheduler, sceneController, revision);
+            if (armedRevision <= 0) return false;
+            activeRevision = armedRevision;
+            return true;
+        }
     };
 
     /**
@@ -423,6 +442,35 @@ public final class OverlayService extends Service {
         CloudTrackRepository.RestoreResult armed = repository.restoreWithManifest(scheduler);
         if (!armed.ok) return 0;
         if (controller != null) controller.replaceRevision(armed.revision, armed.manifest);
+        return armed.revision;
+    }
+
+    /**
+     * Android-free, unit-testable core of the re-delivered manifested revision re-arm
+     * (section 7/14). On a manifested assignment at {@code revision <= cached} the durable
+     * install already happened, so this re-arms the regie DEFENSIVELY WITHOUT re-persisting: if
+     * the controller already holds a manifest for the cached revision it is a no-op success; if
+     * not (e.g. the service armed a legacy restore, or a prior arm was lost) it re-reads the
+     * just-cached durable manifested copy via {@link CloudTrackRepository#restoreWithManifest}
+     * and arms the regie from it. It returns the armed revision (&gt; 0) only when the regie
+     * holds a manifest for the cached revision afterwards, and 0 when the cache has no durable
+     * manifest for it (the manifested re-delivery must then fail closed, no ACK). It never
+     * lowers the active revision and never logs content.
+     *
+     * @return the armed (cached) revision on success, or 0 when no durable manifest is armable
+     */
+    static long confirmManifestedRevisionArmed(CloudTrackRepository repository,
+            MediaSyncedTrackScheduler scheduler, SceneRuntimeController controller, long revision) {
+        if (controller == null) return 0;
+        // Already armed for the cached revision => benign idempotent re-ACK, nothing to do.
+        if (controller.hasActiveManifest() && controller.activeRevision() == revision) {
+            return revision;
+        }
+        // Not armed for this revision yet: re-read the durable manifested copy and arm from it,
+        // without re-persisting. A revision with no durable manifest fails closed.
+        CloudTrackRepository.RestoreResult armed = repository.restoreWithManifest(scheduler);
+        if (!armed.ok || armed.revision != revision) return 0;
+        controller.replaceRevision(armed.revision, armed.manifest);
         return armed.revision;
     }
 

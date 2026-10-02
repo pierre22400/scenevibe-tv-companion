@@ -295,6 +295,57 @@ public final class SceneRuntimeControllerTest {
         assertTrue(sink.hidden.contains("comment-1"));
     }
 
+    /**
+     * A late expiry carrying a superseded generation is a no-op: it must neither hide the
+     * new-revision scene nor resurrect the old one (sections 13/14/21). This locks the
+     * interaction between the new scheduler-driven expiry and the generation guard.
+     */
+    @Test public void staleGenerationExpiryIsIgnored() {
+        RecordingSink sink = new RecordingSink();
+        SceneRuntimeController regie = new SceneRuntimeController(sink);
+        regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
+        long gen1 = regie.currentGeneration();
+        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        assertEquals("comment-1", regie.visibleSceneId());
+
+        // Revision 2 takes over and shows its own scene under the new generation.
+        regie.replaceRevision(2, manifest("track-2", scene("comment-2", 3_000, 4_000)));
+        regie.onCommentDue(comment("comment-2", 3_000, 4_000));
+        assertEquals("comment-2", regie.visibleSceneId());
+
+        // A late expiry from the superseded revision-1 generation must do nothing: it cannot
+        // hide the new comment-2 scene, and comment-1 is already gone.
+        regie.onCommentExpired(comment("comment-1", 12_000, 6_000), gen1);
+        assertEquals("stale-generation expiry must not hide the new scene",
+                "comment-2", regie.visibleSceneId());
+        assertFalse("stale-generation expiry must not hide the comment-2 scene",
+                sink.hidden.contains("comment-2"));
+    }
+
+    /**
+     * An expiry for a scene other than the currently visible one (same generation) is a no-op,
+     * and expiry of the visible scene hides exactly it. Mirrors the scheduler firing onExpire
+     * for whichever comment's media window elapsed.
+     */
+    @Test public void expiryOfVisibleSceneHidesItExactlyOnce() {
+        RecordingSink sink = new RecordingSink();
+        SceneRuntimeController regie = new SceneRuntimeController(sink);
+        regie.loadManifest(1, manifest("track-1",
+                scene("comment-1", 1_000, 6_000), scene("comment-2", 12_000, 6_000)));
+        regie.onCommentDue(comment("comment-1", 1_000, 6_000));
+
+        // Expiry of a non-visible scene is a no-op.
+        regie.onCommentExpired(comment("comment-2", 12_000, 6_000));
+        assertEquals("comment-1", regie.visibleSceneId());
+
+        // Expiry of the visible scene hides it; a second (duplicate/late) expiry is harmless.
+        regie.onCommentExpired(comment("comment-1", 1_000, 6_000));
+        assertFalse(regie.hasVisibleScene());
+        regie.onCommentExpired(comment("comment-1", 1_000, 6_000));
+        assertEquals("duplicate expiry must not hide twice", 1,
+                java.util.Collections.frequency(sink.hidden, "comment-1"));
+    }
+
     /** Null event never NPEs and never shows anything. */
     @Test public void nullEventIsSafe() {
         RecordingSink sink = new RecordingSink();

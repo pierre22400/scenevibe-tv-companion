@@ -184,6 +184,75 @@ public final class ManifestInstallAckDecisionTest {
         assertFalse(regie.hasActiveManifest());
     }
 
+    // ---- review Issue 2: re-delivered manifested revision (revision <= cached) re-arm -----
+
+    /**
+     * A re-delivered manifested revision whose regie is ALREADY armed for the cached revision
+     * is a benign idempotent re-ACK: confirmManifestedRevisionArmed returns the revision without
+     * re-persisting anything.
+     */
+    @Test public void reDeliveredManifestConfirmsAlreadyArmedRegie() throws Exception {
+        Memory memory=new Memory();
+        CloudTrackRepository repository=new CloudTrackRepository(memory);
+        RecordingSink sink=new RecordingSink();
+        SceneRuntimeController regie=new SceneRuntimeController(sink);
+
+        // Install + arm revision 5 (installer path arms the regie).
+        assertEquals(5,OverlayService.installManifestedRevision(repository,scheduler(),regie,
+                new DiagnosticsStore(),5,runtimeJson("track-1"),manifestJson("track-1")));
+        assertTrue(regie.hasActiveManifest());
+        String runtimeAfterInstall=memory.values.get("runtime");
+        String manifestAfterInstall=memory.values.get("manifest");
+
+        // Re-delivery at revision <= cached: confirm the regie is armed, re-persist nothing.
+        long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,5);
+        assertEquals(5,armed);
+        assertTrue(regie.isSceneRendererActiveFor(5));
+        assertEquals("re-delivery must not re-persist runtime",runtimeAfterInstall,memory.values.get("runtime"));
+        assertEquals("re-delivery must not re-persist manifest",manifestAfterInstall,memory.values.get("manifest"));
+    }
+
+    /**
+     * A re-delivered manifested revision whose regie is NOT yet armed (e.g. a cold restart that
+     * only loaded the durable cache) is re-armed defensively from the durable manifested copy,
+     * so the re-ACK is safe. No new persistence occurs.
+     */
+    @Test public void reDeliveredManifestReArmsUnarmedRegieFromDurableCache() throws Exception {
+        Memory memory=new Memory();
+        // Durable manifested revision 7 exists from a prior cycle.
+        assertEquals(7,OverlayService.installManifestedRevision(new CloudTrackRepository(memory),
+                scheduler(),new SceneRuntimeController(new RecordingSink()),new DiagnosticsStore(),
+                7,runtimeJson("track-1"),manifestJson("track-1")));
+
+        // A brand new controller (unarmed) stands in for a restart that has not armed yet.
+        CloudTrackRepository repository=new CloudTrackRepository(memory);
+        SceneRuntimeController regie=new SceneRuntimeController(new RecordingSink());
+        assertFalse(regie.hasActiveManifest());
+
+        long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,7);
+        assertEquals("defensive re-arm from durable manifested cache",7,armed);
+        assertTrue(regie.hasActiveManifest());
+        assertTrue(regie.isSceneRendererActiveFor(7));
+    }
+
+    /**
+     * A re-delivered MANIFESTED revision whose cache has NO durable manifest (a legacy Case A
+     * revision) is not armable: confirm returns 0 so the manifested re-delivery fails closed
+     * (no ACK) rather than ACK a scene the regie cannot drive.
+     */
+    @Test public void reDeliveredManifestFailsClosedWhenNoDurableManifest() throws Exception {
+        Memory memory=new Memory();
+        CloudTrackRepository repository=new CloudTrackRepository(memory);
+        // Legacy Case A install: runtime only, no manifest.
+        assertTrue(repository.install(4,runtimeJson("track-1"),scheduler()));
+        assertNull(memory.values.get("manifest"));
+
+        SceneRuntimeController regie=new SceneRuntimeController(new RecordingSink());
+        long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,4);
+        assertEquals("no durable manifest => not armable => fail closed",0,armed);
+        assertFalse(regie.hasActiveManifest());
+    }
+
     // ---- section 20-A (cases 1-3): no manifest => legacy path, regie not engaged --------
 
     /** Case 1: a legacy no-manifest install persists runtime, stores no manifest. */
