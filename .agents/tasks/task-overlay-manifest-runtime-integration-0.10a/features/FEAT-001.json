@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish and document a green baseline for every mandatory local gate before any code change. Confirms the sandbox can run the Android gates locally (SDK installed by planner) so later features are verified against a known-good starting point. No production code changes.",
+  "status": "completed",
+  "steps": [
+    "Confirm Android SDK is present at /opt/android-sdk and a gitignored local.properties with 'sdk.dir=/opt/android-sdk' exists at repo root; if missing, recreate local.properties (it is in .gitignore, so it is never committed).",
+    "Run the Python boundary gate: `python3 -m unittest discover -s tests` from repo root and confirm it passes.",
+    "Run the Android gates with the pinned Gradle 8.9 binary (/root/.local/share/mise/installs/gradle/8.9.0/gradle-8.9/bin/gradle), JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2, ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk: `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug --console=plain` and confirm BUILD SUCCESSFUL.",
+    "Compile the LAN DEV path: `SCENEVIBE_ENABLE_LAN_DEV=true <gradle8.9> :app:assembleDebug --console=plain`.",
+    "Compile the Consumer Cloud path: `SCENEVIBE_CLOUD_ORIGIN=https://interface-scenevibe-3wxg.vercel.app <gradle8.9> :app:assembleDebug --console=plain`.",
+    "Attempt (best effort) `:app:assembleRelease` WITHOUT modifying the signing chain; record whether it produced app-release-unsigned.apk.",
+    "Record the exact commands and results in the feature findings. Do NOT modify any source file in this feature."
+  ],
+  "acceptance_criteria": [
+    "`python3 -m unittest discover -s tests` reports OK (all tests pass).",
+    "Gradle 8.9 / JDK 17 `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug` reports BUILD SUCCESSFUL against the unmodified base branch.",
+    "LAN DEV and Consumer Cloud assembleDebug both report BUILD SUCCESSFUL.",
+    "Findings record the exact gate commands and their green results, and note whether assembleRelease is feasible."
+  ],
+  "verification": [
+    "python3 -m unittest discover -s tests",
+    "<gradle8.9> :app:testDebugUnitTest :app:lintDebug :app:assembleDebug with ANDROID_HOME and JAVA_HOME 17"
+  ],
+  "blocked_reason": null,
+  "findings": "Baseline verified GREEN by the planner against unmodified base (HEAD fe15d4fa). Environment: Android SDK installed at /opt/android-sdk (commandlinetools 13114758, platform-tools, platforms;android-35, build-tools;35.0.0, licenses accepted); gitignored local.properties sdk.dir=/opt/android-sdk created; Gradle 8.9 at /root/.local/share/mise/installs/gradle/8.9.0/gradle-8.9/bin/gradle; JDK 17 at /root/.local/share/mise/installs/java/17.0.2. Results: python3 -m unittest discover -s tests => OK (13 tests). Gradle 8.9/JDK17 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug => BUILD SUCCESSFUL. SCENEVIBE_ENABLE_LAN_DEV=true :app:assembleDebug => BUILD SUCCESSFUL. SCENEVIBE_CLOUD_ORIGIN=https://interface-scenevibe-3wxg.vercel.app :app:assembleDebug => BUILD SUCCESSFUL. :app:assembleRelease => BUILD SUCCESSFUL producing app-release-unsigned.apk (signing chain untouched). All mandatory local gates ARE feasible in this sandbox. Physical device/emulator still unavailable: api35 smoke + Sony qualifications remain CI/human-only."
+}

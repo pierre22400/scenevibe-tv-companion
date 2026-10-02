@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-005",
+  "type": "docs",
+  "description": "Finalize the security boundary coverage in the Python contract test, update the architecture documentation (no duplicates), and, only if needed for CI qualification, temporarily add the new branch to the debug workflow trigger. Captures the explicitly NOT-implemented limits (wall-clock production exec, Cloud assets) and the physical gates still required. Depends on FEAT-002, FEAT-003, FEAT-004.",
+  "status": "pending",
+  "steps": [
+    "Extend tests/test_poc_contract.py (section 22) to prove, by static assertion over source files: SceneRenderer stays Android-native and contains none of Class.forName/DexClassLoader/PathClassLoader/android.webkit/WebView(/java.net.URL/HttpURLConnection (extend the existing forbidden list to also cover the new SceneRuntimeController and VideoOverlayManifestBridge sources); MediaSyncedTrackScheduler and MediaIdentityMatcher and legacy OverlayRenderer are all still present; the generic SceneRenderer is a separate class that holds no Cloud logic (assert no CloudControlClient / assignment / deviceToken references in SceneRenderer and the controller); CloudControlClient holds no graphics logic (assert no SceneRenderer/TableLayout/FrameLayout/GradientDrawable references in CloudControlClient); no new Android permission appears in AndroidManifest.xml (the existing permission-set assertion already pins this — keep it green). Also add section 20-F security assertions (cases 33-37): no network URL, no WebView, no dynamic class loading, no transport control, no new permission, as static boundary checks over the new + existing sources. Keep every existing Python assertion intact.",
+    "Update docs/overlay-manifest-0.10a-tv.md (section 28) IN PLACE rather than creating a new doc: replace the 'What is deliberately not wired yet' section to describe the now-wired runtime regie; document the final architecture (legacy Case A path; manifested Video Case B path; atomic same-revision cache; ACK boundary = assignment accepted durably, not first scene displayed; restart recovery; cross-contract validation rules; scene lifecycle incl. eligibility hide + stale-callback neutralization + revision replacement; exactly-one-visual-path). Explicitly document the LIMITS: wall-clock (clock.mode=='wall') remains PARSED and Banner-compatible but is NOT executed in production because its startMs time anchor contract is unspecified (document this as a required future contract — do NOT invent the anchor, section 16); Cloud asset transport is NOT built this cycle — only the local AssetResolver seam, missing asset => bounded scene failure (section 15); priorities are NOT added, architecture kept extensible (section 17). State clearly that no Android CI run equals physical Android TV 15/12 qualification (section 27) and list the physical gates still required (section 31).",
+    "Run the full gate suite one more time after doc/test edits: python3 boundary tests, then Gradle 8.9/JDK17 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug, plus LAN DEV and Consumer Cloud assembleDebug, and (best effort) :app:assembleRelease unsigned.",
+    "ONLY IF the orchestrator needs the debug CI to run on the new branch for qualification: add exactly the single branch name 'kiro/overlay-manifest-runtime-integration-0.10a-001' to the push.branches list in .github/workflows/android-debug.yml, with a comment that it is temporary for 0.10A runtime integration. Do NOT touch android-release.yml, do NOT touch android-15-smoke.yml, do NOT modify or expose secrets, do NOT broaden any other trigger. This step is optional — the orchestrator opens/pushes the PR, so leave it to be decided based on whether CI gating is required; if in doubt, make the minimal single-branch addition since it is explicitly permitted by section 26.",
+    "Commit all work on the current branch kiro/overlay-manifest-runtime-integration-0.10a-001 with clear conventional-commit messages. Do NOT push, do NOT open/modify a PR, do NOT merge/rebase/force-push."
+  ],
+  "acceptance_criteria": [
+    "tests/test_poc_contract.py proves all section-22 and section-20-F boundary points over both existing and new sources and passes; all prior Python assertions remain green.",
+    "docs/overlay-manifest-0.10a-tv.md is updated in place (no duplicate doc) and documents final architecture, legacy + manifested paths, atomic cache, ACK boundary, restart recovery, cross-contract validation, scene lifecycle, wall-clock limit, asset limit, security, and physical gates still required.",
+    "Full local gate suite (python + Gradle 8.9/JDK17 testDebugUnitTest/lintDebug/assembleDebug + LAN DEV + Consumer Cloud) is green.",
+    "Any CI trigger change is limited to adding only the new branch name to android-debug.yml push.branches, documented as temporary; android-release.yml and android-15-smoke.yml and secrets untouched.",
+    "All changes committed to kiro/overlay-manifest-runtime-integration-0.10a-001; nothing pushed/merged."
+  ],
+  "verification": [
+    "python3 -m unittest discover -s tests",
+    "<gradle8.9> :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --console=plain",
+    "SCENEVIBE_ENABLE_LAN_DEV=true <gradle8.9> :app:assembleDebug && SCENEVIBE_CLOUD_ORIGIN=https://interface-scenevibe-3wxg.vercel.app <gradle8.9> :app:assembleDebug"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

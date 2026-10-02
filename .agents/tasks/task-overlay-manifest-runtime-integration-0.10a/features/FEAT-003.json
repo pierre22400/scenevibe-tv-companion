@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Introduce the runtime regie controller (SceneRuntimeController) that coordinates cache/manifest + the EXISTING MediaSyncedTrackScheduler events + SceneRenderer. The controller is the single decision point for WHEN a scene is shown/hidden; it owns no clock, never commands the player, and is Android-independent as far as reasonable so it is JVM-testable via a thin renderer/preflight seam. Includes the regie unit tests (sections 9, 13, 14, 20-D, 21). Depends on FEAT-002 (bridge + atomic cache).",
+  "status": "pending",
+  "steps": [
+    "Create SceneRuntimeController.java. It holds the active OverlayManifest (indexed by scene id, reuse the FEAT-002 index), the active revision, and a generation/revision guard counter. Expose a minimal seam interface for the actual drawing so JVM tests can run without Android: e.g. `interface SceneSink { boolean preflight(OverlayManifest.Scene scene); void show(OverlayManifest.Scene scene); void hide(OverlayManifest.Scene scene); void hideAll(); }`. In production the OverlayService adapter (FEAT-004) implements SceneSink by delegating to SceneRenderer; in tests a fake records calls.",
+    "Responsibilities (section 9): loadManifest(revision, manifest) / unload(); index scenes by id; onCommentDue(ScheduledTrack.Event) -> look up scene by event.id, if found call sink.preflight then sink.show, if not found do NOTHING (no render); onCommentExpired/onHide -> sink.hide; hideAll on eligibility loss; replaceRevision -> bump generation, unload old manifest, drop any visible scene from the old revision; never command the video player. The controller MUST NOT create a Handler/postDelayed clock for Video scenes — timing comes only from scheduler events forwarded in.",
+    "Add a generation/revision guard (section 14, 21): every onCommentDue is tagged with the revision/generation active when the scheduler produced it (or the controller checks the current generation at delivery). A late callback carrying an old generation must be ignored and must never resurrect an old scene. A double callback for the same scene must be idempotent (show once; second is a no-op or safe re-show of the same current scene, never a duplicate overlay). Deliver exactly one active visual scene at a time.",
+    "Exactly-one-visual-path contract (section 10, 30): the controller exposes/returns a deterministic signal that a valid manifest is active for the current revision (Case B). Define the authoritative predicate the OverlayService will use to pick Case A (legacy OverlayRenderer) vs Case B (regie+SceneRenderer) so the two never run for the same comment. Keep this as a pure method on the controller or a tiny helper (mirrors OverlayService.shouldShowOnEntry static-predicate style).",
+    "Eligibility (section 13): expose onEligibility(false) -> immediately hideAll (armed != visible) WITHOUT discarding the durable manifest/track or the loaded in-memory manifest; onEligibility(true) allows a subsequent due event to show again per existing policy. Do not alter MediaIdentityMatcher.",
+    "Pause/resume (section 12): the controller reacts to the scheduler's onPlayback(playing, pauseFreezesDisplay) only to the extent the legacy path already does (do not add a second clock). When pauseFreezesDisplay and paused, the visible scene must not be force-expired by wall time inside the controller; expiry/visibility continues to be driven by scheduler events. Keep this minimal and documented; do not reimplement the scheduler's freeze.",
+    "Add JVM tests for section 20-D (cases 16-22) and section 21: comment-1 due => scene comment-1 shown; unknown scene id => no render; a callback tagged with an old revision/generation => ignored (fake sink shows nothing new); replacing revision disarms the old scene (hide old, old-gen callbacks ignored); eligibility loss => hideAll called; pause/resume keeps the expected Video behavior (no second clock, scene not wall-expired on pause); exactly one renderer/scene active at a time. Section 21 async: render requested after a simulated stop/unload => ignored; double callback for same scene => idempotent (single show); a new revision received while a scene is visible => old scene hidden/disarmed and only new-revision scenes can show. Use a deterministic fake SceneSink and feed events directly; no Android, no real time."
+  ],
+  "acceptance_criteria": [
+    "SceneRuntimeController is Android-independent (no android.* imports), owns no clock, never references TransportControls / media commands, and drives SceneRenderer only via the SceneSink seam.",
+    "onCommentDue shows the matching scene, shows nothing for an unknown id, and ignores callbacks from a superseded revision/generation (stale callbacks never resurrect an old scene).",
+    "Revision replacement disarms the old scene; eligibility loss hides immediately but keeps durable + in-memory manifest/track; exactly one visual scene is active at any time.",
+    "A deterministic predicate selects Case A vs Case B so legacy OverlayRenderer and SceneRenderer are never active simultaneously for the same comment.",
+    "Section 20-D (16-22) and section 21 async tests pass under :app:testDebugUnitTest."
+  ],
+  "verification": [
+    "<gradle8.9> :app:testDebugUnitTest --console=plain (regie + async tests pass)",
+    "<gradle8.9> :app:lintDebug :app:assembleDebug --console=plain"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -34,6 +34,8 @@ final class DiagnosticsStore {
     private long lastSuccessfulAckRevision;
     private RuntimeDiagnostics.CloudErrorCode lastCloudErrorCode =
             RuntimeDiagnostics.CloudErrorCode.NONE;
+    private RuntimeDiagnostics.ManifestCode lastManifestCode =
+            RuntimeDiagnostics.ManifestCode.NONE;
 
     /** Package-visible so JVM tests can build a fresh, isolated store without the singleton. */
     DiagnosticsStore() {}
@@ -87,6 +89,16 @@ final class DiagnosticsStore {
     }
 
     /**
+     * Observational: bounded outcome of the last OverlayManifest install/validation (valid,
+     * invalid contract, inconsistent with the runtimeTrack, or a durable cache failure). It
+     * is a bounded enum, never comment/scene content or the full manifest JSON, and it never
+     * gates behavior; it only surfaces on the diagnostics screen.
+     */
+    synchronized void setLastManifestCode(RuntimeDiagnostics.ManifestCode code) {
+        if (code != null) this.lastManifestCode = code;
+    }
+
+    /**
      * Clears the observational runtime signals that describe a live cloud identity/session
      * back to their neutral defaults. Used by the EXCEPTIONAL Cloud reset so the diagnostics
      * view does not keep showing stale connection/ACK markers after the identity is wiped.
@@ -98,6 +110,7 @@ final class DiagnosticsStore {
         this.lastAssignmentRevisionReceived = 0;
         this.lastSuccessfulAckRevision = 0;
         this.lastCloudErrorCode = RuntimeDiagnostics.CloudErrorCode.NONE;
+        this.lastManifestCode = RuntimeDiagnostics.ManifestCode.NONE;
     }
 
     synchronized boolean serviceRunning() { return serviceRunning; }
@@ -110,4 +123,5 @@ final class DiagnosticsStore {
     synchronized long lastAssignmentRevisionReceived() { return lastAssignmentRevisionReceived; }
     synchronized long lastSuccessfulAckRevision() { return lastSuccessfulAckRevision; }
     synchronized RuntimeDiagnostics.CloudErrorCode lastCloudErrorCode() { return lastCloudErrorCode; }
+    synchronized RuntimeDiagnostics.ManifestCode lastManifestCode() { return lastManifestCode; }
 }

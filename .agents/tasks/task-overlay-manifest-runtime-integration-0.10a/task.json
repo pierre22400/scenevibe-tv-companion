@@ -1,0 +1,7 @@
+{
+  "task_id": "task-overlay-manifest-runtime-integration-0.10a",
+  "task_description": "SceneVibe TV 0.10A OverlayManifest Runtime Integration: turn the 0.10A foundation (OverlayManifest/OverlayManifestParser/SceneRenderer) into a real runtime regie. Add a cross-contract Video validation bridge, atomic revision-consistent runtimeTrack+manifest persistence, a JVM-testable SceneRuntimeController that drives SceneRenderer from the EXISTING MediaSyncedTrackScheduler clock, minimal OverlayService + CloudControlClient wiring (Case A legacy OverlayRenderer unchanged / Case B manifested SceneRenderer, exactly one visual path), strict ACK-after-durable-install boundary, restart recovery, eligibility hide, stale-callback neutralization, bounded diagnostics, and full test + docs updates. Branch kiro/overlay-manifest-runtime-integration-0.10a-001 stacked on work/overlay-manifest-foundation-0.10a-tv-001 (base SHA fe15d4fa91bea6bba3bd9b3ee6185df8848414c8). EXTEND, do not rewrite. No push/merge/PR here. Physical Sony qualification remains human-only and must never be marked done.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}
