@@ -37,6 +37,14 @@ final class CloudControlClient {
          * carries comment/scene content or a secret.
          */
         boolean confirmArmed(long revision);
+        /**
+         * Production regie hand-off after a LEGACY no-manifest revision has been installed
+         * durably. The service must disarm any previously loaded manifested revision and make
+         * this legacy revision the active visual revision BEFORE the ACK can be sent. Standalone
+         * legacy clients/tests without a regie keep their historical behavior through this
+         * default no-op success.
+         */
+        default boolean activateLegacy(long revision) {return true;}
     }
     private static final String TAG="SceneVibeCloud";
     private static final int LIMIT=3_000_000;
@@ -332,9 +340,19 @@ final class CloudControlClient {
                 // the regie cannot drive. The ACK protocol itself is unchanged.
                 throw new IllegalStateException("Cached manifested revision not armable");
             }
-        } else if(revision>cached && !cache.install(revision,runtime.toString(),scheduler)) {
-            // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
-            throw new IllegalStateException("Invalid or non-durable runtime track");
+        } else {
+            // Legacy Case A. A NEW legacy revision must first replace the durable cache/scheduler,
+            // then the production regie must explicitly disarm any previously manifested
+            // revision and adopt this revision BEFORE ACK. Re-delivery of an already-cached
+            // legacy revision re-confirms that same visual state. Without a regie installer
+            // (legacy-only tests/clients), historical behavior remains unchanged.
+            if(revision>cached && !cache.install(revision,runtime.toString(),scheduler)) {
+                // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
+                throw new IllegalStateException("Invalid or non-durable runtime track");
+            }
+            if(manifestInstaller!=null && !manifestInstaller.activateLegacy(revision)) {
+                throw new IllegalStateException("Legacy revision could not become active");
+            }
         }
         // A cached, unacknowledged revision was already restored when service started.
         // ACK sends finalTrackId (NOT trackId) and only after the scheduler load succeeded.
