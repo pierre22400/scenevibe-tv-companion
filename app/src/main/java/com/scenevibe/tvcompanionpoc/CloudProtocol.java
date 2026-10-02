@@ -40,7 +40,7 @@ final class CloudProtocol {
         Object rawDuration=media==null?null:media.opt("durationMs");
         String finalTrackId=data.optString("finalTrackId","");
         String trackId=data.optString("trackId","");
-        return revision>=1&&revision>=cached&&runtime!=null&&media!=null
+        boolean coreValid=revision>=1&&revision>=cached&&runtime!=null&&media!=null
             &&!finalTrackId.isEmpty()&&!trackId.isEmpty()
             &&"scenevibe.track.v1".equals(runtime.optString("type"))
             &&trackId.equals(runtime.optString("trackId"))
@@ -48,6 +48,21 @@ final class CloudProtocol {
             &&"prime_video".equals(media.optString("platform"))
             &&bounded(media.optString("videoId"),256)&&bounded(media.optString("title"),500)
             &&rawDuration instanceof Number&&((Number)rawDuration).longValue()>0;
+        if(!coreValid)return false;
+        // Backward compatibility: 0.8.2 / 0.9D assignments did not carry a scene manifest.
+        if(!data.has("overlayManifest"))return true;
+        JSONObject manifestJson=data.optJSONObject("overlayManifest");
+        if(manifestJson==null)return false;
+        try {
+            OverlayManifest manifest=OverlayManifestParser.parse(manifestJson);
+            // Cloud FinalTrack assignments must project a media-clock Video scene bound to
+            // the same track id; Banner/wall-clock manifests use a later generic assignment path.
+            return "video".equals(manifest.product)
+                    &&trackId.equals(manifest.sourceId)
+                    &&"media".equals(manifest.clockMode);
+        } catch(OverlayManifestParser.Invalid invalid) {
+            return false;
+        }
     }
 
     private static boolean bounded(String value,int max) {

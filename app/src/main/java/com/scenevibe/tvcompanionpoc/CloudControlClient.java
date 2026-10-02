@@ -239,6 +239,9 @@ final class CloudControlClient {
         long revision=data.optLong("revision",-1), cached=cache.revision();
         // Observational only: record the highest assignment revision received.
         DiagnosticsStore.INSTANCE.setLastAssignmentRevisionReceived(revision);
+        // During 0.10A migration the already-qualified runtimeTrack remains the source for
+        // media synchronisation. CloudProtocol has independently validated any additive
+        // OverlayManifest scene; SceneRenderer hand-off is layered beside this scheduler path.
         JSONObject runtime=data.optJSONObject("runtimeTrack");
         String finalTrackId=data.optString("finalTrackId","");
         // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.

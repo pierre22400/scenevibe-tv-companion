@@ -210,6 +210,39 @@ class PocContractTests(unittest.TestCase):
         self.assertNotIn("BroadcastReceiver", client)
         self.assertNotIn("8765", client)
 
+    def test_overlay_manifest_is_scene_data_and_renderer_stays_native(self):
+        """Scene language must stay bounded data interpreted only by native Android primitives."""
+        java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
+        parser = (java / "OverlayManifestParser.java").read_text()
+        renderer = (java / "SceneRenderer.java").read_text()
+        model = (java / "OverlayManifest.java").read_text()
+
+        self.assertIn("scenevibe.overlay-manifest.v1", model)
+        for primitive in ("TEXT", "IMAGE", "RECTANGLE", "TABLE", "GROUP"):
+            self.assertIn(primitive, model)
+        self.assertIn("startMs", model)
+        self.assertIn("durationMs", model)
+        self.assertIn("CANVAS_WIDTH=1920", model)
+        self.assertIn("TYPE_APPLICATION_OVERLAY", renderer)
+        self.assertIn("TextView", renderer)
+        self.assertIn("ImageView", renderer)
+        self.assertIn("TableLayout", renderer)
+        self.assertIn("FrameLayout", renderer)
+        self.assertIn("GradientDrawable", renderer)
+        self.assertIn("asset:", parser)
+
+        for forbidden in (
+            "Class.forName",
+            "DexClassLoader",
+            "PathClassLoader",
+            "android.webkit",
+            "WebView(",
+            "java.net.URL",
+            "HttpURLConnection",
+        ):
+            self.assertNotIn(forbidden, renderer)
+            self.assertNotIn(forbidden, parser)
+
     def test_track_pause_policy_reaches_renderer_without_player_controls(self):
         """Keep pause-aware display isolated from the direct commentary timer."""
         java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"

@@ -33,6 +33,38 @@ public final class CloudProtocolTest {
                     .put("durationMs",5_884_768)));
     }
 
+    /** Adds one valid 0.10A Video scene without changing the legacy runtimeTrack. */
+    private static JSONObject withOverlayManifest(JSONObject envelope,String trackId) throws Exception {
+        JSONObject text=new JSONObject()
+            .put("id","comment-1:text")
+            .put("type","text")
+            .put("frame",new JSONObject().put("x",100).put("y",60).put("width",1600).put("height",180))
+            .put("zIndex",1)
+            .put("opacity",1.0)
+            .put("text","Documented comment.")
+            .put("style",new JSONObject()
+                .put("color","#FFFFFF")
+                .put("backgroundColor","#17130FCC")
+                .put("fontSize",42)
+                .put("fontWeight","normal")
+                .put("textAlign","center")
+                .put("padding",20)
+                .put("cornerRadius",24));
+        JSONObject manifest=new JSONObject()
+            .put("type","scenevibe.overlay-manifest.v1")
+            .put("schemaVersion","1.0.0")
+            .put("manifestId","video:"+trackId)
+            .put("source",new JSONObject().put("product","video").put("sourceId",trackId))
+            .put("canvas",new JSONObject().put("width",1920).put("height",1080))
+            .put("clock",new JSONObject().put("mode","media").put("pauseBehavior","freeze"))
+            .put("scenes",new org.json.JSONArray().put(new JSONObject()
+                .put("id","comment-1")
+                .put("startMs",12_000)
+                .put("durationMs",6_000)
+                .put("elements",new org.json.JSONArray().put(text))));
+        return envelope.put("overlayManifest",manifest);
+    }
+
     /** A canonical 201 with userCode, UUID ids, bounded secrets and ISO expiry validates. */
     @Test public void canonicalActivationWithUserCodeValidates() throws Exception {
         assertTrue(CloudProtocol.validActivation(activation()));
@@ -77,6 +109,33 @@ public final class CloudProtocolTest {
     @Test public void assignmentEnvelopeValidates() throws Exception {
         assertTrue(CloudProtocol.validAssignment(assignment(UUID_B,2,"track-1"),UUID_B,1));
     }
+    /** The same assignment remains valid when the additive OverlayManifest is present. */
+    @Test public void assignmentWithCanonicalOverlayManifestValidates() throws Exception {
+        assertTrue(CloudProtocol.validAssignment(
+                withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-1"),UUID_B,1));
+    }
+    /** FinalTrack assignments bind the manifest source id to the same runtime track id. */
+    @Test public void assignmentRejectsOverlaySourceIdMismatch() throws Exception {
+        JSONObject envelope=withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-1");
+        envelope.getJSONObject("overlayManifest").getJSONObject("source")
+                .put("sourceId","track-2");
+        assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
+    }
+    /** The existing FinalTrack endpoint accepts Video/media scenes, not Banner/wall scenes. */
+    @Test public void assignmentRejectsBannerManifestOnVideoPath() throws Exception {
+        JSONObject envelope=withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-1");
+        envelope.getJSONObject("overlayManifest").getJSONObject("source").put("product","banner");
+        envelope.getJSONObject("overlayManifest").getJSONObject("clock").put("mode","wall");
+        assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
+    }
+    /** Unsupported scene primitives fail closed before the assignment can be cached or ACKed. */
+    @Test public void assignmentRejectsUnsupportedOverlayPrimitive() throws Exception {
+        JSONObject envelope=withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-1");
+        envelope.getJSONObject("overlayManifest").getJSONArray("scenes").getJSONObject(0)
+                .getJSONArray("elements").getJSONObject(0).put("type","webview");
+        assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
+    }
+
     /** An assignment addressed to another cloud device never replaces local cache. */
     @Test public void assignmentRejectsWrongDevice() throws Exception {
         assertFalse(CloudProtocol.validAssignment(assignment(UUID_A,2,"track-1"),UUID_B,1));
