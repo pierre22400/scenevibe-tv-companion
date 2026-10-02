@@ -26,6 +26,9 @@ permissions:
 
 jobs:
   release:
+    # Never create a signed release from the bootstrap/default branch.
+    # Manual qualification must explicitly target a release/PR branch.
+    if: ${{ github.ref != 'refs/heads/main' }}
     runs-on: ubuntu-latest
     env:
       # `secrets` is not available in step-level `if:` expressions, so expose the
