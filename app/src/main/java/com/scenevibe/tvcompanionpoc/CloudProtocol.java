@@ -49,10 +49,20 @@ final class CloudProtocol {
             &&bounded(media.optString("videoId"),256)&&bounded(media.optString("title"),500)
             &&rawDuration instanceof Number&&((Number)rawDuration).longValue()>0;
         if(!coreValid)return false;
-        // 0.10A additive routing: legacy assignments without a manifest stay valid, while
-        // any PRESENT manifest must resolve to an allow-listed renderer/payload mapping.
-        try {OverlayManifestRouter.resolve(data);return true;}
-        catch(OverlayManifestRouter.Invalid invalid) {return false;}
+        // Backward compatibility: 0.8.2 / 0.9D assignments did not carry a scene manifest.
+        if(!data.has("overlayManifest"))return true;
+        JSONObject manifestJson=data.optJSONObject("overlayManifest");
+        if(manifestJson==null)return false;
+        try {
+            OverlayManifest manifest=OverlayManifestParser.parse(manifestJson);
+            // Cloud FinalTrack assignments must project a media-clock Video scene bound to
+            // the same track id; Banner/wall-clock manifests use a later generic assignment path.
+            return "video".equals(manifest.product)
+                    &&trackId.equals(manifest.sourceId)
+                    &&"media".equals(manifest.clockMode);
+        } catch(OverlayManifestParser.Invalid invalid) {
+            return false;
+        }
     }
 
     private static boolean bounded(String value,int max) {
