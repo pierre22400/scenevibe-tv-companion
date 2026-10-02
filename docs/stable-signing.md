@@ -34,8 +34,12 @@ one. Do not conflate them, and do not invent Google Play policy.
    future decision**, **not** configured here.
 
 For now SceneVibe TV uses the self-managed stable key (concept 1) for sideload /
-qualification APKs. Any Play upload key / Play App Signing enrollment is a later,
-explicit decision and is intentionally out of scope here.
+qualification APKs. Before the first public Play release, make an explicit continuity
+choice: Google Play permits a developer to provide an existing app-signing key when
+configuring Play App Signing. If preserving certificate continuity between these
+sideloaded builds and Play-delivered installs matters, evaluate using this same stable
+key as the Play **app-signing** key (while keeping a distinct upload key). Do not create
+or switch Play keys implicitly; that remains a deliberate release decision.
 
 ---
 
@@ -149,8 +153,9 @@ re-running `apksigner`.
 2. Builds the Consumer Cloud Mode release variant and produces the unsigned,
    non-debuggable `app-release-unsigned.apk`.
 3. Decodes the keystore from `SCENEVIBE_ANDROID_KEYSTORE_BASE64` into the runner temp
-   dir, `apksigner`-signs a copy, runs `apksigner verify --print-certs`, and discards the
-   keystore in an `always()` step.
+   dir, runs `zipalign` on the unsigned APK **before signing**, signs the aligned APK with
+   `apksigner`, runs `apksigner verify --verbose --print-certs`, verifies final alignment
+   again with `zipalign -c`, and discards the keystore in an `always()` step.
 4. Uploads `scenevibe-tv-companion-release` (signed APK + verify output + APK SHA-256 +
    certificate SHA-256 + secret-free metadata). It does **not** publish to Play Store,
    push a tag, or create a GitHub release.
