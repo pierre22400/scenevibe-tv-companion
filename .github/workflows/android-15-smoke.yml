@@ -1,0 +1,107 @@
+# Android 15 / API 35 emulator smoke test.
+#
+# PURPOSE AND HONEST SCOPE
+# ------------------------------------------------------------------------------------------
+# SceneVibe TV Companion ALREADY compiles and targets compileSdk/targetSdk 35, so this is NOT
+# an API-35 migration. The FEAT-004 Android 15 behavior-change audit (recorded in the task
+# plan) concluded that ZERO app code or manifest changes are required for Android 15:
+#   * the foreground service is foregroundServiceType=specialUse, which is NOT in Android 15's
+#     list of BOOT_COMPLETED-restricted FGS types (dataSync, camera, mediaPlayback, phoneCall,
+#     mediaProjection, microphone), so the boot-prepare startForegroundService path remains
+#     PERMITTED on API 35;
+#   * the SYSTEM_ALERT_WINDOW background-FGS narrowing does not apply because the FGS is always
+#     started from the foreground (a user Activity action in MainActivity, guarded by
+#     Settings.canDrawOverlays) or from the BOOT_COMPLETED exemption path, never from a plain
+#     background start that would need an already-visible overlay window;
+#   * PendingIntent already uses FLAG_IMMUTABLE.
+# This workflow exists to give that audit an automated, repeatable, Android-15 runtime check.
+#
+# !!! HONESTY / SCOPE LIMITATION — READ BEFORE TRUSTING ANY RESULT !!!
+# This job boots a STANDARD Android 15 (API 35) emulator image (google_apis x86_64). At the
+# time this workflow was written there is NO officially published, usable Android TV (leanback)
+# system image for API 35 in the SDK repository (`system-images;android-35;android-tv;*` does
+# not resolve), so a true Android TV emulator cannot be booted here. Consequently:
+#   * This job qualifies ANDROID 15 (API 35) PLATFORM INVARIANTS ONLY.
+#   * It is NOT, and must never be described as, an "Android TV" or "physical Android TV
+#     qualification". Android-TV-specific behavior (leanback launcher placement, D-pad focus,
+#     real overlay rendering on a TV surface, real MediaSession from a TV streaming app, and a
+#     true device reboot) remains HUMAN / PHYSICAL REQUIRED and is reported as such below.
+# If/when an official API-35 Android TV system image becomes available, switch the
+# `system-image-*` inputs below to the TV variant and rename the job accordingly.
+#
+# The script steps below NEVER print "PASS" for a check they did not actually perform. Any
+# item that cannot be honestly observed in a headless CI emulator emits an explicit
+# "HUMAN/PHYSICAL REQUIRED" notice instead of a fake pass.
+
+name: Android 15 (API 35) platform smoke (NOT Android TV)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  APP_ID: com.scenevibe.tvcompanionpoc
+  # API 35 standard image. google_apis x86_64 is the broadly available Android 15 image; there
+  # is no usable android-tv image at this API level (see header), so this is a platform-only
+  # qualification.
+  API_LEVEL: "35"
+  EMU_TARGET: google_apis
+  EMU_ARCH: x86_64
+
+jobs:
+  # Job name deliberately states the platform-only scope so a green check is never mistaken for
+  # an Android TV qualification.
+  android15-platform-smoke:
+    name: Android 15 API 35 platform invariants (standard image, NOT Android TV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v4
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Install Android SDK 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build Cloud-mode debug APK for install
+        env:
+          # Stable public SceneVibe origin (NOT a secret): builds the installable APK against
+          # the real Cloud endpoint, matching the Cloud qualification APK from android-debug.yml.
+          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg.vercel.app
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Android 15 (API 35) emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          # Headless, no window, no audio/boot animation: this is a server CI runner.
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          # android-emulator-runner executes multiline script input line-by-line; keep
+          # shell state/functions in one committed bash script instead of defining them inline.
+          script: bash .github/scripts/android-15-smoke.sh
+
+      - name: Collect logcat artifact note
+        if: always()
+        run: echo "Logcat was scanned inline in the emulator step; see the step log for AndroidRuntime scan output."

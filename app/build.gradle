@@ -19,10 +19,26 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc"
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName "0.8.1-tv-recovery"
+        versionCode 12
+        versionName "0.8.2-tv-release-hardening"
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
+    }
+
+    buildTypes {
+        // Explicit production RELEASE variant. The POC intentionally keeps minify
+        // and resource shrinking OFF so the qualified 0.8.1 runtime behavior stays
+        // byte-for-byte unchanged except for the debuggable flag and signing. No
+        // signingConfig is embedded here: the real release signature is applied
+        // post-build by apksigner in CI using GitHub secrets, so no key material is
+        // ever required at Gradle configure time. assembleRelease therefore emits an
+        // unsigned, non-debuggable APK (app-release-unsigned.apk).
+        release {
+            debuggable false
+            minifyEnabled false
+            shrinkResources false
+            signingConfig null
+        }
     }
 
     compileOptions {
