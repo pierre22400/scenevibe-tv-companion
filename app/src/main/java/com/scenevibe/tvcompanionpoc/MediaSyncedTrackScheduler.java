@@ -43,7 +43,7 @@ public final class MediaSyncedTrackScheduler {
      * Comments that have been rendered (onRender fired) and whose media-time window has not yet
      * elapsed. Each is expired via {@link Listener#onExpire} once the media position reaches
      * {@code startMs + durationMs}. Keyed by event id so a backward seek that re-arms a comment
-     * also removes any pending window for it. Only populated for a positive durationMs.
+     * also expires any pending visible window before replay. Only populated for a positive durationMs.
      */
     private final Map<String, ScheduledTrack.Event> windowed = new HashMap<>();
     private ScheduledTrack track;
@@ -201,7 +201,8 @@ public final class MediaSyncedTrackScheduler {
                 // A comment seeked back before its own start is fully re-armed: forget any
                 // pending media-time window so a later forward replay re-renders and re-windows
                 // it cleanly rather than expiring against the stale previous window.
-                windowed.remove(event.id);
+                ScheduledTrack.Event visibleWindow = windowed.remove(event.id);
+                if (visibleWindow != null) listener.onExpire(visibleWindow);
                 count++;
             }
         }
