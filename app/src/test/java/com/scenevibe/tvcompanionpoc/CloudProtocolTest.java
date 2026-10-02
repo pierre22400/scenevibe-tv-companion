@@ -33,6 +33,18 @@ public final class CloudProtocolTest {
                     .put("durationMs",5_884_768)));
     }
 
+    /** Adds the 0.10A additive renderer-routing manifest without changing runtimeTrack. */
+    private static JSONObject withOverlayManifest(JSONObject envelope,String trackId) throws Exception {
+        return envelope.put("overlayManifest",new JSONObject()
+            .put("type","scenevibe.overlay-manifest.v1")
+            .put("surface","system_overlay")
+            .put("renderer",new JSONObject().put("id","scenevibe.renderer.commentary.v1"))
+            .put("payload",new JSONObject()
+                .put("contract","scenevibe.track.v1")
+                .put("ref","assignment.runtimeTrack")
+                .put("id",trackId)));
+    }
+
     /** A canonical 201 with userCode, UUID ids, bounded secrets and ISO expiry validates. */
     @Test public void canonicalActivationWithUserCodeValidates() throws Exception {
         assertTrue(CloudProtocol.validActivation(activation()));
@@ -77,6 +89,24 @@ public final class CloudProtocolTest {
     @Test public void assignmentEnvelopeValidates() throws Exception {
         assertTrue(CloudProtocol.validAssignment(assignment(UUID_B,2,"track-1"),UUID_B,1));
     }
+    /** The same assignment remains valid when the additive OverlayManifest is present. */
+    @Test public void assignmentWithCanonicalOverlayManifestValidates() throws Exception {
+        assertTrue(CloudProtocol.validAssignment(
+                withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-1"),UUID_B,1));
+    }
+    /** A present unknown renderer fails closed instead of falling back to commentary. */
+    @Test public void assignmentRejectsUnknownOverlayRenderer() throws Exception {
+        JSONObject envelope=withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-1");
+        envelope.getJSONObject("overlayManifest").getJSONObject("renderer")
+                .put("id","scenevibe.renderer.unknown.v1");
+        assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
+    }
+    /** Manifest payload identity must bind to the same runtimeTrack trackId. */
+    @Test public void assignmentRejectsOverlayPayloadIdMismatch() throws Exception {
+        JSONObject envelope=withOverlayManifest(assignment(UUID_B,2,"track-1"),"track-2");
+        assertFalse(CloudProtocol.validAssignment(envelope,UUID_B,1));
+    }
+
     /** An assignment addressed to another cloud device never replaces local cache. */
     @Test public void assignmentRejectsWrongDevice() throws Exception {
         assertFalse(CloudProtocol.validAssignment(assignment(UUID_A,2,"track-1"),UUID_B,1));
