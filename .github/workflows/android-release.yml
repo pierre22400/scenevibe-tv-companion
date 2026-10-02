@@ -4,8 +4,8 @@ name: Android release APK (stable-signed)
 #
 # This workflow is manual-only (workflow_dispatch). It builds the Consumer Cloud Mode
 # release variant (SCENEVIBE_ENABLE_LAN_DEV=false, the real public SceneVibe origin),
-# runs assembleRelease to emit the UNSIGNED non-debuggable release APK, then signs it
-# with apksigner using the four stable-signing GitHub repository secrets.
+# runs assembleRelease to emit the UNSIGNED non-debuggable release APK, zipaligns it,
+# then signs it with apksigner using the four stable-signing GitHub repository secrets.
 #
 # CRITICAL DIFFERENCE from android-debug.yml: the debug workflow treats signing as an
 # OPTIONAL, secret-gated add-on (it soft-passes unsigned when secrets are absent). A
@@ -109,7 +109,7 @@ jobs:
           printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
           echo "keystore_path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Sign release APK with stable key and verify certs
+      - name: Align, sign release APK with stable key, and verify certs
         id: stable_sign
         env:
           SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
@@ -117,20 +117,31 @@ jobs:
           SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
           KEYSTORE_PATH: ${{ steps.stable_keystore.outputs.keystore_path }}
         run: |
+          set -euo pipefail
           BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/35.0.0)"
           APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+          ZIPALIGN="$BUILD_TOOLS_DIR/zipalign"
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED_APK="$RUNNER_TEMP/scenevibe-tv-companion-release-aligned.apk"
           SIGNED_APK="$RUNNER_TEMP/scenevibe-tv-companion-release.apk"
-          cp "$UNSIGNED_APK" "$SIGNED_APK"
+
+          # Android's documented manual-signing order is zipalign BEFORE apksigner.
+          # -P 16 also verifies the current 16 KiB page-size alignment requirement.
+          "$ZIPALIGN" -f -P 16 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+
           # Password and alias are passed by env: reference, never inline on the command line.
           "$APKSIGNER" sign \
             --ks "$KEYSTORE_PATH" \
             --ks-pass "env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD" \
             --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" \
             --key-pass "env:SCENEVIBE_ANDROID_KEY_PASSWORD" \
-            "$SIGNED_APK"
-          # apksigner's sign step aligns the archive; verify + capture the certs output.
-          "$APKSIGNER" verify --print-certs "$SIGNED_APK" | tee "$RUNNER_TEMP/release-apksigner-verify.txt"
+            --out "$SIGNED_APK" \
+            "$ALIGNED_APK"
+
+          "$APKSIGNER" verify --verbose --print-certs "$SIGNED_APK" \
+            | tee "$RUNNER_TEMP/release-apksigner-verify.txt"
+          # apksigner preserves APK alignment. Verify the final signed artifact too.
+          "$ZIPALIGN" -v -c -P 16 4 "$SIGNED_APK"
           echo "signed_apk=$SIGNED_APK" >> "$GITHUB_OUTPUT"
 
       - name: Assemble secret-free release artifacts and metadata
@@ -201,4 +212,6 @@ jobs:
         env:
           KEYSTORE_PATH: ${{ steps.stable_keystore.outputs.keystore_path }}
         run: |
-          rm -f "$KEYSTORE_PATH" "$RUNNER_TEMP/scenevibe-tv-companion-release.apk"
+          rm -f "$KEYSTORE_PATH" \
+            "$RUNNER_TEMP/scenevibe-tv-companion-release-aligned.apk" \
+            "$RUNNER_TEMP/scenevibe-tv-companion-release.apk"
