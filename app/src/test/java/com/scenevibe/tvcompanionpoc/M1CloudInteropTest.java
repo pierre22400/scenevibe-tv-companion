@@ -80,7 +80,7 @@ public final class M1CloudInteropTest {
     @Test public void originalColumboProjectionIsInstallable() throws Exception {
         String directory=System.getenv("SCENEVIBE_M1_SONY_FIXTURES");
         org.junit.Assume.assumeTrue(directory!=null);
-        JSONObject artifact=new JSONObject(Files.readString(Path.of(directory,"cloud-envelopes.json")));
+        JSONObject artifact=new JSONObject(new String(Files.readAllBytes(Path.of(directory,"cloud-envelopes.json")),StandardCharsets.UTF_8));
         JSONObject envelope=artifact.getJSONArray("cases").getJSONObject(0).getJSONObject("envelope");
         assertTrue(CloudProtocol.validAssignment(envelope,envelope.getString("deviceId"),0));
         ScheduledTrack runtime=TrackParser.parse(envelope.getJSONObject("runtimeTrack"),media->null);
