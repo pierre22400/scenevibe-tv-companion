@@ -414,6 +414,15 @@ public final class OverlayService extends Service {
             activeRevision = armedRevision;
             return true;
         }
+        @Override public boolean activateLegacy(long revision) {
+            long legacyRevision=activateLegacyRevision(sceneController,revision);
+            if(legacyRevision<=0)return false;
+            // unload() asks the sink to hide a visible manifested scene. Force immediate window
+            // removal as well so a bounded exit fade can never overlap the first legacy card.
+            if(sceneRenderer!=null)sceneRenderer.dismissNow();
+            activeRevision=legacyRevision;
+            return true;
+        }
     };
 
     /**
@@ -472,6 +481,18 @@ public final class OverlayService extends Service {
         if (!armed.ok || armed.revision != revision) return 0;
         controller.replaceRevision(armed.revision, armed.manifest);
         return armed.revision;
+    }
+
+    /**
+     * Android-free/testable Case-B -> Case-A transition. Once a newer legacy runtime revision
+     * is already durable and accepted by the scheduler, disarm any loaded OverlayManifest
+     * BEFORE that legacy revision can ACK. Returning the revision lets the Android service
+     * update its visual-owner revision without coupling CloudControlClient to graphics state.
+     */
+    static long activateLegacyRevision(SceneRuntimeController controller,long revision) {
+        if(controller==null||revision<1)return 0;
+        controller.unload();
+        return revision;
     }
 
     /**
