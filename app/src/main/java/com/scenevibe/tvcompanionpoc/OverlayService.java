@@ -403,6 +403,9 @@ public final class OverlayService extends Service {
             long armedRevision = installManifestedRevision(cloudTrackRepository, trackScheduler,
                     sceneController, DiagnosticsStore.INSTANCE, revision, runtimeJson, manifestJson);
             if (armedRevision <= 0) return false;
+            // The Cloud application gate owns the UI thread here. Retire any prior
+            // legacy window synchronously before selecting the manifested revision.
+            if (renderer != null) renderer.dismiss();
             activeRevision = armedRevision;
             return true;
         }
@@ -411,6 +414,9 @@ public final class OverlayService extends Service {
             long armedRevision = confirmManifestedRevisionArmed(cloudTrackRepository,
                     trackScheduler, sceneController, revision);
             if (armedRevision <= 0) return false;
+            // The Cloud application gate owns the UI thread here. Retire any prior
+            // legacy window synchronously before selecting the manifested revision.
+            if (renderer != null) renderer.dismiss();
             activeRevision = armedRevision;
             return true;
         }
