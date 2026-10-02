@@ -254,8 +254,9 @@ final class OverlayManifestParser {
 
     /** Reject undeclared properties without recursing into their values. */
     private static void onlyKeys(JSONObject object,String... allowed) throws Invalid {
-        Set<String> keys=Set.of(allowed);
-        for(String key:object.keySet())if(!keys.contains(key))throw new Invalid("Unknown property");
+        Set<String> keys=new HashSet<>(java.util.Arrays.asList(allowed));
+        java.util.Iterator<String> names=object.keys();
+        while(names.hasNext())if(!keys.contains(names.next()))throw new Invalid("Unknown property");
     }
 
     /** Require an actual JSON string; org.json coercion is deliberately forbidden. */
