@@ -239,11 +239,10 @@ final class CloudControlClient {
         long revision=data.optLong("revision",-1), cached=cache.revision();
         // Observational only: record the highest assignment revision received.
         DiagnosticsStore.INSTANCE.setLastAssignmentRevisionReceived(revision);
-        // 0.10A routing seam. A manifest, when present, must resolve to an allow-listed
-        // renderer/payload mapping; assignments from the pre-manifest Cloud use the explicit
-        // LEGACY_COMMENTARY route. The resolved payload is still the same sibling runtimeTrack.
-        OverlayManifestRouter.Resolved route=OverlayManifestRouter.resolve(data);
-        JSONObject runtime=route.payload;
+        // During 0.10A migration the already-qualified runtimeTrack remains the source for
+        // media synchronisation. CloudProtocol has independently validated any additive
+        // OverlayManifest scene; SceneRenderer hand-off is layered beside this scheduler path.
+        JSONObject runtime=data.optJSONObject("runtimeTrack");
         String finalTrackId=data.optString("finalTrackId","");
         // Re-run the FULL runtimeTrack JSON through the shared TrackParser before persistence.
         if(revision>cached && !cache.install(revision,runtime.toString(),scheduler))
