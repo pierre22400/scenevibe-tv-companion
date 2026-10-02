@@ -1,0 +1,23 @@
+name: Android release APK (stable-signed)
+
+# Bootstrap definition on the default branch.
+# GitHub requires a workflow_dispatch workflow to exist on the default branch
+# before it can be manually dispatched for another ref.
+#
+# The full 0.8.2 release implementation lives on the PR branch.
+# This bootstrap deliberately refuses to build from main.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse release from bootstrap main definition
+        run: |
+          echo "::error::Bootstrap only. Dispatch this workflow against the qualified 0.8.2 PR branch."
+          exit 1
