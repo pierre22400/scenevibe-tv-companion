@@ -11,7 +11,7 @@ Stabilize the release architecture of the SceneVibe TV Companion POC without cha
 qualified 0.8.1 runtime behavior. This cycle:
 
 - introduces an explicit, non-debuggable **release** build variant (unsigned at build time;
-  signed post-build by `apksigner` in CI);
+  aligned with `zipalign`, then signed post-build by `apksigner` in CI);
 - adds a dedicated, secret-gated **release** CI chain separate from the debug chain;
 - documents the stable self-managed signing architecture and the signature-continuity protocol;
 - audits the app against Android 15 / API 35 behavior changes (the app already targets 35);
@@ -219,7 +219,7 @@ plane; production Clerk live-instance/domain cutover.
 ## NOT YET QUALIFIED
 
 - **Signed release artifact.** Cannot be produced until the four GitHub signing secrets exist. The
-  signing/verification path (keystore decode, `apksigner` sign, `apksigner verify --print-certs`,
+  signing/verification path (keystore decode, `zipalign`, `apksigner` sign, `apksigner verify --print-certs`,
   certificate-fingerprint extraction, signed-APK artifact upload) is **CI-only and secret-gated**
   and was **not** run in the sandbox because the four secrets are absent there. By design,
   `android-release.yml` **fails explicitly** (`::error::` + `exit 1`) before any build when the
@@ -233,7 +233,7 @@ plane; production Clerk live-instance/domain cutover.
 
 - **This cycle:** a **self-managed stable signing key** for **sideload / qualification** APKs.
   The key lives entirely off-repo; CI holds it as the four GitHub repository secrets and
-  `apksigner` applies the signature **post-build** to the unsigned, non-debuggable release APK.
+  CI applies `zipalign` **before** `apksigner`, then signs the aligned, non-debuggable release APK.
   No `signingConfig` is embedded in gradle, so no key material is required at Gradle configure
   time and none is version-controlled.
 - **Google Play upload key** and **Google Play App Signing** are a **separate future decision**
