@@ -10,63 +10,67 @@ import static org.junit.Assert.*;
 public final class OverlayManifestParserTest {
     /** Builds a valid Video manifest equivalent to the first FinalTrack projection. */
     private static JSONObject videoManifest() throws Exception {
-        return new JSONObject()
-                .put("type","scenevibe.overlay-manifest.v1")
-                .put("schemaVersion","1.0.0")
-                .put("manifestId","video:track-1")
-                .put("source",new JSONObject()
-                        .put("product","video")
-                        .put("sourceId","track-1"))
-                .put("canvas",new JSONObject().put("width",1920).put("height",1080))
-                .put("clock",new JSONObject().put("mode","media").put("pauseBehavior","freeze"))
-                .put("scenes",new JSONArray().put(new JSONObject()
-                        .put("id","comment-1")
-                        .put("startMs",12_000)
-                        .put("durationMs",6_000)
-                        .put("elements",new JSONArray().put(new JSONObject()
-                                .put("id","comment-1:card")
-                                .put("type","group")
-                                .put("frame",frame(140,70,1640,210))
-                                .put("zIndex",10)
-                                .put("opacity",1.0)
-                                .put("animation",new JSONObject()
-                                        .put("enter","fade").put("exit","fade").put("durationMs",180))
-                                .put("children",new JSONArray()
-                                        .put(rectangle("comment-1:bg",0,0,1640,210))
-                                        .put(text("comment-1:text","Documented comment.",46,28,1548,154))))));
+        JSONArray children=new JSONArray()
+                .put(rectangle("comment-1:bg",0,0,1640,210))
+                .put(text("comment-1:text","Documented comment.",46,28,1548,154));
+        JSONObject group=new JSONObject()
+                .put("id","comment-1:card")
+                .put("type","group")
+                .put("frame",frame(140,70,1640,210))
+                .put("zIndex",10)
+                .put("opacity",1.0)
+                .put("animation",new JSONObject()
+                        .put("enter","fade").put("exit","fade").put("durationMs",180))
+                .put("children",children);
+        JSONObject scene=new JSONObject()
+                .put("id","comment-1")
+                .put("startMs",12_000)
+                .put("durationMs",6_000)
+                .put("elements",new JSONArray().put(group));
+        return manifest("video:track-1","video","track-1","media","freeze",scene);
     }
 
     /** Builds the initial primitive family in one Banner scene. */
     private static JSONObject bannerManifest() throws Exception {
+        JSONObject image=new JSONObject()
+                .put("id","logo")
+                .put("type","image")
+                .put("frame",frame(60,50,200,200))
+                .put("zIndex",2)
+                .put("opacity",1.0)
+                .put("assetRef","asset:demo-logo")
+                .put("fit","contain");
+        JSONArray children=new JSONArray()
+                .put(rectangle("bg",0,0,1720,900))
+                .put(text("title","Menu du jour",300,60,1320,140))
+                .put(image)
+                .put(table("prices"));
+        JSONObject group=new JSONObject()
+                .put("id","banner-group")
+                .put("type","group")
+                .put("frame",frame(100,80,1720,900))
+                .put("zIndex",1)
+                .put("opacity",1.0)
+                .put("children",children);
+        JSONObject scene=new JSONObject()
+                .put("id","banner-scene")
+                .put("startMs",0)
+                .put("durationMs",30_000)
+                .put("elements",new JSONArray().put(group));
+        return manifest("banner:demo","banner","demo","wall","continue",scene);
+    }
+
+    /** Build the common root contract around one scene. */
+    private static JSONObject manifest(String id,String product,String sourceId,
+            String clockMode,String pauseBehavior,JSONObject scene) throws Exception {
         return new JSONObject()
                 .put("type","scenevibe.overlay-manifest.v1")
                 .put("schemaVersion","1.0.0")
-                .put("manifestId","banner:demo")
-                .put("source",new JSONObject().put("product","banner").put("sourceId","demo"))
+                .put("manifestId",id)
+                .put("source",new JSONObject().put("product",product).put("sourceId",sourceId))
                 .put("canvas",new JSONObject().put("width",1920).put("height",1080))
-                .put("clock",new JSONObject().put("mode","wall").put("pauseBehavior","continue"))
-                .put("scenes",new JSONArray().put(new JSONObject()
-                        .put("id","banner-scene")
-                        .put("startMs",0)
-                        .put("durationMs",30_000)
-                        .put("elements",new JSONArray().put(new JSONObject()
-                                .put("id","banner-group")
-                                .put("type","group")
-                                .put("frame",frame(100,80,1720,900))
-                                .put("zIndex",1)
-                                .put("opacity",1.0)
-                                .put("children",new JSONArray()
-                                        .put(rectangle("bg",0,0,1720,900))
-                                        .put(text("title","Menu du jour",300,60,1320,140))
-                                        .put(new JSONObject()
-                                                .put("id","logo")
-                                                .put("type","image")
-                                                .put("frame",frame(60,50,200,200))
-                                                .put("zIndex",2)
-                                                .put("opacity",1.0)
-                                                .put("assetRef","asset:demo-logo")
-                                                .put("fit","contain"))
-                                        .put(table("prices")))))));
+                .put("clock",new JSONObject().put("mode",clockMode).put("pauseBehavior",pauseBehavior))
+                .put("scenes",new JSONArray().put(scene));
     }
 
     /** Build a bounded frame object. */
