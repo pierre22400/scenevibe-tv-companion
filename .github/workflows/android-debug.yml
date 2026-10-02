@@ -8,6 +8,9 @@ on:
       - work/tv-cloud-client-001
       - kiro/tv-product-hardening-001
       - work/overlay-manifest-foundation-0.10a-tv-001
+      # Temporary (0.10A runtime integration): run debug CI on the runtime regie branch.
+      # Remove once the 0.10A runtime integration PR has landed.
+      - kiro/overlay-manifest-runtime-integration-0.10a-001
   pull_request:
     branches: [main]
   workflow_dispatch:

@@ -294,7 +294,7 @@ final class CloudControlClient {
         DiagnosticsStore.INSTANCE.setLastAssignmentRevisionReceived(revision);
         // During 0.10A migration the already-qualified runtimeTrack remains the source for
         // media synchronisation. CloudProtocol has independently validated any additive
-        // OverlayManifest scene; SceneRenderer hand-off is layered beside this scheduler path.
+        // OverlayManifest scene; the regie hand-off is layered beside this scheduler path.
         JSONObject runtime=data.optJSONObject("runtimeTrack");
         String finalTrackId=data.optString("finalTrackId","");
         // 0.10A: an assignment MAY additively carry an OverlayManifest. Case B (manifested

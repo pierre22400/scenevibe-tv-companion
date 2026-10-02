@@ -36,6 +36,8 @@ final class DiagnosticsStore {
             RuntimeDiagnostics.CloudErrorCode.NONE;
     private RuntimeDiagnostics.ManifestCode lastManifestCode =
             RuntimeDiagnostics.ManifestCode.NONE;
+    private RuntimeDiagnostics.SceneCode lastSceneCode =
+            RuntimeDiagnostics.SceneCode.NONE;
 
     /** Package-visible so JVM tests can build a fresh, isolated store without the singleton. */
     DiagnosticsStore() {}
@@ -99,6 +101,17 @@ final class DiagnosticsStore {
     }
 
     /**
+     * Observational: bounded outcome of the last scene-runtime render attempt (a missing local
+     * asset => SCENE_ASSET_UNAVAILABLE, an abandoned draw => SCENE_RENDER_FAILED). It is a
+     * bounded enum, never comment/scene content, the manifest JSON or a credential, and it
+     * never gates behavior; it only surfaces on the diagnostics screen. A missing scene asset
+     * is recorded here as a bounded SCENE failure, NOT as a manifest inconsistency.
+     */
+    synchronized void setLastSceneCode(RuntimeDiagnostics.SceneCode code) {
+        if (code != null) this.lastSceneCode = code;
+    }
+
+    /**
      * Clears the observational runtime signals that describe a live cloud identity/session
      * back to their neutral defaults. Used by the EXCEPTIONAL Cloud reset so the diagnostics
      * view does not keep showing stale connection/ACK markers after the identity is wiped.
@@ -111,6 +124,7 @@ final class DiagnosticsStore {
         this.lastSuccessfulAckRevision = 0;
         this.lastCloudErrorCode = RuntimeDiagnostics.CloudErrorCode.NONE;
         this.lastManifestCode = RuntimeDiagnostics.ManifestCode.NONE;
+        this.lastSceneCode = RuntimeDiagnostics.SceneCode.NONE;
     }
 
     synchronized boolean serviceRunning() { return serviceRunning; }
@@ -124,4 +138,5 @@ final class DiagnosticsStore {
     synchronized long lastSuccessfulAckRevision() { return lastSuccessfulAckRevision; }
     synchronized RuntimeDiagnostics.CloudErrorCode lastCloudErrorCode() { return lastCloudErrorCode; }
     synchronized RuntimeDiagnostics.ManifestCode lastManifestCode() { return lastManifestCode; }
+    synchronized RuntimeDiagnostics.SceneCode lastSceneCode() { return lastSceneCode; }
 }

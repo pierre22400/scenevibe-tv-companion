@@ -355,10 +355,12 @@ public final class OverlayService extends Service {
         @Override public boolean preflight(OverlayManifest.Scene scene) {
             boolean ok = ensureSceneRenderer().preflight(scene);
             if (!ok) {
-                // Bounded diagnostic only: a required local asset is missing. Never log the
-                // scene/comment content or the manifest JSON (section 19).
-                DiagnosticsStore.INSTANCE.setLastManifestCode(
-                        RuntimeDiagnostics.ManifestCode.MANIFEST_INCONSISTENT);
+                // Bounded diagnostic only: a required local asset did not resolve. A missing
+                // asset is a bounded SCENE failure, NOT a manifest inconsistency (section 19),
+                // so it records the dedicated SCENE_ASSET_UNAVAILABLE code. Never log the
+                // scene/comment content or the manifest JSON.
+                DiagnosticsStore.INSTANCE.setLastSceneCode(
+                        RuntimeDiagnostics.SceneCode.SCENE_ASSET_UNAVAILABLE);
             }
             return ok;
         }
