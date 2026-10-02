@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Add the cross-contract Video validation helper (VideoOverlayManifestBridge) and the atomic, revision-consistent persistence of runtimeTrack + OverlayManifest. This is the data/validation layer that guarantees a manifested revision is either fully installed (track + manifest + revision metadata all durable) or the prior valid revision stays entirely intact — never a mixed revision. No regie/UI wiring yet; this feature is pure, JVM-testable logic plus its unit tests (sections 5, 6, 20-B, 20-C).",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create VideoOverlayManifestBridge.java in app/src/main/java/com/scenevibe/tvcompanionpoc/. Give it a pure static (or instance, no Android deps) method that takes a parsed ScheduledTrack (runtimeTrack) and a parsed OverlayManifest and returns a bounded validation result (ok / failure-with-bounded-code). Enforce EXACTLY (section 5): manifest.product=='video'; manifest.sourceId.equals(runtimeTrack.trackId); manifest.clockMode=='media'; each runtimeTrack comment.id maps to exactly one manifest scene.id (bijection); no extra Video scenes; for each matched pair scene.startMs == comment.startMs AND scene.durationMs == comment.durationMs compared as exact integer milliseconds (long ==). On any failure return a bounded failure; never include comment/scene text in the result or any log. Keep this logic OUT of CloudControlClient.",
     "Build a scene index by id inside the bridge (or a small helper the regie will reuse later) so the mapping check is O(n) and reusable. Index must detect duplicate scene ids and missing/extra ids distinctly enough to pick the right bounded diagnostic (MANIFEST_INCONSISTENT vs MANIFEST_INVALID).",
