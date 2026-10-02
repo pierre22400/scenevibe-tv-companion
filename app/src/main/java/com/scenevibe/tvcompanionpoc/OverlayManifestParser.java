@@ -123,7 +123,7 @@ final class OverlayManifestParser {
             int radius=exactInt(style,"cornerRadius",0,300);
             return element(id,OverlayManifest.PrimitiveType.TEXT,frame,zIndex,opacity,animation,
                     text,null,null,color,background,fontSize,weight.equals("bold"),align,padding,
-                    radius,null,null,List.of(),List.of());
+                    radius,null,null,java.util.Collections.emptyList(),java.util.Collections.emptyList());
         }
 
         if("image".equals(type)) {
@@ -132,7 +132,7 @@ final class OverlayManifestParser {
             String fit=item.optString("fit","");
             if(!fit.equals("contain")&&!fit.equals("cover"))throw new Invalid("Invalid image fit");
             return element(id,OverlayManifest.PrimitiveType.IMAGE,frame,zIndex,opacity,animation,
-                    null,assetRef,fit,null,null,0,false,null,0,0,null,null,List.of(),List.of());
+                    null,assetRef,fit,null,null,0,false,null,0,0,null,null,java.util.Collections.emptyList(),java.util.Collections.emptyList());
         }
 
         if("rectangle".equals(type)) {
@@ -140,7 +140,7 @@ final class OverlayManifestParser {
             String fill=color(style.optString("fillColor",""));
             int radius=exactInt(style,"cornerRadius",0,300);
             return element(id,OverlayManifest.PrimitiveType.RECTANGLE,frame,zIndex,opacity,animation,
-                    null,null,null,null,null,0,false,null,0,radius,fill,null,List.of(),List.of());
+                    null,null,null,null,null,0,false,null,0,radius,fill,null,java.util.Collections.emptyList(),java.util.Collections.emptyList());
         }
 
         if("table".equals(type)) {
@@ -152,7 +152,7 @@ final class OverlayManifestParser {
             int fontSize=exactInt(style,"fontSize",8,120);
             int padding=exactInt(style,"padding",0,120);
             return element(id,OverlayManifest.PrimitiveType.TABLE,frame,zIndex,opacity,animation,
-                    null,null,null,color,background,fontSize,false,null,padding,0,null,grid,rows,List.of());
+                    null,null,null,color,background,fontSize,false,null,padding,0,null,grid,rows,java.util.Collections.emptyList());
         }
 
         if("group".equals(type)) {
@@ -163,7 +163,7 @@ final class OverlayManifestParser {
             List<OverlayManifest.Element> parsed=parseElements(children,frame.width,frame.height,
                     depth+1,counter,ids);
             return element(id,OverlayManifest.PrimitiveType.GROUP,frame,zIndex,opacity,animation,
-                    null,null,null,null,null,0,false,null,0,0,null,null,List.of(),parsed);
+                    null,null,null,null,null,0,false,null,0,0,null,null,java.util.Collections.emptyList(),parsed);
         }
 
         throw new Invalid("Unsupported primitive type");
