@@ -79,7 +79,8 @@ jobs:
         env:
           # Stable public SceneVibe origin (NOT a secret): builds the installable APK against
           # the real Cloud endpoint, matching the Cloud qualification APK from android-debug.yml.
-          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg.vercel.app
+          # Same pinned M1 Cloud Preview as the physical qualification candidate.
+          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg-gezccb341-archc-ode.vercel.app
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Enable KVM for the emulator

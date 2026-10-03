@@ -61,6 +61,8 @@ final class RuntimeDiagnostics {
                 .lastAssignmentRevisionReceived(observed.lastAssignmentRevisionReceived())
                 .lastSuccessfulAckRevision(observed.lastSuccessfulAckRevision())
                 .lastCloudErrorCode(errorCode)
+                .lastManifestCode(observed.lastManifestCode())
+                .lastSceneCode(observed.lastSceneCode())
                 .build();
     }
 
@@ -79,6 +81,30 @@ final class RuntimeDiagnostics {
      * last cloud interaction had no error to report.
      */
     enum CloudErrorCode { NONE, NETWORK, TIMEOUT, UNAUTHORIZED, PROTOCOL, CREDENTIAL_UNAVAILABLE }
+
+    /**
+     * Bounded OverlayManifest outcome codes. These are the only manifest values that ever
+     * reach a diagnostics surface; comment/scene content, the full manifest JSON and any
+     * credential are never surfaced. NONE means the last manifest install had no manifest
+     * issue to report. MANIFEST_INVALID is a structural/contract failure (wrong product,
+     * clock, bound source id, or a duplicate id); MANIFEST_INCONSISTENT is a
+     * runtimeTrack&lt;-&gt;manifest mismatch (missing/extra scene or non-matching timing);
+     * MANIFEST_CACHE_FAILED is a durable persistence failure during an atomic install.
+     */
+    enum ManifestCode { NONE, MANIFEST_INVALID, MANIFEST_INCONSISTENT, MANIFEST_CACHE_FAILED }
+
+    /**
+     * Bounded scene-runtime outcome codes (user section 19). These describe what happened the
+     * last time the regie tried to turn a manifest scene into pixels; they are the only
+     * scene-runtime values that reach a diagnostics surface and never carry comment/scene
+     * content, the manifest JSON or any credential. A missing scene asset is a bounded SCENE
+     * failure (NOT a manifest inconsistency): SCENE_ASSET_UNAVAILABLE means the regie
+     * suppressed a show because a required local asset did not resolve (no Cloud transport this
+     * cycle, section 15); SCENE_RENDER_FAILED means a scene draw was abandoned before any
+     * partial overlay could appear. NONE means the last scene attempt had nothing to report.
+     * Like every diagnostics code these are observational only and never gate logic.
+     */
+    enum SceneCode { NONE, SCENE_ASSET_UNAVAILABLE, SCENE_RENDER_FAILED }
 
     final String appVersion;
     final boolean serviceRunning;
@@ -106,6 +132,10 @@ final class RuntimeDiagnostics {
     final long lastAssignmentRevisionReceived;
     final long lastSuccessfulAckRevision;
     final CloudErrorCode lastCloudErrorCode;
+    /** Bounded outcome of the last OverlayManifest install/validation; NONE when none seen. */
+    final ManifestCode lastManifestCode;
+    /** Bounded outcome of the last scene-runtime render attempt; NONE when none seen. */
+    final SceneCode lastSceneCode;
 
     private RuntimeDiagnostics(Builder builder) {
         this.appVersion = builder.appVersion;
@@ -127,6 +157,8 @@ final class RuntimeDiagnostics {
         this.lastAssignmentRevisionReceived = builder.lastAssignmentRevisionReceived;
         this.lastSuccessfulAckRevision = builder.lastSuccessfulAckRevision;
         this.lastCloudErrorCode = builder.lastCloudErrorCode;
+        this.lastManifestCode = builder.lastManifestCode;
+        this.lastSceneCode = builder.lastSceneCode;
     }
 
     /**
@@ -162,6 +194,8 @@ final class RuntimeDiagnostics {
         private long lastAssignmentRevisionReceived;
         private long lastSuccessfulAckRevision;
         private CloudErrorCode lastCloudErrorCode = CloudErrorCode.NONE;
+        private ManifestCode lastManifestCode = ManifestCode.NONE;
+        private SceneCode lastSceneCode = SceneCode.NONE;
 
         Builder appVersion(String value) { this.appVersion = value == null ? "" : value; return this; }
         Builder serviceRunning(boolean value) { this.serviceRunning = value; return this; }
@@ -188,6 +222,8 @@ final class RuntimeDiagnostics {
         Builder lastAssignmentRevisionReceived(long value) { this.lastAssignmentRevisionReceived = value; return this; }
         Builder lastSuccessfulAckRevision(long value) { this.lastSuccessfulAckRevision = value; return this; }
         Builder lastCloudErrorCode(CloudErrorCode value) { this.lastCloudErrorCode = value; return this; }
+        Builder lastManifestCode(ManifestCode value) { this.lastManifestCode = value; return this; }
+        Builder lastSceneCode(SceneCode value) { this.lastSceneCode = value; return this; }
 
         RuntimeDiagnostics build() { return new RuntimeDiagnostics(this); }
     }

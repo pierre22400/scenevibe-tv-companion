@@ -7,6 +7,9 @@ on:
       - work/tv-pairing-authenticated-lan-001
       - work/tv-cloud-client-001
       - kiro/tv-product-hardening-001
+      # Temporary (0.10A runtime integration): run debug CI on the runtime regie branch.
+      # Remove once the 0.10A runtime integration PR has landed.
+      - kiro/overlay-manifest-runtime-integration-0.10a-001
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -52,7 +55,8 @@ jobs:
         env:
           # Stable public SceneVibe origin (NOT a secret): compiles the uploaded APK
           # against the real Cloud endpoint so it is usable for physical qualification.
-          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg.vercel.app
+          # M1 pre-physical candidate pinned to Cloud PR #19 commit 402f781d7e3bccd10807de8e8ce1dd0d81ec5162.
+          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg-gezccb341-archc-ode.vercel.app
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:

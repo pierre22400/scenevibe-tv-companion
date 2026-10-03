@@ -20,44 +20,8 @@ ok() {
   echo "PASS: $1"
 }
 
-# GitHub-hosted Android emulators occasionally transition through "offline" even
-# after android-emulator-runner has completed its boot wait. Treat that runner
-# transport race as infrastructure noise, but fail closed if the device cannot
-# become usable again within a bounded retry window.
-wait_for_adb() {
-  local label="$1"
-  local attempt state
-  for attempt in $(seq 1 12); do
-    state="$(adb get-state 2>/dev/null || true)"
-    if [ "$state" = "device" ] && adb shell true >/dev/null 2>&1; then
-      echo "ADB ready for ${label} (attempt ${attempt}/12)"
-      return 0
-    fi
-    echo "ADB not ready for ${label}: state=${state:-unavailable} (attempt ${attempt}/12)"
-    adb reconnect >/dev/null 2>&1 || true
-    sleep 5
-  done
-
-  echo "ADB still unavailable; restarting host adb server once."
-  adb kill-server >/dev/null 2>&1 || true
-  adb start-server >/dev/null 2>&1 || true
-  adb wait-for-device >/dev/null 2>&1 || true
-  for attempt in $(seq 1 6); do
-    state="$(adb get-state 2>/dev/null || true)"
-    if [ "$state" = "device" ] && adb shell true >/dev/null 2>&1; then
-      echo "ADB recovered for ${label} after server restart (attempt ${attempt}/6)"
-      return 0
-    fi
-    sleep 5
-  done
-
-  fail "emulator adb transport did not recover for ${label}"
-  return 1
-}
-
 echo "===== Android 15 (API 35) platform smoke — scope: platform invariants only ====="
 echo "----- device under test -----"
-wait_for_adb "initial device probe" || true
 adb shell getprop ro.build.version.sdk
 adb shell getprop ro.build.version.release
 adb shell getprop ro.product.cpu.abi
@@ -77,7 +41,6 @@ else
 fi
 
 echo "----- 2) adb install -----"
-wait_for_adb "APK install" || true
 if adb install -r "$APK"; then
   ok "APK installed"
 else
@@ -85,7 +48,6 @@ else
 fi
 
 echo "----- 3) package present (pm list packages) -----"
-wait_for_adb "package verification" || true
 if adb shell pm list packages | tr -d '\r' | grep -q "package:${APP_ID}"; then
   ok "package ${APP_ID} present after install"
 else
@@ -93,11 +55,9 @@ else
 fi
 
 echo "----- 4) clear logcat, then launch MainActivity -----"
-wait_for_adb "MainActivity launch" || true
 adb logcat -c || true
 adb shell am start -n "${APP_ID}/.MainActivity"
 sleep 8
-wait_for_adb "post-launch verification" || true
 
 echo "----- 5) no immediate crash: scan logcat for AndroidRuntime FATAL EXCEPTION -----"
 LOG="$(adb logcat -d || true)"
@@ -124,14 +84,12 @@ else
 fi
 
 echo "----- 7) foreground service (OverlayService, specialUse FGS) -----"
-wait_for_adb "foreground-service invariant checks" || true
 adb shell appops set "${APP_ID}" SYSTEM_ALERT_WINDOW allow || true
 echo "appops SYSTEM_ALERT_WINDOW state:"
 adb shell appops get "${APP_ID}" SYSTEM_ALERT_WINDOW || true
 note_human "OverlayService (specialUse foreground service) start + 'FGS alive' + overlay-window-visible require a real user action (D-pad 'Start SceneVibe') and a visible overlay surface. These are NOT honestly observable in this headless CI emulator and are HUMAN/PHYSICAL REQUIRED on Android TV hardware."
 
 echo "----- 8) boot / autostart path (BootReceiver -> specialUse FGS) -----"
-wait_for_adb "force-stop persistence check" || true
 note_human "BOOT_COMPLETED autostart (BootReceiver arming the specialUse FGS in boot-prepare mode) requires the autostart opt-in ON, overlay + MediaSession access granted, and a genuine device reboot. This is NOT honestly qualifiable headlessly and is HUMAN/PHYSICAL REQUIRED on Android TV hardware."
 adb shell am force-stop "${APP_ID}" || true
 if adb shell pm list packages | tr -d '\r' | grep -q "package:${APP_ID}"; then

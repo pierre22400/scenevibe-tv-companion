@@ -216,6 +216,11 @@ class PocContractTests(unittest.TestCase):
         parser = (java / "OverlayManifestParser.java").read_text()
         renderer = (java / "SceneRenderer.java").read_text()
         model = (java / "OverlayManifest.java").read_text()
+        # 0.10A runtime regie sources: the manifest is now actually interpreted at runtime, so
+        # the Android-native + no-transport boundary must also hold over the new regie
+        # controller and the cross-contract bridge.
+        controller = (java / "SceneRuntimeController.java").read_text()
+        bridge = (java / "VideoOverlayManifestBridge.java").read_text()
 
         self.assertIn("scenevibe.overlay-manifest.v1", model)
         for primitive in ("TEXT", "IMAGE", "RECTANGLE", "TABLE", "GROUP"):
@@ -242,6 +247,112 @@ class PocContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, renderer)
             self.assertNotIn(forbidden, parser)
+            # Extend the forbidden list to the new runtime regie sources so the Scene language
+            # stays bounded data all the way through interpretation.
+            self.assertNotIn(forbidden, controller)
+            self.assertNotIn(forbidden, bridge)
+
+        # The regie is Android-free orchestration: it never imports the scheduler clock as its
+        # own and never reaches for the network, but it is still a separate interpreter class.
+        self.assertIn("class SceneRuntimeController", controller)
+        self.assertIn("class VideoOverlayManifestBridge", bridge)
+
+    def test_scene_runtime_keeps_cloud_and_graphics_separated(self):
+        """Section 22: the generic SceneRenderer / regie holds no Cloud logic, and the Cloud
+        client holds no graphics logic; the legacy and scheduler/matcher seams all survive."""
+        java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
+        renderer = (java / "SceneRenderer.java").read_text()
+        controller = (java / "SceneRuntimeController.java").read_text()
+        client = (java / "CloudControlClient.java").read_text()
+
+        # The temporal authority and media identity seams, plus the legacy overlay path, must
+        # all remain present: the runtime regie is ADDED beside them, never a replacement.
+        self.assertTrue((java / "MediaSyncedTrackScheduler.java").exists())
+        self.assertTrue((java / "MediaIdentityMatcher.java").exists())
+        self.assertTrue((java / "OverlayRenderer.java").exists())
+        # The generic scene interpreter is a separate class from the legacy OverlayRenderer.
+        self.assertTrue((java / "SceneRenderer.java").exists())
+        self.assertIn("final class SceneRenderer", renderer)
+        self.assertIn("final class OverlayRenderer",
+                      (java / "OverlayRenderer.java").read_text())
+
+        # SceneRenderer and the regie controller must carry NO Cloud logic: no cloud client,
+        # no assignment/ACK handling, no device credential/token.
+        for cloud_token in (
+            "CloudControlClient",
+            "CloudTrackRepository",
+            "fetchAssignment",
+            "deviceToken",
+            "activationSecret",
+            "/api/v1",
+        ):
+            self.assertNotIn(cloud_token, renderer)
+            self.assertNotIn(cloud_token, controller)
+
+        # CloudControlClient must carry NO graphics logic: no scene renderer, no Android View
+        # containers, no drawable building. It only moves bytes.
+        for graphics_token in (
+            "SceneRenderer",
+            "TableLayout",
+            "FrameLayout",
+            "GradientDrawable",
+            "TextView",
+            "ImageView",
+            "WindowManager",
+        ):
+            self.assertNotIn(graphics_token, client)
+
+    def test_scene_runtime_security_boundary_cases_33_to_37(self):
+        """Section 20-F (cases 33-37): over the new + existing scene-runtime sources assert
+        no network URL, no WebView, no dynamic class loading, no transport control, and that
+        the AndroidManifest declares no new permission."""
+        java = ROOT / "app/src/main/java/com/scenevibe/tvcompanionpoc"
+        scene_sources = {
+            name: (java / name).read_text()
+            for name in (
+                "SceneRenderer.java",
+                "SceneRuntimeController.java",
+                "VideoOverlayManifestBridge.java",
+                "OverlayManifestParser.java",
+                "OverlayManifest.java",
+            )
+        }
+
+        # Case 33 (no network): the scene runtime never opens an HTTP(S) transport or a URL.
+        # Case 34 (no WebView) + Case 35 (no dynamic class loading): no reflective/dex loaders
+        # and no embedded web runtime anywhere on the scene path.
+        # Case 36 (no transport control): the scene runtime never drives the media session.
+        for name, source in scene_sources.items():
+            for forbidden in (
+                "java.net.URL",
+                "HttpURLConnection",
+                "HttpsURLConnection",
+                "Socket",
+                "android.webkit",
+                "WebView",
+                "Class.forName",
+                "DexClassLoader",
+                "PathClassLoader",
+                "getTransportControls",
+                "dispatchMediaButtonEvent",
+            ):
+                self.assertNotIn(forbidden, source, f"{forbidden} must not appear in {name}")
+
+        # Case 37 (no new permission): the manifest permission set stays exactly the pinned
+        # overlay / foreground / LAN / boot set. This mirrors the dedicated permission test and
+        # keeps the scene-runtime cycle from smuggling in a new permission.
+        root = ET.parse(MANIFEST).getroot()
+        permissions = {node.attrib[ANDROID + "name"] for node in root.findall("uses-permission")}
+        self.assertEqual(
+            permissions,
+            {
+                "android.permission.SYSTEM_ALERT_WINDOW",
+                "android.permission.FOREGROUND_SERVICE",
+                "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+                "android.permission.INTERNET",
+                "android.permission.RECEIVE_BOOT_COMPLETED",
+            },
+        )
 
     def test_track_pause_policy_reaches_renderer_without_player_controls(self):
         """Keep pause-aware display isolated from the direct commentary timer."""
