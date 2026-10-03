@@ -10,6 +10,7 @@ on:
       # Temporary (0.10A runtime integration): run debug CI on the runtime regie branch.
       # Remove once the 0.10A runtime integration PR has landed.
       - kiro/overlay-manifest-runtime-integration-0.10a-001
+      - work/scenevibe-os-m2-qualification-001
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -55,8 +56,9 @@ jobs:
         env:
           # Stable public SceneVibe origin (NOT a secret): compiles the uploaded APK
           # against the real Cloud endpoint so it is usable for physical qualification.
-          # M1 pre-physical candidate pinned to Cloud PR #19 commit 402f781d7e3bccd10807de8e8ce1dd0d81ec5162.
-          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg-gezccb341-archc-ode.vercel.app
+          # M2 physical qualification candidate. Config-only branch: TV Java/runtime code is unchanged from M1 main.
+          # Cloud PR #20 exact HEAD 42d39fa48735feaf309699f3a9bc13b383f8deb4, deployed by GitHub Actions via Vercel CLI.
+          SCENEVIBE_CLOUD_ORIGIN: https://interface-scenevibe-3wxg-4fwtfg1km-archc-ode.vercel.app
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
