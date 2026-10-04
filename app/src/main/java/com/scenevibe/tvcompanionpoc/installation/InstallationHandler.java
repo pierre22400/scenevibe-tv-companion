@@ -5,6 +5,8 @@ package com.scenevibe.tvcompanionpoc.installation;
  * Implementations added later must keep validate/prepare/encode/restore memory-only and
  * invoke arm on the runtime owner thread. Inert snapshots reuse InstallRequest so no store,
  * persistence API or premature runtime orchestration is introduced here.
+ * Phase D implementations remain Video-side; the additive prepared-state marker below
+ * retains trusted immutable memory only, without importing a concrete product type.
  */
 public interface InstallationHandler {
     /** Purely validate package semantics and local requirements, returning a bounded code. */
@@ -20,4 +22,11 @@ public interface InstallationHandler {
 
     /** Minimal compile-time port boundary; concrete runtime ports belong to subsequent phases. */
     interface RuntimePorts {}
+
+    /**
+     * Handler-owned immutable bounded preparation, never an arbitrary Object or serialized value.
+     * Implementations must retain no Context, service, scheduler, renderer, client, secret or store.
+     * Only their owning handler may interpret this slot; generic orchestration cannot inspect it.
+     */
+    interface PreparedState {}
 }

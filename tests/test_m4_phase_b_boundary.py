@@ -15,12 +15,16 @@ starting GitHub tree; they protect existing callers, wire, persistence, identity
 permissions, signature configuration and every existing characterization test.
 Phase C permits only its explicit store files and the constructor-only persistence
 extraction, balanced by the additional Phase C byte/scope boundary tests.
+Phase D adds only its explicit Video-side files and typed prepared-state contract;
+the Phase D differential and scope gates protect the authorized semantic extraction.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
 PHASE_C_PATH = ROOT / '.github/scripts/m4-phase-c-baseline.json'
 PHASE_C = json.loads(PHASE_C_PATH.read_text(encoding='utf-8')) if PHASE_C_PATH.exists() else {}
+PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
+PHASE_D = json.loads(PHASE_D_PATH.read_text(encoding='utf-8')) if PHASE_D_PATH.exists() else {}
 
 
 def code_only(source):
@@ -90,6 +94,7 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         old_files = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         new_files = set(BASELINE['genericModelFiles'])
         new_files.update(PHASE_C.get('genericStoreFiles', []))
+        new_files.update(PHASE_D.get('videoHandlerFiles', []))
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)

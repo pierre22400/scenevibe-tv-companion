@@ -13,11 +13,15 @@ Pure snapshot/store/codec compile without Android or Video classes. Only the And
 backend may use Context/SharedPreferences. The old repository's entire behavioral tail
 and injectable seam remain byte-exact; current owners cannot route through handlers.
 The Phase B exception is balanced by exact Phase C scope and retained-source checks.
+Phase D preserves this store byte-for-byte and adds narrowly authorized handler-owned
+semantics; frozen historical reference and orchestration fragments guard that exception.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-c-baseline.json').read_text(encoding='utf-8'))
 PHASE_B = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
+PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
+PHASE_D = json.loads(PHASE_D_PATH.read_text(encoding='utf-8')) if PHASE_D_PATH.exists() else {}
 
 
 def code_only(source):
@@ -77,7 +81,16 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         tail = source[source.index('    /** Injectable persistence boundary'):]
         start = source.index('final class CloudTrackRepository')
         end = source.index('    /** Wraps SharedPreferences.commit')
-        self.assertEqual(BASELINE['repositoryCoreSha256'], hashlib.sha256(tail.encode()).hexdigest())
+        if PHASE_D:
+            reference = (ROOT / PHASE_D['historicalReferenceFile']).read_text(encoding='utf-8')
+            reference = code_only(reference.replace('M4PhaseDHistoricalRepository', 'CloudTrackRepository'))
+            reference = '\n'.join(line for line in reference.splitlines() if line.strip())
+            self.assertEqual(PHASE_D['historicalRepositoryCodeSha256'], hashlib.sha256(reference.encode()).hexdigest())
+            for anchor, frozen in PHASE_D['repositoryFrozenFragments'].items():
+                fragment = source[source.index(anchor):source.index(frozen['end'])]
+                self.assertEqual(frozen['sha256'], hashlib.sha256(fragment.encode()).hexdigest(), anchor)
+        else:
+            self.assertEqual(BASELINE['repositoryCoreSha256'], hashlib.sha256(tail.encode()).hexdigest())
         self.assertEqual(BASELINE['repositorySeamSha256'], hashlib.sha256(source[start:end].encode()).hexdigest())
         constructor = code_only(source[end:source.index('    /** Injectable persistence boundary')])
         self.assertNotIn('SharedPreferences', code_only(source))
@@ -91,13 +104,17 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         old = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         old.add(BASELINE['authorizedPersistenceExtraction'])
         expected = old | set(BASELINE['genericStoreFiles'])
+        expected.update(PHASE_D.get('videoHandlerFiles', []))
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
         self.assertEqual(expected, actual)
         for path in actual:
             source = code_only((ROOT / path).read_text(encoding='utf-8'))
-            self.assertIsNone(re.search(r'\bimplements\s+InstallationHandler\b', source), path)
+            if path not in PHASE_D.get('videoHandlerFiles', []):
+                self.assertIsNone(re.search(r'\bimplements\s+InstallationHandler\b', source), path)
             self.assertNotIn('PackageInstaller', source, path)
         for path, digest in BASELINE['qualifiedRuntimeBlobs'].items():
+            if path in PHASE_D.get('additiveContractFiles', []):
+                continue
             self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
 
     def test_every_retained_jvm_test_and_frozen_inventory_remains_byte_exact(self):
