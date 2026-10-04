@@ -105,7 +105,7 @@ final class M4PhaseAFixtures {
         final Sink sink=new Sink();
         final SceneRuntimeController controller=new SceneRuntimeController(sink);
         final MediaSyncedTrackScheduler scheduler;
-        final CloudControlClient.ManifestInstaller installer;
+        final M4PhaseFHistoricalCloudClient.ManifestInstaller installer;
         int legacyRenders,loads;
 
         /** Bind the real scheduler/bridge/service helpers to deterministic boundary fakes. */
@@ -131,7 +131,7 @@ final class M4PhaseAFixtures {
                     controller.onEligibility(eligible);
                 }
             });
-            installer=new CloudControlClient.ManifestInstaller() {
+            installer=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
                 /** Delegate the entire manifested install/restore/arm sequence to the current core. */
                 @Override public boolean install(long revision,String runtime,String manifest) {
                     long armed=OverlayService.installManifestedRevision(cache,scheduler,controller,
@@ -156,7 +156,7 @@ final class M4PhaseAFixtures {
 
         /** Apply through the real owner gate without a transport or a synthetic installer. */
         boolean apply(JSONObject envelope) throws Exception {
-            return CloudControlClient.applyAssignment(AssignmentMutationGate.direct(),()->true,
+            return M4PhaseFHistoricalCloudClient.applyAssignment(AssignmentMutationGate.direct(),()->true,
                     envelope.getLong("revision"),envelope.getJSONObject("runtimeTrack").toString(),
                     envelope.has("overlayManifest")?envelope.getJSONObject("overlayManifest").toString():null,
                     cache,scheduler,installer);

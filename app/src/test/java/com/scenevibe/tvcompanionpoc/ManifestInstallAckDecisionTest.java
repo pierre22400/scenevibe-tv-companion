@@ -14,7 +14,7 @@ import static org.junit.Assert.*;
 /**
  * Section 7/8 ACK-ordering coverage plus section 20-A (cases 1-3). These tests exercise the
  * Android-free {@link OverlayService#installManifestedRevision} helper, which is the exact
- * core the production {@link CloudControlClient.ManifestInstaller} delegates to: it is the
+ * core the production {@link M4PhaseFHistoricalCloudClient.ManifestInstaller} delegates to: it is the
  * decision that gates the ACK. A manifested revision is "ACK-able" (helper returns a positive
  * revision) ONLY after runtimeTrack valid + manifest valid + cross-contract valid + atomic
  * durable persist + scheduler accept + regie accept. Any failure returns 0 => NO ACK, prior
@@ -278,7 +278,7 @@ public final class ManifestInstallAckDecisionTest {
         regie.onCommentDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null));
         assertTrue(regie.hasVisibleScene());
 
-        CloudControlClient.ManifestInstaller transition=new CloudControlClient.ManifestInstaller() {
+        M4PhaseFHistoricalCloudClient.ManifestInstaller transition=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
             @Override public boolean install(long revision,String runtime,String manifest) {
                 return false;
             }
@@ -290,7 +290,7 @@ public final class ManifestInstallAckDecisionTest {
             }
         };
 
-        boolean ackable=CloudControlClient.installLegacyRevision(
+        boolean ackable=M4PhaseFHistoricalCloudClient.installLegacyRevision(
                 5,4,runtimeJson("track-2"),repository,scheduler,transition);
 
         assertTrue("legacy revision is ACK-able only after Case-B disarm",ackable);

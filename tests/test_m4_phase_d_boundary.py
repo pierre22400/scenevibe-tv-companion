@@ -10,9 +10,12 @@ The frozen reference is the actual starting repository, changed only in name/com
 Byte-pinned runtime/store/configuration/test blobs and unchanged orchestration fragments
 balance the narrow repository/typed-state exceptions to the older Phase B/C gates.
 Phase E permits its one generic orchestrator definition, never a current-caller cutover.
+Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
+PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-d-baseline.json').read_text(encoding='utf-8'))
 PHASE_E_PATH = ROOT / '.github/scripts/m4-phase-e-baseline.json'
 PHASE_E = json.loads(PHASE_E_PATH.read_text(encoding='utf-8')) if PHASE_E_PATH.exists() else {}
@@ -96,19 +99,22 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         expected = old | set(BASELINE['additiveContractFiles']) | {BASELINE['authorizedSemanticDelegation']} | set(BASELINE['videoHandlerFiles'])
         if PHASE_E:
             expected.add(PHASE_E['installerFile'])
+        if PHASE_F:
+            expected.add(PHASE_F['adapterFile'])
         actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}
         self.assertEqual(expected, actual)
         implementations = []
         for relative in actual:
             source = code_only((ROOT / relative).read_text(encoding='utf-8'))
-            if relative != PHASE_E.get('installerFile'):
+            if relative != PHASE_E.get('installerFile') and relative not in PHASE_F.get('authorizedLiveCallers', []):
                 self.assertNotIn('PackageInstaller', source, relative)
             if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)', source):
                 implementations.append(Path(relative).name)
         self.assertEqual(['VideoLegacyInstallationHandler.java', 'VideoManifestInstallationHandler.java'], sorted(implementations))
         client = code_only((PRODUCTION / 'CloudControlClient.java').read_text(encoding='utf-8'))
         for token in ('InstallRequest', 'InstallationHandlerRegistry', 'VideoInstallationHandlers', 'VideoInstallationRuntimePorts'):
-            self.assertNotIn(token, client)
+            if token != 'InstallRequest' or not PHASE_F:
+                self.assertNotIn(token, client)
         repository = code_only((ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8'))
         for token in ('.registry(', '.findCodec(', '.findHandler(', 'encodeForCache(', 'restoreFromCache(',
                       'new InstallRequest', 'new PreparedInstallation', 'store.read(', 'store.commit('):
@@ -117,8 +123,13 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
     def test_qualified_runtime_store_wire_and_configs_remain_byte_exact(self):
         """No protected scheduler/renderer/identity/store/transport/manifest/signing input can drift."""
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+                continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
         source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')
+        for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(
+                'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):
+            source = source.replace(patch['after'], patch['before'])
         for anchor, frozen in BASELINE['repositoryFrozenFragments'].items():
             fragment = source[source.index(anchor):source.index(frozen['end'])]
             self.assertEqual(frozen['sha256'], hashlib.sha256(fragment.encode()).hexdigest(), anchor)
@@ -130,6 +141,8 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         normalized = '\n'.join(line for line in normalized.splitlines() if line.strip())
         self.assertEqual(BASELINE['historicalRepositoryCodeSha256'], hashlib.sha256(normalized.encode()).hexdigest())
         for path, expected in BASELINE['frozenTestSources'].items():
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+                continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
 
     def test_prepared_state_contract_is_typed_and_additive_only(self):

@@ -14,9 +14,12 @@ The exact starting GitHub tree pins every old production/resource/configuration 
 every old JVM test/fixture and the earlier inventories. Earlier boundary predicates
 and CI accounting may gain only the documented Phase E inventory/bucket exceptions.
 A real JDK-only compile verifies the installer cannot acquire platform dependencies.
+Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
+PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-e-baseline.json').read_text(encoding='utf-8'))
 INSTALLER = 'app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java'
 
@@ -122,32 +125,40 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
     def test_all_old_production_handlers_store_and_configs_remain_byte_exact(self):
         """Pin all prior Java/resources/manifest/build/signing inputs, including every current production caller."""
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+                continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
         for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):
             source = code_only((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).read_text())
-            self.assertNotIn('PackageInstaller', source, name)
+            if str((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).relative_to(ROOT)) not in PHASE_F.get('authorizedLiveCallers', []):
+                self.assertNotIn('PackageInstaller', source, name)
 
     def test_every_retained_jvm_test_fixture_inventory_and_work_order_stays_frozen(self):
         """Protect earlier qualification evidence and authoritative documents without changing fixtures to fit E."""
         frozen = {**BASELINE['frozenTestSources'], **BASELINE['frozenDocumentationBlobs']}
         for path, expected in frozen.items():
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+                continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
 
     def test_production_inventory_admits_exactly_one_unwired_orchestration_type(self):
         """No Cloud adapter, service port, restore coordinator or future milestone type can appear."""
         prior = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(prior | {INSTALLER}, actual)
+        self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()), actual)
         callers = []
         for path in actual:
             if re.search(r'\bPackageInstaller\b', code_only((ROOT / path).read_text())):
                 callers.append(path)
-        self.assertEqual([INSTALLER], callers)
+        self.assertEqual(sorted([INSTALLER] + PHASE_F.get('authorizedLiveCallers', [])), sorted(callers))
 
     def test_prior_boundary_predicates_and_workflow_only_gain_exact_e_exceptions(self):
         """Reverse the small authorized additions and demand the earlier gate/workflow bytes exactly."""
         for relative, expected in BASELINE['frozenAccountingBoundaryBlobs'].items():
             source = (ROOT / relative).read_text(encoding='utf-8')
+            if PHASE_F:
+                for patch in reversed(PHASE_F['boundaryPatches'].get(relative, [])):
+                    source = source.replace(patch['after'], patch['before'])
             previous = without_phase_e_accounting(relative, source)
             self.assertEqual(expected, blob_hash(previous.encode('utf-8')), relative)
 

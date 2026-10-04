@@ -192,7 +192,7 @@ public final class CloudResetAsyncTest {
         ManualExecutor io=new ManualExecutor();
         DiagnosticsStore diagnostics=DiagnosticsStore.INSTANCE;
         diagnostics.setLastSuccessfulAckRevision(2);
-        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler);
+        CloudControlClient client=M4PhaseFResetFixture.client(io,identity,cache,scheduler);
 
         // reset() returns immediately: the wipe is queued but NOT yet run.
         client.reset();
@@ -242,7 +242,7 @@ public final class CloudResetAsyncTest {
         assertTrue(cache.install(2,track("active"),scheduler));
 
         ManualExecutor io=new ManualExecutor();
-        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler);
+        CloudControlClient client=M4PhaseFResetFixture.client(io,identity,cache,scheduler);
 
         final List<String> order=new ArrayList<>();
         // A stand-in for an in-flight/queued cloud request already sitting on io.
@@ -274,7 +274,7 @@ public final class CloudResetAsyncTest {
         CloudTrackRepository cache=new CloudTrackRepository(new TrackMemory());
 
         ManualExecutor io=new ManualExecutor();
-        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler);
+        CloudControlClient client=M4PhaseFResetFixture.client(io,identity,cache,scheduler);
 
         final int[] completions={0};
         client.reset(()->completions[0]++);
@@ -301,7 +301,7 @@ public final class CloudResetAsyncTest {
         ManualExecutor io=new ManualExecutor();
         io.shutdown(); // primary path rejects immediately
         ManualExecutor fallback=new ManualExecutor();
-        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler,fallback);
+        CloudControlClient client=M4PhaseFResetFixture.client(io,identity,cache,scheduler,fallback);
 
         final int[] completions={0};
         client.reset(()->completions[0]++);
@@ -335,7 +335,7 @@ public final class CloudResetAsyncTest {
 
         ManualExecutor io=new ManualExecutor();
         final int[] rotations={0};
-        CloudControlClient client=new CloudControlClient(
+        CloudControlClient client=M4PhaseFResetFixture.client(
                 io,identity,cache,scheduler,Runnable::run,
                 ()->rotations[0]++);
 
@@ -363,7 +363,7 @@ public final class CloudResetAsyncTest {
         CloudTrackRepository cache=new CloudTrackRepository(new TrackMemory());
 
         ManualExecutor io=new ManualExecutor();
-        CloudControlClient client=new CloudControlClient(io,identity,cache,scheduler);
+        CloudControlClient client=M4PhaseFResetFixture.client(io,identity,cache,scheduler);
         client.reset();
         io.runAll();
 

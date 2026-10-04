@@ -18,9 +18,12 @@ extraction, balanced by the additional Phase C byte/scope boundary tests.
 Phase D adds only its explicit Video-side files and typed prepared-state contract;
 the Phase D differential and scope gates protect the authorized semantic extraction.
 Phase E admits exactly its isolated PackageInstaller, with no existing-caller exception.
+Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
+PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
 PHASE_C_PATH = ROOT / '.github/scripts/m4-phase-c-baseline.json'
 PHASE_C = json.loads(PHASE_C_PATH.read_text(encoding='utf-8')) if PHASE_C_PATH.exists() else {}
@@ -89,6 +92,8 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
             # The authorized constructor-only extraction is guarded separately by Phase C.
             if path == PHASE_C.get('authorizedPersistenceExtraction'):
                 continue
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+                continue
             self.assertEqual(expected, git_blob_digest((ROOT / path).read_bytes()), path)
 
     def test_no_current_caller_or_future_phase_production_component_is_added(self):
@@ -100,12 +105,14 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         new_files.update(PHASE_D.get('videoHandlerFiles', []))
         if PHASE_E:
             new_files.add(PHASE_E['installerFile'])
+        if PHASE_F:
+            new_files.add(PHASE_F['adapterFile'])
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)
         for path in old_files:
             # Only the persistence facade may import the explicitly permitted store/backend.
-            if path == PHASE_C.get('authorizedPersistenceExtraction'):
+            if path == PHASE_C.get('authorizedPersistenceExtraction') or path in PHASE_F.get('authorizedProductionChanges', []):
                 continue
             source = code_only((ROOT / path).read_text(encoding='utf-8'))
             self.assertNotIn('com.scenevibe.tvcompanionpoc.installation', source, path)

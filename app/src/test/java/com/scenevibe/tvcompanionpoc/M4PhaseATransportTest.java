@@ -26,7 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import static org.junit.Assert.*;
 
 /**
- * Exercises the real CloudControlClient fetch/apply/ACK method and UTF-8 HTTP codec.
+ * Exercises the real M4PhaseFHistoricalCloudClient fetch/apply/ACK method and UTF-8 HTTP codec.
  * HTTPS connections are intercepted only for a reserved .invalid test host. No sockets,
  * credentials, private editorial fixtures or new production transport seams are introduced.
  */
@@ -35,15 +35,12 @@ public final class M4PhaseATransportTest {
 
     /** Install a process-local URL boundary once; every unexpected connection fails closed. */
     @BeforeClass public static void isolateHttpsTransport() {
-        URL.setURLStreamHandlerFactory(protocol->"https".equals(protocol)?new URLStreamHandler() {
-            /** The only permitted URL is the current deterministic fixture exchange. */
-            @Override protected URLConnection openConnection(URL url) throws java.io.IOException {
-                Exchange exchange=EXCHANGE.get();
-                if (exchange==null||!"m4-characterization.invalid".equals(url.getHost()))
-                    throw new java.io.IOException("Unexpected test transport target");
-                return exchange.connection(url);
-            }
-        }:null);
+        M4PhaseFHttps.register("m4-characterization.invalid",url->{
+            // The only permitted URL is the current deterministic fixture exchange.
+            Exchange exchange=EXCHANGE.get();
+            if(exchange==null)throw new java.io.IOException("Unexpected test transport target");
+            return exchange.connection(url);
+        });
     }
 
     /** Release the exchange so a subsequent test cannot inherit response state. */
@@ -138,13 +135,13 @@ public final class M4PhaseATransportTest {
         assertTrue(credentials.confirmClaimed());
         ScheduledExecutorService io=Executors.newSingleThreadScheduledExecutor();
         try {
-            CloudControlClient client=new CloudControlClient(io,credentials,exchange.runtime.cache,
+            M4PhaseFHistoricalCloudClient client=new M4PhaseFHistoricalCloudClient(io,credentials,exchange.runtime.cache,
                     exchange.runtime.scheduler,exchange.runtime.installer);
-            Field origin=CloudControlClient.class.getDeclaredField("origin");origin.setAccessible(true);
+            Field origin=M4PhaseFHistoricalCloudClient.class.getDeclaredField("origin");origin.setAccessible(true);
             origin.set(client,"https://m4-characterization.invalid");
-            Field running=CloudControlClient.class.getDeclaredField("running");running.setAccessible(true);
+            Field running=M4PhaseFHistoricalCloudClient.class.getDeclaredField("running");running.setAccessible(true);
             running.setBoolean(client,true);
-            Method fetch=CloudControlClient.class.getDeclaredMethod("fetchAssignment");fetch.setAccessible(true);
+            Method fetch=M4PhaseFHistoricalCloudClient.class.getDeclaredMethod("fetchAssignment");fetch.setAccessible(true);
             EXCHANGE.set(exchange);
             try {fetch.invoke(client);} catch (InvocationTargetException failure) {
                 Throwable cause=failure.getCause();

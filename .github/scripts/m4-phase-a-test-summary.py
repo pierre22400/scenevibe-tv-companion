@@ -14,6 +14,7 @@ The historical output path/artifact remains compatible and now includes both pha
 Phase C adds its own executed bucket while retaining those frozen inventories.
 Phase D adds an independent handler/differential/ARM bucket, without losing earlier counts.
 Phase E adds executed orchestration, readback, real-Video and historical-cache buckets.
+Phase F adds actual Cloud/owner/runtime/reset compatibility execution without dropping old cases.
 """
 
 
@@ -28,6 +29,8 @@ def summarize(root):
     phase_d = json.loads(phase_d_path.read_text(encoding='utf-8')) if phase_d_path.exists() else {'phaseDSuites': {}}
     phase_e_path = root / '.github/scripts/m4-phase-e-baseline.json'
     phase_e = json.loads(phase_e_path.read_text(encoding='utf-8')) if phase_e_path.exists() else {'phaseESuites': {}}
+    phase_f_path = root / '.github/scripts/m4-phase-f-baseline.json'
+    phase_f = json.loads(phase_f_path.read_text(encoding='utf-8')) if phase_f_path.exists() else {'phaseFSuites': {}}
     counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}
     suites = {}
     skipped = []
@@ -46,9 +49,9 @@ def summarize(root):
                 skipped.append(name + '.' + case.attrib['name'])
             else:
                 counts['PASS'] += 1
-    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites']}
+    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites']}
     if suites != expected:
-        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E inventory')
+        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
         raise ValueError('An unexpected JVM case was skipped')
     for path, digest in baseline['fixtureSha256'].items():
@@ -64,6 +67,7 @@ def summarize(root):
         'phaseCCases': sum(phase_c['phaseCSuites'].values()),
         'phaseDCases': sum(phase_d['phaseDSuites'].values()),
         'phaseECases': sum(phase_e['phaseESuites'].values()),
+        'phaseFCases': sum(phase_f['phaseFSuites'].values()),
         'suites': suites,
         'skippedCases': skipped,
         'fixtureSha256': baseline['fixtureSha256'],
@@ -72,7 +76,7 @@ def summarize(root):
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
     print('JVM: ' + ' '.join(f'{name}={count}' for name, count in counts.items()))
-    print(f'Retained baseline: {summary["retainedCases"]}; Phase A: {summary["phaseACases"]}; Phase B: {summary["phaseBCases"]}; Phase C: {summary["phaseCCases"]}; Phase D: {summary["phaseDCases"]}; Phase E: {summary["phaseECases"]}')
+    print(f'Retained baseline: {summary["retainedCases"]}; Phase A: {summary["phaseACases"]}; Phase B: {summary["phaseBCases"]}; Phase C: {summary["phaseCCases"]}; Phase D: {summary["phaseDCases"]}; Phase E: {summary["phaseECases"]}; Phase F: {summary["phaseFCases"]}')
     for name in skipped:
         print('Opt-in SKIP: ' + name)
     return 1 if counts['FAIL'] else 0
@@ -87,5 +91,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except (ValueError, KeyError, OSError, ET.ParseError):
-        print('Phase A/B/C/D/E report validation failed; no payload or exception message emitted', file=sys.stderr)
+        print('Phase A/B/C/D/E/F report validation failed; no payload or exception message emitted', file=sys.stderr)
         sys.exit(1)

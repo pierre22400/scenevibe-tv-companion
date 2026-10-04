@@ -16,9 +16,12 @@ The Phase B exception is balanced by exact Phase C scope and retained-source che
 Phase D preserves this store byte-for-byte and adds narrowly authorized handler-owned
 semantics; frozen historical reference and orchestration fragments guard that exception.
 Phase E adds only its explicitly inventoried orchestration class; the store remains pinned.
+Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
+PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-c-baseline.json').read_text(encoding='utf-8'))
 PHASE_B = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
 PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
@@ -81,6 +84,9 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         """Only the Android constructor/imports/banner may change; all Video/ACK/restore methods stay frozen."""
         path = ROOT / BASELINE['authorizedPersistenceExtraction']
         source = path.read_text(encoding='utf-8')
+        for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(
+                'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):
+            source = source.replace(patch['after'], patch['before'])
         tail = source[source.index('    /** Injectable persistence boundary'):]
         start = source.index('final class CloudTrackRepository')
         end = source.index('    /** Wraps SharedPreferences.commit')
@@ -110,22 +116,28 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         expected.update(PHASE_D.get('videoHandlerFiles', []))
         if PHASE_E:
             expected.add(PHASE_E['installerFile'])
+        if PHASE_F:
+            expected.add(PHASE_F['adapterFile'])
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
         self.assertEqual(expected, actual)
         for path in actual:
             source = code_only((ROOT / path).read_text(encoding='utf-8'))
             if path not in PHASE_D.get('videoHandlerFiles', []):
                 self.assertIsNone(re.search(r'\bimplements\s+InstallationHandler\b', source), path)
-            if path != PHASE_E.get('installerFile'):
+            if path != PHASE_E.get('installerFile') and path not in PHASE_F.get('authorizedLiveCallers', []):
                 self.assertNotIn('PackageInstaller', source, path)
         for path, digest in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_D.get('additiveContractFiles', []):
+                continue
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
 
     def test_every_retained_jvm_test_and_frozen_inventory_remains_byte_exact(self):
         """Do not weaken old characterization/model tests to make the persistence refactor pass."""
         for path, digest in BASELINE['frozenTestSources'].items():
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+                continue
             self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
 
 

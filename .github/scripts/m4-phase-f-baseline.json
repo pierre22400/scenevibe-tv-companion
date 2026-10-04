@@ -1,0 +1,454 @@
+{
+  "referenceHead": "eb38e34086f22f81e5cc9ef917197658ce63ecbd",
+  "phaseEClosure": "f4b2007245b7ecc39f8cabb1e8d36945d0650d4e",
+  "baseTv": "ecdf77bec9f93babf15239a63bf7f702fd7ca293",
+  "baseCloud": "5011c91aac61a0cc6dcc74c256a15b7dee03d785",
+  "adapterFile": "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudV1InstallationAdapter.java",
+  "authorizedProductionChanges": [
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java"
+  ],
+  "authorizedLiveCallers": [
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java"
+  ],
+  "authorizedTestChanges": [
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseATransportTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetAsyncTest.java"
+  ],
+  "qualifiedRuntimeBlobs": {
+    ".github/workflows/android-15-smoke.yml": "0e2eefb1314f561efc3ea401fc3163b800b42afa",
+    ".github/workflows/android-release.yml": "4902241c43d6f976eb542771735c8712be3a3a18",
+    "app/build.gradle": "043a1b11da8e89107b2d82f0badffb3993bbf880",
+    "app/src/main/AndroidManifest.xml": "4abe48d105eddfef1845e2373b34e4fef636b675",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGate.java": "36bf2ad56ea533b82e282caada731d161039beb3",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java": "086a89cff2fa4701be427d4f9b029db264e48fa1",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPreference.java": "c6a9520b4d23a33d0a4a7d72859174d6120ca641",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java": "545966dbf58b1ee7a71c5686e6a19909be516ae6",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java": "0a162d0e955a2b5c8e4b82c09305ec5ac31f0053",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentials.java": "f75b9c0457afccaf2c7d14c5f8b7f641b855e770",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudProtocol.java": "7f8f146f107d4070bfdfbb3b5118cbe7c500e2ae",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java": "ac3209e5ba049ebaa9278217a00a5858a33c40db",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java": "4023911c39aec1052a8ba768961646c0f794d8c2",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": "2d37e9dee891426d48e4621b4e66b668afd71e02",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsStore.java": "965c324fde88a0db30fec742330fddea612af4b3",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DisplayCountdown.java": "295dd4f6dd24f206c7fbdd57bb4a196c0ea980a0",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/InstallationIdentity.java": "32a2f7e7565bd71226cc1dfe506ccbcbdeef1232",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java": "8e468664842991863d52b3e4d3c4959eb34687de",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaIdentityMatcher.java": "f022a48c78151a11508d7feb12ba91239191a43a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java": "c8728643be07f405a47b62a84f525302dbb73cab",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java": "9c205b09ff5ffd85977250175eaab5019984b1b1",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java": "441d983409d94ae6d5e31198ec739dec86166754",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NotificationAccess.java": "b79a16d128c533169305e8a814b56488c3846559",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifest.java": "41489cc6c1cc6a837658323d0d36349a4149c869",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestParser.java": "eb8f6b5e7bc559e55bde0d32dda3c443d57126de",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java": "ae63244b3aa52dff5fa259b684959f5fa4bf626c",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": "b35bd8a1cc047ae1be962610afb54a40a54dedab",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingPolicy.java": "d5120dbd2c615d16e43275e69793696155ff1c6d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingRuntime.java": "5532e093cbe17920764bf69ba72d0634195cb870",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java": "760578ab0f2088caf63ed43bc084861ba17a47af",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java": "5e73b1d406ec5b6f9a5f0b84702d6c77182b1ee8",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java": "c5f3b96606a65374417771261f6631f402902de9",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/ScheduledTrack.java": "38219f1130a0243272d3b1df5ad2e63461d7cc1e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java": "447b4e2e6fb4a7852bfcb2cb9e94217adf46f884",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java": "fd1e23426ee1cfbba6f3cd5a30e40c38c599ce43",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationHandlers.java": "4eb7a4d239e8fddf7d9ce4dfd06f63c82399a24d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java": "c060fa7cf777f5f2279805c90f9790d480279e46",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoLegacyInstallationHandler.java": "84973d3ee7112e97fb68d2afc2e03fb8aba4cd3d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoManifestInstallationHandler.java": "304e235ac26c388288b6ce81fc5ae76bfbad4476",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridge.java": "8c30496cfc082019cb8518962b8584bdc9c11f2e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java": "eb0fa40cca9dfd350af38319cc701778a4ccf358",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoRuntimePreparation.java": "f9088db0ed9db1e746a54e0d51f6dfaffebe19a5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java": "cfd974d7eb4e557caf978fc94432a6c1b02d38bd",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/ExecutionRequirements.java": "227d3adb676642f03e8e1a680f422b3c5d792e1f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallRequest.java": "6efda99788067ffcbf2c72d62a1ebeb4e19b202a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationBounds.java": "51195bed65912e22ee7efe8cf402e11d65d39f08",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandler.java": "eb40e00c65cab8e8244fa67d9c19ecf7b6d61f9b",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandlerRegistry.java": "a3cc005bb64aba6eea70871c61a063148b0056c0",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshot.java": "d437ffd9e8633c55c0e2c55e1fac161960d767f6",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshotCodec.java": "af553a0904a582606d016a51b7a195def84db8ca",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStatus.java": "301e9b1d29280e8cda04e84a96f6d2857d266e1e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java": "8deda537d30b804a14215b2105d4c437659bdc7e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PreparedInstallation.java": "a03b3d986062a291b29feacec706d532cc12a620",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java": "56b79dbdb063ab1562882bfa25da5e195112c77b",
+    "app/src/main/res/drawable/ic_launcher.png": "4493fbd92fc7069f8984660a19d77478c52b15d6",
+    "app/src/main/res/drawable/tv_banner.png": "32e603afa8def2655f8a2129949336c1c52babbf",
+    "app/src/main/res/values/strings.xml": "04c8cf1b0543bcded5bea7bf863d6e4c4c163056",
+    "build.gradle": "378b9ca6938fb5366e057e2f1104c473ed91b76e",
+    "gradle.properties": "a9a5893341537a9cf036d9b9d2d92ef53809f804",
+    "settings.gradle": "1560b65e4b80bd0565b8cc03e0316ccba0618b42",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java": "0f973271d1f6c133adddff6a8136ffb9eef19fd5"
+  },
+  "frozenTestSources": {
+    ".github/scripts/m4-phase-a-baseline.json": "f635ceb0b5964b31daf74f0fbea7c2e935ae2f9b",
+    ".github/scripts/m4-phase-b-baseline.json": "a5a65aa8a929017f4bf5030e799c53ac48df68e2",
+    ".github/scripts/m4-phase-c-baseline.json": "b82f0f39625da33d47ea0940248c4935d63af7cb",
+    ".github/scripts/m4-phase-d-baseline.json": "57d9162e7f9c06a1716cc4cf4c6e578dcc327363",
+    ".github/scripts/m4-phase-e-baseline.json": "a24175c010a616472ffe46a7356010ce539557ca",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java": "1d4269ed80ef872b1d2ab246ed9ebf27f22d47ee",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AutostartPolicyTest.java": "4e43a30362f1be5b2cf462a17880d613f1ab4e34",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudActivationDiagnosticsTest.java": "07b896c29e161953e5cbea2c3338fddd0f7f8fa3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudClientRestartAfterResetTest.java": "39870a1e45671ad2fdb73e0a22d2d4494fb7b817",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentialsTest.java": "a55c2cd403bf97028fdbb3026ee3f4755cda5302",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudManifestCacheTest.java": "a5665508109389ac510bf996d4d4d41feb77282a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudProtocolTest.java": "d3f558d0d51ed910acb85315244fb50f4fe1b2c8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetAsyncTest.java": "1b41870d02980d98894d197ce5ef99a16b246422",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetTest.java": "a5082076629b64eb663195c616f7adbeb9af3384",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudTrackRepositoryTest.java": "3bc93dcd050f4b38775c67d760c815704b07a390",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CommentaryServerAuthTest.java": "96d856be7ebd66d406dca73a4bda2d3a116337db",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ConsumerModeTest.java": "b6d9f4ab707caf207d48868011a65de445381ce1",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DiagnosticsNoSecretTest.java": "8f27250623acc2126b9f8e7bcf6c9316eb4460f3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DisplayCountdownTest.java": "7fece36f394fb5e66d4cc68b62edf33c5e5ba0fa",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/InstallationIdentityTest.java": "4dc9dd7d64afbe8be3a42abda75a9b483c86ac52",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M1CloudInteropTest.java": "5ec63ace4ebd1078a5855a3adec494bb90ce75bf",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAAtomicStoreTest.java": "fe2e1fa35da813a4c39bf9374f55d2d421f7b592",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java": "f399b25cc906d63295e37d252a12f9aa92cba0b4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAIdentityTest.java": "9787b173fafb629dc638e34c0fd0e2c100c06ad6",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAInstallationTest.java": "e78a90ed38540a27f5e0b7aa0753299a8e00e7c8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseATransportTest.java": "fe974de0030cb9016599871c1e15af296209bddd",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseBSideEffectTest.java": "2003512d461bdc67a3065f3ac9a024d42fdc7ee0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseCCompatibilityTest.java": "01d400e3576c5f7533a7ed22432dc54557db3836",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDArmTest.java": "7851e3be021c2c6a83f284166c116832714c7ed9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDCompatibilityEdgeTest.java": "b3f6c7be9256853031b39d5619fcc08844d0caf2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDDifferentialTest.java": "08f81b0229e6da7d50634f4c5835a2e46126e485",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHandlerFixtures.java": "2d0e5cf86dc3538634af898de6bcb98812fe9d17",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHistoricalRepository.java": "9dd7a5c555e67c0e4ab743ebd08b8ea05083c828",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDLegacyHandlerTest.java": "1dfecc8060c3e269302e197f9922af6296696d2b",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDManifestedHandlerTest.java": "fbd2b773096fae053a91f60fdb58b0399348daf4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDRegistryTest.java": "0209d3d48dca135c83065b6446aff221d282e5b4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEHistoricalInstallerTest.java": "675b51540e26f50b9e2e17c30acb5b008d633b15",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFailureTest.java": "d89cf1f8185ca02a9a738ed3354367a83437b1aa",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFixtures.java": "958c5cd269b8609f13f466d3fd43835f493d24e3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoInstallerTest.java": "f372c14b31555dfa2685ea7adb13c6c8760de731",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java": "33c490694ec1dcb921b64f803c569b5356fce236",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerExpiryTest.java": "23e07e8a6171ecbb8a3437e1783ab59f9e814876",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerIdentityTest.java": "23691bc6b8f7f1f449ab4353cc5e89f0ce78427d",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayArmedNotVisibleTest.java": "d90956df7d74d5c40c3b971b072ea0a04b6c1028",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayManifestParserTest.java": "39f22f843703311464ae5751b3a99c221b107658",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/PairingPolicyTest.java": "d226e4f04a1aba3dadd7f68d8e951fda972c9700",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRendererPreflightTest.java": "fb9c0913b7681cf7990ffe59c30540cff41b2034",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRuntimeControllerTest.java": "df34a9f5f323aee9a24a514da670dd2e03744d0c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SecretStoreMigrationTest.java": "25f2bf18d0672d3765657730caa78938f3b76745",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridgeTest.java": "29d23c2b3dbb334f22a2d8ead7bbefab89b143a5",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackendTest.java": "e043480dd2bb07e38df309ad2831e2658ae9df07",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationModelTest.java": "5b010d111e21249e7b6a5869d3ed690b72a5cd31",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationRegistryTest.java": "3c3fcaefa083a3f54f978108b5aad0bbc62b5837",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationStoreTest.java": "b3447d097ccb1f02c49b9e6662637748f87e55d0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4PhaseEInstallerFixtures.java": "b156fed6db3b7895817bf462e603d92de7320af5",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerFailureTest.java": "fffdea8627016aa3e0823f2789468df538263376",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerReadbackTest.java": "b5187d5eef78b60d7448183a2ef531db6b9bc04f",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerTest.java": "5077a5d0aac452cd52812baaedc7e01c1b3a9d1e",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilitiesTest.java": "5227a03f3d3d560cfdfaf0f8e3345869505d2ee8",
+    "app/src/test/resources/m1/cloud-envelopes.json": "7d4f16a05f51181266adfcd495200b06f04dca3a",
+    "app/src/test/resources/m1/overlay-corpus.json": "d2769cbd6d82bc3b3ef6a02784e9159076892daf",
+    "app/src/test/resources/m4/video-legacy-cache-v1.json": "c175f1f1a343ac217105e66b70d363566875f90d",
+    "app/src/test/resources/m4/video-manifested-cache-v1.json": "5635582678824581ff40fbcf8e026ab100a7ff8f"
+  },
+  "frozenDocumentationBlobs": {
+    "docs/m4-phase-a-characterization-report.md": "a983b4aa10e6a57c784a73f84fdee985bbf2aab9",
+    "docs/m4-phase-b-generic-model-capabilities-report.md": "92c8e991016ec8fc445842bd3e34ee55925765f0",
+    "docs/m4-phase-b-generic-model-capabilities-work-order.md": "27170fbf7b8e7f6d4c89db4fc5a42fde51405fe6",
+    "docs/m4-phase-c-generic-durable-store-report.md": "3f596bf4e510aa63800cac5c8965988ef133c048",
+    "docs/m4-phase-c-generic-durable-store-work-order.md": "29f67fba24ff3495be232395ee7a3352c9aea464",
+    "docs/m4-phase-d-video-compatibility-handlers-report.md": "f2e6e6dc7145aa3e245962b935a56021df468694",
+    "docs/m4-phase-d-video-compatibility-handlers-work-order.md": "424ce192d4a755279dd9b26373ae544f094c97f4",
+    "docs/m4-phase-e-package-installer-orchestration-report.md": "7417868e56b742837a625115456cdd763fc0c9ce",
+    "docs/m4-phase-e-package-installer-orchestration-work-order.md": "b41251e5e2db9c72c24d0410b1ce6aa10790905c",
+    "docs/m4-phase-f-cloud-v1-adapter-work-order.md": "b058bf4dce6cd3f183c59d7eb647393e423d820b",
+    "docs/scenevibe-os-m4-tv-installation-architecture.md": "acb3433c8c42467bebe5a467f7aa282645eedcab"
+  },
+  "productionFiles": [
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGate.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPreference.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentials.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudProtocol.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DisplayCountdown.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/InstallationIdentity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaIdentityMatcher.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NotificationAccess.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifest.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestParser.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingPolicy.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingRuntime.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/ScheduledTrack.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationHandlers.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoLegacyInstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoManifestInstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridge.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoRuntimePreparation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/ExecutionRequirements.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallRequest.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationBounds.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandlerRegistry.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshot.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshotCodec.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStatus.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PreparedInstallation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudV1InstallationAdapter.java"
+  ],
+  "boundaryPatches": {
+    "tests/test_m4_phase_b_boundary.py": [
+      {
+        "before": "\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]",
+        "after": "Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]"
+      },
+      {
+        "before": "ROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "ROOT = Path(__file__).resolve().parents[1]\nPHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'\nPHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}\n"
+      },
+      {
+        "before": "            self.assertEqual(expected, git_blob_digest((ROOT / path).read_bytes()), path)",
+        "after": "            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, git_blob_digest((ROOT / path).read_bytes()), path)"
+      },
+      {
+        "before": "        actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}",
+        "after": "        if PHASE_F:\n            new_files.add(PHASE_F['adapterFile'])\n        actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}"
+      },
+      {
+        "before": "            if path == PHASE_C.get('authorizedPersistenceExtraction'):\n                continue\n            source =",
+        "after": "            if path == PHASE_C.get('authorizedPersistenceExtraction') or path in PHASE_F.get('authorizedProductionChanges', []):\n                continue\n            source ="
+      }
+    ],
+    "tests/test_m4_phase_c_boundary.py": [
+      {
+        "before": "\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]",
+        "after": "Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]"
+      },
+      {
+        "before": "ROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "ROOT = Path(__file__).resolve().parents[1]\nPHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'\nPHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}\n"
+      },
+      {
+        "before": "            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)",
+        "after": "            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)"
+      },
+      {
+        "before": "        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}",
+        "after": "        if PHASE_F:\n            expected.add(PHASE_F['adapterFile'])\n        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}"
+      },
+      {
+        "before": "            if path != PHASE_E.get('installerFile'):\n",
+        "after": "            if path != PHASE_E.get('installerFile') and path not in PHASE_F.get('authorizedLiveCallers', []):\n"
+      },
+      {
+        "before": "        source = path.read_text(encoding='utf-8')\n        tail =",
+        "after": "        source = path.read_text(encoding='utf-8')\n        for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(\n                'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):\n            source = source.replace(patch['after'], patch['before'])\n        tail ="
+      }
+    ],
+    "tests/test_m4_phase_d_boundary.py": [
+      {
+        "before": "\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]",
+        "after": "Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]"
+      },
+      {
+        "before": "ROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "ROOT = Path(__file__).resolve().parents[1]\nPHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'\nPHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}\n"
+      },
+      {
+        "before": "            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)",
+        "after": "            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)"
+      },
+      {
+        "before": "        actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}",
+        "after": "        if PHASE_F:\n            expected.add(PHASE_F['adapterFile'])\n        actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}"
+      },
+      {
+        "before": "            if relative != PHASE_E.get('installerFile'):\n",
+        "after": "            if relative != PHASE_E.get('installerFile') and relative not in PHASE_F.get('authorizedLiveCallers', []):\n"
+      },
+      {
+        "before": "        source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')\n        for anchor, frozen",
+        "after": "        source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')\n        for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(\n                'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):\n            source = source.replace(patch['after'], patch['before'])\n        for anchor, frozen"
+      },
+      {
+        "before": "            self.assertNotIn(token, client)\n",
+        "after": "            if token != 'InstallRequest' or not PHASE_F:\n                self.assertNotIn(token, client)\n"
+      }
+    ],
+    "tests/test_m4_phase_e_boundary.py": [
+      {
+        "before": "\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]",
+        "after": "Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]"
+      },
+      {
+        "before": "ROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "ROOT = Path(__file__).resolve().parents[1]\nPHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'\nPHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}\n"
+      },
+      {
+        "before": "            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)",
+        "after": "            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)"
+      },
+      {
+        "before": "            self.assertNotIn('PackageInstaller', source, name)",
+        "after": "            if str((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).relative_to(ROOT)) not in PHASE_F.get('authorizedLiveCallers', []):\n                self.assertNotIn('PackageInstaller', source, name)"
+      },
+      {
+        "before": "        self.assertEqual(prior | {INSTALLER}, actual)",
+        "after": "        self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()), actual)"
+      },
+      {
+        "before": "        self.assertEqual([INSTALLER], callers)",
+        "after": "        self.assertEqual(sorted([INSTALLER] + PHASE_F.get('authorizedLiveCallers', [])), sorted(callers))"
+      },
+      {
+        "before": "            previous = without_phase_e_accounting(relative, source)",
+        "after": "            if PHASE_F:\n                for patch in reversed(PHASE_F['boundaryPatches'].get(relative, [])):\n                    source = source.replace(patch['after'], patch['before'])\n            previous = without_phase_e_accounting(relative, source)"
+      }
+    ],
+    ".github/scripts/m4-phase-a-test-summary.py": [
+      {
+        "before": "Phase E adds executed orchestration, readback, real-Video and historical-cache buckets.\n",
+        "after": "Phase E adds executed orchestration, readback, real-Video and historical-cache buckets.\nPhase F adds actual Cloud/owner/runtime/reset compatibility execution without dropping old cases.\n"
+      },
+      {
+        "before": "    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}",
+        "after": "    phase_f_path = root / '.github/scripts/m4-phase-f-baseline.json'\n    phase_f = json.loads(phase_f_path.read_text(encoding='utf-8')) if phase_f_path.exists() else {'phaseFSuites': {}}\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}"
+      },
+      {
+        "before": "**phase_e['phaseESuites']}",
+        "after": "**phase_e['phaseESuites'], **phase_f['phaseFSuites']}"
+      },
+      {
+        "before": "        'phaseECases': sum(phase_e['phaseESuites'].values()),",
+        "after": "        'phaseECases': sum(phase_e['phaseESuites'].values()),\n        'phaseFCases': sum(phase_f['phaseFSuites'].values()),"
+      },
+      {
+        "before": "; Phase E: {summary[\"phaseECases\"]}",
+        "after": "; Phase E: {summary[\"phaseECases\"]}; Phase F: {summary[\"phaseFCases\"]}"
+      },
+      {
+        "before": "Phase A/B/C/D/E",
+        "after": "Phase A/B/C/D/E/F"
+      }
+    ],
+    ".github/workflows/android-debug.yml": [
+      {
+        "before": "Phase A/B/C/D/E",
+        "after": "Phase A/B/C/D/E/F"
+      }
+    ]
+  },
+  "testPatches": {
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java": [
+      {
+        "before": "CloudControlClient",
+        "after": "M4PhaseFHistoricalCloudClient"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseATransportTest.java": [
+      {
+        "before": "CloudControlClient",
+        "after": "M4PhaseFHistoricalCloudClient"
+      },
+      {
+        "before": "        URL.setURLStreamHandlerFactory(protocol->\"https\".equals(protocol)?new URLStreamHandler() {\n            /** The only permitted URL is the current deterministic fixture exchange. */\n            @Override protected URLConnection openConnection(URL url) throws java.io.IOException {\n                Exchange exchange=EXCHANGE.get();\n                if (exchange==null||!\"m4-characterization.invalid\".equals(url.getHost()))\n                    throw new java.io.IOException(\"Unexpected test transport target\");\n                return exchange.connection(url);\n            }\n        }:null);",
+        "after": "        M4PhaseFHttps.register(\"m4-characterization.invalid\",url->{\n            // The only permitted URL is the current deterministic fixture exchange.\n            Exchange exchange=EXCHANGE.get();\n            if(exchange==null)throw new java.io.IOException(\"Unexpected test transport target\");\n            return exchange.connection(url);\n        });"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java": [
+      {
+        "before": "CloudControlClient",
+        "after": "M4PhaseFHistoricalCloudClient"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java": [
+      {
+        "before": "CloudControlClient",
+        "after": "M4PhaseFHistoricalCloudClient"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetAsyncTest.java": [
+      {
+        "before": "new CloudControlClient(",
+        "after": "M4PhaseFResetFixture.client("
+      }
+    ]
+  },
+  "microProductionPatches": {
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java": [
+      {
+        "before": "    public void clearHistorical() {\n        synchronized (backend.monitor()) {backend.commit(Collections.emptyMap(),Collections.emptySet(),true);}\n    }\n\n",
+        "after": "    public void clearHistorical() {\n        clearAll();\n    }\n\n    /** Atomically clear this installation file, including generic state, residue and ACK; never reset identity. */\n    public boolean clearAll() {\n        synchronized (backend.monitor()) {\n            try {return backend.commit(Collections.emptyMap(),Collections.emptySet(),true);}\n            catch (RuntimeException failed) {return false;}\n        }\n    }\n\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java": [
+      {
+        "before": "    CloudTrackRepository(Context context) {\n        InstallationStore store=new InstallationStore(new AndroidInstallationBackend(context));",
+        "after": "    CloudTrackRepository(Context context) {\n        this(new InstallationStore(new AndroidInstallationBackend(context)));\n    }\n    /** Share the service's sole store for transitional historical startup; live installs bypass this facade. */\n    CloudTrackRepository(InstallationStore store) {"
+      }
+    ]
+  },
+  "protectedClientMethods": {
+    "void start()": "f40398b518ae354a273f3294932f869e29ccbd8499afd12c7192bfbb7575f60f",
+    "void activate()": "f67f9d6472948f78591ae5a28b02833829eec8ac6d0d55cbed4c005b1ec1aa23",
+    "void disconnect()": "5f4d00ee3e422b598e8b71f391b6fd6d39fe16ea3785628178c7db3b1d98e6ba",
+    "void stop()": "4fbddc75b39c18b29b09100b19ef8e41ecaa6bebfe06fa8de7bec9eb0cede58b",
+    "private void poll()": "36d8688cf172574038b28bacf968b1b13513812fc379157178d201b454e63bca",
+    "private static RuntimeDiagnostics.CloudErrorCode classify(Throwable error)": "8bd5a608e436aae44f251795780133e7802d2481768f3e6ae26a17951c4492d4",
+    "static RuntimeDiagnostics.CloudErrorCode activationErrorCode(int status)": "25dc619f9a1bda055e7b57e2cb66c1ad85232e04b5d27b1c67f8e3b713caed19",
+    "private void publishCloudState()": "f7d82739e59518f5be53d7002af11f47c6fac57ea0109b04cf4a29061fa66dc3",
+    "private void checkActivation()": "0c5fdb984041ec837e1e83d8cef42685f356fbb97d497f4eace3b9f5128fc146",
+    "private Reply http(String method,String path,String token,JSONObject body)": "3898cad653ecce8fb96ab132f93df8b9b28df2de24a38669db2aa51d5595d240"
+  },
+  "protectedServiceMethods": {
+    "static long installManifestedRevision(": "64f8887ce4cb6a3554bf61781d8dc4c205895dcee35f929794549712147e5ba7",
+    "static long confirmManifestedRevisionArmed(": "12a50a4903e45bbc8d2f6418a13aa06821ccc61593f0f9a2aa562155020ec04c",
+    "static long activateLegacyRevision(": "90b56f56820110b8a7db1fb533d2e61f5a73be6128b488e2ec7859066430d72f",
+    "static boolean shouldShowOnEntry(": "7f2c22a4f80ccda8f4b540d43be46054ef21e2105a9d392ead4c6818aee45952",
+    "static boolean shouldRestoreBadgeOnExpiry(": "e4d39a6312e5f16e069ed52429115e0d1c42543c89b2cda5f45fcc9626fca5f8",
+    "static boolean shouldReconstructCloudClient(": "87aebac47396a252c1ec30644b48a5e6e7ccb4eb403c63a61ead136b274a21bc"
+  },
+  "historicalClientFile": "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalCloudClient.java",
+  "phaseFSuites": {
+    "M4PhaseFAdapterRejectionTest": 20,
+    "M4PhaseFAdapterTest": 7,
+    "M4PhaseFCapabilityDiagnosticsTest": 5,
+    "M4PhaseFClearStoreTest": 10,
+    "M4PhaseFCloudClientTest": 30,
+    "M4PhaseFCorruptionTest": 6,
+    "M4PhaseFHistoricalRedeliveryTest": 6,
+    "M4PhaseFNonArmedTest": 9,
+    "M4PhaseFOwnerGateTest": 6,
+    "M4PhaseFResetTest": 12,
+    "M4PhaseFRuntimeFailureTest": 18,
+    "M4PhaseFRuntimeTest": 9
+  },
+  "boundaryBlobs": {
+    "tests/test_m4_phase_b_boundary.py": "5412a669c060a1353ba34aea6ed0427eaa03430a",
+    "tests/test_m4_phase_c_boundary.py": "3cd3a6a67c5a789d5012af58f493cdafff72ca60",
+    "tests/test_m4_phase_d_boundary.py": "1a80bc0e2445ab625f50457f71036e2067ead0ad",
+    "tests/test_m4_phase_e_boundary.py": "159682dd8a6ca6534cacfc510d2d15aac3a5a346",
+    ".github/scripts/m4-phase-a-test-summary.py": "634196ec25bf4b86ad999aed0b51c1a9813be981",
+    ".github/workflows/android-debug.yml": "bf63a0c686cc1a3f4bfcf57c0fce918f962baf84"
+  }
+}

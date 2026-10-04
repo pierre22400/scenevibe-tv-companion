@@ -98,9 +98,9 @@ public final class AssignmentMutationGateTest {
     }
 
     /** Wire the same installer cores used by the production OverlayService. */
-    private static CloudControlClient.ManifestInstaller installer(CloudTrackRepository cache,
+    private static M4PhaseFHistoricalCloudClient.ManifestInstaller installer(CloudTrackRepository cache,
             MediaSyncedTrackScheduler scheduler,SceneRuntimeController controller) {
-        return new CloudControlClient.ManifestInstaller() {
+        return new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
             /** Install and arm via the production cache/bridge/regie chain. */
             @Override public boolean install(long revision,String runtime,String manifest) {
                 return OverlayService.installManifestedRevision(cache,scheduler,controller,
@@ -146,28 +146,28 @@ public final class AssignmentMutationGateTest {
             WindowSink sink=new WindowSink(owner);
             SceneRuntimeController controller=new SceneRuntimeController(sink);
             MediaSyncedTrackScheduler scheduler=scheduler(controller);
-            CloudControlClient.ManifestInstaller installer=installer(cache,scheduler,controller);
-            assertTrue(CloudControlClient.applyAssignment(owner.gate,()->true,4,runtime,manifest,
+            M4PhaseFHistoricalCloudClient.ManifestInstaller installer=installer(cache,scheduler,controller);
+            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,4,runtime,manifest,
                     cache,scheduler,installer));
             ScheduledTrack track=TrackParser.parse(e.getJSONObject("runtimeTrack"),media->null);
             owner.gate.call(()->{controller.onEligibility(true);
                 controller.onCommentDue(track.comments.get(0));return null;});
             assertTrue(sink.visible);
 
-            assertTrue(CloudControlClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,
+            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,
                     cache,scheduler,installer));
             assertFalse("old scene must be retired before ACK eligibility",sink.visible);
             assertEquals(5,cache.revision());assertEquals(5,controller.activeRevision());
             assertTrue(cache.markAcknowledged(5));
             int hides=sink.hides;
-            assertTrue(CloudControlClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,
+            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,
                     cache,scheduler,installer));
             assertEquals("redelivery does not retire anything again",hides,sink.hides);
 
             owner.gate.call(()->{controller.onEligibility(true);
                 controller.onCommentDue(track.comments.get(0));return null;});
             assertTrue(sink.visible);
-            assertTrue(CloudControlClient.applyAssignment(owner.gate,()->true,6,runtime,null,
+            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,6,runtime,null,
                     cache,scheduler,installer));
             assertFalse(sink.visible);assertNull(memory.get("manifest"));
             assertFalse(controller.hasActiveManifest());
@@ -184,8 +184,8 @@ public final class AssignmentMutationGateTest {
             WindowSink sink=new WindowSink(owner);SceneRuntimeController controller=
                     new SceneRuntimeController(sink);
             MediaSyncedTrackScheduler scheduler=scheduler(controller);
-            CloudControlClient.ManifestInstaller installer=installer(cache,scheduler,controller);
-            assertTrue(CloudControlClient.applyAssignment(owner.gate,()->true,4,runtime,manifest,
+            M4PhaseFHistoricalCloudClient.ManifestInstaller installer=installer(cache,scheduler,controller);
+            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,4,runtime,manifest,
                     cache,scheduler,installer));
             ScheduledTrack track=TrackParser.parse(e.getJSONObject("runtimeTrack"),media->null);
             owner.gate.call(()->{controller.onEligibility(true);
@@ -241,7 +241,7 @@ public final class AssignmentMutationGateTest {
             posted.countDown();},()->false);
         CloudTrackRepository cache=new CloudTrackRepository(new Memory());
         Thread caller=new Thread(()->{
-            try {result.set(CloudControlClient.applyAssignment(gate,current::get,4,"unused",
+            try {result.set(M4PhaseFHistoricalCloudClient.applyAssignment(gate,current::get,4,"unused",
                     null,cache,null,null));}
             catch(Throwable error){failure.set(error);}
             finally {finished.countDown();}
