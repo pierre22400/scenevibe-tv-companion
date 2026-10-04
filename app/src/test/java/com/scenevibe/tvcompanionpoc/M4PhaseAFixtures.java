@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import static org.junit.Assert.*;
@@ -41,7 +42,9 @@ final class M4PhaseAFixtures {
         JSONObject fixture=resource(manifested?"/m4/video-manifested-cache-v1.json"
                 :"/m4/video-legacy-cache-v1.json");
         Memory memory=new Memory();
-        for (String key:fixture.keySet()) memory.values.put(key,fixture.getString(key));
+        for (Iterator<String> keys=fixture.keys();keys.hasNext();) {
+            String key=keys.next();memory.values.put(key,fixture.getString(key));
+        }
         return memory;
     }
 
