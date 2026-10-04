@@ -128,7 +128,15 @@ public final class InstallationStore {
 
     /** Retain the historical explicit cache-reset operation without touching any other preference file. */
     public void clearHistorical() {
-        synchronized (backend.monitor()) {backend.commit(Collections.emptyMap(),Collections.emptySet(),true);}
+        clearAll();
+    }
+
+    /** Atomically clear this installation file, including generic state, residue and ACK; never reset identity. */
+    public boolean clearAll() {
+        synchronized (backend.monitor()) {
+            try {return backend.commit(Collections.emptyMap(),Collections.emptySet(),true);}
+            catch (RuntimeException failed) {return false;}
+        }
     }
 
     /** Infer only artifact-key shape; semantic product/coherence validation remains outside the store. */

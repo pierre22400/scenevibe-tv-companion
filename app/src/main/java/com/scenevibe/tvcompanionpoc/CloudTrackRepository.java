@@ -39,7 +39,10 @@ final class CloudTrackRepository {
     private final Storage storage;
     /** Wraps SharedPreferences.commit so a successful return means both fields are durable. */
     CloudTrackRepository(Context context) {
-        InstallationStore store=new InstallationStore(new AndroidInstallationBackend(context));
+        this(new InstallationStore(new AndroidInstallationBackend(context)));
+    }
+    /** Share the service's sole store for transitional historical startup; live installs bypass this facade. */
+    CloudTrackRepository(InstallationStore store) {
         storage=new Storage() {
             /** Delegate raw historical reads without interpreting generic installation state. */
             @Override public String get(String key) {return store.historicalValue(key);}
