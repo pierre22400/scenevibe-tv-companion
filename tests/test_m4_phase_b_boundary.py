@@ -13,10 +13,14 @@ Compilation uses an empty classpath/sourcepath, so Android, JSON, Cloud and Vide
 classes cannot become accidental dependencies. Git blob hashes come from the actual
 starting GitHub tree; they protect existing callers, wire, persistence, identity,
 permissions, signature configuration and every existing characterization test.
+Phase C permits only its explicit store files and the constructor-only persistence
+extraction, balanced by the additional Phase C byte/scope boundary tests.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
+PHASE_C_PATH = ROOT / '.github/scripts/m4-phase-c-baseline.json'
+PHASE_C = json.loads(PHASE_C_PATH.read_text(encoding='utf-8')) if PHASE_C_PATH.exists() else {}
 
 
 def code_only(source):
@@ -75,6 +79,9 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         """Protect production behavior and all retained tests using the starting GitHub blob hashes."""
         frozen = {**BASELINE['qualifiedRuntimeBlobs'], **BASELINE['frozenPhaseASourceBlobs']}
         for path, expected in frozen.items():
+            # The authorized constructor-only extraction is guarded separately by Phase C.
+            if path == PHASE_C.get('authorizedPersistenceExtraction'):
+                continue
             self.assertEqual(expected, git_blob_digest((ROOT / path).read_bytes()), path)
 
     def test_no_current_caller_or_future_phase_production_component_is_added(self):
@@ -82,10 +89,14 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         production = ROOT / 'app/src/main/java'
         old_files = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         new_files = set(BASELINE['genericModelFiles'])
+        new_files.update(PHASE_C.get('genericStoreFiles', []))
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)
         for path in old_files:
+            # Only the persistence facade may import the explicitly permitted store/backend.
+            if path == PHASE_C.get('authorizedPersistenceExtraction'):
+                continue
             source = code_only((ROOT / path).read_text(encoding='utf-8'))
             self.assertNotIn('com.scenevibe.tvcompanionpoc.installation', source, path)
             self.assertIsNone(re.search(r'\b(' + names + r')\b', source), path)

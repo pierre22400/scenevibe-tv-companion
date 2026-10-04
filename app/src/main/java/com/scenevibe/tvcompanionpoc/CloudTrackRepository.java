@@ -1,9 +1,16 @@
 package com.scenevibe.tvcompanionpoc;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 import org.json.JSONObject;
 import org.json.JSONArray;
+
+/**
+ * Phase C moves Android persistence mechanics under InstallationStore. This compatibility
+ * repository retains its exact Video parsers, scheduler/restore sequence, revision checks
+ * and test seam. Current callers still use the historical tuple, never generic handlers.
+ */
 
 /** Persists one validated text-only runtime track and its revision in app-private storage. */
 final class CloudTrackRepository {
@@ -31,30 +38,29 @@ final class CloudTrackRepository {
     private final Storage storage;
     /** Wraps SharedPreferences.commit so a successful return means both fields are durable. */
     CloudTrackRepository(Context context) {
-        SharedPreferences prefs=context.getApplicationContext().getSharedPreferences("cloud_track",Context.MODE_PRIVATE);
+        InstallationStore store=new InstallationStore(new AndroidInstallationBackend(context));
         storage=new Storage() {
-            @Override public String get(String key) {return prefs.getString(key,null);}
+            /** Delegate raw historical reads without interpreting generic installation state. */
+            @Override public String get(String key) {return store.historicalValue(key);}
+            /** Keep legacy removal of a stale manifest inside the same durable batch. */
             @Override public boolean save(long revision,String json) {
                 // Legacy Case A (no manifest): persist revision + runtime and remove any stale
                 // manifest in the SAME commit so a disconnected revision never keeps an older
                 // revision's manifest. Observable no-manifest behavior is otherwise unchanged.
-                return prefs.edit().putString("revision",String.valueOf(revision))
-                        .putString("runtime",json).remove("manifest").commit();
+                return store.saveHistorical(revision,json,null);
             }
+            /** Delegate the complete historical tuple to the sole Android persistence owner. */
             @Override public boolean save(long revision,String runtimeJson,String manifestJson) {
                 // Atomic manifested install: revision + runtime + manifest all durable in one
                 // commit, or none of them. A null manifest removes any stale manifest key.
-                SharedPreferences.Editor editor=prefs.edit()
-                        .putString("revision",String.valueOf(revision))
-                        .putString("runtime",runtimeJson);
-                if(manifestJson==null)editor.remove("manifest");
-                else editor.putString("manifest",manifestJson);
-                return editor.commit();
+                return store.saveHistorical(revision,runtimeJson,manifestJson);
             }
+            /** Record the confirmed exact historical revision, never transmit its ACK. */
             @Override public boolean saveAck(long revision) {
-                return prefs.edit().putString("ackRevision",String.valueOf(revision)).commit();
+                return store.saveHistoricalAcknowledgement(revision);
             }
-            @Override public void clear() {prefs.edit().clear().commit();}
+            /** Retain explicit reset/corruption clearing of this cache file only. */
+            @Override public void clear() {store.clearHistorical();}
         };
     }
     /** Injectable persistence boundary for deterministic JVM tests. */

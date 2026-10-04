@@ -44,9 +44,9 @@ jobs:
         run: python3 -m unittest discover -s tests
       - name: Build and lint debug APK (Cloud not configured)
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
-      - name: Verify Phase A/B executed test counts and frozen fixtures
+      - name: Verify Phase A/B/C executed test counts and frozen fixtures
         run: python3 .github/scripts/m4-phase-a-test-summary.py
-      - name: Upload bounded Phase A/B test summary
+      - name: Upload bounded Phase A/B/C test summary
         uses: actions/upload-artifact@v4
         with:
           name: scenevibe-m4-phase-a-test-summary
