@@ -15,6 +15,7 @@ and injectable seam remain byte-exact; current owners cannot route through handl
 The Phase B exception is balanced by exact Phase C scope and retained-source checks.
 Phase D preserves this store byte-for-byte and adds narrowly authorized handler-owned
 semantics; frozen historical reference and orchestration fragments guard that exception.
+Phase E adds only its explicitly inventoried orchestration class; the store remains pinned.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,8 @@ BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-c-baseline.json').read_t
 PHASE_B = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
 PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
 PHASE_D = json.loads(PHASE_D_PATH.read_text(encoding='utf-8')) if PHASE_D_PATH.exists() else {}
+PHASE_E_PATH = ROOT / '.github/scripts/m4-phase-e-baseline.json'
+PHASE_E = json.loads(PHASE_E_PATH.read_text(encoding='utf-8')) if PHASE_E_PATH.exists() else {}
 
 
 def code_only(source):
@@ -105,13 +108,16 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         old.add(BASELINE['authorizedPersistenceExtraction'])
         expected = old | set(BASELINE['genericStoreFiles'])
         expected.update(PHASE_D.get('videoHandlerFiles', []))
+        if PHASE_E:
+            expected.add(PHASE_E['installerFile'])
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
         self.assertEqual(expected, actual)
         for path in actual:
             source = code_only((ROOT / path).read_text(encoding='utf-8'))
             if path not in PHASE_D.get('videoHandlerFiles', []):
                 self.assertIsNone(re.search(r'\bimplements\s+InstallationHandler\b', source), path)
-            self.assertNotIn('PackageInstaller', source, path)
+            if path != PHASE_E.get('installerFile'):
+                self.assertNotIn('PackageInstaller', source, path)
         for path, digest in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_D.get('additiveContractFiles', []):
                 continue

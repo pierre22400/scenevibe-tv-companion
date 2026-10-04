@@ -9,10 +9,13 @@ import unittest
 The frozen reference is the actual starting repository, changed only in name/comments.
 Byte-pinned runtime/store/configuration/test blobs and unchanged orchestration fragments
 balance the narrow repository/typed-state exceptions to the older Phase B/C gates.
+Phase E permits its one generic orchestrator definition, never a current-caller cutover.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-d-baseline.json').read_text(encoding='utf-8'))
+PHASE_E_PATH = ROOT / '.github/scripts/m4-phase-e-baseline.json'
+PHASE_E = json.loads(PHASE_E_PATH.read_text(encoding='utf-8')) if PHASE_E_PATH.exists() else {}
 PRODUCTION = ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc'
 
 
@@ -36,7 +39,8 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         forbidden += r'CloudProtocol|CloudDeviceCredentials|FinalTrack|Banner|Language|PackageInstaller)\b'
         for path in (PRODUCTION / 'installation').glob('*.java'):
             source = code_only(path.read_text(encoding='utf-8'))
-            self.assertIsNone(re.search(forbidden, source), path.name)
+            pattern = forbidden.replace('|PackageInstaller', '') if str(path.relative_to(ROOT)) == PHASE_E.get('installerFile') else forbidden
+            self.assertIsNone(re.search(pattern, source), path.name)
             for token in ('java.net.', 'org.json.', 'java.lang.reflect.', 'Class.forName', 'ServiceLoader'):
                 self.assertNotIn(token, source, path.name)
             if path.name != 'AndroidInstallationBackend.java':
@@ -90,12 +94,15 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         """Permit exactly the Phase D files/handlers while Cloud transport and service remain frozen callers."""
         old = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         expected = old | set(BASELINE['additiveContractFiles']) | {BASELINE['authorizedSemanticDelegation']} | set(BASELINE['videoHandlerFiles'])
+        if PHASE_E:
+            expected.add(PHASE_E['installerFile'])
         actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}
         self.assertEqual(expected, actual)
         implementations = []
         for relative in actual:
             source = code_only((ROOT / relative).read_text(encoding='utf-8'))
-            self.assertNotIn('PackageInstaller', source, relative)
+            if relative != PHASE_E.get('installerFile'):
+                self.assertNotIn('PackageInstaller', source, relative)
             if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)', source):
                 implementations.append(Path(relative).name)
         self.assertEqual(['VideoLegacyInstallationHandler.java', 'VideoManifestInstallationHandler.java'], sorted(implementations))

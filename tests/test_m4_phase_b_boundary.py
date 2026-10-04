@@ -17,6 +17,7 @@ Phase C permits only its explicit store files and the constructor-only persisten
 extraction, balanced by the additional Phase C byte/scope boundary tests.
 Phase D adds only its explicit Video-side files and typed prepared-state contract;
 the Phase D differential and scope gates protect the authorized semantic extraction.
+Phase E admits exactly its isolated PackageInstaller, with no existing-caller exception.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,8 @@ PHASE_C_PATH = ROOT / '.github/scripts/m4-phase-c-baseline.json'
 PHASE_C = json.loads(PHASE_C_PATH.read_text(encoding='utf-8')) if PHASE_C_PATH.exists() else {}
 PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
 PHASE_D = json.loads(PHASE_D_PATH.read_text(encoding='utf-8')) if PHASE_D_PATH.exists() else {}
+PHASE_E_PATH = ROOT / '.github/scripts/m4-phase-e-baseline.json'
+PHASE_E = json.loads(PHASE_E_PATH.read_text(encoding='utf-8')) if PHASE_E_PATH.exists() else {}
 
 
 def code_only(source):
@@ -95,6 +98,8 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         new_files = set(BASELINE['genericModelFiles'])
         new_files.update(PHASE_C.get('genericStoreFiles', []))
         new_files.update(PHASE_D.get('videoHandlerFiles', []))
+        if PHASE_E:
+            new_files.add(PHASE_E['installerFile'])
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)
