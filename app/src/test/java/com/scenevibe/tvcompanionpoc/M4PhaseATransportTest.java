@@ -1,6 +1,7 @@
 package com.scenevibe.tvcompanionpoc;
 
 import org.json.JSONObject;
+import org.json.JSONException;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -8,6 +9,7 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -76,7 +78,8 @@ public final class M4PhaseATransportTest {
                 /** Capture exactly the bytes serialized by the real client. */
                 @Override public OutputStream getOutputStream() {return posted;}
                 /** Observe ACK only after the durable/live state has become coherent. */
-                @Override public int getResponseCode() {
+                @Override public int getResponseCode() throws IOException {
+                    try {
                     if ("GET".equals(getRequestMethod())) {
                         getPath=url.getPath()+"?"+url.getQuery();return 200;
                     }
@@ -93,17 +96,27 @@ public final class M4PhaseATransportTest {
                         assertEquals("/api/v1/devices/"+assignment.getString("deviceId")+"/ack",url.getPath());
                     }
                     return ackStatus;
+                    } catch (JSONException invalid) {
+                        throw new IOException("Invalid test response fixture");
+                    }
                 }
                 /** Return fixture bytes with the same UTF-8 boundary as the real server. */
-                @Override public InputStream getInputStream() {
+                @Override public InputStream getInputStream() throws IOException {
+                    try {
                     JSONObject body="GET".equals(getRequestMethod())?assignment:new JSONObject()
                             .put("deviceId",assignment.getString("deviceId"))
                             .put("revision",assignment.getLong("revision")+(badConfirmation?1:0))
                             .put("deliveryStatus","acknowledged");
                     return new ByteArrayInputStream(body.toString().getBytes(StandardCharsets.UTF_8));
+                    } catch (JSONException invalid) {
+                        throw new IOException("Invalid test response fixture");
+                    }
                 }
                 /** The real client's error path reads this bounded synthetic response. */
-                @Override public InputStream getErrorStream() {return getInputStream();}
+                @Override public InputStream getErrorStream() {
+                    try {return getInputStream();}
+                    catch (IOException invalid) {throw new IllegalStateException("Invalid test response fixture");}
+                }
                 /** There is no negotiated TLS session in an in-process byte substitute. */
                 @Override public String getCipherSuite() {return "TEST_ONLY";}
                 /** No local certificate is used by the fixture transport. */
