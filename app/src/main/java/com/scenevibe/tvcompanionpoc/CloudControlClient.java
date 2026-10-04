@@ -5,6 +5,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import org.json.JSONObject;
+import com.scenevibe.tvcompanionpoc.installation.InstallRequest;
+import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
+import com.scenevibe.tvcompanionpoc.installation.PackageInstaller;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,94 +26,45 @@ import javax.net.ssl.HttpsURLConnection;
  * window owner, so scheduler callbacks cannot race an incomplete renderer handoff.
  */
 final class CloudControlClient {
-    /**
-     * Durable manifested-install seam supplied by {@link OverlayService} (section 7). The
-     * client only moves bytes; this installer performs the cross-contract validation (via the
-     * bridge), the atomic runtime+manifest persistence (via {@link CloudTrackRepository}), the
-     * scheduler load and the regie arm. It returns true only when ALL of those succeeded for
-     * the given revision; a false result means the client must NOT ACK and must keep the prior
-     * cache intact. It never receives or returns comment/scene content or a secret.
-     */
-    interface ManifestInstaller {
-        boolean install(long revision,String runtimeJson,String manifestJson);
-        /**
-         * Defensive re-arm for a re-delivered manifested assignment at {@code revision <= cached}
-         * (section 7/14): the durable install already happened on a prior cycle, so NOTHING is
-         * re-persisted and the ACK protocol is unchanged, but the regie must be confirmed armed
-         * for the cached manifested revision before this benign idempotent re-ACK fires. It
-         * returns true when the regie holds (or was armed to hold) the cached manifested
-         * revision; false means the cache has no durable manifest for it, so the manifested
-         * re-delivery must fail closed (no ACK) rather than ACK a revision the regie cannot
-         * drive. It never re-persists, never changes the active revision downward, and never
-         * carries comment/scene content or a secret.
-         */
-        boolean confirmArmed(long revision);
-        /**
-         * Production regie hand-off after a LEGACY no-manifest revision has been installed
-         * durably. The service must disarm any previously loaded manifested revision and make
-         * this legacy revision the active visual revision BEFORE the ACK can be sent. Standalone
-         * legacy clients/tests without a regie keep their historical behavior through this
-         * default no-op success.
-         */
-        default boolean activateLegacy(long revision) {return true;}
+    /** Generic local call seam; production binds the one service-owned PackageInstaller. */
+    interface InstallationOperation {
+        /** Complete one local installation; this operation neither sends nor persists an ACK. */
+        InstallationStatus install(InstallRequest request,InstallationHandler.RuntimePorts ports);
     }
     private static final String TAG="SceneVibeCloud";
     private static final int LIMIT=3_000_000;
-    /**
-     * Bounded watchdog for the asynchronous reset: if the queued wipe has not completed within
-     * this window a bounded diagnostic is surfaced. This never blocks the calling (Android
-     * main) thread; it runs on a throwaway daemon thread and only emits an observational code.
-     */
+    /** Bounded observational watchdog never waits on the Android reset caller. */
     private static final long RESET_WATCHDOG_SECONDS=15;
     private final ScheduledExecutorService io;
-    /**
-     * Separate one-shot fallback execution boundary used only if the primary Cloud io executor
-     * is already shut down when Reset is requested. Production always dispatches this work to
-     * a daemon thread so the Android caller is never used as the reset worker.
-     */
+    /** One-shot asynchronous fallback is used only when the primary executor is spent. */
     private final java.util.concurrent.Executor resetFallback;
-    /** Destructive-reset hook that rotates ONLY the non-secret local installation identity. */
+    /** Rotate only the separate non-secret installation identity on exceptional reset. */
     private final Runnable resetInstallationIdentity;
     private final CloudDeviceCredentials identity;
-    private final CloudTrackRepository cache;
-    private final MediaSyncedTrackScheduler scheduler;
-    /**
-     * Smallest possible seam for the regie-accept step of the ACK invariant (section 7). The
-     * client never contains graphics or cross-contract rules; when an assignment carries an
-     * OverlayManifest the client hands the raw runtime+manifest JSON to this installer, which
-     * (in {@link OverlayService}) validates cross-contract via {@link VideoOverlayManifestBridge},
-     * persists atomically via the FEAT-002 repository, loads the scheduler and arms the
-     * {@link SceneRuntimeController}. It returns true ONLY when the whole durable install +
-     * scheduler accept + regie accept chain succeeded; false means NO ACK. It is null in the
-     * no-manifest/legacy test constructors, in which case a manifested assignment fails closed.
-     */
-    private final ManifestInstaller manifestInstaller;
-    /** Owner-thread application gate; network fetch and ACK stay on io. */
+    private final InstallationStore store;
+    private final InstallationOperation installation;
+    private final InstallationHandler.RuntimePorts runtimePorts;
+    /** Runtime-only reset supplied by the service; it knows no durable or network state. */
+    private final Runnable resetRuntime;
+    /** All local runtime mutations complete on the Android owner before HTTP ACK. */
     private final AssignmentMutationGate mutations;
-    /** Local stable id from InstallationIdentity; used ONLY as the activation installationId. */
+    /** Service identity proof is rechecked after dispatch, in addition to running. */
+    private final java.util.function.BooleanSupplier currentClient;
     private final String installationId;
     private final String origin;
     private volatile boolean running;
     private int failures;
-    /** Links the outbound client to an already created passive MediaSession scheduler. */
-    CloudControlClient(Context context, CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
-        this(context,cache,scheduler,null);
-    }
-    /**
-     * Production constructor used by {@link OverlayService}: in addition to the scheduler it
-     * takes the {@link ManifestInstaller} seam so a manifested assignment can be installed
-     * atomically and armed in the regie before the ACK (section 7). A null installer keeps the
-     * legacy no-manifest behavior and fails a manifested assignment closed (no ACK).
-     */
-    CloudControlClient(Context context, CloudTrackRepository cache,
-            MediaSyncedTrackScheduler scheduler,ManifestInstaller manifestInstaller) {
+
+    /** Bind the service's single generic stack; only this constructor creates Android transport owners. */
+    CloudControlClient(Context context,InstallationStore store,PackageInstaller installer,
+            InstallationHandler.RuntimePorts runtimePorts,Runnable resetRuntime,
+            java.util.function.Supplier<CloudControlClient> currentClient) {
         this.io=Executors.newSingleThreadScheduledExecutor();
         this.resetFallback=CloudControlClient::startResetFallbackThread;
         this.resetInstallationIdentity=()->new InstallationIdentity(context).rotateForCloudReset();
         this.identity=new CloudDeviceCredentials(context);
-        this.cache=cache;
-        this.scheduler=scheduler;
-        this.manifestInstaller=manifestInstaller;
+        this.store=store;this.installation=installer::install;this.runtimePorts=runtimePorts;
+        this.resetRuntime=resetRuntime;this.currentClient=()->currentClient.get()==this;
         Handler main=new Handler(Looper.getMainLooper());
         this.mutations=new AssignmentMutationGate(work->{
             if(!main.post(work))throw new java.util.concurrent.RejectedExecutionException(
@@ -117,64 +73,29 @@ final class CloudControlClient {
         this.installationId=new InstallationIdentity(context).installationId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
     }
-    /**
-     * Injectable seam for deterministic JVM tests of the ASYNCHRONOUS reset. It takes the
-     * already-built cloud collaborators plus the single-thread scheduled executor so a test can
-     * drive {@link #reset(Runnable)} without an Android {@link Context} or a live HTTPS stack.
-     * The origin is left empty (so {@link #start()} is a no-op and no network is ever touched)
-     * and the installationId is a fixed non-secret placeholder; only the reset lifecycle -
-     * synchronous running-flip, wipe queued onto io, executor shutdown, async completion - is
-     * exercised. Production code always uses the {@link Context} constructor above.
-     */
+
+    /** Android-free local seam drives the actual client without starting network polling. */
     CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
-            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler) {
-        this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread,()->{});
+            InstallationStore store,InstallationOperation installation,
+            InstallationHandler.RuntimePorts runtimePorts,Runnable resetRuntime) {
+        this(io,identity,store,installation,runtimePorts,resetRuntime,
+                CloudControlClient::startResetFallbackThread,()->{},AssignmentMutationGate.direct(),()->true);
     }
-    /**
-     * Injectable seam carrying a {@link ManifestInstaller}, used only by the FEAT-004
-     * ACK-ordering tests so the manifested install+ack-decision can be driven deterministically
-     * without an Android {@link Context} or a live HTTPS stack. The origin is left empty so no
-     * network is ever touched.
-     */
+
+    /** Inject owner/lifetime/reset boundaries without accepting a product parser or runtime controller. */
     CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
-            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
-            ManifestInstaller manifestInstaller) {
-        this(io,identity,cache,scheduler,CloudControlClient::startResetFallbackThread,()->{},
-                manifestInstaller);
-    }
-    /**
-     * Extended injectable seam used only by reset tests so the rejected-primary-executor path
-     * can be driven deterministically without ever running fallback work on the test caller.
-     */
-    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
-            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
-            java.util.concurrent.Executor resetFallback) {
-        this(io,identity,cache,scheduler,resetFallback,()->{});
-    }
-    /**
-     * Full reset seam: tests may observe the installation-id rotation without Android storage.
-     * Production supplies a durable {@link InstallationIdentity#rotateForCloudReset()} hook.
-     */
-    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
-            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
-            java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity) {
-        this(io,identity,cache,scheduler,resetFallback,resetInstallationIdentity,null);
-    }
-    /** Full test seam including the manifested-install installer. */
-    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
-            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
+            InstallationStore store,InstallationOperation installation,
+            InstallationHandler.RuntimePorts runtimePorts,Runnable resetRuntime,
             java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity,
-            ManifestInstaller manifestInstaller) {
-        this.io=io;
-        this.resetFallback=resetFallback;
-        this.resetInstallationIdentity=resetInstallationIdentity;
-        this.identity=identity;
-        this.cache=cache;
-        this.scheduler=scheduler;
-        this.manifestInstaller=manifestInstaller;
-        this.mutations=AssignmentMutationGate.direct();
-        this.installationId="test-installation";
-        this.origin="";
+            AssignmentMutationGate mutations,java.util.function.BooleanSupplier currentClient) {
+        if(io==null||identity==null||store==null||installation==null||runtimePorts==null
+                ||resetRuntime==null||resetFallback==null||resetInstallationIdentity==null
+                ||mutations==null||currentClient==null)throw new IllegalArgumentException("Missing Cloud dependency");
+        this.io=io;this.identity=identity;this.store=store;this.installation=installation;
+        this.runtimePorts=runtimePorts;this.resetRuntime=resetRuntime;
+        this.resetFallback=resetFallback;this.resetInstallationIdentity=resetInstallationIdentity;
+        this.mutations=mutations;this.currentClient=currentClient;
+        this.installationId="test-installation";this.origin="";
     }
     /** Restores cached media in OverlayService before starting the first network fetch. */
     void start() {
@@ -274,24 +195,6 @@ final class CloudControlClient {
         return RuntimeDiagnostics.CloudErrorCode.PROTOCOL;
     }
     /**
-     * Android-free/testable Case-A transition used by {@link #fetchAssignment}. A NEW legacy
-     * revision first installs the runtimeTrack durably and loads the existing scheduler. After
-     * that succeeds, a production regie seam (when present) must disarm any previously loaded
-     * manifested revision and adopt the legacy revision before ACK is allowed. A re-delivered
-     * cached legacy revision skips persistence but re-confirms the same visual ownership.
-     *
-     * <p>Legacy-only clients/tests that have no regie installer preserve their historical
-     * behavior. Failure at either step returns false so the caller does not ACK.</p>
-     */
-    static boolean installLegacyRevision(long revision,long cached,String runtimeJson,
-            CloudTrackRepository cache,MediaSyncedTrackScheduler scheduler,
-            ManifestInstaller installer) {
-        if(revision<1||runtimeJson==null||cache==null||scheduler==null)return false;
-        if(revision>cached && !cache.install(revision,runtimeJson,scheduler))return false;
-        return installer==null || installer.activateLegacy(revision);
-    }
-
-    /**
      * Observational only: maps the current credential state to the bounded diagnostics cloud
      * state. Never influences a decision; the client's behavior is unchanged by this call.
      */
@@ -322,54 +225,42 @@ final class CloudControlClient {
             identity.clearExpiredActivation();Log.i(TAG,"Cloud activation expired");
         }
     }
-    /** Downloads only revisions beyond the last ACK; retries an unacknowledged cached revision. */
+    /** Read generic durable ACK, adapt on io, await owner installation and confirm ACK only after ARMED. */
     private void fetchAssignment() throws Exception {
-        String token=identity.deviceToken(), cloudDeviceId=identity.cloudDeviceId();
+        String token=identity.deviceToken(),cloudDeviceId=identity.cloudDeviceId();
         if(token==null||cloudDeviceId==null)return;
-        Reply reply=http("GET","devices/"+cloudDeviceId+"/assignment?afterRevision="+cache.acknowledged(),token,null);
-        // 204 = nothing newer, 404 = authenticated but no current assignment: both NORMAL, not offline.
+        InstallationStore.ReadResult durable=store.read();
+        if(durable.state()==InstallationStore.ReadState.CORRUPT)
+            throw new CloudException(RuntimeDiagnostics.CloudErrorCode.NETWORK,"Local installation cache unavailable");
+        Reply reply=http("GET","devices/"+cloudDeviceId+"/assignment?afterRevision="+durable.acknowledgedRevision(),token,null);
+        // 204 and authenticated 404 remain normal empty polling responses.
         if(reply.status==204||reply.status==404)return;
         if(reply.status==401) {
-            // Observational only: a bounded UNAUTHORIZED code. This never auto-resets the
-            // identity - Reset Cloud is a manual Diagnostics-only action.
             DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED);
             Log.w(TAG,"Cloud credential rejected");return;
         }
-        JSONObject data=reply.body;
-        if(reply.status!=200||data==null||!CloudProtocol.validAssignment(data,cloudDeviceId,cache.revision())) {
-            // A malformed/rejected assignment is a PROTOCOL failure. Carry that code on the
-            // exception so poll's catch reports PROTOCOL and never clobbers it with NETWORK.
+        CloudV1InstallationAdapter.Assignment assignment;
+        try {
+            if(reply.status!=200)throw new IllegalArgumentException("Invalid assignment status");
+            assignment=CloudV1InstallationAdapter.adapt(reply.body,cloudDeviceId);
+        } catch(RuntimeException malformed) {
             throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,"Invalid assignment response");
         }
-        long revision=data.optLong("revision",-1), cached=cache.revision();
-        // Observational only: record the highest assignment revision received.
+        InstallRequest request=assignment.request();
+        long revision=request.revision();
         DiagnosticsStore.INSTANCE.setLastAssignmentRevisionReceived(revision);
-        // During 0.10A migration the already-qualified runtimeTrack remains the source for
-        // media synchronisation. CloudProtocol has independently validated any additive
-        // OverlayManifest scene; the regie hand-off is layered beside this scheduler path.
-        JSONObject runtime=data.optJSONObject("runtimeTrack");
-        String finalTrackId=data.optString("finalTrackId","");
-        // 0.10A: an assignment MAY additively carry an OverlayManifest. Case B (manifested
-        // revision) must install runtimeTrack + manifest ATOMICALLY and arm the regie BEFORE
-        // the ACK (section 7). Case A (no manifest) stays exactly as before. The cross-contract
-        // rules live in VideoOverlayManifestBridge via the installer seam, never in this client.
-        JSONObject overlayManifest=data.optJSONObject("overlayManifest");
-        // Apply the whole live-state transition on the window owner, including the
-        // legacy scheduler.load path. Wait for durable install + arm; posting alone
-        // is insufficient to authorize the network ACK below.
-        if(!applyAssignment(mutations,()->running,revision,runtime.toString(),
-                overlayManifest==null?null:overlayManifest.toString(),cache,scheduler,
-                manifestInstaller))
-            throw new IllegalStateException("Assignment could not become active");
-        // A cached, unacknowledged revision was already restored when service started.
-        // ACK sends finalTrackId (NOT trackId) and only after the scheduler load succeeded.
-        JSONObject ack=new JSONObject().put("revision",revision).put("finalTrackId",finalTrackId);
+        InstallationStatus installed=applyAssignment(mutations,()->running&&currentClient.getAsBoolean(),
+                request,runtimePorts,installation);
+        DiagnosticsStore.INSTANCE.setLastManifestCode(CloudV1InstallationAdapter.manifestCode(request,installed));
+        if(installed!=InstallationStatus.ARMED)
+            throw new CloudException(RuntimeDiagnostics.CloudErrorCode.NETWORK,"Local installation refused");
+        if(!running||!currentClient.getAsBoolean())return;
+        JSONObject ack=new JSONObject().put("revision",revision).put("finalTrackId",assignment.finalTrackId());
         Reply confirmed=http("POST","devices/"+cloudDeviceId+"/ack",token,ack);
         if(confirmed.status!=200||!CloudProtocol.validAck(confirmed.body,cloudDeviceId,revision))
             throw new IllegalStateException("Cloud ACK rejected");
-        if(!cache.markAcknowledged(revision))throw new IllegalStateException("Cloud ACK state could not be persisted");
-        // Observational only: record the last revision the cloud successfully acknowledged
-        // and clear any prior bounded error code after a fully successful cycle.
+        if(!running||!currentClient.getAsBoolean())return;
+        if(!store.markAcknowledged(revision))throw new IllegalStateException("Cloud ACK state could not be persisted");
         DiagnosticsStore.INSTANCE.setLastSuccessfulAckRevision(revision);
         DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NONE);
         Log.i(TAG,"Cloud track loaded; revision="+revision);
@@ -411,29 +302,12 @@ final class CloudControlClient {
             }
         } finally {connection.disconnect();}
     }
-    /**
-     * Owner-thread installation boundary shared by production and JVM regressions.
-     * The lifetime predicate is checked AFTER dispatch, so a stopped client's queued
-     * assignment cannot touch a newer service. Returning true requires the entire
-     * manifested or legacy transition to finish before the caller may send an ACK.
-     */
-    static boolean applyAssignment(AssignmentMutationGate gate,
-            java.util.function.BooleanSupplier currentClient,long revision,
-            String runtimeJson,String manifestJson,CloudTrackRepository cache,
-            MediaSyncedTrackScheduler scheduler,ManifestInstaller installer) throws Exception {
-        return gate.call(()->{
-            if(!currentClient.getAsBoolean())return false;
-            long cached=cache.revision();
-            if(revision<cached)return false;
-            if(manifestJson!=null) {
-                if(installer==null)throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,
-                        "Manifested assignment without installer");
-                return revision>cached
-                        ?installer.install(revision,runtimeJson,manifestJson)
-                        :installer.confirmArmed(revision);
-            }
-            return installLegacyRevision(revision,cached,runtimeJson,cache,scheduler,installer);
-        });
+    /** Await one generic install on the owner; stopped/replaced queued work cannot mutate or authorize ACK. */
+    static InstallationStatus applyAssignment(AssignmentMutationGate gate,
+            java.util.function.BooleanSupplier currentClient,InstallRequest request,
+            InstallationHandler.RuntimePorts runtimePorts,InstallationOperation installation) throws Exception {
+        return gate.call(()->currentClient.getAsBoolean()
+                ?installation.install(request,runtimePorts):InstallationStatus.ARM_FAILED);
     }
 
     /** Convenience overload: the coordinated reset with no completion callback. */
@@ -494,8 +368,9 @@ final class CloudControlClient {
                 identity.reset();
                 try {
                     mutations.call(()->{
-                        cache.clear();
-                        scheduler.clear();
+                        boolean cleared=store.clearAll();
+                        resetRuntime.run();
+                        if(!cleared)throw new IllegalStateException("Cloud installation reset failed");
                         return null;
                     });
                 } catch(Exception ownerFailure) {
@@ -503,6 +378,9 @@ final class CloudControlClient {
                 }
                 DiagnosticsStore.INSTANCE.resetCloudObservations();
                 Log.i(TAG,"Cloud reset completed with fresh installation identity");
+            }catch(RuntimeException resetFailure) {
+                DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NETWORK);
+                Log.w(TAG,"Cloud reset incomplete");
             }finally {
                 done.countDown();
                 if(onComplete!=null) {
@@ -570,6 +448,7 @@ final class CloudControlClient {
      */
     private static final class CloudException extends Exception {
         final RuntimeDiagnostics.CloudErrorCode code;
+        /** Carry only an existing bounded code and a fixed label, never a raw response/cause. */
         CloudException(RuntimeDiagnostics.CloudErrorCode code,String message){super(message);this.code=code;}
     }
 }
