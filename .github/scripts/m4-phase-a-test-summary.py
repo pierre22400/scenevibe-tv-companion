@@ -6,10 +6,19 @@ from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
 
+"""Read executed results rather than estimating them from source annotations.
+
+The Phase A inventory and fixtures stay frozen. Phase B extends that inventory in
+its own file, so adding pure models cannot silently drop an old characterization.
+The historical output path/artifact remains compatible and now includes both phases.
+"""
+
 
 def summarize(root):
     """Check retained suites and fixtures, then summarize actual Gradle JUnit XML."""
     baseline = json.loads((root / '.github/scripts/m4-phase-a-baseline.json').read_text(encoding='utf-8'))
+    phase_b_path = root / '.github/scripts/m4-phase-b-baseline.json'
+    phase_b = json.loads(phase_b_path.read_text(encoding='utf-8')) if phase_b_path.exists() else {'phaseBSuites': {}}
     counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}
     suites = {}
     skipped = []
@@ -28,9 +37,9 @@ def summarize(root):
                 skipped.append(name + '.' + case.attrib['name'])
             else:
                 counts['PASS'] += 1
-    expected = {**baseline['existingSuites'], **baseline['phaseASuites']}
+    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites']}
     if suites != expected:
-        raise ValueError('Executed suite names/counts differ from the frozen Phase A inventory')
+        raise ValueError('Executed suite names/counts differ from the Phase A/B inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
         raise ValueError('An unexpected JVM case was skipped')
     for path, digest in baseline['fixtureSha256'].items():
@@ -42,6 +51,7 @@ def summarize(root):
         'jvm': counts,
         'retainedCases': sum(baseline['existingSuites'].values()),
         'phaseACases': sum(baseline['phaseASuites'].values()),
+        'phaseBCases': sum(phase_b['phaseBSuites'].values()),
         'suites': suites,
         'skippedCases': skipped,
         'fixtureSha256': baseline['fixtureSha256'],
@@ -50,7 +60,7 @@ def summarize(root):
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
     print('JVM: ' + ' '.join(f'{name}={count}' for name, count in counts.items()))
-    print(f'Retained baseline: {summary["retainedCases"]}; Phase A: {summary["phaseACases"]}')
+    print(f'Retained baseline: {summary["retainedCases"]}; Phase A: {summary["phaseACases"]}; Phase B: {summary["phaseBCases"]}')
     for name in skipped:
         print('Opt-in SKIP: ' + name)
     return 1 if counts['FAIL'] else 0
@@ -65,5 +75,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except (ValueError, KeyError, OSError, ET.ParseError):
-        print('Phase A report validation failed; no payload or exception message emitted', file=sys.stderr)
+        print('Phase A/B report validation failed; no payload or exception message emitted', file=sys.stderr)
         sys.exit(1)
