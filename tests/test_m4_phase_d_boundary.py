@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import re
 import unittest
+from sony_corrective_provenance import retained_bytes, retained_text
 
 """Keep Video semantic handlers outside the generic core and forbid an early installer cutover.
 
@@ -12,6 +13,8 @@ balance the narrow repository/typed-state exceptions to the older Phase B/C gate
 Phase E permits its one generic orchestrator definition, never a current-caller cutover.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
+Sony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.
+
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -128,7 +131,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')
         for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(
                 'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):
@@ -146,7 +149,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['frozenTestSources'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_prepared_state_contract_is_typed_and_additive_only(self):
         """The original constructor stays available; the new slot accepts no raw Object or concrete product."""

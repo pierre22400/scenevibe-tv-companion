@@ -16,6 +16,7 @@ Phase D adds an independent handler/differential/ARM bucket, without losing earl
 Phase E adds executed orchestration, readback, real-Video and historical-cache buckets.
 Phase F adds actual Cloud/owner/runtime/reset compatibility execution without dropping old cases.
 Phase G adds startup/boot/metadata/reset and post-restore Cloud execution without changing prior buckets.
+The Sony corrective cycle adds its own executed bucket; native disk/process evidence is separate.
 """
 
 
@@ -34,6 +35,8 @@ def summarize(root):
     phase_f = json.loads(phase_f_path.read_text(encoding='utf-8')) if phase_f_path.exists() else {'phaseFSuites': {}}
     phase_g_path = root / '.github/scripts/m4-phase-g-baseline.json'
     phase_g = json.loads(phase_g_path.read_text(encoding='utf-8')) if phase_g_path.exists() else {'phaseGSuites': {}}
+    sony_path = root / '.github/scripts/m4-phase-g-sony-corrective-baseline.json'
+    sony = json.loads(sony_path.read_text(encoding='utf-8')) if sony_path.exists() else {'phaseGCorrectiveSuites': {}}
     counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}
     suites = {}
     skipped = []
@@ -52,7 +55,7 @@ def summarize(root):
                 skipped.append(name + '.' + case.attrib['name'])
             else:
                 counts['PASS'] += 1
-    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites']}
+    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites']}
     if suites != expected:
         raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
@@ -72,6 +75,7 @@ def summarize(root):
         'phaseECases': sum(phase_e['phaseESuites'].values()),
         'phaseFCases': sum(phase_f['phaseFSuites'].values()),
         'phaseGCases': sum(phase_g['phaseGSuites'].values()),
+        'phaseGCorrectiveCases': sum(sony['phaseGCorrectiveSuites'].values()),
         'suites': suites,
         'skippedCases': skipped,
         'fixtureSha256': baseline['fixtureSha256'],
@@ -80,7 +84,7 @@ def summarize(root):
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
     print('JVM: ' + ' '.join(f'{name}={count}' for name, count in counts.items()))
-    print(f'Retained baseline: {summary["retainedCases"]}; Phase A: {summary["phaseACases"]}; Phase B: {summary["phaseBCases"]}; Phase C: {summary["phaseCCases"]}; Phase D: {summary["phaseDCases"]}; Phase E: {summary["phaseECases"]}; Phase F: {summary["phaseFCases"]}; Phase G: {summary["phaseGCases"]}')
+    print(f'Retained baseline: {summary["retainedCases"]}; Phase A: {summary["phaseACases"]}; Phase B: {summary["phaseBCases"]}; Phase C: {summary["phaseCCases"]}; Phase D: {summary["phaseDCases"]}; Phase E: {summary["phaseECases"]}; Phase F: {summary["phaseFCases"]}; Phase G: {summary["phaseGCases"]}; Sony corrective: {summary["phaseGCorrectiveCases"]}')
     for name in skipped:
         print('Opt-in SKIP: ' + name)
     return 1 if counts['FAIL'] else 0

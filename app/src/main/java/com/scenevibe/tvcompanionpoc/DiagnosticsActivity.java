@@ -157,6 +157,7 @@ public final class DiagnosticsActivity extends Activity {
         line(sb, "Installed revision", String.valueOf(d.installedRevision));
         line(sb, "Acknowledged revision", String.valueOf(d.acknowledgedRevision));
         line(sb, "Last startup restore", d.lastStartupRestoreResult == null ? "-" : d.lastStartupRestoreResult.name());
+        line(sb, "Installation read failure", d.installationReadFailure.name());
         line(sb, "Cached track (compatibility)", d.cachedTrackPresent ? "yes" : "no");
         line(sb, "Cached track id (compatibility)", d.cachedTrackId == null ? "-" : d.cachedTrackId);
         line(sb, "Cached revision (compatibility)", String.valueOf(d.cachedRevision));

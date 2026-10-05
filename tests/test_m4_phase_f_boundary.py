@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import unittest
+from sony_corrective_provenance import retained_bytes, retained_text
 
 """Qualify the live Cloud cutover without weakening the retained M4 evidence.
 
@@ -13,6 +14,8 @@ reversed to their exact starting blobs; old predicates/accounting are reversed l
 The executed JVM suites exercise the actual client, installer and service runtime ports.
 Boot/diagnostics and Cloud/Video semantics remain byte-pinned for the later Phase G.
 Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
+Sony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.
+
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -171,7 +174,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         self.assertEqual({JAVA + 'installation/InstallationStore.java', JAVA + 'CloudTrackRepository.java'},
                          set(BASELINE['microProductionPatches']))
         for path, patches in BASELINE['microProductionPatches'].items():
-            previous = inverse((ROOT / path).read_text(), patches)
+            previous = inverse(retained_text(ROOT / path), patches)
             self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)
         store = code_only((ROOT / JAVA / 'installation/InstallationStore.java').read_text())
         clear = java_block(store, 'public boolean clearAll()')
@@ -185,10 +188,10 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in BASELINE['authorizedProductionChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         installer = JAVA + 'installation/PackageInstaller.java'
         self.assertIn(installer, BASELINE['qualifiedRuntimeBlobs'])
-        self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][installer], blob_hash((ROOT / installer).read_bytes()))
+        self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][installer], blob_hash(retained_bytes(ROOT / installer)))
 
     def test_auth_http_backoff_and_deferred_service_helpers_remain_unchanged(self):
         """Retain exact qualified auth/HTTPS/disconnect behavior and leave historical helpers for Phase G."""
@@ -215,7 +218,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         oracle = (ROOT / BASELINE['historicalClientFile']).read_text().replace('M4PhaseFHistoricalCloudClient', 'CloudControlClient')
         self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][JAVA + 'CloudControlClient.java'], blob_hash(oracle.encode()))
         for path, patches in BASELINE['testPatches'].items():
-            previous = inverse(inverse((ROOT / path).read_text(),
+            previous = inverse(inverse(retained_text(ROOT / path),
                                        PHASE_G.get('testPatches', {}).get(path, [])), patches)
             self.assertEqual(BASELINE['frozenTestSources'][path], blob_hash(previous.encode()), path)
 
@@ -225,7 +228,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         for path, expected in frozen.items():
             if path in BASELINE['authorizedTestChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):
         """Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned."""
@@ -247,7 +250,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})
         self.assertEqual(expected, set(BASELINE['boundaryPatches']))
         for relative, patches in BASELINE['boundaryPatches'].items():
-            previous = inverse(inverse((ROOT / relative).read_text(),
+            previous = inverse(inverse(retained_text(ROOT / relative),
                                        PHASE_G.get('boundaryPatches', {}).get(relative, [])), patches)
             self.assertEqual(BASELINE['boundaryBlobs'][relative], blob_hash(previous.encode()), relative)
 

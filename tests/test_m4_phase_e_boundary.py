@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from sony_corrective_provenance import retained_bytes, retained_text
 
 """Keep Phase E's single orchestrator isolated and all qualified production callers frozen.
 
@@ -16,6 +17,8 @@ and CI accounting may gain only the documented Phase E inventory/bucket exceptio
 A real JDK-only compile verifies the installer cannot acquire platform dependencies.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
+Sony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.
+
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,7 +133,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):
             source = code_only((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).read_text())
             if str((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).relative_to(ROOT)) not in PHASE_F.get('authorizedLiveCallers', []):
@@ -142,7 +145,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         for path, expected in frozen.items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_production_inventory_admits_exactly_one_unwired_orchestration_type(self):
         """No Cloud adapter, service port, restore coordinator or future milestone type can appear."""
@@ -158,7 +161,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
     def test_prior_boundary_predicates_and_workflow_only_gain_exact_e_exceptions(self):
         """Reverse the small authorized additions and demand the earlier gate/workflow bytes exactly."""
         for relative, expected in BASELINE['frozenAccountingBoundaryBlobs'].items():
-            source = (ROOT / relative).read_text(encoding='utf-8')
+            source = retained_text(ROOT / relative)
             for patch in reversed(PHASE_G.get('boundaryPatches', {}).get(relative, [])):
                 source = source.replace(patch['after'], patch['before'])
             if PHASE_F:

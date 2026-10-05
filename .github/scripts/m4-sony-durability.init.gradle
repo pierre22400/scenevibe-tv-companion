@@ -1,0 +1,15 @@
+// Test-only instrumentation configuration; production build, signing and manifest inputs remain byte-exact.
+// The same fixture sources compile against both the pinned pre-fix tree and the corrective tree.
+gradle.beforeProject { project ->
+    if (project.path == ":app") {
+        project.plugins.withId("com.android.application") {
+            def fixtureRoot = System.getenv("SCENEVIBE_DURABILITY_TEST_ROOT") ?: project.rootDir.toString()
+            project.android.defaultConfig.testInstrumentationRunner =
+                "com.scenevibe.tvcompanionpoc.M4SonyDurabilityInstrumentation"
+            project.android.sourceSets.androidTest.java.srcDirs =
+                [new File(fixtureRoot, "app/src/androidTest/java")]
+            project.android.sourceSets.androidTest.assets.srcDirs =
+                [new File(fixtureRoot, "app/src/test/resources/m4")]
+        }
+    }
+}

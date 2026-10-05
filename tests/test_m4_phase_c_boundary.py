@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from sony_corrective_provenance import retained_bytes, retained_text
 
 """Permit only the Phase C persistence extraction while keeping qualified behavior pinned.
 
@@ -18,6 +19,8 @@ semantics; frozen historical reference and orchestration fragments guard that ex
 Phase E adds only its explicitly inventoried orchestration class; the store remains pinned.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
+Sony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.
+
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -134,14 +137,14 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
                 continue
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(digest, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_every_retained_jvm_test_and_frozen_inventory_remains_byte_exact(self):
         """Do not weaken old characterization/model tests to make the persistence refactor pass."""
         for path, digest in BASELINE['frozenTestSources'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(digest, blob_hash(retained_bytes(ROOT / path)), path)
 
 
 if __name__ == '__main__':

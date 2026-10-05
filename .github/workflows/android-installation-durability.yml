@@ -1,0 +1,71 @@
+name: Android installation disk and process durability
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  durability:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [31, 35]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Install Android SDK 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Build corrective test-only instrumentation APKs
+        run: |
+          mkdir -p "$RUNNER_TEMP/scenevibe-m4-durability-apks"
+          gradle --init-script .github/scripts/m4-sony-durability.init.gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/scenevibe-m4-durability-apks/fixed-app.apk"
+          cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk "$RUNNER_TEMP/scenevibe-m4-durability-apks/fixed-test.apk"
+      - name: Build pinned pre-fix negative control from Git archive
+        if: matrix.api == 31
+        env:
+          SCENEVIBE_DURABILITY_TEST_ROOT: ${{ github.workspace }}
+        run: |
+          BASELINE_DIR="$RUNNER_TEMP/scenevibe-m4-g-baseline"
+          mkdir -p "$BASELINE_DIR"
+          git merge-base --is-ancestor 824339de562c0de8542f4c1b2a22266832c8abef HEAD
+          git archive 824339de562c0de8542f4c1b2a22266832c8abef | tar -x -C "$BASELINE_DIR"
+          gradle -p "$BASELINE_DIR" --init-script "$GITHUB_WORKSPACE/.github/scripts/m4-sony-durability.init.gradle" :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+          cp "$BASELINE_DIR/app/build/outputs/apk/debug/app-debug.apk" "$RUNNER_TEMP/scenevibe-m4-durability-apks/baseline-app.apk"
+          cp "$BASELINE_DIR/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "$RUNNER_TEMP/scenevibe-m4-durability-apks/baseline-test.apk"
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Qualify real preference XML and distinct Android processes
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash .github/scripts/m4-sony-durability.sh
+      - name: Upload bounded native durability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-m4-native-durability-api-${{ matrix.api }}
+          path: ${{ runner.temp }}/scenevibe-m4-durability-results
+          if-no-files-found: error
+          retention-days: 30

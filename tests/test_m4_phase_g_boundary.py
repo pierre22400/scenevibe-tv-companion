@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import unittest
+from sony_corrective_provenance import retained_bytes, retained_text
 
 """Qualify generic startup, metadata and reset with exact provenance for every retained gate.
 
@@ -11,6 +12,8 @@ Six old production owners may change only through uniquely reversible inventorie
 The entire generic core, F client/wire/ACK path, media cores and build/signing inputs stay pinned.
 Old service helpers move verbatim into a test-only oracle; their original assertions survive.
 Executed G cases extend actual Gradle XML accounting and the Sony document remains a manual protocol.
+Sony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.
+
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,7 +74,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         self.assertEqual(set(BASELINE['authorizedProductionChanges']), set(BASELINE['productionPatches']))
         for path, patches in BASELINE['productionPatches'].items():
             self.assertTrue(patches, path)
-            previous = inverse((ROOT / path).read_text(), patches)
+            previous = inverse(retained_text(ROOT / path), patches)
             self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)
 
     def test_service_startup_reuses_same_installer_with_no_write_parser_or_lookup(self):
@@ -195,11 +198,11 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in BASELINE['authorizedProductionChanges']:
                 continue
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         for name in ('CloudControlClient.java', 'CloudV1InstallationAdapter.java', 'CloudProtocol.java',
                      'AutostartPolicy.java', 'installation/PackageInstaller.java', 'installation/InstallationStore.java'):
             path = JAVA + name
-            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash((ROOT / path).read_bytes()), name)
+            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(retained_bytes(ROOT / path)), name)
 
     def test_generic_core_bridge_and_static_registry_remain_isolated(self):
         """No new parser, registry, runtime capability, future milestone or second restore authority can appear."""
@@ -242,11 +245,11 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         """Only three historical helper names may change; every original assertion and retained F test stays exact."""
         self.assertEqual(set(BASELINE['authorizedTestChanges']), set(BASELINE['testPatches']))
         for path, expected in BASELINE['frozenTestSources'].items():
-            previous = inverse((ROOT / path).read_text(), BASELINE['testPatches'].get(path, [])) if path in BASELINE['testPatches'] else (ROOT / path).read_bytes()
+            previous = inverse(retained_text(ROOT / path), BASELINE['testPatches'].get(path, [])) if path in BASELINE['testPatches'] else retained_bytes(ROOT / path)
             content = previous.encode() if isinstance(previous, str) else previous
             self.assertEqual(expected, blob_hash(content), path)
         for path, expected in BASELINE['frozenDocumentationBlobs'].items():
-            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_old_boundary_predicates_and_accounting_changes_are_exactly_reversible(self):
         """Every old gate/assertion and workflow step survives after undoing only exact G exceptions/labels."""
@@ -254,7 +257,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})
         self.assertEqual(expected, set(BASELINE['boundaryPatches']))
         for path, patches in BASELINE['boundaryPatches'].items():
-            previous = inverse((ROOT / path).read_text(), patches)
+            previous = inverse(retained_text(ROOT / path), patches)
             self.assertEqual(BASELINE['boundaryBlobs'][path], blob_hash(previous.encode()), path)
 
     def test_executed_g_bucket_is_additive_and_only_the_private_skip_is_allowed(self):

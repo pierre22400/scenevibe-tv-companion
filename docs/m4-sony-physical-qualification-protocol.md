@@ -1,13 +1,15 @@
 # M4 Sony physical qualification — manual protocol
 
-Status: **NOT PERFORMED**. This is a checklist for the existing Sony Android TV target,
-not a result. Production remains **SHADOW**; PR #14 stays OPEN / DRAFT / unmerged.
+First physical session: **PARTIAL / FAIL — hard reboot / offline durable restore**.
+Corrective physical re-qualification: **NOT PERFORMED**. This checklist records both the
+existing failure and the remaining manual gate. Production remains **SHADOW**;
+PR #14 stays OPEN / DRAFT / unmerged.
 Automated JVM and API 35 results do not qualify physical TV boot, Prime MediaSession,
 native overlay windows, D-pad placement or upgrade continuity.
 
-Use the exact **final Phase G HEAD** and its **stable-signed Cloud APK artifact** from the
+Use the exact **final corrective Phase G HEAD** and its **stable-signed Cloud APK artifact** from the
 [PR #14 final Git closure manifest](https://github.com/pierre22400/scenevibe-tv-companion/pull/14),
-linked by the [Phase G report](m4-phase-g-generic-restore-diagnostics-report.md).
+linked by the [corrective report](m4-phase-g-sony-hard-reboot-corrective-report.md).
 Record the commit, Actions run, artifact id, downloaded APK SHA-256 and certificate before installing.
 Do not substitute a debug-signed APK or an APK from another commit.
 
@@ -15,7 +17,7 @@ Do not substitute a debug-signed APK or an APK from another commit.
 | --- | --- |
 | Operator / date / timezone | ____ |
 | Sony model / firmware / Android version / ADB serial | ____ |
-| Final Phase G HEAD / debug run / stable APK artifact id | ____ / ____ / ____ |
+| Final corrective HEAD / debug run / stable APK artifact id | ____ / ____ / ____ |
 | Downloaded raw APK SHA-256 | ____ |
 | Observed signer certificate SHA-256 | ____ |
 | Expected certificate SHA-256 | `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c` |
@@ -28,6 +30,30 @@ applicable, and an evidence reference. Blank fields are NOT RUN, never PASS. Cap
 screens and bounded observations; do not include credentials, full identities or raw Cloud bodies.
 No uninstall, data clear, Reset Cloud or re-pairing is permitted during the upgrade/continuity checks.
 Record any failure before stopping that check; preserve state for the later audit.
+The first session used HEAD `824339de562c0de8542f4c1b2a22266832c8abef`, raw APK
+SHA-256 `3aa97275855b85dd2ccecda395bb5c2c0724c9ccd4713576c523c127c4f9a6e2`.
+It passed upgrade/data/identity/pairing/permission continuity, historical restoration,
+Cloud 14 then 15 with confirmed ACKs, visible replacement/one owner, pause/resume,
+both seeks and Prime eligibility loss/return. At genuine network-isolated hard reboot
+of confirmed revision 15, service and permissions survived but the package was CORRUPT,
+handler unavailable and startup CACHE_FAILED. Zero diagnostic revisions were unavailable
+observations, not proof that disk data was cleared. SceneVibe had no observed crash;
+unrelated Sony component FATALs must not be attributed to SceneVibe. Same-revision
+redelivery was **NOT RUN**: the existing UI has no supported trigger and Send increments.
+
+The correction deliberately rejects already-corrupted bytes. First perform steps 1–3
+with `adb install -r`, before any reset, and capture the added **Installation read failure**
+enum plus startup/revision/ACK/handler. An existing damaged snapshot may still give
+GENERIC_INVALID / CACHE_FAILED; preserve that evidence and record step 4 as blocked by
+the known old cache, never PASS. Do not edit private data, trim the snapshot or induce
+automatic recovery. If the damaged cache prevents delivery, the operator may use only
+the **existing explicit Reset Cloud** after the continuity evidence is complete, then
+re-pair using the existing flow. Record the deliberate identity/pairing rotation and
+new reference values separately; it cannot count as upgrade continuity. No reset has
+been performed by the corrective software cycle. Repeat the package checks on that
+clean reference with a **new Cloud revision N**, then newer N+1; use the actual exact
+numbers throughout. This preparation must not hide or overwrite the first FAIL.
+
 For steps 2–5, temporarily isolate Cloud reachability after recording step 1 (controlled router
 blocking, or disable TV networking while retaining a usable ADB connection). This isolates local restoration from automatic Cloud redelivery:
 "no new Send" alone does not prevent a poll from legitimately advancing ACK or installing an
@@ -83,7 +109,8 @@ that separates local restoration from subsequent Cloud work; otherwise mark that
 10. Use the existing authorized redelivery mechanism to deliver the **same revision**, without a
     new Send/increment. Record how redelivery was induced and prove the revision/handler/content
     stay unchanged and ACK confirms only after successful re-ARM. If no mechanism is available,
-    record NOT RUN and arrange that test before physical acceptance; do not edit private data.
+    record NOT RUN; do not add a product button/API or use a new Send as same-revision
+    evidence. A separate acceptance audit decides the unresolved point; do not edit private data.
     Result: ____; revision/ACK before/after: ____ / ____ → ____ / ____; evidence: ____.
 
 11. Pause while the new scene is visible, then resume. Verify the qualified media-time FREEZE
@@ -115,6 +142,11 @@ that separates local restoration from subsequent Cloud work; otherwise mark that
     and permissions with step 1. Process-local assignment/successful-ACK counters may be zero
     before redelivery; durable ACK must persist. Result: ____;
     revision/ACK/codec/handler/startup/autostart: ____ / ____ / ____ / ____ / ____ / ____; evidence: ____.
+    Record **Installation read failure: NONE**, **Installed package: yes**, exact pre-reboot
+    N/ACK/codec/handler and **Last startup restore: ARMED** while still network-isolated.
+    CACHE_FAILED, CORRUPT, a changed durable ACK or unavailable handler is FAIL; do not
+    reset/re-pair/redeliver to turn that reboot into a PASS. Keep both pre/post logcat
+    evidence and prove restore precedes the probe/Cloud. Exclude standby and force-stop.
 
 17. Verify no old card/scene/badge appears at boot or before an eligible due event. Then produce
     an eligible due event and verify the restored package displays with exactly one owner.
@@ -126,6 +158,8 @@ that separates local restoration from subsequent Cloud work; otherwise mark that
     Compare durable ACK and the process-local assignment/successful-ACK counters after confirmed
     delivery. Result: ____; revision/ACK/assignment/successful ACK: ____ / ____ / ____ / ____;
     redelivery method/evidence: ____.
+    If the existing UI still supplies no supported same-revision redelivery, retain
+    **NOT RUN**, the reason and the exact revision; do not create a Cloud mechanism.
 
 19. Verify **Unicode** visually and in approved bounded fixture evidence: composed accented French,
     decomposed `e` + combining acute accent, ligature `œ`, apostrophe `’` and emoji `🙂`.
@@ -150,7 +184,8 @@ that separates local restoration from subsequent Cloud work; otherwise mark that
 | Operator result and date | ____ |
 | Separate Chat audit reference and decision | ____ |
 
-**No physical PASS is asserted by this document.** API 35 standard-image smoke and JVM recreation
-cannot replace this Sony protocol. Work Phase G authorizes preparation for this manual gate;
+**No final physical Sony PASS is asserted by this document.** The initial partial results and
+hard-reboot FAIL remain authoritative. API 31/35 native disk/process gates, API 35 smoke
+and JVM recreation cannot replace this Sony protocol. The corrective cycle prepares this manual gate;
 the later physical evidence and separate audit determine acceptance. No merge, production cutover
 or M5+ action is authorized here.

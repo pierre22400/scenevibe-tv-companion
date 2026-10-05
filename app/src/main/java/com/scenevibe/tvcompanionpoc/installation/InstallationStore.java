@@ -30,6 +30,11 @@ public final class InstallationStore {
     }
     /** Closed read outcome has no content-bearing diagnostics. */
     public enum ReadState { EMPTY, SNAPSHOT, CORRUPT }
+    /** Observational fault classes only; they never authorize fallback, repair, ARM or acknowledgement. */
+    public enum ReadFailure {
+        NONE, GENERIC_INVALID, HISTORICAL_INVALID, ACK_INVALID,
+        ACK_AHEAD_GENERIC, ACK_AHEAD_WITHOUT_GENERIC, BACKEND_READ_FAILED
+    }
     /** COMMITTED is durability only, never an armed/ACK-eligible runtime result. */
     public enum CommitState { COMMITTED, INVALID_SNAPSHOT, CACHE_FAILED }
 
@@ -38,9 +43,10 @@ public final class InstallationStore {
         private final ReadState state;
         private final InstallationSnapshot snapshot;
         private final long acknowledged;
+        private final ReadFailure failure;
         /** Construct a closed result without retaining an exception or raw representation. */
-        private ReadResult(ReadState state,InstallationSnapshot snapshot,long acknowledged) {
-            this.state=state;this.snapshot=snapshot;this.acknowledged=acknowledged;
+        private ReadResult(ReadState state,InstallationSnapshot snapshot,long acknowledged,ReadFailure failure) {
+            this.state=state;this.snapshot=snapshot;this.acknowledged=acknowledged;this.failure=failure;
         }
         /** Return clean empty, complete representation, or corruption. */
         public ReadState state() {return state;}
@@ -48,6 +54,8 @@ public final class InstallationStore {
         public InstallationSnapshot snapshot() {return snapshot;}
         /** Return confirmed durable ACK, never a value synthesized from commit success. */
         public long acknowledgedRevision() {return acknowledged;}
+        /** Describe the failed read stage without retaining content, an exception or a raw preference value. */
+        public ReadFailure failure() {return failure;}
     }
 
     private final Backend backend;
@@ -60,13 +68,18 @@ public final class InstallationStore {
     /** Read one coherent representation without a write, migration, parser, clock or activation. */
     public ReadResult read() {
         synchronized (backend.monitor()) {
+            ReadFailure failure=ReadFailure.BACKEND_READ_FAILED;
             try {
-                String generic=backend.get(SNAPSHOT_KEY);
+                String generic=readValue(SNAPSHOT_KEY);
+                failure=generic==null?ReadFailure.HISTORICAL_INVALID:ReadFailure.GENERIC_INVALID;
                 InstallationSnapshot snapshot=generic==null?readHistorical():InstallationSnapshotCodec.decode(generic);
-                long ack=acknowledgedValue();
-                if (ack>(snapshot==null?0:snapshot.revision())) throw new IllegalArgumentException("Invalid durable acknowledgement");
-                return new ReadResult(snapshot==null?ReadState.EMPTY:ReadState.SNAPSHOT,snapshot,ack);
-            } catch (RuntimeException invalid) {return new ReadResult(ReadState.CORRUPT,null,0);}
+                failure=ReadFailure.ACK_INVALID;
+                long ack=acknowledgedValue(readValue("ackRevision"));
+                if (ack>(snapshot==null?0:snapshot.revision()))
+                    return corrupt(generic==null?ReadFailure.ACK_AHEAD_WITHOUT_GENERIC:ReadFailure.ACK_AHEAD_GENERIC);
+                return new ReadResult(snapshot==null?ReadState.EMPTY:ReadState.SNAPSHOT,snapshot,ack,ReadFailure.NONE);
+            } catch (BackendReadFailure unavailable) {return corrupt(ReadFailure.BACKEND_READ_FAILED);}
+            catch (RuntimeException invalid) {return corrupt(failure);}
         }
     }
 
@@ -141,7 +154,7 @@ public final class InstallationStore {
 
     /** Infer only artifact-key shape; semantic product/coherence validation remains outside the store. */
     private InstallationSnapshot readHistorical() {
-        String raw=backend.get("revision"),runtime=backend.get("runtime"),manifest=backend.get("manifest");
+        String raw=readValue("revision"),runtime=readValue("runtime"),manifest=readValue("manifest");
         if (raw==null&&runtime==null&&manifest==null) return null;
         long revision=InstallationSnapshotCodec.decimal(raw,false);
         Map<String,byte[]> artifacts=new TreeMap<>();
@@ -164,7 +177,25 @@ public final class InstallationStore {
 
     /** Treat absent ACK as zero; malformed numbers remain explicit corruption for generic reads. */
     private long acknowledgedValue() {
-        String raw=backend.get("ackRevision");return raw==null?0:InstallationSnapshotCodec.decimal(raw,true);
+        return acknowledgedValue(backend.get("ackRevision"));
+    }
+    /** Share the identical strict ACK parser between writes and the staged observational read. */
+    private static long acknowledgedValue(String raw) {
+        return raw==null?0:InstallationSnapshotCodec.decimal(raw,true);
+    }
+    /** Bound every read-boundary exception without confusing it with codec or ACK rejection. */
+    private String readValue(String key) {
+        try {return backend.get(key);}
+        catch (RuntimeException unavailable) {throw new BackendReadFailure();}
+    }
+    /** Preserve the exact fail-closed result and unavailable revision/ACK, adding only a fixed observation. */
+    private static ReadResult corrupt(ReadFailure failure) {
+        return new ReadResult(ReadState.CORRUPT,null,0,failure);
+    }
+    /** Fixed internal marker holds neither the backend cause nor a content-bearing message. */
+    private static final class BackendReadFailure extends RuntimeException {
+        /** Discard the arbitrary backend exception rather than attaching its cause. */
+        BackendReadFailure() {super("Installation backend read failed");}
     }
     /** A generic marker is unsupported by the raw facade; never resurrect its historical residue. */
     private boolean historicalAuthority() {

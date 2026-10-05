@@ -16,9 +16,14 @@ import java.util.List;
  * One editor/commit publishes a batch. Android may update its memory cache even when disk
  * commit returns false: a shared fixed-key prior view masks that failed publication until
  * recovery can restage it in the next single batch. No rollback write or runtime occurs.
+ * The generic string uses a reversible terminal envelope: Android's indented XML writer
+ * otherwise appends spaces inside a String ending in LF. The logical codec stays unchanged;
+ * reads never trim, repair, migrate or accept an invalid old representation.
  */
 public final class AndroidInstallationBackend implements InstallationStore.Backend {
     private static final String[] KEYS={InstallationStore.SNAPSHOT_KEY,"revision","runtime","manifest","ackRevision"};
+    private static final String SNAPSHOT_PREFIX="scenevibe.os.android-preference.v1:";
+    private static final String SNAPSHOT_END="!";
     private static final List<FailedView> FAILED_VIEWS=new ArrayList<>();
     private final SharedPreferences preferences;
 
@@ -36,11 +41,11 @@ public final class AndroidInstallationBackend implements InstallationStore.Backe
         synchronized (preferences) {
             PriorView failed=failedView();
             if (failed==null) {
-                try {return preferences.getString(key,null);}
+                try {return logicalValue(key,preferences.getString(key,null));}
                 catch (ClassCastException invalidType) {throw new IllegalStateException("Invalid preference type");}
             }
             if (failed.corrupt.contains(key)) throw new IllegalStateException("Invalid preference type");
-            return failed.values.get(key);
+            return logicalValue(key,failed.values.get(key));
         }
     }
 
@@ -65,7 +70,8 @@ public final class AndroidInstallationBackend implements InstallationStore.Backe
                     String previous=prior.values.get(key);
                     if (previous==null) editor.remove(key);else editor.putString(key,previous);
                 }
-                for (Map.Entry<String,String> value:values.entrySet()) editor.putString(value.getKey(),value.getValue());
+                for (Map.Entry<String,String> value:values.entrySet())
+                    editor.putString(value.getKey(),preferenceValue(value.getKey(),value.getValue()));
                 for (String key:removed) editor.remove(key);
                 if (editor.commit()) {
                     setFailedView(null);
@@ -75,6 +81,23 @@ public final class AndroidInstallationBackend implements InstallationStore.Backe
             setFailedView(prior);
             return false;
         }
+    }
+
+    /** Wrap only generic writes, within the existing codec ceiling, without a newline at the XML text end. */
+    private static String preferenceValue(String key,String value) {
+        if (!InstallationStore.SNAPSHOT_KEY.equals(key)) return value;
+        if (value.length()>InstallationSnapshotCodec.MAX_ENCODED_CHARACTERS)
+            throw new IllegalArgumentException("Invalid installation preference encoding");
+        return SNAPSHOT_PREFIX+value+SNAPSHOT_END;
+    }
+
+    /** Unwrap only the exact bounded transport; untouched historical/raw generic strings remain strict codec input. */
+    private static String logicalValue(String key,String value) {
+        if (!InstallationStore.SNAPSHOT_KEY.equals(key)||value==null||!value.startsWith(SNAPSHOT_PREFIX)) return value;
+        int length=value.length()-SNAPSHOT_PREFIX.length()-SNAPSHOT_END.length();
+        if (length<1||length>InstallationSnapshotCodec.MAX_ENCODED_CHARACTERS||!value.endsWith(SNAPSHOT_END))
+            throw new IllegalStateException("Invalid installation preference encoding");
+        return value.substring(SNAPSHOT_PREFIX.length(),value.length()-SNAPSHOT_END.length());
     }
 
     /** Capture five immutable string references only; malformed preference types retain a closed flag. */

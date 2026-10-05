@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from sony_corrective_provenance import retained_bytes, retained_text
 
 """Pin Phase B to a JDK-only additive island and preserve the qualified runtime.
 
@@ -20,6 +21,8 @@ the Phase D differential and scope gates protect the authorized semantic extract
 Phase E admits exactly its isolated PackageInstaller, with no existing-caller exception.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
 Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
+Sony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.
+
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,7 +100,7 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
                 continue
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
-            self.assertEqual(expected, git_blob_digest((ROOT / path).read_bytes()), path)
+            self.assertEqual(expected, git_blob_digest(retained_bytes(ROOT / path)), path)
 
     def test_no_current_caller_or_future_phase_production_component_is_added(self):
         """Allow only the eight generic definitions; every old caller must remain unwired."""

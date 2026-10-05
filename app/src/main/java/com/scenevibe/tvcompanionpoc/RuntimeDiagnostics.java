@@ -124,6 +124,8 @@ final class RuntimeDiagnostics {
     /** Abbreviated cloud device id (never the full value); null when none exists yet. */
     final String cloudDeviceIdAbbreviated;
     final InstallationState installationState;
+    /** Bounded durable-read fault, purely observational and independent of startup/runtime success. */
+    final InstallationStore.ReadFailure installationReadFailure;
     final boolean installationPresent;
     final long installedRevision;
     final long acknowledgedRevision;
@@ -167,6 +169,7 @@ final class RuntimeDiagnostics {
         this.installationIdAbbreviated = builder.installationIdAbbreviated;
         this.cloudDeviceIdAbbreviated = builder.cloudDeviceIdAbbreviated;
         this.installationState = builder.installationState;
+        this.installationReadFailure = builder.installationReadFailure;
         this.installationPresent = builder.installationPresent;
         this.installedRevision = builder.installedRevision;
         this.acknowledgedRevision = builder.acknowledgedRevision;
@@ -211,6 +214,7 @@ final class RuntimeDiagnostics {
         private String installationIdAbbreviated;
         private String cloudDeviceIdAbbreviated;
         private InstallationState installationState = InstallationState.EMPTY;
+        private InstallationStore.ReadFailure installationReadFailure = InstallationStore.ReadFailure.NONE;
         private boolean installationPresent;
         private long installedRevision;
         private long acknowledgedRevision;
@@ -235,6 +239,7 @@ final class RuntimeDiagnostics {
 
         /** Project one coherent read into bounded metadata and old aliases; never inspect canonical bytes. */
         Builder installation(InstallationStore.ReadResult durable) {
+            installationReadFailure = durable == null ? InstallationStore.ReadFailure.BACKEND_READ_FAILED : durable.failure();
             installationState = durable == null || durable.state() == InstallationStore.ReadState.CORRUPT
                     ? InstallationState.CORRUPT : durable.state() == InstallationStore.ReadState.SNAPSHOT
                     ? InstallationState.READY : InstallationState.EMPTY;
