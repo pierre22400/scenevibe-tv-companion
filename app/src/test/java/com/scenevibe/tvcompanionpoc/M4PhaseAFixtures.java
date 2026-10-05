@@ -134,20 +134,20 @@ final class M4PhaseAFixtures {
             installer=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
                 /** Delegate the entire manifested install/restore/arm sequence to the current core. */
                 @Override public boolean install(long revision,String runtime,String manifest) {
-                    long armed=OverlayService.installManifestedRevision(cache,scheduler,controller,
+                    long armed=M4PhaseGHistoricalService.installManifestedRevision(cache,scheduler,controller,
                             new DiagnosticsStore(),revision,runtime,manifest);
                     if (armed==revision) memory.trace.add("arm:"+revision);
                     return armed==revision;
                 }
                 /** Redelivery must confirm the durable copy, never install incoming bytes again. */
                 @Override public boolean confirmArmed(long revision) {
-                    long armed=OverlayService.confirmManifestedRevisionArmed(cache,scheduler,controller,revision);
+                    long armed=M4PhaseGHistoricalService.confirmManifestedRevisionArmed(cache,scheduler,controller,revision);
                     if (armed==revision) memory.trace.add("confirm:"+revision);
                     return armed==revision;
                 }
                 /** Return visual ownership to the legacy path before ACK eligibility. */
                 @Override public boolean activateLegacy(long revision) {
-                    long active=OverlayService.activateLegacyRevision(controller,revision);
+                    long active=M4PhaseGHistoricalService.activateLegacyRevision(controller,revision);
                     if (active==revision) memory.trace.add("legacy-arm:"+revision);
                     return active==revision;
                 }

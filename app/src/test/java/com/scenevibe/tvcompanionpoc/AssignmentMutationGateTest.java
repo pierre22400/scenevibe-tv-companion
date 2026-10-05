@@ -103,17 +103,17 @@ public final class AssignmentMutationGateTest {
         return new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
             /** Install and arm via the production cache/bridge/regie chain. */
             @Override public boolean install(long revision,String runtime,String manifest) {
-                return OverlayService.installManifestedRevision(cache,scheduler,controller,
+                return M4PhaseGHistoricalService.installManifestedRevision(cache,scheduler,controller,
                         DiagnosticsStore.INSTANCE,revision,runtime,manifest)>0;
             }
             /** Confirm idempotent arm through the production redelivery core. */
             @Override public boolean confirmArmed(long revision) {
-                return OverlayService.confirmManifestedRevisionArmed(cache,scheduler,controller,
+                return M4PhaseGHistoricalService.confirmManifestedRevisionArmed(cache,scheduler,controller,
                         revision)>0;
             }
             /** Preserve the manifested -> legacy production handoff. */
             @Override public boolean activateLegacy(long revision) {
-                return OverlayService.activateLegacyRevision(controller,revision)>0;
+                return M4PhaseGHistoricalService.activateLegacyRevision(controller,revision)>0;
             }
         };
     }
