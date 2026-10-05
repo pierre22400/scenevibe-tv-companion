@@ -9,8 +9,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
+import com.scenevibe.tvcompanionpoc.installation.PackageInstaller;
+import com.scenevibe.tvcompanionpoc.installation.TvCapabilities;
 
 /**
  * User-started foreground service that owns the Android overlay window.
@@ -51,8 +58,14 @@ public final class OverlayService extends Service {
     private CommentaryServer commentaryServer;
     private MediaSessionProbe mediaSessionProbe;
     private MediaSyncedTrackScheduler trackScheduler;
-    private CloudTrackRepository cloudTrackRepository;
-    private CloudControlClient cloudClient;
+    /** Publish the owner's current instance for Cloud io's pre-ACK lifetime rechecks. */
+    private volatile CloudControlClient cloudClient;
+    /** One service-owned generic stack serializes every live assignment through the owner gate. */
+    private InstallationStore installationStore;
+    private PackageInstaller packageInstaller;
+    private LiveVideoRuntimePorts videoRuntimePorts;
+    /** A fresh client cannot reuse the old identity or race the asynchronous reset wipe. */
+    private boolean cloudResetPending;
     /**
      * 0.10A generic scene path (Case B). The {@link SceneRenderer} draws manifested Video
      * scenes and the {@link SceneRuntimeController} is the regie that decides WHEN. Both are
@@ -194,24 +207,20 @@ public final class OverlayService extends Service {
                         }
                     }
                 });
-                cloudTrackRepository = new CloudTrackRepository(this);
-                // Restart recovery (section 8): prefer the manifested restore so a revision that
-                // has a durable valid manifest re-arms the regie armed-not-visible. A revision
-                // with no manifest returns a failed result WITHOUT clearing, so the legacy
-                // restore() below stays the Case A authority and nothing is lost.
-                CloudTrackRepository.RestoreResult manifested =
-                        cloudTrackRepository.restoreWithManifest(trackScheduler);
-                if (manifested.ok) {
-                    activeRevision = manifested.revision;
-                    sceneController.loadManifest(manifested.revision, manifested.manifest);
-                    Log.i(TAG, "Cached manifested revision restored; revision=" + manifested.revision);
-                } else {
-                    long restored = cloudTrackRepository.restore(trackScheduler);
-                    if (restored > 0) {
-                        activeRevision = restored;
-                        Log.i(TAG, "Cached cloud track restored; revision=" + restored);
-                    }
-                }
+                installationStore = new InstallationStore(new AndroidInstallationBackend(this));
+                packageInstaller = new PackageInstaller(installationStore,
+                        VideoInstallationHandlers.registry(), TvCapabilities.current());
+                videoRuntimePorts = new LiveVideoRuntimePorts(
+                        () -> Looper.myLooper() == Looper.getMainLooper(),
+                        () -> trackScheduler, () -> sceneController,
+                        () -> { if (renderer != null) renderer.dismiss(); },
+                        () -> { if (sceneRenderer != null) sceneRenderer.dismissNow(); },
+                        revision -> activeRevision = revision);
+                // Complete durable restoration on main before either probe events or Cloud polling.
+                // Only the installer's same-revision path resolves/validates the durable handler.
+                InstallationStatus restored = restoreInstalledPackage(installationStore,
+                        packageInstaller, videoRuntimePorts, DiagnosticsStore.INSTANCE);
+                Log.i(TAG, "Installation startup restore=" + (restored == null ? "EMPTY" : restored.name()));
             }
 
             // The CommentaryServer / port 8765 / LAN pairing surface is a LAN DEV tool only.
@@ -252,12 +261,12 @@ public final class OverlayService extends Service {
                 mediaSessionProbe.start();
             }
 
-            if (shouldReconstructCloudClient(cloudClient == null, BuildConfig.CLOUD_ORIGIN.isEmpty())) {
+            if (!cloudResetPending && shouldReconstructCloudClient(cloudClient == null, BuildConfig.CLOUD_ORIGIN.isEmpty())) {
                 // Fresh construction on first entry AND after ACTION_CLOUD_RESET nulled the
                 // field: a reset client's io executor is shut down and cannot be reused, so the
                 // only correct way to re-arm the cloud is a brand-new CloudControlClient here.
-                cloudClient = new CloudControlClient(this, cloudTrackRepository, trackScheduler,
-                        manifestInstaller);
+                cloudClient = new CloudControlClient(this, installationStore, packageInstaller,
+                        videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient);
                 cloudClient.start();
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
@@ -275,8 +284,11 @@ public final class OverlayService extends Service {
                 // "cloudClient == null" path above and calls start() again; without this the
                 // stale client's running==false flag would make activate() a silent no-op.
                 if (cloudClient != null) {
-                    cloudClient.reset();
+                    CloudControlClient spent = cloudClient;
+                    cloudResetPending = true;
                     cloudClient = null;
+                    spent.reset(() -> new android.os.Handler(Looper.getMainLooper())
+                            .post(() -> cloudResetPending = false));
                 }
                 if (renderer != null) {
                     renderer.dismiss();
@@ -387,118 +399,102 @@ public final class OverlayService extends Service {
     };
 
     /**
-     * Manifested-install seam supplied to {@link CloudControlClient} (section 7). The client
-     * only moves bytes; this installer owns the regie-accept half of the ACK invariant. It
-     * installs runtimeTrack + manifest ATOMICALLY and cross-contract-validated via the FEAT-002
-     * repository (which runs {@link VideoOverlayManifestBridge}, persists durably and loads the
-     * scheduler), then arms the regie by loading the manifest. It returns true ONLY when the
-     * whole chain succeeded; any failure leaves the prior cache intact, records a bounded
-     * diagnostic and returns false so the client does NOT ACK. No comment/scene content or
-     * secret is ever logged here.
+     * Service-owned runtime ports reuse the existing scheduler/controller and lazy windows.
+     * Suppliers tolerate teardown and permit deterministic tests of this actual adapter;
+     * only native retirement and the owner predicate are substituted. No parser, storage,
+     * network or ACK enters these ports. Selection is the final successful ARM operation.
      */
-    private final CloudControlClient.ManifestInstaller manifestInstaller =
-            new CloudControlClient.ManifestInstaller() {
-        @Override public boolean install(long revision, String runtimeJson, String manifestJson) {
-            if (cloudTrackRepository == null || trackScheduler == null) return false;
-            long armedRevision = installManifestedRevision(cloudTrackRepository, trackScheduler,
-                    sceneController, DiagnosticsStore.INSTANCE, revision, runtimeJson, manifestJson);
-            if (armedRevision <= 0) return false;
-            // The Cloud application gate owns the UI thread here. Retire any prior
-            // legacy window synchronously before selecting the manifested revision.
-            if (renderer != null) renderer.dismiss();
-            activeRevision = armedRevision;
-            return true;
-        }
-        @Override public boolean confirmArmed(long revision) {
-            if (cloudTrackRepository == null || trackScheduler == null) return false;
-            long armedRevision = confirmManifestedRevisionArmed(cloudTrackRepository,
-                    trackScheduler, sceneController, revision);
-            if (armedRevision <= 0) return false;
-            // The Cloud application gate owns the UI thread here. Retire any prior
-            // legacy window synchronously before selecting the manifested revision.
-            if (renderer != null) renderer.dismiss();
-            activeRevision = armedRevision;
-            return true;
-        }
-        @Override public boolean activateLegacy(long revision) {
-            long legacyRevision=activateLegacyRevision(sceneController,revision);
-            if(legacyRevision<=0)return false;
-            // unload() asks the sink to hide a visible manifested scene. Force immediate window
-            // removal as well so a bounded exit fade can never overlap the first legacy card.
-            if(sceneRenderer!=null)sceneRenderer.dismissNow();
-            activeRevision=legacyRevision;
-            return true;
-        }
-    };
+    static final class LiveVideoRuntimePorts implements VideoInstallationRuntimePorts {
+        private final java.util.function.BooleanSupplier owner;
+        private final java.util.function.Supplier<MediaSyncedTrackScheduler> scheduler;
+        private final java.util.function.Supplier<SceneRuntimeController> controller;
+        private final Runnable retireLegacy,retireScenes;
+        private final java.util.function.LongConsumer selection;
 
-    /**
-     * Android-free, unit-testable core of the manifested-install ACK decision (section 7). It
-     * installs runtimeTrack + manifest ATOMICALLY and cross-contract-validated via the FEAT-002
-     * repository (which runs {@link VideoOverlayManifestBridge}, persists durably and loads the
-     * scheduler), records the bounded outcome into {@code diagnostics}, then arms the regie by
-     * replacing the controller's active revision from the just-committed durable copy. It
-     * returns the armed revision (&gt; 0) ONLY when the whole durable install + scheduler accept
-     * + regie accept chain succeeded; it returns 0 on ANY failure, in which case the prior cache
-     * is left intact and the client must NOT ACK. No comment/scene content or secret is logged.
-     *
-     * @return the armed revision on full success, or 0 when the install/arm chain failed
-     */
-    static long installManifestedRevision(CloudTrackRepository repository,
-            MediaSyncedTrackScheduler scheduler, SceneRuntimeController controller,
-            DiagnosticsStore diagnostics, long revision, String runtimeJson, String manifestJson) {
-        CloudTrackRepository.InstallResult result =
-                repository.install(revision, runtimeJson, manifestJson, scheduler);
-        // Observational only: record the bounded install outcome, never any content.
-        diagnostics.setLastManifestCode(result.code);
-        if (!result.ok) return 0;
-        // Durable install + scheduler accept succeeded; now arm the regie from the just-committed
-        // durable copy so the bridge stays the sole owner of the cross-contract rules (it already
-        // ran inside install()).
-        CloudTrackRepository.RestoreResult armed = repository.restoreWithManifest(scheduler);
-        if (!armed.ok) return 0;
-        if (controller != null) controller.replaceRevision(armed.revision, armed.manifest);
-        return armed.revision;
+        /** Bind the service's existing owners; construction never loads, renders or persists. */
+        LiveVideoRuntimePorts(java.util.function.BooleanSupplier owner,
+                java.util.function.Supplier<MediaSyncedTrackScheduler> scheduler,
+                java.util.function.Supplier<SceneRuntimeController> controller,
+                Runnable retireLegacy,Runnable retireScenes,java.util.function.LongConsumer selection) {
+            if(owner==null||scheduler==null||controller==null||retireLegacy==null
+                    ||retireScenes==null||selection==null)throw new IllegalArgumentException("Missing Video owner");
+            this.owner=owner;this.scheduler=scheduler;this.controller=controller;
+            this.retireLegacy=retireLegacy;this.retireScenes=retireScenes;this.selection=selection;
+        }
+        /** Android composition returns true only on the actual main/window owner thread. */
+        @Override public boolean isOwnerThread() {return owner.getAsBoolean();}
+        /** Synchronously dismiss the existing legacy renderer; never construct a renderer. */
+        @Override public boolean retireLegacyVisualOwner() {
+            if(!isOwnerThread())return false;
+            retireLegacy.run();return true;
+        }
+        /** Unload/invalidate the regie, then force immediate removal of its existing window. */
+        @Override public boolean retireManifestedVisualOwner() {
+            if(!isOwnerThread())return false;
+            SceneRuntimeController runtime=controller.get();
+            if(runtime==null)return false;
+            runtime.unload();retireScenes.run();return true;
+        }
+        /** Load exactly the prepared immutable track, with no reparse or durable operation. */
+        @Override public boolean loadPreparedTrack(ScheduledTrack track) {
+            if(!isOwnerThread()||track==null)return false;
+            MediaSyncedTrackScheduler runtime=scheduler.get();
+            if(runtime==null)return false;
+            runtime.load(track);return true;
+        }
+        /** Replace the exact prepared manifest/revision using the existing controller generation guard. */
+        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {
+            if(!isOwnerThread()||revision<1||manifest==null)return false;
+            SceneRuntimeController runtime=controller.get();
+            if(runtime==null)return false;
+            runtime.replaceRevision(revision,manifest);
+            return runtime.isSceneRendererActiveFor(revision);
+        }
+        /** Select only an exact armed manifested revision, or a legacy revision with no manifested owner. */
+        @Override public boolean selectActiveRevision(long revision,boolean manifested) {
+            if(!isOwnerThread()||revision<1)return false;
+            SceneRuntimeController runtime=controller.get();
+            if(runtime==null||(manifested?!runtime.isSceneRendererActiveFor(revision):runtime.hasActiveManifest()))return false;
+            selection.accept(revision);return true;
+        }
+        /** Clear partial runtime ownership idempotently, attempting every cleanup even after one failure. */
+        @Override public void abortActivation() {
+            if(!isOwnerThread())return;
+            cleanup(()->{SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.unload();});
+            cleanup(retireScenes);cleanup(retireLegacy);
+            cleanup(()->{MediaSyncedTrackScheduler runtime=scheduler.get();if(runtime!=null)runtime.clear();});
+            selection.accept(0);
+        }
+        /** A failed native removal cannot skip the remaining runtime cleanup or expose raw exceptions. */
+        private static void cleanup(Runnable work) {
+            try {work.run();}catch(RuntimeException refused) { /* The handler returns bounded ARM_FAILED. */ }
+        }
     }
 
     /**
-     * Android-free, unit-testable core of the re-delivered manifested revision re-arm
-     * (section 7/14). On a manifested assignment at {@code revision <= cached} the durable
-     * install already happened, so this re-arms the regie DEFENSIVELY WITHOUT re-persisting: if
-     * the controller already holds a manifest for the cached revision it is a no-op success; if
-     * not (e.g. the service armed a legacy restore, or a prior arm was lost) it re-reads the
-     * just-cached durable manifested copy via {@link CloudTrackRepository#restoreWithManifest}
-     * and arms the regie from it. It returns the armed revision (&gt; 0) only when the regie
-     * holds a manifest for the cached revision afterwards, and 0 when the cache has no durable
-     * manifest for it (the manifested re-delivery must then fail closed, no ACK). It never
-     * lowers the active revision and never logs content.
-     *
-     * @return the armed (cached) revision on success, or 0 when no durable manifest is armable
+     * Restore once into a freshly composed runtime, without parsing, writing, migrating or ACKing.
+     * EMPTY does nothing; CORRUPT stays intact. A snapshot's inert canonical request reuses the
+     * same installer's qualified same-revision path and exact durable handler binding.
+     * Only ARMED selects a revision through the existing owner ports. The nullable result means
+     * no package was present; diagnostics records a bounded last-startup outcome, never content.
      */
-    static long confirmManifestedRevisionArmed(CloudTrackRepository repository,
-            MediaSyncedTrackScheduler scheduler, SceneRuntimeController controller, long revision) {
-        if (controller == null) return 0;
-        // Already armed for the cached revision => benign idempotent re-ACK, nothing to do.
-        if (controller.hasActiveManifest() && controller.activeRevision() == revision) {
-            return revision;
+    static InstallationStatus restoreInstalledPackage(InstallationStore store, PackageInstaller installer,
+            InstallationHandler.RuntimePorts ports, DiagnosticsStore diagnostics) {
+        InstallationStatus result;
+        try {
+            InstallationStore.ReadResult durable = store.read();
+            if (durable.state() == InstallationStore.ReadState.EMPTY) {
+                result = null;
+            } else if (durable.state() == InstallationStore.ReadState.CORRUPT) {
+                result = InstallationStatus.CACHE_FAILED;
+            } else {
+                result = installer.install(durable.snapshot().canonical(), ports);
+            }
+        } catch (RuntimeException unavailable) {
+            result = InstallationStatus.CACHE_FAILED;
         }
-        // Not armed for this revision yet: re-read the durable manifested copy and arm from it,
-        // without re-persisting. A revision with no durable manifest fails closed.
-        CloudTrackRepository.RestoreResult armed = repository.restoreWithManifest(scheduler);
-        if (!armed.ok || armed.revision != revision) return 0;
-        controller.replaceRevision(armed.revision, armed.manifest);
-        return armed.revision;
-    }
-
-    /**
-     * Android-free/testable Case-B -> Case-A transition. Once a newer legacy runtime revision
-     * is already durable and accepted by the scheduler, disarm any loaded OverlayManifest
-     * BEFORE that legacy revision can ACK. Returning the revision lets the Android service
-     * update its visual-owner revision without coupling CloudControlClient to graphics state.
-     */
-    static long activateLegacyRevision(SceneRuntimeController controller,long revision) {
-        if(controller==null||revision<1)return 0;
-        controller.unload();
-        return revision;
+        diagnostics.setLastStartupRestoreResult(result);
+        return result;
     }
 
     /**

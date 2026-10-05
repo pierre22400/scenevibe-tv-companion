@@ -1,5 +1,7 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
+
 /**
  * The process-lifetime, bounded holder for the OBSERVATIONAL runtime signals that the
  * OverlayService / CloudControlClient / scheduler report (user section 10). It keeps a
@@ -38,6 +40,8 @@ final class DiagnosticsStore {
             RuntimeDiagnostics.ManifestCode.NONE;
     private RuntimeDiagnostics.SceneCode lastSceneCode =
             RuntimeDiagnostics.SceneCode.NONE;
+    /** Last startup attempt only; null means EMPTY/not attempted, never current runtime authority. */
+    private InstallationStatus lastStartupRestoreResult;
 
     /** Package-visible so JVM tests can build a fresh, isolated store without the singleton. */
     DiagnosticsStore() {}
@@ -111,6 +115,11 @@ final class DiagnosticsStore {
         if (code != null) this.lastSceneCode = code;
     }
 
+    /** Record only the installer's bounded startup outcome, including EMPTY's neutral null. */
+    synchronized void setLastStartupRestoreResult(InstallationStatus result) {
+        this.lastStartupRestoreResult = result;
+    }
+
     /**
      * Clears the observational runtime signals that describe a live cloud identity/session
      * back to their neutral defaults. Used by the EXCEPTIONAL Cloud reset so the diagnostics
@@ -125,6 +134,7 @@ final class DiagnosticsStore {
         this.lastCloudErrorCode = RuntimeDiagnostics.CloudErrorCode.NONE;
         this.lastManifestCode = RuntimeDiagnostics.ManifestCode.NONE;
         this.lastSceneCode = RuntimeDiagnostics.SceneCode.NONE;
+        this.lastStartupRestoreResult = null;
     }
 
     synchronized boolean serviceRunning() { return serviceRunning; }
@@ -139,4 +149,6 @@ final class DiagnosticsStore {
     synchronized RuntimeDiagnostics.CloudErrorCode lastCloudErrorCode() { return lastCloudErrorCode; }
     synchronized RuntimeDiagnostics.ManifestCode lastManifestCode() { return lastManifestCode; }
     synchronized RuntimeDiagnostics.SceneCode lastSceneCode() { return lastSceneCode; }
+    /** Read historical startup observation without authorizing an ARM or a retry. */
+    synchronized InstallationStatus lastStartupRestoreResult() { return lastStartupRestoreResult; }
 }

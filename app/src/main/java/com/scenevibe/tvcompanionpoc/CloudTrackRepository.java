@@ -1,9 +1,17 @@
 package com.scenevibe.tvcompanionpoc;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 import org.json.JSONObject;
-import org.json.JSONArray;
+
+/**
+ * Phase C moves Android persistence mechanics under InstallationStore. This compatibility
+ * repository retains its exact Video parsers, scheduler/restore sequence, revision checks
+ * and test seam. Current callers still use the historical tuple, never generic handlers.
+ * Phase D delegates semantic parsing/coherence to the named Video compatibility facades.
+ * Revision/persistence/load/restore/ACK orchestration stays here until later authorized phases.
+ */
 
 /** Persists one validated text-only runtime track and its revision in app-private storage. */
 final class CloudTrackRepository {
@@ -31,30 +39,32 @@ final class CloudTrackRepository {
     private final Storage storage;
     /** Wraps SharedPreferences.commit so a successful return means both fields are durable. */
     CloudTrackRepository(Context context) {
-        SharedPreferences prefs=context.getApplicationContext().getSharedPreferences("cloud_track",Context.MODE_PRIVATE);
+        this(new InstallationStore(new AndroidInstallationBackend(context)));
+    }
+    /** Share the service's sole store for transitional historical startup; live installs bypass this facade. */
+    CloudTrackRepository(InstallationStore store) {
         storage=new Storage() {
-            @Override public String get(String key) {return prefs.getString(key,null);}
+            /** Delegate raw historical reads without interpreting generic installation state. */
+            @Override public String get(String key) {return store.historicalValue(key);}
+            /** Keep legacy removal of a stale manifest inside the same durable batch. */
             @Override public boolean save(long revision,String json) {
                 // Legacy Case A (no manifest): persist revision + runtime and remove any stale
                 // manifest in the SAME commit so a disconnected revision never keeps an older
                 // revision's manifest. Observable no-manifest behavior is otherwise unchanged.
-                return prefs.edit().putString("revision",String.valueOf(revision))
-                        .putString("runtime",json).remove("manifest").commit();
+                return store.saveHistorical(revision,json,null);
             }
+            /** Delegate the complete historical tuple to the sole Android persistence owner. */
             @Override public boolean save(long revision,String runtimeJson,String manifestJson) {
                 // Atomic manifested install: revision + runtime + manifest all durable in one
                 // commit, or none of them. A null manifest removes any stale manifest key.
-                SharedPreferences.Editor editor=prefs.edit()
-                        .putString("revision",String.valueOf(revision))
-                        .putString("runtime",runtimeJson);
-                if(manifestJson==null)editor.remove("manifest");
-                else editor.putString("manifest",manifestJson);
-                return editor.commit();
+                return store.saveHistorical(revision,runtimeJson,manifestJson);
             }
+            /** Record the confirmed exact historical revision, never transmit its ACK. */
             @Override public boolean saveAck(long revision) {
-                return prefs.edit().putString("ackRevision",String.valueOf(revision)).commit();
+                return store.saveHistoricalAcknowledgement(revision);
             }
-            @Override public void clear() {prefs.edit().clear().commit();}
+            /** Retain explicit reset/corruption clearing of this cache file only. */
+            @Override public void clear() {store.clearHistorical();}
         };
     }
     /** Injectable persistence boundary for deterministic JVM tests. */
@@ -117,20 +127,20 @@ final class CloudTrackRepository {
                 ||manifestJson==null||manifestJson.length()>800_000)
             return new InstallResult(false,RuntimeDiagnostics.ManifestCode.MANIFEST_INVALID);
         ScheduledTrack track;
-        OverlayManifest manifest;
+        VideoPreparedState prepared;
         try {
             long prior=0;
             String raw=storage.get("revision");
             if(raw!=null)prior=Long.parseLong(raw);
             if(revision<=prior)
                 return new InstallResult(false,RuntimeDiagnostics.ManifestCode.MANIFEST_INVALID);
-            track=parse(runtimeJson);
-            manifest=OverlayManifestParser.parse(new org.json.JSONObject(manifestJson));
+            prepared=VideoInstallationHandlers.manifested().prepareCompatibility(runtimeJson,manifestJson);
+            track=prepared.track;
+        } catch(VideoManifestInstallationHandler.Invalid invalid) {
+            return new InstallResult(false,invalid.code);
         } catch(Exception invalid) {
             return new InstallResult(false,RuntimeDiagnostics.ManifestCode.MANIFEST_INVALID);
         }
-        VideoOverlayManifestBridge.Result cross=VideoOverlayManifestBridge.validate(track,manifest);
-        if(!cross.ok)return new InstallResult(false,cross.code);
         if(!storage.save(revision,runtimeJson,manifestJson))
             return new InstallResult(false,RuntimeDiagnostics.ManifestCode.MANIFEST_CACHE_FAILED);
         scheduler.load(track);
@@ -173,12 +183,9 @@ final class CloudTrackRepository {
             if(json==null||raw==null)throw new IllegalArgumentException("Incomplete manifested cache");
             long revision=Long.parseLong(raw);
             if(revision<1)throw new IllegalArgumentException("Invalid cache revision");
-            ScheduledTrack track=parse(json);
-            OverlayManifest manifest=OverlayManifestParser.parse(new org.json.JSONObject(manifestJson));
-            VideoOverlayManifestBridge.Result cross=VideoOverlayManifestBridge.validate(track,manifest);
-            if(!cross.ok)throw new IllegalArgumentException("Inconsistent manifested cache");
-            scheduler.load(track);
-            return new RestoreResult(true,revision,manifest);
+            VideoPreparedState prepared=VideoInstallationHandlers.manifested().prepareCompatibility(json,manifestJson);
+            scheduler.load(prepared.track);
+            return new RestoreResult(true,revision,prepared.manifest);
         } catch(Exception invalid) {
             storage.clear();
             return new RestoreResult(false,0,null);
@@ -221,15 +228,6 @@ final class CloudTrackRepository {
     synchronized void clear() {storage.clear();}
     /** Applies the exact parser used by LAN; cloud runtime is text-only. */
     private ScheduledTrack parse(String json) throws Exception {
-        JSONObject envelope=new JSONObject(json);
-        JSONArray comments=envelope.optJSONArray("comments");
-        if(comments==null)throw new IllegalArgumentException("Invalid cloud comments");
-        for(int i=0;i<comments.length();i++) {
-            JSONObject item=comments.optJSONObject(i);
-            if(item==null||item.has("media"))throw new IllegalArgumentException("Cloud media unsupported");
-        }
-        return TrackParser.parse(envelope, media -> {
-            throw new TrackParser.Invalid("invalid_media","Cloud v1 is text-only");
-        });
+        return VideoInstallationHandlers.legacy().parseCompatibility(json);
     }
 }

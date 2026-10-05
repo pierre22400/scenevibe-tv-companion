@@ -1,0 +1,47 @@
+{
+  "referenceHead": "d62865f6c8ccc5c90862a1e8a2c273cb9832e961",
+  "baseTvM4": "ecdf77bec9f93babf15239a63bf7f702fd7ca293",
+  "existingSuites": {
+    "AssignmentMutationGateTest": 6,
+    "AutostartPolicyTest": 9,
+    "CloudActivationDiagnosticsTest": 2,
+    "CloudClientRestartAfterResetTest": 4,
+    "CloudDeviceCredentialsTest": 5,
+    "CloudManifestCacheTest": 7,
+    "CloudProtocolTest": 23,
+    "CloudResetAsyncTest": 6,
+    "CloudResetTest": 4,
+    "CloudTrackRepositoryTest": 5,
+    "CommentaryServerAuthTest": 1,
+    "ConsumerModeTest": 3,
+    "DiagnosticsNoSecretTest": 8,
+    "DisplayCountdownTest": 1,
+    "InstallationIdentityTest": 8,
+    "M1CloudInteropTest": 3,
+    "ManifestInstallAckDecisionTest": 11,
+    "MediaSyncedTrackSchedulerExpiryTest": 6,
+    "MediaSyncedTrackSchedulerIdentityTest": 5,
+    "OverlayArmedNotVisibleTest": 12,
+    "OverlayManifestParserTest": 6,
+    "PairingPolicyTest": 3,
+    "SceneRendererPreflightTest": 5,
+    "SceneRuntimeControllerTest": 16,
+    "SecretStoreMigrationTest": 13,
+    "VideoOverlayManifestBridgeTest": 7
+  },
+  "phaseASuites": {
+    "M4PhaseAAtomicStoreTest": 3,
+    "M4PhaseAIdentityTest": 3,
+    "M4PhaseAInstallationTest": 12,
+    "M4PhaseATransportTest": 12
+  },
+  "allowedOptInSkips": [
+    "M1CloudInteropTest.originalColumboProjectionIsInstallable"
+  ],
+  "fixtureSha256": {
+    "app/src/test/resources/m1/cloud-envelopes.json": "19ee6fc3e2eba7009c9d345c33a63ca5617621fac9c8f5618cb24ee2932d6eab",
+    "app/src/test/resources/m1/overlay-corpus.json": "c78addf877b277e38f66c12274e4c8ed2ce12a503d883e27fd9950215cafbf30",
+    "app/src/test/resources/m4/video-legacy-cache-v1.json": "1676ed2033ec0e589509da7bdab3294ed8b5949153eeb2cfdb539aa23409cc8c",
+    "app/src/test/resources/m4/video-manifested-cache-v1.json": "76d109c4b69f3e707912449f87e3fa6b9081e4564a12c77c633ae7ed7563beb1"
+  }
+}

@@ -1,0 +1,531 @@
+{
+  "referenceHead": "824339de562c0de8542f4c1b2a22266832c8abef",
+  "baseTv": "ecdf77bec9f93babf15239a63bf7f702fd7ca293",
+  "baseCloud": "5011c91aac61a0cc6dcc74c256a15b7dee03d785",
+  "phaseFClosure": "eb0e0d823edc291bf1a39583ba70f098fac189e0",
+  "authorizedProductionChanges": [
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java"
+  ],
+  "authorizedProvenanceChanges": [
+    "tests/test_m4_phase_b_boundary.py",
+    "tests/test_m4_phase_c_boundary.py",
+    "tests/test_m4_phase_d_boundary.py",
+    "tests/test_m4_phase_e_boundary.py",
+    "tests/test_m4_phase_f_boundary.py",
+    "tests/test_m4_phase_g_boundary.py",
+    ".github/scripts/m4-phase-a-test-summary.py"
+  ],
+  "authorizedProtocolChange": "docs/m4-sony-physical-qualification-protocol.md",
+  "productionFiles": [
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGate.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPreference.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentials.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudProtocol.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DisplayCountdown.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/InstallationIdentity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaIdentityMatcher.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NotificationAccess.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifest.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestParser.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingPolicy.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingRuntime.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/ScheduledTrack.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationHandlers.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoLegacyInstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoManifestInstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridge.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoRuntimePreparation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/ExecutionRequirements.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallRequest.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationBounds.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandlerRegistry.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshot.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshotCodec.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStatus.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PreparedInstallation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudV1InstallationAdapter.java"
+  ],
+  "startingBlobs": {
+    ".github/scripts/android-15-smoke.sh": "8b9ba3e14a8edabfe7b78ded23e4dd42a350801b",
+    ".github/scripts/m4-phase-a-baseline.json": "f635ceb0b5964b31daf74f0fbea7c2e935ae2f9b",
+    ".github/scripts/m4-phase-a-test-summary.py": "e4eaa5998a54489c2ab5f3d6ef28f9d19857a303",
+    ".github/scripts/m4-phase-b-baseline.json": "a5a65aa8a929017f4bf5030e799c53ac48df68e2",
+    ".github/scripts/m4-phase-c-baseline.json": "b82f0f39625da33d47ea0940248c4935d63af7cb",
+    ".github/scripts/m4-phase-d-baseline.json": "57d9162e7f9c06a1716cc4cf4c6e578dcc327363",
+    ".github/scripts/m4-phase-e-baseline.json": "a24175c010a616472ffe46a7356010ce539557ca",
+    ".github/scripts/m4-phase-f-baseline.json": "a1337815f9a170267591e7ad135723787f6aae9b",
+    ".github/scripts/m4-phase-g-baseline.json": "8de44d1a6b9d007762d97a392cdb8dc4f3883ae0",
+    ".github/workflows/android-15-smoke.yml": "0e2eefb1314f561efc3ea401fc3163b800b42afa",
+    ".github/workflows/android-debug.yml": "e80792b5adbcf5438970e2999ad51cb856752b96",
+    ".github/workflows/android-release.yml": "4902241c43d6f976eb542771735c8712be3a3a18",
+    "app/src/main/AndroidManifest.xml": "4abe48d105eddfef1845e2373b34e4fef636b675",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGate.java": "36bf2ad56ea533b82e282caada731d161039beb3",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java": "086a89cff2fa4701be427d4f9b029db264e48fa1",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPreference.java": "c6a9520b4d23a33d0a4a7d72859174d6120ca641",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java": "c6f822db097c52b15d44b4d76253a2346b926ea6",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java": "48fccfe62b2964f792fabd8d750106c424df4957",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentials.java": "f75b9c0457afccaf2c7d14c5f8b7f641b855e770",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudProtocol.java": "7f8f146f107d4070bfdfbb3b5118cbe7c500e2ae",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java": "fe205a621184445d061827be984962799b582608",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudV1InstallationAdapter.java": "113c10a5e94e8a0f9b4a247a63bf47795636bdad",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java": "4023911c39aec1052a8ba768961646c0f794d8c2",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": "4fd0376c3075e757812724a3c83d84c7bd31730c",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsStore.java": "d851c94205e7fb90fb16dd85a4d15e2825c947ee",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DisplayCountdown.java": "295dd4f6dd24f206c7fbdd57bb4a196c0ea980a0",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/InstallationIdentity.java": "32a2f7e7565bd71226cc1dfe506ccbcbdeef1232",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java": "3b2276b0a2d93949fe56dc374f46605f201a31a3",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaIdentityMatcher.java": "f022a48c78151a11508d7feb12ba91239191a43a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java": "c8728643be07f405a47b62a84f525302dbb73cab",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java": "9c205b09ff5ffd85977250175eaab5019984b1b1",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java": "441d983409d94ae6d5e31198ec739dec86166754",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NotificationAccess.java": "b79a16d128c533169305e8a814b56488c3846559",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifest.java": "41489cc6c1cc6a837658323d0d36349a4149c869",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestParser.java": "eb8f6b5e7bc559e55bde0d32dda3c443d57126de",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java": "ae63244b3aa52dff5fa259b684959f5fa4bf626c",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": "c464baed64d353e6b065db8ccc6655a72277857a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingPolicy.java": "d5120dbd2c615d16e43275e69793696155ff1c6d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingRuntime.java": "5532e093cbe17920764bf69ba72d0634195cb870",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java": "0b9581dbec9eb51e5d3b1901b1642302f1ac0f02",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java": "5e73b1d406ec5b6f9a5f0b84702d6c77182b1ee8",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java": "c5f3b96606a65374417771261f6631f402902de9",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/ScheduledTrack.java": "38219f1130a0243272d3b1df5ad2e63461d7cc1e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java": "447b4e2e6fb4a7852bfcb2cb9e94217adf46f884",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java": "fd1e23426ee1cfbba6f3cd5a30e40c38c599ce43",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationHandlers.java": "4eb7a4d239e8fddf7d9ce4dfd06f63c82399a24d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java": "c060fa7cf777f5f2279805c90f9790d480279e46",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoLegacyInstallationHandler.java": "84973d3ee7112e97fb68d2afc2e03fb8aba4cd3d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoManifestInstallationHandler.java": "304e235ac26c388288b6ce81fc5ae76bfbad4476",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridge.java": "8c30496cfc082019cb8518962b8584bdc9c11f2e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java": "eb0fa40cca9dfd350af38319cc701778a4ccf358",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoRuntimePreparation.java": "f9088db0ed9db1e746a54e0d51f6dfaffebe19a5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java": "cfd974d7eb4e557caf978fc94432a6c1b02d38bd",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/ExecutionRequirements.java": "227d3adb676642f03e8e1a680f422b3c5d792e1f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallRequest.java": "6efda99788067ffcbf2c72d62a1ebeb4e19b202a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationBounds.java": "51195bed65912e22ee7efe8cf402e11d65d39f08",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandler.java": "eb40e00c65cab8e8244fa67d9c19ecf7b6d61f9b",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandlerRegistry.java": "a3cc005bb64aba6eea70871c61a063148b0056c0",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshot.java": "d437ffd9e8633c55c0e2c55e1fac161960d767f6",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshotCodec.java": "af553a0904a582606d016a51b7a195def84db8ca",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStatus.java": "301e9b1d29280e8cda04e84a96f6d2857d266e1e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java": "d3899dd4d6ff05992d813e4f0c9c51a52e1e7d22",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java": "0f973271d1f6c133adddff6a8136ffb9eef19fd5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PreparedInstallation.java": "a03b3d986062a291b29feacec706d532cc12a620",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java": "56b79dbdb063ab1562882bfa25da5e195112c77b",
+    "app/src/main/res/drawable/ic_launcher.png": "4493fbd92fc7069f8984660a19d77478c52b15d6",
+    "app/src/main/res/drawable/tv_banner.png": "32e603afa8def2655f8a2129949336c1c52babbf",
+    "app/src/main/res/values/strings.xml": "04c8cf1b0543bcded5bea7bf863d6e4c4c163056",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java": "6fa550544987b8222f80fbf13eeab49f76aeb530",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AutostartPolicyTest.java": "4e43a30362f1be5b2cf462a17880d613f1ab4e34",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudActivationDiagnosticsTest.java": "07b896c29e161953e5cbea2c3338fddd0f7f8fa3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudClientRestartAfterResetTest.java": "39870a1e45671ad2fdb73e0a22d2d4494fb7b817",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentialsTest.java": "a55c2cd403bf97028fdbb3026ee3f4755cda5302",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudManifestCacheTest.java": "a5665508109389ac510bf996d4d4d41feb77282a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudProtocolTest.java": "d3f558d0d51ed910acb85315244fb50f4fe1b2c8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetAsyncTest.java": "fcee8a09657de9066ff80424302741a01587b4e2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetTest.java": "a5082076629b64eb663195c616f7adbeb9af3384",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudTrackRepositoryTest.java": "3bc93dcd050f4b38775c67d760c815704b07a390",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CommentaryServerAuthTest.java": "96d856be7ebd66d406dca73a4bda2d3a116337db",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ConsumerModeTest.java": "b6d9f4ab707caf207d48868011a65de445381ce1",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DiagnosticsNoSecretTest.java": "8f27250623acc2126b9f8e7bcf6c9316eb4460f3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DisplayCountdownTest.java": "7fece36f394fb5e66d4cc68b62edf33c5e5ba0fa",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/InstallationIdentityTest.java": "4dc9dd7d64afbe8be3a42abda75a9b483c86ac52",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M1CloudInteropTest.java": "5ec63ace4ebd1078a5855a3adec494bb90ce75bf",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAAtomicStoreTest.java": "fe2e1fa35da813a4c39bf9374f55d2d421f7b592",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java": "2531940975541ba2ce5dd6d0f25e52a72f777e58",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAIdentityTest.java": "9787b173fafb629dc638e34c0fd0e2c100c06ad6",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAInstallationTest.java": "e78a90ed38540a27f5e0b7aa0753299a8e00e7c8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseATransportTest.java": "d0558d133d956753967fb6dc767d210e8b6d9294",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseBSideEffectTest.java": "2003512d461bdc67a3065f3ac9a024d42fdc7ee0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseCCompatibilityTest.java": "01d400e3576c5f7533a7ed22432dc54557db3836",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDArmTest.java": "7851e3be021c2c6a83f284166c116832714c7ed9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDCompatibilityEdgeTest.java": "b3f6c7be9256853031b39d5619fcc08844d0caf2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDDifferentialTest.java": "08f81b0229e6da7d50634f4c5835a2e46126e485",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHandlerFixtures.java": "2d0e5cf86dc3538634af898de6bcb98812fe9d17",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHistoricalRepository.java": "9dd7a5c555e67c0e4ab743ebd08b8ea05083c828",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDLegacyHandlerTest.java": "1dfecc8060c3e269302e197f9922af6296696d2b",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDManifestedHandlerTest.java": "fbd2b773096fae053a91f60fdb58b0399348daf4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDRegistryTest.java": "0209d3d48dca135c83065b6446aff221d282e5b4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEHistoricalInstallerTest.java": "675b51540e26f50b9e2e17c30acb5b008d633b15",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFailureTest.java": "d89cf1f8185ca02a9a738ed3354367a83437b1aa",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFixtures.java": "958c5cd269b8609f13f466d3fd43835f493d24e3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoInstallerTest.java": "f372c14b31555dfa2685ea7adb13c6c8760de731",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFAdapterRejectionTest.java": "ed7525b3a4ce602943a70ba683dc8f63acab4a4a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFAdapterTest.java": "2ec6d6cdf5342a8fab65aa5ded9007c86d2e8e81",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCapabilityDiagnosticsTest.java": "c9dcead174b442ffb7630745a52c192eda55d6ca",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFClearStoreTest.java": "73c3c831868ad47ad8440d06dc0406bd929032c9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCloudClientTest.java": "e3a4f8a2266a74358d4f5ffc14f89b6f3f505cbd",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCorruptionTest.java": "8e48d897ade6c4702727605b9228e4b7b809b072",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFFixtures.java": "498056d4e0efb5d89ea92e27ef8524590e9a984a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalCloudClient.java": "a90c0587d7bc332cd0ea94bf95e74e0cae3bd4d0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalRedeliveryTest.java": "78f7c536de9deabad69df208d739c533340c2fd1",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHttps.java": "0186103eea800e252024212ecd1ac6a4ca586076",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFNonArmedTest.java": "694e61b8eb40ff32c64fc475fac7dfef4b9e436d",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFOwnerGateTest.java": "68a94c47dc7f9ef6d75e858221acbec618202a0a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFResetFixture.java": "9ebc14c70765a93806eccf3818855412a8982097",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFResetTest.java": "a012197ba00153494907cb1c6d0e6e962bf23a33",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeFailureTest.java": "bdbda3a0e407b1b23178775d70e11f4ef09d445c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeTest.java": "7cd731562c33948e1c84c84cec6a57bca4789465",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGArmFailureTest.java": "e9f641fa48f37e375f759784d6537db5f4ccf958",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGBootTest.java": "3f4fd6070b8fe4068edf2d34821465d01ec28aed",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGCloudAfterRestoreTest.java": "623d900baf168c749f7378c63e255f8f48c2a871",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGDiagnosticsStateTest.java": "0ad491d71413496afdc506bbec4cb7cd12fab642",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGDiagnosticsTest.java": "d35b1a878ed2da4e65d1255a1eaa3edd59f2e354",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGFixtures.java": "2175321ea329ecad036dcee25c4a1334da7b034a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGHistoricalService.java": "7cf40efd2e697b4c520a67b46a7a039c4ea07368",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGResetTest.java": "2536ce24f2169b3cc09de7b37c44ecc445d59386",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGRestoreFailureTest.java": "82794fa1ad34d65368fb4ba40dac29a8c46dc9e2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupStateTest.java": "9bda8a3843f2a9087e17f8a9fd755e52708d208c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupTest.java": "3b2e483fa1e51682c1b3510485750da2772e2dc2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java": "23564ee918d0c840d5e408946f8c1e810362a3b9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerExpiryTest.java": "23e07e8a6171ecbb8a3437e1783ab59f9e814876",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerIdentityTest.java": "23691bc6b8f7f1f449ab4353cc5e89f0ce78427d",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayArmedNotVisibleTest.java": "d90956df7d74d5c40c3b971b072ea0a04b6c1028",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayManifestParserTest.java": "39f22f843703311464ae5751b3a99c221b107658",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/PairingPolicyTest.java": "d226e4f04a1aba3dadd7f68d8e951fda972c9700",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRendererPreflightTest.java": "fb9c0913b7681cf7990ffe59c30540cff41b2034",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRuntimeControllerTest.java": "df34a9f5f323aee9a24a514da670dd2e03744d0c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SecretStoreMigrationTest.java": "25f2bf18d0672d3765657730caa78938f3b76745",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridgeTest.java": "29d23c2b3dbb334f22a2d8ead7bbefab89b143a5",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackendTest.java": "e043480dd2bb07e38df309ad2831e2658ae9df07",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationModelTest.java": "5b010d111e21249e7b6a5869d3ed690b72a5cd31",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationRegistryTest.java": "3c3fcaefa083a3f54f978108b5aad0bbc62b5837",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationStoreTest.java": "b3447d097ccb1f02c49b9e6662637748f87e55d0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4PhaseEInstallerFixtures.java": "b156fed6db3b7895817bf462e603d92de7320af5",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerFailureTest.java": "fffdea8627016aa3e0823f2789468df538263376",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerReadbackTest.java": "b5187d5eef78b60d7448183a2ef531db6b9bc04f",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerTest.java": "5077a5d0aac452cd52812baaedc7e01c1b3a9d1e",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilitiesTest.java": "5227a03f3d3d560cfdfaf0f8e3345869505d2ee8",
+    "app/src/test/resources/m1/cloud-envelopes.json": "7d4f16a05f51181266adfcd495200b06f04dca3a",
+    "app/src/test/resources/m1/overlay-corpus.json": "d2769cbd6d82bc3b3ef6a02784e9159076892daf",
+    "app/src/test/resources/m4/video-legacy-cache-v1.json": "c175f1f1a343ac217105e66b70d363566875f90d",
+    "app/src/test/resources/m4/video-manifested-cache-v1.json": "5635582678824581ff40fbcf8e026ab100a7ff8f",
+    "build.gradle": "378b9ca6938fb5366e057e2f1104c473ed91b76e",
+    "docs/lan-pairing-protocol-v1.md": "ba247274a45b66b7e0d72fad392c45bcae0976d4",
+    "docs/m1-final-closure-ui-boundary.md": "be557e26b1fafc4d59e37b8b25d30851eda878d9",
+    "docs/m1-video-coordination.md": "e636d573868d3e5413f266bafd112f27efc4310d",
+    "docs/m4-phase-a-characterization-report.md": "a983b4aa10e6a57c784a73f84fdee985bbf2aab9",
+    "docs/m4-phase-b-generic-model-capabilities-report.md": "92c8e991016ec8fc445842bd3e34ee55925765f0",
+    "docs/m4-phase-b-generic-model-capabilities-work-order.md": "27170fbf7b8e7f6d4c89db4fc5a42fde51405fe6",
+    "docs/m4-phase-c-generic-durable-store-report.md": "3f596bf4e510aa63800cac5c8965988ef133c048",
+    "docs/m4-phase-c-generic-durable-store-work-order.md": "29f67fba24ff3495be232395ee7a3352c9aea464",
+    "docs/m4-phase-d-video-compatibility-handlers-report.md": "f2e6e6dc7145aa3e245962b935a56021df468694",
+    "docs/m4-phase-d-video-compatibility-handlers-work-order.md": "424ce192d4a755279dd9b26373ae544f094c97f4",
+    "docs/m4-phase-e-package-installer-orchestration-report.md": "7417868e56b742837a625115456cdd763fc0c9ce",
+    "docs/m4-phase-e-package-installer-orchestration-work-order.md": "b41251e5e2db9c72c24d0410b1ce6aa10790905c",
+    "docs/m4-phase-f-cloud-v1-adapter-report.md": "9baffd2dcf5c5f60252f78220edc6c65b151254e",
+    "docs/m4-phase-f-cloud-v1-adapter-work-order.md": "b058bf4dce6cd3f183c59d7eb647393e423d820b",
+    "docs/m4-phase-g-generic-restore-diagnostics-report.md": "9f0cbd9cfd428d279aef62d489174aaabd36f5a1",
+    "docs/m4-phase-g-generic-restore-diagnostics-work-order.md": "2f44e172874acddd41d34857d57a0bae92dd0216",
+    "docs/m4-sony-physical-qualification-protocol.md": "7e15c40e9898c14ca8597246b45ca0b3bdc4a35d",
+    "docs/overlay-manifest-0.10a-tv.md": "0e4bf731ace8b446d3cf499bb2672285dc0260d4",
+    "docs/physical-qualification-v0.5-2026-09-25.md": "dd80de156ea9018fd10d7dd8b8f0aecdc9f78952",
+    "docs/physical-qualification-v0.6-2026-09-25.md": "19e20334f801ec7b2530aaacc34e712c2b768dfa",
+    "docs/pr-0.8.0-tv-hardening.md": "19c31ca0c8f7d0ce23bc68e4b01cb6e55ddedbdf",
+    "docs/scenevibe-os-m4-tv-installation-architecture.md": "acb3433c8c42467bebe5a467f7aa282645eedcab",
+    "docs/signature-continuity-protocol.md": "755cbe932d3d0cd098a45673c2d5b1691ddc7160",
+    "docs/sony-notification-access-focus-2026-09-25.md": "5d731f95518218b60514b31af1b4feb394acfe18",
+    "docs/stable-signing.md": "dd8c92a176cfa3a7d376af3e65184aef02e408fc",
+    "docs/tv-hardening-0.8.md": "6c48a17ec7e10dff88ed78ec421fedc4af0001a7",
+    "docs/tv-recovery-0.8.1.md": "6572daef08fc64ebf019898ad76435c27f9b37c3",
+    "docs/tv-release-hardening-0.8.2.md": "c481fb7696b327c5971223616f1e4713039d53f0",
+    "gradle.properties": "a9a5893341537a9cf036d9b9d2d92ef53809f804",
+    "settings.gradle": "1560b65e4b80bd0565b8cc03e0316ccba0618b42",
+    "tests/test_m4_phase_b_boundary.py": "5ff9bbc471fd2b170901722eeba5db9f16c8088a",
+    "tests/test_m4_phase_c_boundary.py": "b5441a73a019cbb1bb68f4c85e498433e639abc5",
+    "tests/test_m4_phase_d_boundary.py": "8518b1d96583864a4722425defc29b5f3bc629b0",
+    "tests/test_m4_phase_e_boundary.py": "f393cfbd4d448824aa392b359a3f8bece64a6394",
+    "tests/test_m4_phase_f_boundary.py": "19839ae946fef83c5f9cc94b45c7247d6f9fff41",
+    "tests/test_m4_phase_g_boundary.py": "d33fd25704d7a0ae35047b71d0983770ff2367d9",
+    "tests/test_poc_contract.py": "1071b66cf6128674830e6dc5b13a2cae27de5027"
+  },
+  "correctivePatches": {
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java": [
+      {
+        "before": " * One editor/commit publishes a batch. Android may update its memory cache even when disk\n * commit returns false: a shared fixed-key prior view masks that failed publication until\n * recovery can restage it in the next single batch. No rollback write or runtime occurs.\n */\npublic final class AndroidInstallationBackend implements InstallationStore.Backend {\n    private static final String[] KEYS={InstallationStore.SNAPSHOT_KEY,\"revision\",\"runtime\",\"manifest\",\"ackRevision\"};\n    private static final List<FailedView> FAILED_VIEWS=new ArrayList<>();\n    private final SharedPreferences preferences;\n\n",
+        "after": " * One editor/commit publishes a batch. Android may update its memory cache even when disk\n * commit returns false: a shared fixed-key prior view masks that failed publication until\n * recovery can restage it in the next single batch. No rollback write or runtime occurs.\n * The generic string uses a reversible terminal envelope: Android's indented XML writer\n * otherwise appends spaces inside a String ending in LF. The logical codec stays unchanged;\n * reads never trim, repair, migrate or accept an invalid old representation.\n */\npublic final class AndroidInstallationBackend implements InstallationStore.Backend {\n    private static final String[] KEYS={InstallationStore.SNAPSHOT_KEY,\"revision\",\"runtime\",\"manifest\",\"ackRevision\"};\n    private static final String SNAPSHOT_PREFIX=\"scenevibe.os.android-preference.v1:\";\n    private static final String SNAPSHOT_END=\"!\";\n    private static final List<FailedView> FAILED_VIEWS=new ArrayList<>();\n    private final SharedPreferences preferences;\n\n"
+      },
+      {
+        "before": "        synchronized (preferences) {\n            PriorView failed=failedView();\n            if (failed==null) {\n                try {return preferences.getString(key,null);}\n                catch (ClassCastException invalidType) {throw new IllegalStateException(\"Invalid preference type\");}\n            }\n            if (failed.corrupt.contains(key)) throw new IllegalStateException(\"Invalid preference type\");\n            return failed.values.get(key);\n        }\n    }\n\n",
+        "after": "        synchronized (preferences) {\n            PriorView failed=failedView();\n            if (failed==null) {\n                try {return logicalValue(key,preferences.getString(key,null));}\n                catch (ClassCastException invalidType) {throw new IllegalStateException(\"Invalid preference type\");}\n            }\n            if (failed.corrupt.contains(key)) throw new IllegalStateException(\"Invalid preference type\");\n            return logicalValue(key,failed.values.get(key));\n        }\n    }\n\n"
+      },
+      {
+        "before": "                    String previous=prior.values.get(key);\n                    if (previous==null) editor.remove(key);else editor.putString(key,previous);\n                }\n                for (Map.Entry<String,String> value:values.entrySet()) editor.putString(value.getKey(),value.getValue());\n                for (String key:removed) editor.remove(key);\n                if (editor.commit()) {\n                    setFailedView(null);\n",
+        "after": "                    String previous=prior.values.get(key);\n                    if (previous==null) editor.remove(key);else editor.putString(key,previous);\n                }\n                for (Map.Entry<String,String> value:values.entrySet())\n                    editor.putString(value.getKey(),preferenceValue(value.getKey(),value.getValue()));\n                for (String key:removed) editor.remove(key);\n                if (editor.commit()) {\n                    setFailedView(null);\n"
+      },
+      {
+        "before": "            setFailedView(prior);\n            return false;\n        }\n    }\n\n    /** Capture five immutable string references only; malformed preference types retain a closed flag. */\n",
+        "after": "            setFailedView(prior);\n            return false;\n        }\n    }\n\n    /** Wrap only generic writes, within the existing codec ceiling, without a newline at the XML text end. */\n    private static String preferenceValue(String key,String value) {\n        if (!InstallationStore.SNAPSHOT_KEY.equals(key)) return value;\n        if (value.length()>InstallationSnapshotCodec.MAX_ENCODED_CHARACTERS)\n            throw new IllegalArgumentException(\"Invalid installation preference encoding\");\n        return SNAPSHOT_PREFIX+value+SNAPSHOT_END;\n    }\n\n    /** Unwrap only the exact bounded transport; untouched historical/raw generic strings remain strict codec input. */\n    private static String logicalValue(String key,String value) {\n        if (!InstallationStore.SNAPSHOT_KEY.equals(key)||value==null||!value.startsWith(SNAPSHOT_PREFIX)) return value;\n        int length=value.length()-SNAPSHOT_PREFIX.length()-SNAPSHOT_END.length();\n        if (length<1||length>InstallationSnapshotCodec.MAX_ENCODED_CHARACTERS||!value.endsWith(SNAPSHOT_END))\n            throw new IllegalStateException(\"Invalid installation preference encoding\");\n        return value.substring(SNAPSHOT_PREFIX.length(),value.length()-SNAPSHOT_END.length());\n    }\n\n    /** Capture five immutable string references only; malformed preference types retain a closed flag. */\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java": [
+      {
+        "before": "    }\n    /** Closed read outcome has no content-bearing diagnostics. */\n    public enum ReadState { EMPTY, SNAPSHOT, CORRUPT }\n    /** COMMITTED is durability only, never an armed/ACK-eligible runtime result. */\n    public enum CommitState { COMMITTED, INVALID_SNAPSHOT, CACHE_FAILED }\n\n",
+        "after": "    }\n    /** Closed read outcome has no content-bearing diagnostics. */\n    public enum ReadState { EMPTY, SNAPSHOT, CORRUPT }\n    /** Observational fault classes only; they never authorize fallback, repair, ARM or acknowledgement. */\n    public enum ReadFailure {\n        NONE, GENERIC_INVALID, HISTORICAL_INVALID, ACK_INVALID,\n        ACK_AHEAD_GENERIC, ACK_AHEAD_WITHOUT_GENERIC, BACKEND_READ_FAILED\n    }\n    /** COMMITTED is durability only, never an armed/ACK-eligible runtime result. */\n    public enum CommitState { COMMITTED, INVALID_SNAPSHOT, CACHE_FAILED }\n\n"
+      },
+      {
+        "before": "        private final ReadState state;\n        private final InstallationSnapshot snapshot;\n        private final long acknowledged;\n        /** Construct a closed result without retaining an exception or raw representation. */\n        private ReadResult(ReadState state,InstallationSnapshot snapshot,long acknowledged) {\n            this.state=state;this.snapshot=snapshot;this.acknowledged=acknowledged;\n        }\n        /** Return clean empty, complete representation, or corruption. */\n        public ReadState state() {return state;}\n",
+        "after": "        private final ReadState state;\n        private final InstallationSnapshot snapshot;\n        private final long acknowledged;\n        private final ReadFailure failure;\n        /** Construct a closed result without retaining an exception or raw representation. */\n        private ReadResult(ReadState state,InstallationSnapshot snapshot,long acknowledged,ReadFailure failure) {\n            this.state=state;this.snapshot=snapshot;this.acknowledged=acknowledged;this.failure=failure;\n        }\n        /** Return clean empty, complete representation, or corruption. */\n        public ReadState state() {return state;}\n"
+      },
+      {
+        "before": "        public InstallationSnapshot snapshot() {return snapshot;}\n        /** Return confirmed durable ACK, never a value synthesized from commit success. */\n        public long acknowledgedRevision() {return acknowledged;}\n    }\n\n    private final Backend backend;\n",
+        "after": "        public InstallationSnapshot snapshot() {return snapshot;}\n        /** Return confirmed durable ACK, never a value synthesized from commit success. */\n        public long acknowledgedRevision() {return acknowledged;}\n        /** Describe the failed read stage without retaining content, an exception or a raw preference value. */\n        public ReadFailure failure() {return failure;}\n    }\n\n    private final Backend backend;\n"
+      },
+      {
+        "before": "    /** Read one coherent representation without a write, migration, parser, clock or activation. */\n    public ReadResult read() {\n        synchronized (backend.monitor()) {\n            try {\n                String generic=backend.get(SNAPSHOT_KEY);\n                InstallationSnapshot snapshot=generic==null?readHistorical():InstallationSnapshotCodec.decode(generic);\n                long ack=acknowledgedValue();\n                if (ack>(snapshot==null?0:snapshot.revision())) throw new IllegalArgumentException(\"Invalid durable acknowledgement\");\n                return new ReadResult(snapshot==null?ReadState.EMPTY:ReadState.SNAPSHOT,snapshot,ack);\n            } catch (RuntimeException invalid) {return new ReadResult(ReadState.CORRUPT,null,0);}\n        }\n    }\n\n",
+        "after": "    /** Read one coherent representation without a write, migration, parser, clock or activation. */\n    public ReadResult read() {\n        synchronized (backend.monitor()) {\n            ReadFailure failure=ReadFailure.BACKEND_READ_FAILED;\n            try {\n                String generic=readValue(SNAPSHOT_KEY);\n                failure=generic==null?ReadFailure.HISTORICAL_INVALID:ReadFailure.GENERIC_INVALID;\n                InstallationSnapshot snapshot=generic==null?readHistorical():InstallationSnapshotCodec.decode(generic);\n                failure=ReadFailure.ACK_INVALID;\n                long ack=acknowledgedValue(readValue(\"ackRevision\"));\n                if (ack>(snapshot==null?0:snapshot.revision()))\n                    return corrupt(generic==null?ReadFailure.ACK_AHEAD_WITHOUT_GENERIC:ReadFailure.ACK_AHEAD_GENERIC);\n                return new ReadResult(snapshot==null?ReadState.EMPTY:ReadState.SNAPSHOT,snapshot,ack,ReadFailure.NONE);\n            } catch (BackendReadFailure unavailable) {return corrupt(ReadFailure.BACKEND_READ_FAILED);}\n            catch (RuntimeException invalid) {return corrupt(failure);}\n        }\n    }\n\n"
+      },
+      {
+        "before": "\n    /** Infer only artifact-key shape; semantic product/coherence validation remains outside the store. */\n    private InstallationSnapshot readHistorical() {\n        String raw=backend.get(\"revision\"),runtime=backend.get(\"runtime\"),manifest=backend.get(\"manifest\");\n        if (raw==null&&runtime==null&&manifest==null) return null;\n        long revision=InstallationSnapshotCodec.decimal(raw,false);\n        Map<String,byte[]> artifacts=new TreeMap<>();\n",
+        "after": "\n    /** Infer only artifact-key shape; semantic product/coherence validation remains outside the store. */\n    private InstallationSnapshot readHistorical() {\n        String raw=readValue(\"revision\"),runtime=readValue(\"runtime\"),manifest=readValue(\"manifest\");\n        if (raw==null&&runtime==null&&manifest==null) return null;\n        long revision=InstallationSnapshotCodec.decimal(raw,false);\n        Map<String,byte[]> artifacts=new TreeMap<>();\n"
+      },
+      {
+        "before": "\n    /** Treat absent ACK as zero; malformed numbers remain explicit corruption for generic reads. */\n    private long acknowledgedValue() {\n        String raw=backend.get(\"ackRevision\");return raw==null?0:InstallationSnapshotCodec.decimal(raw,true);\n    }\n    /** A generic marker is unsupported by the raw facade; never resurrect its historical residue. */\n    private boolean historicalAuthority() {\n",
+        "after": "\n    /** Treat absent ACK as zero; malformed numbers remain explicit corruption for generic reads. */\n    private long acknowledgedValue() {\n        return acknowledgedValue(backend.get(\"ackRevision\"));\n    }\n    /** Share the identical strict ACK parser between writes and the staged observational read. */\n    private static long acknowledgedValue(String raw) {\n        return raw==null?0:InstallationSnapshotCodec.decimal(raw,true);\n    }\n    /** Bound every read-boundary exception without confusing it with codec or ACK rejection. */\n    private String readValue(String key) {\n        try {return backend.get(key);}\n        catch (RuntimeException unavailable) {throw new BackendReadFailure();}\n    }\n    /** Preserve the exact fail-closed result and unavailable revision/ACK, adding only a fixed observation. */\n    private static ReadResult corrupt(ReadFailure failure) {\n        return new ReadResult(ReadState.CORRUPT,null,0,failure);\n    }\n    /** Fixed internal marker holds neither the backend cause nor a content-bearing message. */\n    private static final class BackendReadFailure extends RuntimeException {\n        /** Discard the arbitrary backend exception rather than attaching its cause. */\n        BackendReadFailure() {super(\"Installation backend read failed\");}\n    }\n    /** A generic marker is unsupported by the raw facade; never resurrect its historical residue. */\n    private boolean historicalAuthority() {\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java": [
+      {
+        "before": "    /** Abbreviated cloud device id (never the full value); null when none exists yet. */\n    final String cloudDeviceIdAbbreviated;\n    final InstallationState installationState;\n    final boolean installationPresent;\n    final long installedRevision;\n    final long acknowledgedRevision;\n",
+        "after": "    /** Abbreviated cloud device id (never the full value); null when none exists yet. */\n    final String cloudDeviceIdAbbreviated;\n    final InstallationState installationState;\n    /** Bounded durable-read fault, purely observational and independent of startup/runtime success. */\n    final InstallationStore.ReadFailure installationReadFailure;\n    final boolean installationPresent;\n    final long installedRevision;\n    final long acknowledgedRevision;\n"
+      },
+      {
+        "before": "        this.installationIdAbbreviated = builder.installationIdAbbreviated;\n        this.cloudDeviceIdAbbreviated = builder.cloudDeviceIdAbbreviated;\n        this.installationState = builder.installationState;\n        this.installationPresent = builder.installationPresent;\n        this.installedRevision = builder.installedRevision;\n        this.acknowledgedRevision = builder.acknowledgedRevision;\n",
+        "after": "        this.installationIdAbbreviated = builder.installationIdAbbreviated;\n        this.cloudDeviceIdAbbreviated = builder.cloudDeviceIdAbbreviated;\n        this.installationState = builder.installationState;\n        this.installationReadFailure = builder.installationReadFailure;\n        this.installationPresent = builder.installationPresent;\n        this.installedRevision = builder.installedRevision;\n        this.acknowledgedRevision = builder.acknowledgedRevision;\n"
+      },
+      {
+        "before": "        private String installationIdAbbreviated;\n        private String cloudDeviceIdAbbreviated;\n        private InstallationState installationState = InstallationState.EMPTY;\n        private boolean installationPresent;\n        private long installedRevision;\n        private long acknowledgedRevision;\n",
+        "after": "        private String installationIdAbbreviated;\n        private String cloudDeviceIdAbbreviated;\n        private InstallationState installationState = InstallationState.EMPTY;\n        private InstallationStore.ReadFailure installationReadFailure = InstallationStore.ReadFailure.NONE;\n        private boolean installationPresent;\n        private long installedRevision;\n        private long acknowledgedRevision;\n"
+      },
+      {
+        "before": "\n        /** Project one coherent read into bounded metadata and old aliases; never inspect canonical bytes. */\n        Builder installation(InstallationStore.ReadResult durable) {\n            installationState = durable == null || durable.state() == InstallationStore.ReadState.CORRUPT\n                    ? InstallationState.CORRUPT : durable.state() == InstallationStore.ReadState.SNAPSHOT\n                    ? InstallationState.READY : InstallationState.EMPTY;\n",
+        "after": "\n        /** Project one coherent read into bounded metadata and old aliases; never inspect canonical bytes. */\n        Builder installation(InstallationStore.ReadResult durable) {\n            installationReadFailure = durable == null ? InstallationStore.ReadFailure.BACKEND_READ_FAILED : durable.failure();\n            installationState = durable == null || durable.state() == InstallationStore.ReadState.CORRUPT\n                    ? InstallationState.CORRUPT : durable.state() == InstallationStore.ReadState.SNAPSHOT\n                    ? InstallationState.READY : InstallationState.EMPTY;\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": [
+      {
+        "before": "        line(sb, \"Installed revision\", String.valueOf(d.installedRevision));\n        line(sb, \"Acknowledged revision\", String.valueOf(d.acknowledgedRevision));\n        line(sb, \"Last startup restore\", d.lastStartupRestoreResult == null ? \"-\" : d.lastStartupRestoreResult.name());\n        line(sb, \"Cached track (compatibility)\", d.cachedTrackPresent ? \"yes\" : \"no\");\n        line(sb, \"Cached track id (compatibility)\", d.cachedTrackId == null ? \"-\" : d.cachedTrackId);\n        line(sb, \"Cached revision (compatibility)\", String.valueOf(d.cachedRevision));\n",
+        "after": "        line(sb, \"Installed revision\", String.valueOf(d.installedRevision));\n        line(sb, \"Acknowledged revision\", String.valueOf(d.acknowledgedRevision));\n        line(sb, \"Last startup restore\", d.lastStartupRestoreResult == null ? \"-\" : d.lastStartupRestoreResult.name());\n        line(sb, \"Installation read failure\", d.installationReadFailure.name());\n        line(sb, \"Cached track (compatibility)\", d.cachedTrackPresent ? \"yes\" : \"no\");\n        line(sb, \"Cached track id (compatibility)\", d.cachedTrackId == null ? \"-\" : d.cachedTrackId);\n        line(sb, \"Cached revision (compatibility)\", String.valueOf(d.cachedRevision));\n"
+      }
+    ],
+    "tests/test_m4_phase_b_boundary.py": [
+      {
+        "before": "import subprocess\nimport tempfile\nimport unittest\n\n\"\"\"Pin Phase B to a JDK-only additive island and preserve the qualified runtime.\n\n",
+        "after": "import subprocess\nimport tempfile\nimport unittest\nfrom sony_corrective_provenance import retained_bytes, retained_text\n\n\"\"\"Pin Phase B to a JDK-only additive island and preserve the qualified runtime.\n\n"
+      },
+      {
+        "before": "Phase E admits exactly its isolated PackageInstaller, with no existing-caller exception.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "Phase E admits exactly its isolated PackageInstaller, with no existing-caller exception.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\nSony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.\n\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "before": "                continue\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, git_blob_digest((ROOT / path).read_bytes()), path)\n\n    def test_no_current_caller_or_future_phase_production_component_is_added(self):\n        \"\"\"Allow only the eight generic definitions; every old caller must remain unwired.\"\"\"\n",
+        "after": "                continue\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, git_blob_digest(retained_bytes(ROOT / path)), path)\n\n    def test_no_current_caller_or_future_phase_production_component_is_added(self):\n        \"\"\"Allow only the eight generic definitions; every old caller must remain unwired.\"\"\"\n"
+      }
+    ],
+    "tests/test_m4_phase_c_boundary.py": [
+      {
+        "before": "import subprocess\nimport tempfile\nimport unittest\n\n\"\"\"Permit only the Phase C persistence extraction while keeping qualified behavior pinned.\n\n",
+        "after": "import subprocess\nimport tempfile\nimport unittest\nfrom sony_corrective_provenance import retained_bytes, retained_text\n\n\"\"\"Permit only the Phase C persistence extraction while keeping qualified behavior pinned.\n\n"
+      },
+      {
+        "before": "Phase E adds only its explicitly inventoried orchestration class; the store remains pinned.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "Phase E adds only its explicitly inventoried orchestration class; the store remains pinned.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\nSony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.\n\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "before": "                continue\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)\n\n    def test_every_retained_jvm_test_and_frozen_inventory_remains_byte_exact(self):\n        \"\"\"Do not weaken old characterization/model tests to make the persistence refactor pass.\"\"\"\n        for path, digest in BASELINE['frozenTestSources'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)\n\n\nif __name__ == '__main__':\n",
+        "after": "                continue\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(digest, blob_hash(retained_bytes(ROOT / path)), path)\n\n    def test_every_retained_jvm_test_and_frozen_inventory_remains_byte_exact(self):\n        \"\"\"Do not weaken old characterization/model tests to make the persistence refactor pass.\"\"\"\n        for path, digest in BASELINE['frozenTestSources'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(digest, blob_hash(retained_bytes(ROOT / path)), path)\n\n\nif __name__ == '__main__':\n"
+      }
+    ],
+    "tests/test_m4_phase_d_boundary.py": [
+      {
+        "before": "from pathlib import Path\nimport re\nimport unittest\n\n\"\"\"Keep Video semantic handlers outside the generic core and forbid an early installer cutover.\n\n",
+        "after": "from pathlib import Path\nimport re\nimport unittest\nfrom sony_corrective_provenance import retained_bytes, retained_text\n\n\"\"\"Keep Video semantic handlers outside the generic core and forbid an early installer cutover.\n\n"
+      },
+      {
+        "before": "Phase E permits its one generic orchestrator definition, never a current-caller cutover.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "Phase E permits its one generic orchestrator definition, never a current-caller cutover.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\nSony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.\n\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "before": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n        source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')\n        for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(\n                'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):\n",
+        "after": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n        source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')\n        for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(\n                'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):\n"
+      },
+      {
+        "before": "        for path, expected in BASELINE['frozenTestSources'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n\n    def test_prepared_state_contract_is_typed_and_additive_only(self):\n        \"\"\"The original constructor stays available; the new slot accepts no raw Object or concrete product.\"\"\"\n",
+        "after": "        for path, expected in BASELINE['frozenTestSources'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n\n    def test_prepared_state_contract_is_typed_and_additive_only(self):\n        \"\"\"The original constructor stays available; the new slot accepts no raw Object or concrete product.\"\"\"\n"
+      }
+    ],
+    "tests/test_m4_phase_e_boundary.py": [
+      {
+        "before": "import subprocess\nimport tempfile\nimport unittest\n\n\"\"\"Keep Phase E's single orchestrator isolated and all qualified production callers frozen.\n\n",
+        "after": "import subprocess\nimport tempfile\nimport unittest\nfrom sony_corrective_provenance import retained_bytes, retained_text\n\n\"\"\"Keep Phase E's single orchestrator isolated and all qualified production callers frozen.\n\n"
+      },
+      {
+        "before": "A real JDK-only compile verifies the installer cannot acquire platform dependencies.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "A real JDK-only compile verifies the installer cannot acquire platform dependencies.\nPhase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\nSony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.\n\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "before": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n        for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):\n            source = code_only((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).read_text())\n            if str((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).relative_to(ROOT)) not in PHASE_F.get('authorizedLiveCallers', []):\n",
+        "after": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n        for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):\n            source = code_only((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).read_text())\n            if str((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).relative_to(ROOT)) not in PHASE_F.get('authorizedLiveCallers', []):\n"
+      },
+      {
+        "before": "        for path, expected in frozen.items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n\n    def test_production_inventory_admits_exactly_one_unwired_orchestration_type(self):\n        \"\"\"No Cloud adapter, service port, restore coordinator or future milestone type can appear.\"\"\"\n",
+        "after": "        for path, expected in frozen.items():\n            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n\n    def test_production_inventory_admits_exactly_one_unwired_orchestration_type(self):\n        \"\"\"No Cloud adapter, service port, restore coordinator or future milestone type can appear.\"\"\"\n"
+      },
+      {
+        "before": "    def test_prior_boundary_predicates_and_workflow_only_gain_exact_e_exceptions(self):\n        \"\"\"Reverse the small authorized additions and demand the earlier gate/workflow bytes exactly.\"\"\"\n        for relative, expected in BASELINE['frozenAccountingBoundaryBlobs'].items():\n            source = (ROOT / relative).read_text(encoding='utf-8')\n            for patch in reversed(PHASE_G.get('boundaryPatches', {}).get(relative, [])):\n                source = source.replace(patch['after'], patch['before'])\n            if PHASE_F:\n",
+        "after": "    def test_prior_boundary_predicates_and_workflow_only_gain_exact_e_exceptions(self):\n        \"\"\"Reverse the small authorized additions and demand the earlier gate/workflow bytes exactly.\"\"\"\n        for relative, expected in BASELINE['frozenAccountingBoundaryBlobs'].items():\n            source = retained_text(ROOT / relative)\n            for patch in reversed(PHASE_G.get('boundaryPatches', {}).get(relative, [])):\n                source = source.replace(patch['after'], patch['before'])\n            if PHASE_F:\n"
+      }
+    ],
+    "tests/test_m4_phase_f_boundary.py": [
+      {
+        "before": "from pathlib import Path\nimport re\nimport unittest\n\n\"\"\"Qualify the live Cloud cutover without weakening the retained M4 evidence.\n\n",
+        "after": "from pathlib import Path\nimport re\nimport unittest\nfrom sony_corrective_provenance import retained_bytes, retained_text\n\n\"\"\"Qualify the live Cloud cutover without weakening the retained M4 evidence.\n\n"
+      },
+      {
+        "before": "The executed JVM suites exercise the actual client, installer and service runtime ports.\nBoot/diagnostics and Cloud/Video semantics remain byte-pinned for the later Phase G.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "The executed JVM suites exercise the actual client, installer and service runtime ports.\nBoot/diagnostics and Cloud/Video semantics remain byte-pinned for the later Phase G.\nPhase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.\nSony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.\n\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "before": "        self.assertEqual({JAVA + 'installation/InstallationStore.java', JAVA + 'CloudTrackRepository.java'},\n                         set(BASELINE['microProductionPatches']))\n        for path, patches in BASELINE['microProductionPatches'].items():\n            previous = inverse((ROOT / path).read_text(), patches)\n            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)\n        store = code_only((ROOT / JAVA / 'installation/InstallationStore.java').read_text())\n        clear = java_block(store, 'public boolean clearAll()')\n",
+        "after": "        self.assertEqual({JAVA + 'installation/InstallationStore.java', JAVA + 'CloudTrackRepository.java'},\n                         set(BASELINE['microProductionPatches']))\n        for path, patches in BASELINE['microProductionPatches'].items():\n            previous = inverse(retained_text(ROOT / path), patches)\n            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)\n        store = code_only((ROOT / JAVA / 'installation/InstallationStore.java').read_text())\n        clear = java_block(store, 'public boolean clearAll()')\n"
+      },
+      {
+        "before": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in BASELINE['authorizedProductionChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n        installer = JAVA + 'installation/PackageInstaller.java'\n        self.assertIn(installer, BASELINE['qualifiedRuntimeBlobs'])\n        self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][installer], blob_hash((ROOT / installer).read_bytes()))\n\n    def test_auth_http_backoff_and_deferred_service_helpers_remain_unchanged(self):\n        \"\"\"Retain exact qualified auth/HTTPS/disconnect behavior and leave historical helpers for Phase G.\"\"\"\n",
+        "after": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in BASELINE['authorizedProductionChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n        installer = JAVA + 'installation/PackageInstaller.java'\n        self.assertIn(installer, BASELINE['qualifiedRuntimeBlobs'])\n        self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][installer], blob_hash(retained_bytes(ROOT / installer)))\n\n    def test_auth_http_backoff_and_deferred_service_helpers_remain_unchanged(self):\n        \"\"\"Retain exact qualified auth/HTTPS/disconnect behavior and leave historical helpers for Phase G.\"\"\"\n"
+      },
+      {
+        "before": "        oracle = (ROOT / BASELINE['historicalClientFile']).read_text().replace('M4PhaseFHistoricalCloudClient', 'CloudControlClient')\n        self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][JAVA + 'CloudControlClient.java'], blob_hash(oracle.encode()))\n        for path, patches in BASELINE['testPatches'].items():\n            previous = inverse(inverse((ROOT / path).read_text(),\n                                       PHASE_G.get('testPatches', {}).get(path, [])), patches)\n            self.assertEqual(BASELINE['frozenTestSources'][path], blob_hash(previous.encode()), path)\n\n",
+        "after": "        oracle = (ROOT / BASELINE['historicalClientFile']).read_text().replace('M4PhaseFHistoricalCloudClient', 'CloudControlClient')\n        self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][JAVA + 'CloudControlClient.java'], blob_hash(oracle.encode()))\n        for path, patches in BASELINE['testPatches'].items():\n            previous = inverse(inverse(retained_text(ROOT / path),\n                                       PHASE_G.get('testPatches', {}).get(path, [])), patches)\n            self.assertEqual(BASELINE['frozenTestSources'][path], blob_hash(previous.encode()), path)\n\n"
+      },
+      {
+        "before": "        for path, expected in frozen.items():\n            if path in BASELINE['authorizedTestChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n\n    def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):\n        \"\"\"Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned.\"\"\"\n",
+        "after": "        for path, expected in frozen.items():\n            if path in BASELINE['authorizedTestChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n\n    def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):\n        \"\"\"Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned.\"\"\"\n"
+      },
+      {
+        "before": "        expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})\n        self.assertEqual(expected, set(BASELINE['boundaryPatches']))\n        for relative, patches in BASELINE['boundaryPatches'].items():\n            previous = inverse(inverse((ROOT / relative).read_text(),\n                                       PHASE_G.get('boundaryPatches', {}).get(relative, [])), patches)\n            self.assertEqual(BASELINE['boundaryBlobs'][relative], blob_hash(previous.encode()), relative)\n\n",
+        "after": "        expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})\n        self.assertEqual(expected, set(BASELINE['boundaryPatches']))\n        for relative, patches in BASELINE['boundaryPatches'].items():\n            previous = inverse(inverse(retained_text(ROOT / relative),\n                                       PHASE_G.get('boundaryPatches', {}).get(relative, [])), patches)\n            self.assertEqual(BASELINE['boundaryBlobs'][relative], blob_hash(previous.encode()), relative)\n\n"
+      }
+    ],
+    "tests/test_m4_phase_g_boundary.py": [
+      {
+        "before": "from pathlib import Path\nimport re\nimport unittest\n\n\"\"\"Qualify generic startup, metadata and reset with exact provenance for every retained gate.\n\n",
+        "after": "from pathlib import Path\nimport re\nimport unittest\nfrom sony_corrective_provenance import retained_bytes, retained_text\n\n\"\"\"Qualify generic startup, metadata and reset with exact provenance for every retained gate.\n\n"
+      },
+      {
+        "before": "The entire generic core, F client/wire/ACK path, media cores and build/signing inputs stay pinned.\nOld service helpers move verbatim into a test-only oracle; their original assertions survive.\nExecuted G cases extend actual Gradle XML accounting and the Sony document remains a manual protocol.\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n",
+        "after": "The entire generic core, F client/wire/ACK path, media cores and build/signing inputs stay pinned.\nOld service helpers move verbatim into a test-only oracle; their original assertions survive.\nExecuted G cases extend actual Gradle XML accounting and the Sony document remains a manual protocol.\nSony corrective provenance reverses only pinned edits; semantic assertions inspect actual production.\n\n\"\"\"\n\nROOT = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "before": "        self.assertEqual(set(BASELINE['authorizedProductionChanges']), set(BASELINE['productionPatches']))\n        for path, patches in BASELINE['productionPatches'].items():\n            self.assertTrue(patches, path)\n            previous = inverse((ROOT / path).read_text(), patches)\n            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)\n\n    def test_service_startup_reuses_same_installer_with_no_write_parser_or_lookup(self):\n",
+        "after": "        self.assertEqual(set(BASELINE['authorizedProductionChanges']), set(BASELINE['productionPatches']))\n        for path, patches in BASELINE['productionPatches'].items():\n            self.assertTrue(patches, path)\n            previous = inverse(retained_text(ROOT / path), patches)\n            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)\n\n    def test_service_startup_reuses_same_installer_with_no_write_parser_or_lookup(self):\n"
+      },
+      {
+        "before": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in BASELINE['authorizedProductionChanges']:\n                continue\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n        for name in ('CloudControlClient.java', 'CloudV1InstallationAdapter.java', 'CloudProtocol.java',\n                     'AutostartPolicy.java', 'installation/PackageInstaller.java', 'installation/InstallationStore.java'):\n            path = JAVA + name\n            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash((ROOT / path).read_bytes()), name)\n\n    def test_generic_core_bridge_and_static_registry_remain_isolated(self):\n        \"\"\"No new parser, registry, runtime capability, future milestone or second restore authority can appear.\"\"\"\n",
+        "after": "        for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():\n            if path in BASELINE['authorizedProductionChanges']:\n                continue\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n        for name in ('CloudControlClient.java', 'CloudV1InstallationAdapter.java', 'CloudProtocol.java',\n                     'AutostartPolicy.java', 'installation/PackageInstaller.java', 'installation/InstallationStore.java'):\n            path = JAVA + name\n            self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(retained_bytes(ROOT / path)), name)\n\n    def test_generic_core_bridge_and_static_registry_remain_isolated(self):\n        \"\"\"No new parser, registry, runtime capability, future milestone or second restore authority can appear.\"\"\"\n"
+      },
+      {
+        "before": "        \"\"\"Only three historical helper names may change; every original assertion and retained F test stays exact.\"\"\"\n        self.assertEqual(set(BASELINE['authorizedTestChanges']), set(BASELINE['testPatches']))\n        for path, expected in BASELINE['frozenTestSources'].items():\n            previous = inverse((ROOT / path).read_text(), BASELINE['testPatches'].get(path, [])) if path in BASELINE['testPatches'] else (ROOT / path).read_bytes()\n            content = previous.encode() if isinstance(previous, str) else previous\n            self.assertEqual(expected, blob_hash(content), path)\n        for path, expected in BASELINE['frozenDocumentationBlobs'].items():\n            self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)\n\n    def test_old_boundary_predicates_and_accounting_changes_are_exactly_reversible(self):\n        \"\"\"Every old gate/assertion and workflow step survives after undoing only exact G exceptions/labels.\"\"\"\n",
+        "after": "        \"\"\"Only three historical helper names may change; every original assertion and retained F test stays exact.\"\"\"\n        self.assertEqual(set(BASELINE['authorizedTestChanges']), set(BASELINE['testPatches']))\n        for path, expected in BASELINE['frozenTestSources'].items():\n            previous = inverse(retained_text(ROOT / path), BASELINE['testPatches'].get(path, [])) if path in BASELINE['testPatches'] else retained_bytes(ROOT / path)\n            content = previous.encode() if isinstance(previous, str) else previous\n            self.assertEqual(expected, blob_hash(content), path)\n        for path, expected in BASELINE['frozenDocumentationBlobs'].items():\n            self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)\n\n    def test_old_boundary_predicates_and_accounting_changes_are_exactly_reversible(self):\n        \"\"\"Every old gate/assertion and workflow step survives after undoing only exact G exceptions/labels.\"\"\"\n"
+      },
+      {
+        "before": "        expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})\n        self.assertEqual(expected, set(BASELINE['boundaryPatches']))\n        for path, patches in BASELINE['boundaryPatches'].items():\n            previous = inverse((ROOT / path).read_text(), patches)\n            self.assertEqual(BASELINE['boundaryBlobs'][path], blob_hash(previous.encode()), path)\n\n    def test_executed_g_bucket_is_additive_and_only_the_private_skip_is_allowed(self):\n",
+        "after": "        expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})\n        self.assertEqual(expected, set(BASELINE['boundaryPatches']))\n        for path, patches in BASELINE['boundaryPatches'].items():\n            previous = inverse(retained_text(ROOT / path), patches)\n            self.assertEqual(BASELINE['boundaryBlobs'][path], blob_hash(previous.encode()), path)\n\n    def test_executed_g_bucket_is_additive_and_only_the_private_skip_is_allowed(self):\n"
+      }
+    ],
+    ".github/scripts/m4-phase-a-test-summary.py": [
+      {
+        "before": "Phase E adds executed orchestration, readback, real-Video and historical-cache buckets.\nPhase F adds actual Cloud/owner/runtime/reset compatibility execution without dropping old cases.\nPhase G adds startup/boot/metadata/reset and post-restore Cloud execution without changing prior buckets.\n\"\"\"\n\n\n",
+        "after": "Phase E adds executed orchestration, readback, real-Video and historical-cache buckets.\nPhase F adds actual Cloud/owner/runtime/reset compatibility execution without dropping old cases.\nPhase G adds startup/boot/metadata/reset and post-restore Cloud execution without changing prior buckets.\nThe Sony corrective cycle adds its own executed bucket; native disk/process evidence is separate.\n\"\"\"\n\n\n"
+      },
+      {
+        "before": "    phase_f = json.loads(phase_f_path.read_text(encoding='utf-8')) if phase_f_path.exists() else {'phaseFSuites': {}}\n    phase_g_path = root / '.github/scripts/m4-phase-g-baseline.json'\n    phase_g = json.loads(phase_g_path.read_text(encoding='utf-8')) if phase_g_path.exists() else {'phaseGSuites': {}}\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}\n    suites = {}\n    skipped = []\n",
+        "after": "    phase_f = json.loads(phase_f_path.read_text(encoding='utf-8')) if phase_f_path.exists() else {'phaseFSuites': {}}\n    phase_g_path = root / '.github/scripts/m4-phase-g-baseline.json'\n    phase_g = json.loads(phase_g_path.read_text(encoding='utf-8')) if phase_g_path.exists() else {'phaseGSuites': {}}\n    sony_path = root / '.github/scripts/m4-phase-g-sony-corrective-baseline.json'\n    sony = json.loads(sony_path.read_text(encoding='utf-8')) if sony_path.exists() else {'phaseGCorrectiveSuites': {}}\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}\n    suites = {}\n    skipped = []\n"
+      },
+      {
+        "before": "                skipped.append(name + '.' + case.attrib['name'])\n            else:\n                counts['PASS'] += 1\n    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites']}\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n",
+        "after": "                skipped.append(name + '.' + case.attrib['name'])\n            else:\n                counts['PASS'] += 1\n    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites']}\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
+      },
+      {
+        "before": "        'phaseECases': sum(phase_e['phaseESuites'].values()),\n        'phaseFCases': sum(phase_f['phaseFSuites'].values()),\n        'phaseGCases': sum(phase_g['phaseGSuites'].values()),\n        'suites': suites,\n        'skippedCases': skipped,\n        'fixtureSha256': baseline['fixtureSha256'],\n",
+        "after": "        'phaseECases': sum(phase_e['phaseESuites'].values()),\n        'phaseFCases': sum(phase_f['phaseFSuites'].values()),\n        'phaseGCases': sum(phase_g['phaseGSuites'].values()),\n        'phaseGCorrectiveCases': sum(sony['phaseGCorrectiveSuites'].values()),\n        'suites': suites,\n        'skippedCases': skipped,\n        'fixtureSha256': baseline['fixtureSha256'],\n"
+      },
+      {
+        "before": "    destination.parent.mkdir(parents=True, exist_ok=True)\n    destination.write_text(json.dumps(summary, indent=2) + '\\n', encoding='utf-8')\n    print('JVM: ' + ' '.join(f'{name}={count}' for name, count in counts.items()))\n    print(f'Retained baseline: {summary[\"retainedCases\"]}; Phase A: {summary[\"phaseACases\"]}; Phase B: {summary[\"phaseBCases\"]}; Phase C: {summary[\"phaseCCases\"]}; Phase D: {summary[\"phaseDCases\"]}; Phase E: {summary[\"phaseECases\"]}; Phase F: {summary[\"phaseFCases\"]}; Phase G: {summary[\"phaseGCases\"]}')\n    for name in skipped:\n        print('Opt-in SKIP: ' + name)\n    return 1 if counts['FAIL'] else 0\n",
+        "after": "    destination.parent.mkdir(parents=True, exist_ok=True)\n    destination.write_text(json.dumps(summary, indent=2) + '\\n', encoding='utf-8')\n    print('JVM: ' + ' '.join(f'{name}={count}' for name, count in counts.items()))\n    print(f'Retained baseline: {summary[\"retainedCases\"]}; Phase A: {summary[\"phaseACases\"]}; Phase B: {summary[\"phaseBCases\"]}; Phase C: {summary[\"phaseCCases\"]}; Phase D: {summary[\"phaseDCases\"]}; Phase E: {summary[\"phaseECases\"]}; Phase F: {summary[\"phaseFCases\"]}; Phase G: {summary[\"phaseGCases\"]}; Sony corrective: {summary[\"phaseGCorrectiveCases\"]}')\n    for name in skipped:\n        print('Opt-in SKIP: ' + name)\n    return 1 if counts['FAIL'] else 0\n"
+      }
+    ],
+    "docs/m4-sony-physical-qualification-protocol.md": [
+      {
+        "before": "# M4 Sony physical qualification \u2014 manual protocol\n\nStatus: **NOT PERFORMED**. This is a checklist for the existing Sony Android TV target,\nnot a result. Production remains **SHADOW**; PR #14 stays OPEN / DRAFT / unmerged.\nAutomated JVM and API 35 results do not qualify physical TV boot, Prime MediaSession,\nnative overlay windows, D-pad placement or upgrade continuity.\n\nUse the exact **final Phase G HEAD** and its **stable-signed Cloud APK artifact** from the\n[PR #14 final Git closure manifest](https://github.com/pierre22400/scenevibe-tv-companion/pull/14),\nlinked by the [Phase G report](m4-phase-g-generic-restore-diagnostics-report.md).\nRecord the commit, Actions run, artifact id, downloaded APK SHA-256 and certificate before installing.\nDo not substitute a debug-signed APK or an APK from another commit.\n\n",
+        "after": "# M4 Sony physical qualification \u2014 manual protocol\n\nFirst physical session: **PARTIAL / FAIL \u2014 hard reboot / offline durable restore**.\nCorrective physical re-qualification: **NOT PERFORMED**. This checklist records both the\nexisting failure and the remaining manual gate. Production remains **SHADOW**;\nPR #14 stays OPEN / DRAFT / unmerged.\nAutomated JVM and API 35 results do not qualify physical TV boot, Prime MediaSession,\nnative overlay windows, D-pad placement or upgrade continuity.\n\nUse the exact **final corrective Phase G HEAD** and its **stable-signed Cloud APK artifact** from the\n[PR #14 final Git closure manifest](https://github.com/pierre22400/scenevibe-tv-companion/pull/14),\nlinked by the [corrective report](m4-phase-g-sony-hard-reboot-corrective-report.md).\nRecord the commit, Actions run, artifact id, downloaded APK SHA-256 and certificate before installing.\nDo not substitute a debug-signed APK or an APK from another commit.\n\n"
+      },
+      {
+        "before": "| --- | --- |\n| Operator / date / timezone | ____ |\n| Sony model / firmware / Android version / ADB serial | ____ |\n| Final Phase G HEAD / debug run / stable APK artifact id | ____ / ____ / ____ |\n| Downloaded raw APK SHA-256 | ____ |\n| Observed signer certificate SHA-256 | ____ |\n| Expected certificate SHA-256 | `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c` |\n",
+        "after": "| --- | --- |\n| Operator / date / timezone | ____ |\n| Sony model / firmware / Android version / ADB serial | ____ |\n| Final corrective HEAD / debug run / stable APK artifact id | ____ / ____ / ____ |\n| Downloaded raw APK SHA-256 | ____ |\n| Observed signer certificate SHA-256 | ____ |\n| Expected certificate SHA-256 | `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c` |\n"
+      },
+      {
+        "before": "screens and bounded observations; do not include credentials, full identities or raw Cloud bodies.\nNo uninstall, data clear, Reset Cloud or re-pairing is permitted during the upgrade/continuity checks.\nRecord any failure before stopping that check; preserve state for the later audit.\nFor steps 2\u20135, temporarily isolate Cloud reachability after recording step 1 (controlled router\nblocking, or disable TV networking while retaining a usable ADB connection). This isolates local restoration from automatic Cloud redelivery:\n\"no new Send\" alone does not prevent a poll from legitimately advancing ACK or installing an\n",
+        "after": "screens and bounded observations; do not include credentials, full identities or raw Cloud bodies.\nNo uninstall, data clear, Reset Cloud or re-pairing is permitted during the upgrade/continuity checks.\nRecord any failure before stopping that check; preserve state for the later audit.\nThe first session used HEAD `824339de562c0de8542f4c1b2a22266832c8abef`, raw APK\nSHA-256 `3aa97275855b85dd2ccecda395bb5c2c0724c9ccd4713576c523c127c4f9a6e2`.\nIt passed upgrade/data/identity/pairing/permission continuity, historical restoration,\nCloud 14 then 15 with confirmed ACKs, visible replacement/one owner, pause/resume,\nboth seeks and Prime eligibility loss/return. At genuine network-isolated hard reboot\nof confirmed revision 15, service and permissions survived but the package was CORRUPT,\nhandler unavailable and startup CACHE_FAILED. Zero diagnostic revisions were unavailable\nobservations, not proof that disk data was cleared. SceneVibe had no observed crash;\nunrelated Sony component FATALs must not be attributed to SceneVibe. Same-revision\nredelivery was **NOT RUN**: the existing UI has no supported trigger and Send increments.\n\nThe correction deliberately rejects already-corrupted bytes. First perform steps 1\u20133\nwith `adb install -r`, before any reset, and capture the added **Installation read failure**\nenum plus startup/revision/ACK/handler. An existing damaged snapshot may still give\nGENERIC_INVALID / CACHE_FAILED; preserve that evidence and record step 4 as blocked by\nthe known old cache, never PASS. Do not edit private data, trim the snapshot or induce\nautomatic recovery. If the damaged cache prevents delivery, the operator may use only\nthe **existing explicit Reset Cloud** after the continuity evidence is complete, then\nre-pair using the existing flow. Record the deliberate identity/pairing rotation and\nnew reference values separately; it cannot count as upgrade continuity. No reset has\nbeen performed by the corrective software cycle. Repeat the package checks on that\nclean reference with a **new Cloud revision N**, then newer N+1; use the actual exact\nnumbers throughout. This preparation must not hide or overwrite the first FAIL.\n\nFor steps 2\u20135, temporarily isolate Cloud reachability after recording step 1 (controlled router\nblocking, or disable TV networking while retaining a usable ADB connection). This isolates local restoration from automatic Cloud redelivery:\n\"no new Send\" alone does not prevent a poll from legitimately advancing ACK or installing an\n"
+      },
+      {
+        "before": "10. Use the existing authorized redelivery mechanism to deliver the **same revision**, without a\n    new Send/increment. Record how redelivery was induced and prove the revision/handler/content\n    stay unchanged and ACK confirms only after successful re-ARM. If no mechanism is available,\n    record NOT RUN and arrange that test before physical acceptance; do not edit private data.\n    Result: ____; revision/ACK before/after: ____ / ____ \u2192 ____ / ____; evidence: ____.\n\n11. Pause while the new scene is visible, then resume. Verify the qualified media-time FREEZE\n",
+        "after": "10. Use the existing authorized redelivery mechanism to deliver the **same revision**, without a\n    new Send/increment. Record how redelivery was induced and prove the revision/handler/content\n    stay unchanged and ACK confirms only after successful re-ARM. If no mechanism is available,\n    record NOT RUN; do not add a product button/API or use a new Send as same-revision\n    evidence. A separate acceptance audit decides the unresolved point; do not edit private data.\n    Result: ____; revision/ACK before/after: ____ / ____ \u2192 ____ / ____; evidence: ____.\n\n11. Pause while the new scene is visible, then resume. Verify the qualified media-time FREEZE\n"
+      },
+      {
+        "before": "    and permissions with step 1. Process-local assignment/successful-ACK counters may be zero\n    before redelivery; durable ACK must persist. Result: ____;\n    revision/ACK/codec/handler/startup/autostart: ____ / ____ / ____ / ____ / ____ / ____; evidence: ____.\n\n17. Verify no old card/scene/badge appears at boot or before an eligible due event. Then produce\n    an eligible due event and verify the restored package displays with exactly one owner.\n",
+        "after": "    and permissions with step 1. Process-local assignment/successful-ACK counters may be zero\n    before redelivery; durable ACK must persist. Result: ____;\n    revision/ACK/codec/handler/startup/autostart: ____ / ____ / ____ / ____ / ____ / ____; evidence: ____.\n    Record **Installation read failure: NONE**, **Installed package: yes**, exact pre-reboot\n    N/ACK/codec/handler and **Last startup restore: ARMED** while still network-isolated.\n    CACHE_FAILED, CORRUPT, a changed durable ACK or unavailable handler is FAIL; do not\n    reset/re-pair/redeliver to turn that reboot into a PASS. Keep both pre/post logcat\n    evidence and prove restore precedes the probe/Cloud. Exclude standby and force-stop.\n\n17. Verify no old card/scene/badge appears at boot or before an eligible due event. Then produce\n    an eligible due event and verify the restored package displays with exactly one owner.\n"
+      },
+      {
+        "before": "    Compare durable ACK and the process-local assignment/successful-ACK counters after confirmed\n    delivery. Result: ____; revision/ACK/assignment/successful ACK: ____ / ____ / ____ / ____;\n    redelivery method/evidence: ____.\n\n19. Verify **Unicode** visually and in approved bounded fixture evidence: composed accented French,\n    decomposed `e` + combining acute accent, ligature `\u0153`, apostrophe `\u2019` and emoji `\ud83d\ude42`.\n",
+        "after": "    Compare durable ACK and the process-local assignment/successful-ACK counters after confirmed\n    delivery. Result: ____; revision/ACK/assignment/successful ACK: ____ / ____ / ____ / ____;\n    redelivery method/evidence: ____.\n    If the existing UI still supplies no supported same-revision redelivery, retain\n    **NOT RUN**, the reason and the exact revision; do not create a Cloud mechanism.\n\n19. Verify **Unicode** visually and in approved bounded fixture evidence: composed accented French,\n    decomposed `e` + combining acute accent, ligature `\u0153`, apostrophe `\u2019` and emoji `\ud83d\ude42`.\n"
+      },
+      {
+        "before": "| Operator result and date | ____ |\n| Separate Chat audit reference and decision | ____ |\n\n**No physical PASS is asserted by this document.** API 35 standard-image smoke and JVM recreation\ncannot replace this Sony protocol. Work Phase G authorizes preparation for this manual gate;\nthe later physical evidence and separate audit determine acceptance. No merge, production cutover\nor M5+ action is authorized here.\n",
+        "after": "| Operator result and date | ____ |\n| Separate Chat audit reference and decision | ____ |\n\n**No final physical Sony PASS is asserted by this document.** The initial partial results and\nhard-reboot FAIL remain authoritative. API 31/35 native disk/process gates, API 35 smoke\nand JVM recreation cannot replace this Sony protocol. The corrective cycle prepares this manual gate;\nthe later physical evidence and separate audit determine acceptance. No merge, production cutover\nor M5+ action is authorized here.\n"
+      }
+    ]
+  },
+  "phaseGCorrectiveSuites": {
+    "M4SonyReadFailureTest": 9,
+    "M4SonyPreferenceTransportTest": 10
+  },
+  "additiveFiles": [
+    ".github/scripts/m4-phase-g-sony-corrective-baseline.json",
+    ".github/scripts/m4-sony-durability-summary.py",
+    ".github/scripts/m4-sony-durability.init.gradle",
+    ".github/scripts/m4-sony-durability.sh",
+    ".github/workflows/android-installation-durability.yml",
+    "app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M4SonyDurabilityInstrumentation.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4SonyReadFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4SonyPreferenceTransportTest.java",
+    "tests/sony_corrective_provenance.py",
+    "tests/test_m4_sony_corrective_boundary.py"
+  ]
+}

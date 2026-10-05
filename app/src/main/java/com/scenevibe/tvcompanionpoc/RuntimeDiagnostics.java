@@ -1,5 +1,10 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationSnapshot;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
+
 /**
  * An immutable, observational snapshot of the SceneVibe TV runtime (user section 10). It
  * is purely a read model: it is NEVER consulted to make a business decision (no start,
@@ -31,8 +36,7 @@ final class RuntimeDiagnostics {
         // Read-only peeks: capture() must be truly observational. It must NOT run the credential
         // migration and must NOT mint/persist an installationId when none exists yet.
         CloudDeviceCredentials credentials = CloudDeviceCredentials.peek(context);
-        CloudTrackRepository cache = new CloudTrackRepository(context);
-        long revision = cache.revision();
+        InstallationStore store = new InstallationStore(new AndroidInstallationBackend(context));
         boolean credentialUnavailable = credentials.credentialUnavailable();
         CloudState cloudState = credentialUnavailable
                 ? CloudState.DISCONNECTED
@@ -41,17 +45,13 @@ final class RuntimeDiagnostics {
                 : CloudState.DISCONNECTED;
         CloudErrorCode errorCode = credentialUnavailable
                 ? CloudErrorCode.CREDENTIAL_UNAVAILABLE : observed.lastCloudErrorCode();
-        return new Builder()
+        return installationSnapshot(store, observed)
                 .appVersion(BuildConfig.VERSION_NAME)
                 .serviceRunning(observed.serviceRunning())
                 .autostartEnabled(AutostartPreference.isEnabled(context))
                 .cloudState(cloudState)
                 .installationId(new InstallationIdentity(context).peekInstallationId())
                 .cloudDeviceId(credentials.cloudDeviceId())
-                .cachedTrackPresent(revision > 0)
-                .cachedTrackId(cache.cachedTrackId())
-                .cachedRevision(revision)
-                .lastAcknowledgedRevision(cache.acknowledged())
                 .mediaSessionPermissionGranted(NotificationAccess.isGranted(context))
                 .lastObservedMediaApp(observed.lastObservedMediaApp())
                 .mediaIdentityState(observed.mediaIdentityState())
@@ -65,6 +65,15 @@ final class RuntimeDiagnostics {
                 .lastSceneCode(observed.lastSceneCode())
                 .build();
     }
+
+    /** Read generic metadata once, without parsing opaque artifacts or minting/migrating any identity. */
+    static Builder installationSnapshot(InstallationStore store, DiagnosticsStore observed) {
+        return new Builder().installation(store.read())
+                .lastStartupRestoreResult(observed.lastStartupRestoreResult());
+    }
+
+    /** Structural durable state only; READY does not claim executable capability, visibility or ACK. */
+    enum InstallationState { EMPTY, READY, CORRUPT }
 
     /** Coarse cloud connection state; bounded, display-only, never a credential. */
     enum CloudState { CONNECTED, OFFLINE, ACTIVATION_PENDING, DISCONNECTED }
@@ -114,10 +123,24 @@ final class RuntimeDiagnostics {
     final String installationIdAbbreviated;
     /** Abbreviated cloud device id (never the full value); null when none exists yet. */
     final String cloudDeviceIdAbbreviated;
+    final InstallationState installationState;
+    /** Bounded durable-read fault, purely observational and independent of startup/runtime success. */
+    final InstallationStore.ReadFailure installationReadFailure;
+    final boolean installationPresent;
+    final long installedRevision;
+    final long acknowledgedRevision;
+    /** Bounded build-local metadata only; no artifact value is retained. */
+    final String packageCodecId;
+    final String packageHandlerId;
+    /** Last startup attempt only, not the current selection or Cloud confirmation. */
+    final InstallationStatus lastStartupRestoreResult;
+    /** Compatibility alias of generic snapshot presence; never an independent cache authority. */
     final boolean cachedTrackPresent;
-    /** The cached track id (not a secret, not the full FinalTrack); null when none. */
+    /** Video compatibility-only id; capture leaves it null rather than parsing opaque artifacts. */
     final String cachedTrackId;
+    /** Compatibility alias of installedRevision. */
     final long cachedRevision;
+    /** Compatibility alias of generic acknowledgedRevision. */
     final long lastAcknowledgedRevision;
     final boolean mediaSessionPermissionGranted;
     /** The package name of the last observed foreground media app; null when none. */
@@ -137,6 +160,7 @@ final class RuntimeDiagnostics {
     /** Bounded outcome of the last scene-runtime render attempt; NONE when none seen. */
     final SceneCode lastSceneCode;
 
+    /** Freeze scalar observational metadata only; no store, snapshot or artifact is retained. */
     private RuntimeDiagnostics(Builder builder) {
         this.appVersion = builder.appVersion;
         this.serviceRunning = builder.serviceRunning;
@@ -144,6 +168,14 @@ final class RuntimeDiagnostics {
         this.cloudState = builder.cloudState;
         this.installationIdAbbreviated = builder.installationIdAbbreviated;
         this.cloudDeviceIdAbbreviated = builder.cloudDeviceIdAbbreviated;
+        this.installationState = builder.installationState;
+        this.installationReadFailure = builder.installationReadFailure;
+        this.installationPresent = builder.installationPresent;
+        this.installedRevision = builder.installedRevision;
+        this.acknowledgedRevision = builder.acknowledgedRevision;
+        this.packageCodecId = builder.packageCodecId;
+        this.packageHandlerId = builder.packageHandlerId;
+        this.lastStartupRestoreResult = builder.lastStartupRestoreResult;
         this.cachedTrackPresent = builder.cachedTrackPresent;
         this.cachedTrackId = builder.cachedTrackId;
         this.cachedRevision = builder.cachedRevision;
@@ -181,6 +213,14 @@ final class RuntimeDiagnostics {
         private CloudState cloudState = CloudState.DISCONNECTED;
         private String installationIdAbbreviated;
         private String cloudDeviceIdAbbreviated;
+        private InstallationState installationState = InstallationState.EMPTY;
+        private InstallationStore.ReadFailure installationReadFailure = InstallationStore.ReadFailure.NONE;
+        private boolean installationPresent;
+        private long installedRevision;
+        private long acknowledgedRevision;
+        private String packageCodecId;
+        private String packageHandlerId;
+        private InstallationStatus lastStartupRestoreResult;
         private boolean cachedTrackPresent;
         private String cachedTrackId;
         private long cachedRevision;
@@ -196,6 +236,30 @@ final class RuntimeDiagnostics {
         private CloudErrorCode lastCloudErrorCode = CloudErrorCode.NONE;
         private ManifestCode lastManifestCode = ManifestCode.NONE;
         private SceneCode lastSceneCode = SceneCode.NONE;
+
+        /** Project one coherent read into bounded metadata and old aliases; never inspect canonical bytes. */
+        Builder installation(InstallationStore.ReadResult durable) {
+            installationReadFailure = durable == null ? InstallationStore.ReadFailure.BACKEND_READ_FAILED : durable.failure();
+            installationState = durable == null || durable.state() == InstallationStore.ReadState.CORRUPT
+                    ? InstallationState.CORRUPT : durable.state() == InstallationStore.ReadState.SNAPSHOT
+                    ? InstallationState.READY : InstallationState.EMPTY;
+            installationPresent = installationState == InstallationState.READY;
+            InstallationSnapshot snapshot = installationPresent ? durable.snapshot() : null;
+            installedRevision = snapshot == null ? 0 : snapshot.revision();
+            acknowledgedRevision = installationPresent ? durable.acknowledgedRevision() : 0;
+            packageCodecId = snapshot == null ? null : snapshot.codecId();
+            packageHandlerId = snapshot == null ? null : snapshot.handlerId();
+            cachedTrackPresent = installationPresent;
+            cachedRevision = installedRevision;
+            lastAcknowledgedRevision = acknowledgedRevision;
+            cachedTrackId = null;
+            return this;
+        }
+
+        /** Accept only the closed startup observation; null means EMPTY/not attempted. */
+        Builder lastStartupRestoreResult(InstallationStatus result) {
+            this.lastStartupRestoreResult = result; return this;
+        }
 
         Builder appVersion(String value) { this.appVersion = value == null ? "" : value; return this; }
         Builder serviceRunning(boolean value) { this.serviceRunning = value; return this; }

@@ -44,6 +44,15 @@ jobs:
         run: python3 -m unittest discover -s tests
       - name: Build and lint debug APK (Cloud not configured)
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
+      - name: Verify Phase A/B/C/D/E/F/G executed test counts and frozen fixtures
+        run: python3 .github/scripts/m4-phase-a-test-summary.py
+      - name: Upload bounded Phase A/B/C/D/E/F/G test summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-m4-phase-a-test-summary
+          path: app/build/reports/m4-phase-a-summary.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Build LAN DEV APK (prove SCENEVIBE_ENABLE_LAN_DEV still compiles)
         env:
           # Developer-only LAN prototype surface. NOT a consumer build and NOT a secret.

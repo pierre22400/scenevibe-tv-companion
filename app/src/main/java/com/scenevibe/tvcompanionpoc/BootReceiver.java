@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.provider.Settings;
 import android.util.Log;
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 
 /**
  * Autostart entry point (user section 9). It listens ONLY to BOOT_COMPLETED and
@@ -23,6 +25,7 @@ import android.util.Log;
 public final class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "SceneVibePoc";
 
+    /** Read durable metadata after unlock; this receiver never parses, restores or writes a package. */
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent == null ? null : intent.getAction();
@@ -44,12 +47,11 @@ public final class BootReceiver extends BroadcastReceiver {
                     && notEmpty(credentials.deviceToken())
                     && notEmpty(credentials.cloudDeviceId());
 
-            // A valid cached runtime track survives reboots and is enough to arm on its own.
-            boolean hasValidCachedTrack = new CloudTrackRepository(app).revision() > 0;
-
-            AutostartPolicy.Decision decision = AutostartPolicy.decide(
+            InstallationStore.ReadResult durable =
+                    new InstallationStore(new AndroidInstallationBackend(app)).read();
+            AutostartPolicy.Decision decision = decide(
                     autostartEnabled, overlayGranted, mediaGranted,
-                    hasUsableCloudCredential, hasValidCachedTrack);
+                    hasUsableCloudCredential, durable);
 
             // Observational only: publish the bounded decision (START or a specific skip
             // reason) into the diagnostics store so it is visible on the Diagnostics screen
@@ -64,7 +66,7 @@ public final class BootReceiver extends BroadcastReceiver {
             }
         } catch (RuntimeException error) {
             // Fail-closed: a boot receiver must never crash or loop. Record and return.
-            Log.w(TAG, "Autostart evaluation failed; staying disarmed", error);
+            Log.w(TAG, "Autostart evaluation failed; staying disarmed");
         }
     }
 
@@ -82,10 +84,18 @@ public final class BootReceiver extends BroadcastReceiver {
             Log.i(TAG, "Autostart armed OverlayService in boot-prepare mode");
         } catch (RuntimeException startFailure) {
             // e.g. a platform ForegroundServiceStartNotAllowedException: surface, do not crash.
-            Log.w(TAG, "Autostart could not start OverlayService from boot", startFailure);
+            Log.w(TAG, "Autostart could not start OverlayService from boot");
         }
     }
 
+    /** Delegate unchanged permission/opt-in ordering; only a complete durable representation counts. */
+    static AutostartPolicy.Decision decide(boolean enabled, boolean overlay, boolean media,
+            boolean credential, InstallationStore.ReadResult durable) {
+        return AutostartPolicy.decide(enabled, overlay, media, credential,
+                durable != null && durable.state() == InstallationStore.ReadState.SNAPSHOT);
+    }
+
+    /** Usable credentials require both existing non-empty identifiers; no value is logged. */
     private static boolean notEmpty(String value) {
         return value != null && !value.isEmpty();
     }

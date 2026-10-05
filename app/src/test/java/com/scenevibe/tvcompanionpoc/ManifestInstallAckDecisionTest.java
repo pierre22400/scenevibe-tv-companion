@@ -13,8 +13,8 @@ import static org.junit.Assert.*;
 
 /**
  * Section 7/8 ACK-ordering coverage plus section 20-A (cases 1-3). These tests exercise the
- * Android-free {@link OverlayService#installManifestedRevision} helper, which is the exact
- * core the production {@link CloudControlClient.ManifestInstaller} delegates to: it is the
+ * Android-free {@link M4PhaseGHistoricalService#installManifestedRevision} helper, which is the exact
+ * core the production {@link M4PhaseFHistoricalCloudClient.ManifestInstaller} delegates to: it is the
  * decision that gates the ACK. A manifested revision is "ACK-able" (helper returns a positive
  * revision) ONLY after runtimeTrack valid + manifest valid + cross-contract valid + atomic
  * durable persist + scheduler accept + regie accept. Any failure returns 0 => NO ACK, prior
@@ -104,7 +104,7 @@ public final class ManifestInstallAckDecisionTest {
         SceneRuntimeController regie=new SceneRuntimeController(sink);
         DiagnosticsStore diagnostics=new DiagnosticsStore();
 
-        long armed=OverlayService.installManifestedRevision(repository,scheduler(),regie,
+        long armed=M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler(),regie,
                 diagnostics,5,runtimeJson("track-1"),manifestJson("track-1"));
 
         assertEquals("ACK-able only after full success",5,armed);
@@ -121,7 +121,7 @@ public final class ManifestInstallAckDecisionTest {
         Memory memory=new Memory();
         CloudTrackRepository repository=new CloudTrackRepository(memory);
         // A prior valid revision 4 exists.
-        assertEquals(4,OverlayService.installManifestedRevision(repository,scheduler(),
+        assertEquals(4,M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler(),
                 new SceneRuntimeController(new RecordingSink()),new DiagnosticsStore(),
                 4,runtimeJson("track-1"),manifestJson("track-1")));
         String priorRuntime=memory.values.get("runtime");
@@ -140,7 +140,7 @@ public final class ManifestInstallAckDecisionTest {
         RecordingSink sink=new RecordingSink();
         SceneRuntimeController regie=new SceneRuntimeController(sink);
         DiagnosticsStore diagnostics=new DiagnosticsStore();
-        long armed=OverlayService.installManifestedRevision(repository,scheduler(),regie,
+        long armed=M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler(),regie,
                 diagnostics,5,runtimeJson("track-1"),driftedManifest);
 
         assertEquals("inconsistent manifest => NO ACK",0,armed);
@@ -160,7 +160,7 @@ public final class ManifestInstallAckDecisionTest {
         DiagnosticsStore diagnostics=new DiagnosticsStore();
         SceneRuntimeController regie=new SceneRuntimeController(new RecordingSink());
 
-        long armed=OverlayService.installManifestedRevision(repository,scheduler(),regie,
+        long armed=M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler(),regie,
                 diagnostics,1,runtimeJson("track-1"),manifestJson("other-track"));
 
         assertEquals(0,armed);
@@ -176,7 +176,7 @@ public final class ManifestInstallAckDecisionTest {
         DiagnosticsStore diagnostics=new DiagnosticsStore();
         SceneRuntimeController regie=new SceneRuntimeController(new RecordingSink());
 
-        long armed=OverlayService.installManifestedRevision(repository,scheduler(),regie,
+        long armed=M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler(),regie,
                 diagnostics,1,runtimeJson("track-1"),manifestJson("track-1"));
 
         assertEquals(0,armed);
@@ -199,14 +199,14 @@ public final class ManifestInstallAckDecisionTest {
         SceneRuntimeController regie=new SceneRuntimeController(sink);
 
         // Install + arm revision 5 (installer path arms the regie).
-        assertEquals(5,OverlayService.installManifestedRevision(repository,scheduler(),regie,
+        assertEquals(5,M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler(),regie,
                 new DiagnosticsStore(),5,runtimeJson("track-1"),manifestJson("track-1")));
         assertTrue(regie.hasActiveManifest());
         String runtimeAfterInstall=memory.values.get("runtime");
         String manifestAfterInstall=memory.values.get("manifest");
 
         // Re-delivery at revision <= cached: confirm the regie is armed, re-persist nothing.
-        long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,5);
+        long armed=M4PhaseGHistoricalService.confirmManifestedRevisionArmed(repository,scheduler(),regie,5);
         assertEquals(5,armed);
         assertTrue(regie.isSceneRendererActiveFor(5));
         assertEquals("re-delivery must not re-persist runtime",runtimeAfterInstall,memory.values.get("runtime"));
@@ -221,7 +221,7 @@ public final class ManifestInstallAckDecisionTest {
     @Test public void reDeliveredManifestReArmsUnarmedRegieFromDurableCache() throws Exception {
         Memory memory=new Memory();
         // Durable manifested revision 7 exists from a prior cycle.
-        assertEquals(7,OverlayService.installManifestedRevision(new CloudTrackRepository(memory),
+        assertEquals(7,M4PhaseGHistoricalService.installManifestedRevision(new CloudTrackRepository(memory),
                 scheduler(),new SceneRuntimeController(new RecordingSink()),new DiagnosticsStore(),
                 7,runtimeJson("track-1"),manifestJson("track-1")));
 
@@ -230,7 +230,7 @@ public final class ManifestInstallAckDecisionTest {
         SceneRuntimeController regie=new SceneRuntimeController(new RecordingSink());
         assertFalse(regie.hasActiveManifest());
 
-        long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,7);
+        long armed=M4PhaseGHistoricalService.confirmManifestedRevisionArmed(repository,scheduler(),regie,7);
         assertEquals("defensive re-arm from durable manifested cache",7,armed);
         assertTrue(regie.hasActiveManifest());
         assertTrue(regie.isSceneRendererActiveFor(7));
@@ -249,7 +249,7 @@ public final class ManifestInstallAckDecisionTest {
         assertNull(memory.values.get("manifest"));
 
         SceneRuntimeController regie=new SceneRuntimeController(new RecordingSink());
-        long armed=OverlayService.confirmManifestedRevisionArmed(repository,scheduler(),regie,4);
+        long armed=M4PhaseGHistoricalService.confirmManifestedRevisionArmed(repository,scheduler(),regie,4);
         assertEquals("no durable manifest => not armable => fail closed",0,armed);
         assertFalse(regie.hasActiveManifest());
     }
@@ -269,7 +269,7 @@ public final class ManifestInstallAckDecisionTest {
         RecordingSink sink=new RecordingSink();
         SceneRuntimeController regie=new SceneRuntimeController(sink);
 
-        assertEquals(4,OverlayService.installManifestedRevision(repository,scheduler,regie,
+        assertEquals(4,M4PhaseGHistoricalService.installManifestedRevision(repository,scheduler,regie,
                 new DiagnosticsStore(),4,runtimeJson("track-1"),manifestJson("track-1")));
         assertTrue(regie.hasActiveManifest());
         assertTrue(regie.isSceneRendererActiveFor(4));
@@ -278,7 +278,7 @@ public final class ManifestInstallAckDecisionTest {
         regie.onCommentDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null));
         assertTrue(regie.hasVisibleScene());
 
-        CloudControlClient.ManifestInstaller transition=new CloudControlClient.ManifestInstaller() {
+        M4PhaseFHistoricalCloudClient.ManifestInstaller transition=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
             @Override public boolean install(long revision,String runtime,String manifest) {
                 return false;
             }
@@ -286,11 +286,11 @@ public final class ManifestInstallAckDecisionTest {
                 return false;
             }
             @Override public boolean activateLegacy(long revision) {
-                return OverlayService.activateLegacyRevision(regie,revision)==revision;
+                return M4PhaseGHistoricalService.activateLegacyRevision(regie,revision)==revision;
             }
         };
 
-        boolean ackable=CloudControlClient.installLegacyRevision(
+        boolean ackable=M4PhaseFHistoricalCloudClient.installLegacyRevision(
                 5,4,runtimeJson("track-2"),repository,scheduler,transition);
 
         assertTrue("legacy revision is ACK-able only after Case-B disarm",ackable);

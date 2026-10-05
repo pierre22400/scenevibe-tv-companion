@@ -1,5 +1,8 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
+
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
@@ -201,19 +204,27 @@ public final class MainActivity extends Activity {
             return;
         }
         CloudDeviceCredentials identity = new CloudDeviceCredentials(this);
-        String code = identity.userCode();
-        boolean cached = new CloudTrackRepository(this).revision() > 0;
+        InstallationStore.ReadResult durable =
+                new InstallationStore(new AndroidInstallationBackend(this)).read();
+        cloudStatus.setText("SceneVibe Cloud: " + cloudStatus(identity.userCode(),
+                identity.offline(), identity.connected(), durable));
+    }
+
+    /** Consumer wording uses structural saved-content presence, never a revision, codec or artifact. */
+    static String cloudStatus(String code, boolean offline, boolean connected,
+            InstallationStore.ReadResult durable) {
         String status;
         if (code != null) {
             status = "Code: " + code + "\nWaiting for connection...";
-        } else if (identity.offline()) {
-            status = cached ? "Offline (using saved track)" : "Offline";
-        } else if (identity.connected()) {
+        } else if (offline) {
+            status = durable != null && durable.state() == InstallationStore.ReadState.SNAPSHOT
+                    ? "Offline (using saved SceneVibe content)" : "Offline";
+        } else if (connected) {
             status = "Connected";
         } else {
             status = "Not connected";
         }
-        cloudStatus.setText("SceneVibe Cloud: " + status);
+        return status;
     }
 
     /** Starts a new activation on the already user-started foreground service. */
