@@ -28,6 +28,12 @@ applicable, and an evidence reference. Blank fields are NOT RUN, never PASS. Cap
 screens and bounded observations; do not include credentials, full identities or raw Cloud bodies.
 No uninstall, data clear, Reset Cloud or re-pairing is permitted during the upgrade/continuity checks.
 Record any failure before stopping that check; preserve state for the later audit.
+For steps 2–5, temporarily isolate Cloud reachability after recording step 1 (controlled router
+blocking, or disable TV networking while retaining a usable ADB connection). This isolates local restoration from automatic Cloud redelivery:
+"no new Send" alone does not prevent a poll from legitimately advancing ACK or installing an
+already-assigned newer revision. Record network isolation and restore its prior configuration
+before step 6, without Disconnect Cloud or Reset. If isolation is unavailable, capture evidence
+that separates local restoration from subsequent Cloud work; otherwise mark that check NOT RUN.
 
 1. **Before upgrade**, open Diagnostics and record current app version, abbreviated installation id
    and Cloud device id, overlay permission, MediaSession/notification access, autostart opt-in,
@@ -44,7 +50,7 @@ Record any failure before stopping that check; preserve state for the later audi
    changed identity by pairing again and count it as continuity. Result: ____;
    ids/permissions/opt-in comparison: ____; revision/ACK: ____ / ____; evidence: ____.
 
-4. **Without a new Cloud Send**, enter Start SceneVibe or the existing boot-prepare path and verify
+4. **Without a new Cloud Send and while network-isolated**, enter Start SceneVibe or the existing boot-prepare path and verify
    restoration of the previously durable historical/generic package. Diagnostics must show the
    same revision, ACK, codec and handler and `Last startup restore: ARMED`. MEDIA/CONTINUE manifested
    or other unsupported durable data must fail closed; record that refusal rather than silently
@@ -98,7 +104,8 @@ Record any failure before stopping that check; preserve state for the later audi
     evidence: ____.
 
 15. Enable/confirm autostart, record installed revision/ACK, then perform a **hard TV reboot with
-    no new Send**: a genuine full Sony restart/power cycle, not standby, app restart or force-stop.
+    no new Send**: isolate the TV network as above until step 16's local restore evidence is recorded,
+    then use a genuine full Sony restart/power cycle, not standby, app restart or force-stop.
     Record the exact procedure and boot completion evidence. A force-stop/emulator is **not** a
     substitute for hard reboot. Result: ____; pre-reboot revision/ACK/opt-in: ____ / ____ / ____;
     reboot procedure/evidence: ____.
@@ -111,6 +118,8 @@ Record any failure before stopping that check; preserve state for the later audi
 
 17. Verify no old card/scene/badge appears at boot or before an eligible due event. Then produce
     an eligible due event and verify the restored package displays with exactly one owner.
+    Restore the prior network configuration after step 16; record any intervening automatic Cloud
+    redelivery separately from local restore, retaining the same revision for this check.
     Result: ____; revision/ACK: ____ / ____; before/after visual evidence: ____.
 
 18. Perform **post-reboot same-revision redelivery**, retaining the exact revision and handler.
