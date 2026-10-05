@@ -12,9 +12,12 @@ may change old production code. The historical HTTP oracle and modified old test
 reversed to their exact starting blobs; old predicates/accounting are reversed likewise.
 The executed JVM suites exercise the actual client, installer and service runtime ports.
 Boot/diagnostics and Cloud/Video semantics remain byte-pinned for the later Phase G.
+Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
+PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-f-baseline.json').read_text(encoding='utf-8'))
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
 TEST = 'app/src/test/java/com/scenevibe/tvcompanionpoc/'
@@ -122,7 +125,9 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
             self.assertEqual(1, source.count(token), token)
         self.assertIn('VideoInstallationHandlers.registry(), TvCapabilities.current()', source)
         self.assertIn('() -> Looper.myLooper() == Looper.getMainLooper()', source)
-        self.assertIn('new CloudTrackRepository(installationStore)', source)
+        historical = inverse((ROOT / JAVA / 'OverlayService.java').read_text(),
+                             PHASE_G.get('productionPatches', {}).get(JAVA + 'OverlayService.java', []))
+        self.assertIn('new CloudTrackRepository(installationStore)', code_only(historical))
         self.assertIn('videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient', source)
         self.assertIn('!cloudResetPending && shouldReconstructCloudClient(', source)
         self.assertIn('private volatile CloudControlClient cloudClient;', source)
@@ -178,7 +183,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
     def test_installer_handlers_wire_runtime_platform_and_signing_remain_byte_exact(self):
         """All old unexcepted production/resources/configuration bytes, including Phase E installer, remain frozen."""
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
-            if path in BASELINE['authorizedProductionChanges']:
+            if path in BASELINE['authorizedProductionChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
         installer = JAVA + 'installation/PackageInstaller.java'
@@ -190,9 +195,14 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         for name, key in [('CloudControlClient.java', 'protectedClientMethods'),
                           ('OverlayService.java', 'protectedServiceMethods')]:
             source = (ROOT / JAVA / name).read_text()
+            historical = (ROOT / PHASE_G['historicalServiceFile']).read_text() if PHASE_G else source
             for signature, expected in BASELINE[key].items():
-                self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)
-        service = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+                if name == 'OverlayService.java' and any(method in signature for method in PHASE_G.get('removedServiceHelpers', [])):
+                    method_source = historical
+                else:
+                    method_source = source
+                self.assertEqual(expected, hashlib.sha256(java_block(method_source, signature).encode()).hexdigest(), signature)
+        service = code_only((ROOT / (PHASE_G['historicalServiceFile'] if PHASE_G else JAVA + 'OverlayService.java')).read_text())
         for name in ('installManifestedRevision', 'confirmManifestedRevisionArmed', 'activateLegacyRevision'):
             self.assertEqual(1, len(re.findall(r'\b' + name + r'\s*\(', service)), name)
 
@@ -205,14 +215,15 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         oracle = (ROOT / BASELINE['historicalClientFile']).read_text().replace('M4PhaseFHistoricalCloudClient', 'CloudControlClient')
         self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][JAVA + 'CloudControlClient.java'], blob_hash(oracle.encode()))
         for path, patches in BASELINE['testPatches'].items():
-            previous = inverse((ROOT / path).read_text(), patches)
+            previous = inverse(inverse((ROOT / path).read_text(),
+                                       PHASE_G.get('testPatches', {}).get(path, [])), patches)
             self.assertEqual(BASELINE['frozenTestSources'][path], blob_hash(previous.encode()), path)
 
     def test_frozen_tests_fixtures_inventories_and_authoritative_documents_remain_exact(self):
         """All unmodified retained qualification evidence remains byte-exact rather than being rewritten to fit F."""
         frozen = {**BASELINE['frozenTestSources'], **BASELINE['frozenDocumentationBlobs']}
         for path, expected in frozen.items():
-            if path in BASELINE['authorizedTestChanges']:
+            if path in BASELINE['authorizedTestChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
 
@@ -236,7 +247,8 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         expected.update({'.github/scripts/m4-phase-a-test-summary.py', '.github/workflows/android-debug.yml'})
         self.assertEqual(expected, set(BASELINE['boundaryPatches']))
         for relative, patches in BASELINE['boundaryPatches'].items():
-            previous = inverse((ROOT / relative).read_text(), patches)
+            previous = inverse(inverse((ROOT / relative).read_text(),
+                                       PHASE_G.get('boundaryPatches', {}).get(relative, [])), patches)
             self.assertEqual(BASELINE['boundaryBlobs'][relative], blob_hash(previous.encode()), relative)
 
     def test_executed_phase_f_inventory_is_additive_and_private_skip_policy_unchanged(self):

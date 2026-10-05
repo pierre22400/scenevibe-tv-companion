@@ -17,9 +17,12 @@ Phase D preserves this store byte-for-byte and adds narrowly authorized handler-
 semantics; frozen historical reference and orchestration fragments guard that exception.
 Phase E adds only its explicitly inventoried orchestration class; the store remains pinned.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
+Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
+PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-c-baseline.json').read_text(encoding='utf-8'))
@@ -129,14 +132,14 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         for path, digest in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_D.get('additiveContractFiles', []):
                 continue
-            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
 
     def test_every_retained_jvm_test_and_frozen_inventory_remains_byte_exact(self):
         """Do not weaken old characterization/model tests to make the persistence refactor pass."""
         for path, digest in BASELINE['frozenTestSources'].items():
-            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
 

@@ -15,9 +15,12 @@ every old JVM test/fixture and the earlier inventories. Earlier boundary predica
 and CI accounting may gain only the documented Phase E inventory/bucket exceptions.
 A real JDK-only compile verifies the installer cannot acquire platform dependencies.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
+Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
+PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-e-baseline.json').read_text(encoding='utf-8'))
@@ -125,7 +128,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
     def test_all_old_production_handlers_store_and_configs_remain_byte_exact(self):
         """Pin all prior Java/resources/manifest/build/signing inputs, including every current production caller."""
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
-            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
         for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):
@@ -137,7 +140,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         """Protect earlier qualification evidence and authoritative documents without changing fixtures to fit E."""
         frozen = {**BASELINE['frozenTestSources'], **BASELINE['frozenDocumentationBlobs']}
         for path, expected in frozen.items():
-            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
 
@@ -156,6 +159,8 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         """Reverse the small authorized additions and demand the earlier gate/workflow bytes exactly."""
         for relative, expected in BASELINE['frozenAccountingBoundaryBlobs'].items():
             source = (ROOT / relative).read_text(encoding='utf-8')
+            for patch in reversed(PHASE_G.get('boundaryPatches', {}).get(relative, [])):
+                source = source.replace(patch['after'], patch['before'])
             if PHASE_F:
                 for patch in reversed(PHASE_F['boundaryPatches'].get(relative, [])):
                     source = source.replace(patch['after'], patch['before'])

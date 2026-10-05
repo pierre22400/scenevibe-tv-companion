@@ -11,9 +11,12 @@ Byte-pinned runtime/store/configuration/test blobs and unchanged orchestration f
 balance the narrow repository/typed-state exceptions to the older Phase B/C gates.
 Phase E permits its one generic orchestrator definition, never a current-caller cutover.
 Phase F admits only its exact live adapter/caller/reset exceptions; the F gate pins all other bytes.
+Phase G admits only its exact startup/metadata/reset exceptions; the G gate reverses and pins them.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
+PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-d-baseline.json').read_text(encoding='utf-8'))
@@ -123,7 +126,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
     def test_qualified_runtime_store_wire_and_configs_remain_byte_exact(self):
         """No protected scheduler/renderer/identity/store/transport/manifest/signing input can drift."""
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
-            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
         source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')
@@ -141,7 +144,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         normalized = '\n'.join(line for line in normalized.splitlines() if line.strip())
         self.assertEqual(BASELINE['historicalRepositoryCodeSha256'], hashlib.sha256(normalized.encode()).hexdigest())
         for path, expected in BASELINE['frozenTestSources'].items():
-            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []):
+            if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(expected, blob_hash((ROOT / path).read_bytes()), path)
 
