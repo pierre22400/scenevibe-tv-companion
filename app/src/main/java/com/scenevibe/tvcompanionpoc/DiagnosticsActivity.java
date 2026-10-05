@@ -10,6 +10,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
+import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 
 /**
  * Read-only Diagnostics screen (user section 10). It is reachable from MainActivity but is
@@ -55,7 +57,7 @@ public final class DiagnosticsActivity extends Activity {
         addButton(controls, "Reset SceneVibe Cloud connection", this::resetCloud);
 
         TextView note = new TextView(this);
-        note.setText("Reset deletes this TV's SceneVibe Cloud credential and cached track, "
+        note.setText("Reset deletes this TV's SceneVibe Cloud credential and installed SceneVibe content, "
                 + "then creates a fresh local installation id so the TV can pair again safely. "
                 + "The previous TV entry remains in your SceneVibe account until you remove it.");
         note.setTextColor(0xFFA89F92);
@@ -84,7 +86,7 @@ public final class DiagnosticsActivity extends Activity {
 
     /**
      * Executes the EXCEPTIONAL Cloud reset: rotate the local InstallationIdentity, wipe the
-     * cloud credential + cloud identity and clear the runtime cache. Rotation is intentional:
+     * cloud credential + cloud identity and clear the installation file. Rotation is intentional:
      * after deleting the device credential, reusing the old installation id would require proof
      * the TV no longer owns. It is only ever run from this explicit button - never automatically
      * on a network/timeout/401.
@@ -101,10 +103,17 @@ public final class DiagnosticsActivity extends Activity {
         } else {
             // No running service means no concurrent client, so a direct-but-safe wipe is
             // correct: nothing can rewrite the cache after we clear it here.
-            new InstallationIdentity(this).rotateForCloudReset();
-            new CloudDeviceCredentials(this).reset();
-            new CloudTrackRepository(this).clear();
-            DiagnosticsStore.INSTANCE.resetCloudObservations();
+            boolean cleared = resetStoppedInstallation(
+                    new InstallationStore(new AndroidInstallationBackend(this)),
+                    () -> new InstallationIdentity(this).rotateForCloudReset(),
+                    () -> new CloudDeviceCredentials(this).reset(), DiagnosticsStore.INSTANCE);
+            if (!cleared) {
+                Log.w(TAG, "SceneVibe Cloud reset incomplete");
+                Toast.makeText(this, "SceneVibe Cloud reset incomplete. Check diagnostics.",
+                        Toast.LENGTH_LONG).show();
+                refresh();
+                return;
+            }
         }
         Log.i(TAG, "SceneVibe Cloud connection reset by TV user");
         Toast.makeText(this, "SceneVibe Cloud reset. A fresh TV identity is ready to pair.",
@@ -112,8 +121,28 @@ public final class DiagnosticsActivity extends Activity {
         refresh();
     }
 
-    /** Renders every section-10 field as a bounded code / short string, never a secret. */
-    private String render(RuntimeDiagnostics d) {
+    /**
+     * Explicit stopped-service reset only: no Cloud worker exists in this branch. Rotate the
+     * separate identity, clear credentials, then clear generic/historical state in one batch.
+     * A refused wipe keeps readable durable state and reports only a bounded failure.
+     */
+    static boolean resetStoppedInstallation(InstallationStore store, Runnable rotateIdentity,
+            Runnable resetCredentials, DiagnosticsStore observed) {
+        try {
+            rotateIdentity.run();
+            resetCredentials.run();
+            boolean cleared = store.clearAll();
+            observed.resetCloudObservations();
+            if (!cleared) observed.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NETWORK);
+            return cleared;
+        } catch (RuntimeException failed) {
+            observed.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NETWORK);
+            return false;
+        }
+    }
+
+    /** Render generic metadata first and retain labeled compatibility aliases, without any content. */
+    static String render(RuntimeDiagnostics d) {
         StringBuilder sb = new StringBuilder();
         line(sb, "App version", d.appVersion);
         line(sb, "Overlay service", d.serviceRunning ? "running" : "stopped");
@@ -121,10 +150,17 @@ public final class DiagnosticsActivity extends Activity {
         line(sb, "Cloud", d.cloudState.name());
         line(sb, "Installation id", d.installationIdAbbreviated == null ? "-" : d.installationIdAbbreviated);
         line(sb, "Cloud device id", d.cloudDeviceIdAbbreviated == null ? "-" : d.cloudDeviceIdAbbreviated);
-        line(sb, "Cached track", d.cachedTrackPresent ? "yes" : "no");
-        line(sb, "Cached track id", d.cachedTrackId == null ? "-" : d.cachedTrackId);
-        line(sb, "Cached revision", String.valueOf(d.cachedRevision));
-        line(sb, "Last acknowledged revision", String.valueOf(d.lastAcknowledgedRevision));
+        line(sb, "Installed package", d.installationState == RuntimeDiagnostics.InstallationState.CORRUPT
+                ? "corrupt" : d.installationPresent ? "yes" : "no");
+        line(sb, "Package codec", d.packageCodecId == null ? "-" : d.packageCodecId);
+        line(sb, "Package handler", d.packageHandlerId == null ? "-" : d.packageHandlerId);
+        line(sb, "Installed revision", String.valueOf(d.installedRevision));
+        line(sb, "Acknowledged revision", String.valueOf(d.acknowledgedRevision));
+        line(sb, "Last startup restore", d.lastStartupRestoreResult == null ? "-" : d.lastStartupRestoreResult.name());
+        line(sb, "Cached track (compatibility)", d.cachedTrackPresent ? "yes" : "no");
+        line(sb, "Cached track id (compatibility)", d.cachedTrackId == null ? "-" : d.cachedTrackId);
+        line(sb, "Cached revision (compatibility)", String.valueOf(d.cachedRevision));
+        line(sb, "Last acknowledged revision (compatibility)", String.valueOf(d.lastAcknowledgedRevision));
         line(sb, "MediaSession permission", d.mediaSessionPermissionGranted ? "granted" : "not granted");
         line(sb, "Last observed media app", d.lastObservedMediaApp == null ? "-" : d.lastObservedMediaApp);
         line(sb, "Media identity", d.mediaIdentityState.name());
@@ -134,10 +170,13 @@ public final class DiagnosticsActivity extends Activity {
         line(sb, "Last assignment revision", String.valueOf(d.lastAssignmentRevisionReceived));
         line(sb, "Last successful ACK", String.valueOf(d.lastSuccessfulAckRevision));
         line(sb, "Last cloud error", d.lastCloudErrorCode.name());
+        line(sb, "Last manifest outcome", d.lastManifestCode.name());
+        line(sb, "Last scene outcome", d.lastSceneCode.name());
         return sb.toString().trim();
     }
 
-    private void line(StringBuilder sb, String label, String value) {
+    /** Append a fixed label and an already bounded observational scalar. */
+    private static void line(StringBuilder sb, String label, String value) {
         sb.append(label).append(": ").append(value).append('\n');
     }
 
