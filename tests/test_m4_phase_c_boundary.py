@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
+from m5_phase_c_provenance import phase_c_production_files
 
 """Permit only the Phase C persistence extraction while keeping qualified behavior pinned.
 
@@ -125,7 +126,7 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
             expected.add(PHASE_E['installerFile'])
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
-        expected.update(calendar_model_files())
+        expected.update(calendar_model_files() | phase_c_production_files())
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
         self.assertEqual(expected, actual)
         for path in actual:

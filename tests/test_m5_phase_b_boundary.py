@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 from m5_phase_b_provenance import blob_hash, calendar_model_files, phase_b_retained_bytes, qualification_retained_bytes
+from m5_phase_c_provenance import phase_c_production_files, phase_c_added_paths
 
 """Qualify the additive temporal values and the byte-exact test-only legacy oracle.
 
@@ -100,7 +101,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_production_test_config_or_document_file(self):
         """A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture."""
-        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents'])
+        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths()
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):
@@ -108,7 +109,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
                     actual.add(str(path.relative_to(ROOT)))
         self.assertEqual({path for path in expected if path.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}, actual)
         old_java = {path for path in BASELINE['startingBlobs'] if path.startswith('app/src/main/') and path.endswith('.java')}
-        self.assertEqual(old_java | calendar_model_files(), {p for p in actual if p.startswith('app/src/main/') and p.endswith('.java')})
+        self.assertEqual(old_java | calendar_model_files() | phase_c_production_files(), {p for p in actual if p.startswith('app/src/main/') and p.endswith('.java')})
 
     def test_core_compiles_with_jdk_only_empty_classpath_and_sourcepath(self):
         """Execute the JDK compiler against only the three values and verify exactly their three classfiles."""
@@ -123,10 +124,12 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
             output.mkdir()
             result = subprocess.run(compiler + ['-encoding', 'UTF-8', '-classpath', str(empty),
                                     '-sourcepath', str(empty), '-d', str(output)]
-                                    + [str(ROOT / path) for path in sorted(calendar_model_files())],
+                                    + [str(ROOT / path) for path in sorted(calendar_model_files())]
+                                    + [str(ROOT / (CORE + "MediaCalendarScheduler.java"))],
                                     capture_output=True, timeout=30, check=False)
             self.assertEqual(0, result.returncode, 'JDK-only temporal-value compilation failed')
-            self.assertEqual({'SceneEvent.class', 'MediaCalendar.class', 'MediaObservation.class'},
+            self.assertEqual({'SceneEvent.class', 'MediaCalendar.class', 'MediaObservation.class'}
+                             | {'MediaCalendarScheduler.class', 'MediaCalendarScheduler$Sink.class'},
                              {path.name for path in output.rglob('*.class')})
 
     def test_core_has_only_exact_immutable_value_fields(self):

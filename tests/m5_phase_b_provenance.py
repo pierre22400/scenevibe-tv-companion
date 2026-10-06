@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from m5_phase_c_provenance import phase_c_retained_bytes
 
 """Admit exactly three non-live M5 values while retaining every prior M4 predicate.
 
@@ -41,7 +42,7 @@ def qualification_retained_bytes(path):
     exclusively for provenance, before the existing B and Sony inverse layers.
     """
     path = Path(path)
-    content = path.read_bytes()
+    content = phase_c_retained_bytes(path)
     inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))['qualificationCorrective']
     relative = str(path.relative_to(ROOT))
     patches = inventory['patches'].get(relative)

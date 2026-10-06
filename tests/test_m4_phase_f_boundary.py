@@ -6,6 +6,7 @@ import re
 import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
+from m5_phase_c_provenance import phase_c_production_files
 
 """Qualify the live Cloud cutover without weakening the retained M4 evidence.
 
@@ -234,7 +235,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
     def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):
         """Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned."""
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files(), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
         bridges, ports = [], []
         for relative in actual:
             source = code_only((ROOT / relative).read_text())
