@@ -31,8 +31,8 @@ public final class M4PhaseFRuntimeTest {
         try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {
             h.prior(true,13);ScheduledTrack.Event old=h.runtime.loaded.comments.get(0);long generation=h.runtime.controller.currentGeneration();
             h.onOwner(()->{h.runtime.due();return null;});h.fetch();
-            h.onOwner(()->{h.runtime.controller.onCommentDue(old,generation);return null;});assertFalse(h.runtime.manifestVisible);
-            h.onOwner(()->{h.runtime.due();h.runtime.controller.onCommentExpired(old,generation);return null;});
+            h.onOwner(()->{h.runtime.controller.onEventDue(old.id,generation);return null;});assertFalse(h.runtime.manifestVisible);
+            h.onOwner(()->{h.runtime.due();h.runtime.controller.onEventExpired(old.id,generation);return null;});
             assertTrue(h.runtime.manifestVisible);assertEquals(14,h.runtime.active);assertEquals(1,h.runtime.maxVisible);
         }
     }
@@ -49,7 +49,7 @@ public final class M4PhaseFRuntimeTest {
     @Test public void everyDirectMutationRejectsOffOwner() throws Exception {
         try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {
             assertFalse(h.runtime.live.retireLegacyVisualOwner());assertFalse(h.runtime.live.retireManifestedVisualOwner());
-            assertFalse(h.runtime.live.loadPreparedTrack(null));assertFalse(h.runtime.live.armPreparedManifest(14,null));
+            assertFalse(h.runtime.live.loadPreparedVideo(null));assertFalse(h.runtime.live.armPreparedManifest(14,null));
             assertFalse(h.runtime.live.selectActiveRevision(14,true));h.runtime.live.abortActivation();assertTrue(h.backend.trace.isEmpty());
         }
     }

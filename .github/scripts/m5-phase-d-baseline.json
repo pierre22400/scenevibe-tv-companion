@@ -1,0 +1,986 @@
+{
+  "referenceHead": "f99f662b4dd1c2e2285a1272b6abced9e89862b0",
+  "baseTvM5": "67b81045258b1692073c6927b956db4899c6ad1a",
+  "baseCloudM5": "5011c91aac61a0cc6dcc74c256a15b7dee03d785",
+  "startingBlobs": {
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/2026-10-02-104953-review.md": "f9e7530e020f1cacd70cd34b1b2c87b60dfe094b",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/context.json": "0afd028e385887367758b5245dbb451ec33702f5",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-001.json": "b6ffdbdb0691c292e824e62a989c04c8c986ee65",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-002.json": "36097e53f036b93c7b6f0ac2fde67efcb01c3fb7",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-003.json": "f36edc342864c168429be05051a2fcf6ea1d52fc",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-004.json": "b3c898cc4d45a63778e8f000836f6c85e22df77d",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-005.json": "abace867036f063659b38307fc66826aee3d74c8",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/task.json": "c4e5df4794d0ad7060ef413192d037e625564e7a",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/context.json": "a77c01513c73469ca965265e2ff48d1c3f4520c9",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-001.json": "b0ed7a08ca74aee34c1f130afd60a9ba40c9b071",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-002.json": "e8cc4d607b91cf9355f85407d76a65500ba0ed23",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-003.json": "72fe8b01e9a8a59ac4b79ecab83e34af52672e32",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-004.json": "4d4165efb441d2eb6392ca2b1f86f0bbb9d50227",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-005.json": "004934396028b1909d010fa6f727ff4270aab0c6",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/task.json": "74ab6517d9e5fb59b9db03d8d08dea1fdaf36fde",
+    ".github/scripts/android-15-smoke.sh": "8b9ba3e14a8edabfe7b78ded23e4dd42a350801b",
+    ".github/scripts/m4-phase-a-baseline.json": "f635ceb0b5964b31daf74f0fbea7c2e935ae2f9b",
+    ".github/scripts/m4-phase-a-test-summary.py": "6c644db447d4845eb14f0c7bbfc502bc09f7d5af",
+    ".github/scripts/m4-phase-b-baseline.json": "a5a65aa8a929017f4bf5030e799c53ac48df68e2",
+    ".github/scripts/m4-phase-c-baseline.json": "b82f0f39625da33d47ea0940248c4935d63af7cb",
+    ".github/scripts/m4-phase-d-baseline.json": "57d9162e7f9c06a1716cc4cf4c6e578dcc327363",
+    ".github/scripts/m4-phase-e-baseline.json": "a24175c010a616472ffe46a7356010ce539557ca",
+    ".github/scripts/m4-phase-f-baseline.json": "a1337815f9a170267591e7ad135723787f6aae9b",
+    ".github/scripts/m4-phase-g-baseline.json": "8de44d1a6b9d007762d97a392cdb8dc4f3883ae0",
+    ".github/scripts/m4-phase-g-sony-corrective-baseline.json": "4954c5ae18c1d179a846c7c4a51889d3f24621e1",
+    ".github/scripts/m4-sony-durability-summary.py": "f16378393f7af3ce2c2dee3caed462055a5d5edc",
+    ".github/scripts/m4-sony-durability.init.gradle": "340a9e794028b0c90d193414e7d8df45233862ac",
+    ".github/scripts/m4-sony-durability.sh": "4d8f1fac1465d6f947d867200630ebe17269e20e",
+    ".github/scripts/m5-media-differential-summary.py": "f358e8a17bdc879e2ef8019fafdf1573429c6586",
+    ".github/scripts/m5-media-differential.init.gradle": "b190cc52b91e47c18b40ae0e1943bc2ac70c2d98",
+    ".github/scripts/m5-media-differential.sh": "3f2d336a722bae663e48bd5a10e58f52a2609e21",
+    ".github/scripts/m5-phase-b-baseline.json": "3f1457fbf9ab5781af6e61f1c55d433fb15ef923",
+    ".github/scripts/m5-phase-c-baseline.json": "49adb576ee45fa9267cffdb2917162c39c29e1cc",
+    ".github/workflows/android-15-smoke.yml": "0e2eefb1314f561efc3ea401fc3163b800b42afa",
+    ".github/workflows/android-debug.yml": "e80792b5adbcf5438970e2999ad51cb856752b96",
+    ".github/workflows/android-installation-durability.yml": "290890f9d3bd54154682565af69a663622f8ab1d",
+    ".github/workflows/android-media-differential.yml": "e9d9e0fe3b6189598c5ef2d60f0de49bae328f23",
+    ".github/workflows/android-release.yml": "4902241c43d6f976eb542771735c8712be3a3a18",
+    ".gitignore": "02e265a125afc67de8cae3c82533799713e59ab6",
+    "README.md": "3e52bbf3d4a6902ee06a7d8ba241dea8d74fcc28",
+    "app/build.gradle": "043a1b11da8e89107b2d82f0badffb3993bbf880",
+    "app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M4SonyDurabilityInstrumentation.java": "02ed45ce123d7eda11be5c1209eb24f735c56d26",
+    "app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M5MediaDifferentialInstrumentation.java": "98d624bb3bac291acb42629c3bd3aafc8b91a561",
+    "app/src/main/AndroidManifest.xml": "4abe48d105eddfef1845e2373b34e4fef636b675",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGate.java": "36bf2ad56ea533b82e282caada731d161039beb3",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java": "086a89cff2fa4701be427d4f9b029db264e48fa1",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPreference.java": "c6a9520b4d23a33d0a4a7d72859174d6120ca641",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java": "c6f822db097c52b15d44b4d76253a2346b926ea6",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java": "48fccfe62b2964f792fabd8d750106c424df4957",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentials.java": "f75b9c0457afccaf2c7d14c5f8b7f641b855e770",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudProtocol.java": "7f8f146f107d4070bfdfbb3b5118cbe7c500e2ae",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java": "fe205a621184445d061827be984962799b582608",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudV1InstallationAdapter.java": "113c10a5e94e8a0f9b4a247a63bf47795636bdad",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java": "4023911c39aec1052a8ba768961646c0f794d8c2",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": "bfc26ac7c1d85f806f310ad0754cae2ab3e7c294",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsStore.java": "d851c94205e7fb90fb16dd85a4d15e2825c947ee",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DisplayCountdown.java": "295dd4f6dd24f206c7fbdd57bb4a196c0ea980a0",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/InstallationIdentity.java": "32a2f7e7565bd71226cc1dfe506ccbcbdeef1232",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java": "3b2276b0a2d93949fe56dc374f46605f201a31a3",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaIdentityMatcher.java": "f022a48c78151a11508d7feb12ba91239191a43a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java": "c8728643be07f405a47b62a84f525302dbb73cab",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java": "9c205b09ff5ffd85977250175eaab5019984b1b1",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java": "441d983409d94ae6d5e31198ec739dec86166754",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NotificationAccess.java": "b79a16d128c533169305e8a814b56488c3846559",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifest.java": "41489cc6c1cc6a837658323d0d36349a4149c869",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestParser.java": "eb8f6b5e7bc559e55bde0d32dda3c443d57126de",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java": "ae63244b3aa52dff5fa259b684959f5fa4bf626c",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": "c464baed64d353e6b065db8ccc6655a72277857a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingPolicy.java": "d5120dbd2c615d16e43275e69793696155ff1c6d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingRuntime.java": "5532e093cbe17920764bf69ba72d0634195cb870",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java": "9c2c8330513d7134a7aea82e7c64fd2b013e34b4",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java": "5e73b1d406ec5b6f9a5f0b84702d6c77182b1ee8",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java": "c5f3b96606a65374417771261f6631f402902de9",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/ScheduledTrack.java": "38219f1130a0243272d3b1df5ad2e63461d7cc1e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java": "447b4e2e6fb4a7852bfcb2cb9e94217adf46f884",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java": "fd1e23426ee1cfbba6f3cd5a30e40c38c599ce43",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationHandlers.java": "4eb7a4d239e8fddf7d9ce4dfd06f63c82399a24d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java": "c060fa7cf777f5f2279805c90f9790d480279e46",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoLegacyInstallationHandler.java": "84973d3ee7112e97fb68d2afc2e03fb8aba4cd3d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoManifestInstallationHandler.java": "304e235ac26c388288b6ce81fc5ae76bfbad4476",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoMediaObservationAdapter.java": "68d1b28559e60c848058968cb73d424b2a71b95b",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridge.java": "8c30496cfc082019cb8518962b8584bdc9c11f2e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java": "eb0fa40cca9dfd350af38319cc701778a4ccf358",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoRuntimePreparation.java": "f9088db0ed9db1e746a54e0d51f6dfaffebe19a5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendar.java": "c90cc87afb682417d4cb89f2bc663b8058778c37",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendarScheduler.java": "817447e570b8e1ee6ecd1e9eaeaa4eb1f8eb5c19",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaObservation.java": "2b07951084c295223b5746c05e526ef4b33dbd03",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/SceneEvent.java": "235d0bea7244c96fbd769b417e2cd04224a85d8f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java": "3b2b62d3fe73840ede72ea9a3f2abe24a6f9fbc7",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/ExecutionRequirements.java": "227d3adb676642f03e8e1a680f422b3c5d792e1f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallRequest.java": "6efda99788067ffcbf2c72d62a1ebeb4e19b202a",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationBounds.java": "51195bed65912e22ee7efe8cf402e11d65d39f08",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandler.java": "eb40e00c65cab8e8244fa67d9c19ecf7b6d61f9b",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandlerRegistry.java": "a3cc005bb64aba6eea70871c61a063148b0056c0",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshot.java": "d437ffd9e8633c55c0e2c55e1fac161960d767f6",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshotCodec.java": "af553a0904a582606d016a51b7a195def84db8ca",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStatus.java": "301e9b1d29280e8cda04e84a96f6d2857d266e1e",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java": "d27592746a9b576c87819f97740e221f55e95b3d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java": "0f973271d1f6c133adddff6a8136ffb9eef19fd5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PreparedInstallation.java": "a03b3d986062a291b29feacec706d532cc12a620",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java": "56b79dbdb063ab1562882bfa25da5e195112c77b",
+    "app/src/main/res/drawable/ic_launcher.png": "4493fbd92fc7069f8984660a19d77478c52b15d6",
+    "app/src/main/res/drawable/tv_banner.png": "32e603afa8def2655f8a2129949336c1c52babbf",
+    "app/src/main/res/values/strings.xml": "04c8cf1b0543bcded5bea7bf863d6e4c4c163056",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java": "6fa550544987b8222f80fbf13eeab49f76aeb530",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AutostartPolicyTest.java": "4e43a30362f1be5b2cf462a17880d613f1ab4e34",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudActivationDiagnosticsTest.java": "07b896c29e161953e5cbea2c3338fddd0f7f8fa3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudClientRestartAfterResetTest.java": "39870a1e45671ad2fdb73e0a22d2d4494fb7b817",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentialsTest.java": "a55c2cd403bf97028fdbb3026ee3f4755cda5302",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudManifestCacheTest.java": "a5665508109389ac510bf996d4d4d41feb77282a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudProtocolTest.java": "d3f558d0d51ed910acb85315244fb50f4fe1b2c8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetAsyncTest.java": "fcee8a09657de9066ff80424302741a01587b4e2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetTest.java": "a5082076629b64eb663195c616f7adbeb9af3384",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudTrackRepositoryTest.java": "3bc93dcd050f4b38775c67d760c815704b07a390",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CommentaryServerAuthTest.java": "96d856be7ebd66d406dca73a4bda2d3a116337db",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ConsumerModeTest.java": "b6d9f4ab707caf207d48868011a65de445381ce1",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DiagnosticsNoSecretTest.java": "8f27250623acc2126b9f8e7bcf6c9316eb4460f3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DisplayCountdownTest.java": "7fece36f394fb5e66d4cc68b62edf33c5e5ba0fa",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/InstallationIdentityTest.java": "4dc9dd7d64afbe8be3a42abda75a9b483c86ac52",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M1CloudInteropTest.java": "5ec63ace4ebd1078a5855a3adec494bb90ce75bf",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAAtomicStoreTest.java": "fe2e1fa35da813a4c39bf9374f55d2d421f7b592",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java": "2531940975541ba2ce5dd6d0f25e52a72f777e58",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAIdentityTest.java": "9787b173fafb629dc638e34c0fd0e2c100c06ad6",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAInstallationTest.java": "e78a90ed38540a27f5e0b7aa0753299a8e00e7c8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseATransportTest.java": "d0558d133d956753967fb6dc767d210e8b6d9294",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseBSideEffectTest.java": "2003512d461bdc67a3065f3ac9a024d42fdc7ee0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseCCompatibilityTest.java": "01d400e3576c5f7533a7ed22432dc54557db3836",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDArmTest.java": "7851e3be021c2c6a83f284166c116832714c7ed9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDCompatibilityEdgeTest.java": "b3f6c7be9256853031b39d5619fcc08844d0caf2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDDifferentialTest.java": "08f81b0229e6da7d50634f4c5835a2e46126e485",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHandlerFixtures.java": "2d0e5cf86dc3538634af898de6bcb98812fe9d17",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHistoricalRepository.java": "9dd7a5c555e67c0e4ab743ebd08b8ea05083c828",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDLegacyHandlerTest.java": "1dfecc8060c3e269302e197f9922af6296696d2b",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDManifestedHandlerTest.java": "fbd2b773096fae053a91f60fdb58b0399348daf4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDRegistryTest.java": "0209d3d48dca135c83065b6446aff221d282e5b4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEHistoricalInstallerTest.java": "675b51540e26f50b9e2e17c30acb5b008d633b15",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFailureTest.java": "d89cf1f8185ca02a9a738ed3354367a83437b1aa",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFixtures.java": "958c5cd269b8609f13f466d3fd43835f493d24e3",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoInstallerTest.java": "f372c14b31555dfa2685ea7adb13c6c8760de731",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFAdapterRejectionTest.java": "ed7525b3a4ce602943a70ba683dc8f63acab4a4a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFAdapterTest.java": "2ec6d6cdf5342a8fab65aa5ded9007c86d2e8e81",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCapabilityDiagnosticsTest.java": "c9dcead174b442ffb7630745a52c192eda55d6ca",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFClearStoreTest.java": "73c3c831868ad47ad8440d06dc0406bd929032c9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCloudClientTest.java": "e3a4f8a2266a74358d4f5ffc14f89b6f3f505cbd",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCorruptionTest.java": "8e48d897ade6c4702727605b9228e4b7b809b072",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFFixtures.java": "498056d4e0efb5d89ea92e27ef8524590e9a984a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalCloudClient.java": "a90c0587d7bc332cd0ea94bf95e74e0cae3bd4d0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalRedeliveryTest.java": "78f7c536de9deabad69df208d739c533340c2fd1",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHttps.java": "0186103eea800e252024212ecd1ac6a4ca586076",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFNonArmedTest.java": "694e61b8eb40ff32c64fc475fac7dfef4b9e436d",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFOwnerGateTest.java": "2c5602d6df76b2f13778e11a1df88197c8bd9739",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFResetFixture.java": "9ebc14c70765a93806eccf3818855412a8982097",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFResetTest.java": "a012197ba00153494907cb1c6d0e6e962bf23a33",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeFailureTest.java": "bdbda3a0e407b1b23178775d70e11f4ef09d445c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeTest.java": "7cd731562c33948e1c84c84cec6a57bca4789465",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGArmFailureTest.java": "e9f641fa48f37e375f759784d6537db5f4ccf958",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGBootTest.java": "3f4fd6070b8fe4068edf2d34821465d01ec28aed",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGCloudAfterRestoreTest.java": "623d900baf168c749f7378c63e255f8f48c2a871",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGDiagnosticsStateTest.java": "0ad491d71413496afdc506bbec4cb7cd12fab642",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGDiagnosticsTest.java": "d35b1a878ed2da4e65d1255a1eaa3edd59f2e354",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGFixtures.java": "2175321ea329ecad036dcee25c4a1334da7b034a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGHistoricalService.java": "7cf40efd2e697b4c520a67b46a7a039c4ea07368",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGResetTest.java": "2536ce24f2169b3cc09de7b37c44ecc445d59386",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGRestoreFailureTest.java": "82794fa1ad34d65368fb4ba40dac29a8c46dc9e2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupStateTest.java": "9bda8a3843f2a9087e17f8a9fd755e52708d208c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupTest.java": "3b2e483fa1e51682c1b3510485750da2772e2dc2",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4SonyReadFailureTest.java": "70294bb37ad7e73bea6dd13f40724122dac4b4f8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java": "f9959888b402657582b374c3847bf6c55cc05af4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CandidateDifferentialTest.java": "18af8b5be4630e7b0933d7b1344a13c1c841a579",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5FrozenLegacyOracle.java": "deb3bda4aff405d20bd5c92ff5022766b4a8608c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5JournalComparatorTest.java": "0bdf0fa73c17eeb5a21e705776aec22571880350",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5LegacyOracleCorpusTest.java": "d730834cc79a29ebbbfaaa1d5fa37f05e103d1d6",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5NegativeSensitivityTest.java": "785d166fd743ec587694c3c9a74675082e21f612",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SchedulerDirectTest.java": "59005295bb8cde1c479740db0558f198c8664fe8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SinkFailureDifferentialTest.java": "a37cda7a02b146bc6a9b673f59b641a561a5e99b",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5TemporalJournal.java": "0d1a3f8c0f674c8060eb5ade42e40c19e270ddfb",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoObservationAdapterTest.java": "1e812399d04962bae0ea917ec676e3441bf3bb9a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoProjectionTest.java": "79933e8ea33b9ea4edb48c4f859e89869e65d722",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoTestProjection.java": "d985c42e20d0a45475bae22aca7a0635cbb11b54",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java": "23564ee918d0c840d5e408946f8c1e810362a3b9",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerExpiryTest.java": "23e07e8a6171ecbb8a3437e1783ab59f9e814876",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerIdentityTest.java": "23691bc6b8f7f1f449ab4353cc5e89f0ce78427d",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayArmedNotVisibleTest.java": "d90956df7d74d5c40c3b971b072ea0a04b6c1028",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayManifestParserTest.java": "39f22f843703311464ae5751b3a99c221b107658",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/PairingPolicyTest.java": "d226e4f04a1aba3dadd7f68d8e951fda972c9700",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRendererPreflightTest.java": "fb9c0913b7681cf7990ffe59c30540cff41b2034",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRuntimeControllerTest.java": "df34a9f5f323aee9a24a514da670dd2e03744d0c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SecretStoreMigrationTest.java": "25f2bf18d0672d3765657730caa78938f3b76745",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridgeTest.java": "29d23c2b3dbb334f22a2d8ead7bbefab89b143a5",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5MediaCalendarTest.java": "47b350f307ae50982394c9520ce62da19409b898",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5MediaObservationTest.java": "c35dcf4a5f3ff93ee37d7350ad89f6470dc738ed",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5SceneEventTest.java": "58fd50ef52fbf495018d989a5a3f99febbf2bdbc",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackendTest.java": "e043480dd2bb07e38df309ad2831e2658ae9df07",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationModelTest.java": "5b010d111e21249e7b6a5869d3ed690b72a5cd31",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationRegistryTest.java": "3c3fcaefa083a3f54f978108b5aad0bbc62b5837",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationStoreTest.java": "b3447d097ccb1f02c49b9e6662637748f87e55d0",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4PhaseEInstallerFixtures.java": "b156fed6db3b7895817bf462e603d92de7320af5",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4SonyPreferenceTransportTest.java": "f4a215b66634cce1079cecf305946fb6b287cf25",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerFailureTest.java": "fffdea8627016aa3e0823f2789468df538263376",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerReadbackTest.java": "b5187d5eef78b60d7448183a2ef531db6b9bc04f",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerTest.java": "5077a5d0aac452cd52812baaedc7e01c1b3a9d1e",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilitiesTest.java": "5227a03f3d3d560cfdfaf0f8e3345869505d2ee8",
+    "app/src/test/resources/m1/cloud-envelopes.json": "7d4f16a05f51181266adfcd495200b06f04dca3a",
+    "app/src/test/resources/m1/overlay-corpus.json": "d2769cbd6d82bc3b3ef6a02784e9159076892daf",
+    "app/src/test/resources/m4/video-legacy-cache-v1.json": "c175f1f1a343ac217105e66b70d363566875f90d",
+    "app/src/test/resources/m4/video-manifested-cache-v1.json": "5635582678824581ff40fbcf8e026ab100a7ff8f",
+    "app/src/test/resources/m5-phase-b/corpus.json": "3ca518b28e820c05ae3ed6a08540ff8a1b615d55",
+    "app/src/test/resources/m5-phase-b/oracle/MediaIdentityMatcher.java.txt": "f022a48c78151a11508d7feb12ba91239191a43a",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSessionAccessService.java.txt": "c8728643be07f405a47b62a84f525302dbb73cab",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSessionProbe.java.txt": "9c205b09ff5ffd85977250175eaab5019984b1b1",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSyncedTrackScheduler.java.txt": "441d983409d94ae6d5e31198ec739dec86166754",
+    "app/src/test/resources/m5-phase-b/oracle/NotificationAccess.java.txt": "b79a16d128c533169305e8a814b56488c3846559",
+    "app/src/test/resources/m5-phase-b/oracle/ScheduledTrack.java.txt": "38219f1130a0243272d3b1df5ad2e63461d7cc1e",
+    "build.gradle": "378b9ca6938fb5366e057e2f1104c473ed91b76e",
+    "docs/lan-pairing-protocol-v1.md": "ba247274a45b66b7e0d72fad392c45bcae0976d4",
+    "docs/m1-final-closure-ui-boundary.md": "be557e26b1fafc4d59e37b8b25d30851eda878d9",
+    "docs/m1-video-coordination.md": "e636d573868d3e5413f266bafd112f27efc4310d",
+    "docs/m4-final-sony-physical-closure.md": "26cff446bda9398d5f46fea27b96df43800546ff",
+    "docs/m4-phase-a-characterization-report.md": "a983b4aa10e6a57c784a73f84fdee985bbf2aab9",
+    "docs/m4-phase-b-generic-model-capabilities-report.md": "92c8e991016ec8fc445842bd3e34ee55925765f0",
+    "docs/m4-phase-b-generic-model-capabilities-work-order.md": "27170fbf7b8e7f6d4c89db4fc5a42fde51405fe6",
+    "docs/m4-phase-c-generic-durable-store-report.md": "3f596bf4e510aa63800cac5c8965988ef133c048",
+    "docs/m4-phase-c-generic-durable-store-work-order.md": "29f67fba24ff3495be232395ee7a3352c9aea464",
+    "docs/m4-phase-d-video-compatibility-handlers-report.md": "f2e6e6dc7145aa3e245962b935a56021df468694",
+    "docs/m4-phase-d-video-compatibility-handlers-work-order.md": "424ce192d4a755279dd9b26373ae544f094c97f4",
+    "docs/m4-phase-e-package-installer-orchestration-report.md": "7417868e56b742837a625115456cdd763fc0c9ce",
+    "docs/m4-phase-e-package-installer-orchestration-work-order.md": "b41251e5e2db9c72c24d0410b1ce6aa10790905c",
+    "docs/m4-phase-f-cloud-v1-adapter-report.md": "9baffd2dcf5c5f60252f78220edc6c65b151254e",
+    "docs/m4-phase-f-cloud-v1-adapter-work-order.md": "b058bf4dce6cd3f183c59d7eb647393e423d820b",
+    "docs/m4-phase-g-generic-restore-diagnostics-report.md": "9f0cbd9cfd428d279aef62d489174aaabd36f5a1",
+    "docs/m4-phase-g-generic-restore-diagnostics-work-order.md": "2f44e172874acddd41d34857d57a0bae92dd0216",
+    "docs/m4-phase-g-sony-hard-reboot-corrective-report.md": "75948e93ae2e8f7113796d57806068c373dea8cd",
+    "docs/m4-sony-physical-qualification-protocol.md": "337d5693e0ace5482b7f9d75dba8e4c69da6939a",
+    "docs/m5-phase-a-architecture-report.md": "af6747fd5b48756211e3c8b0dcb366ae14b604a2",
+    "docs/m5-phase-b-models-oracle-report.md": "3a3305dbb33f10e79fe0de2134735bc968961144",
+    "docs/m5-phase-c-scheduler-differential-report.md": "67ca6fd3a3c6c058f8184b736f1d7d494b7ead2b",
+    "docs/overlay-manifest-0.10a-tv.md": "0e4bf731ace8b446d3cf499bb2672285dc0260d4",
+    "docs/physical-qualification-v0.5-2026-09-25.md": "dd80de156ea9018fd10d7dd8b8f0aecdc9f78952",
+    "docs/physical-qualification-v0.6-2026-09-25.md": "19e20334f801ec7b2530aaacc34e712c2b768dfa",
+    "docs/pr-0.8.0-tv-hardening.md": "19c31ca0c8f7d0ce23bc68e4b01cb6e55ddedbdf",
+    "docs/scenevibe-os-m4-tv-installation-architecture.md": "acb3433c8c42467bebe5a467f7aa282645eedcab",
+    "docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md": "175bdbc3ae6899b6e20d227ff9ebb4b8c4ccd615",
+    "docs/signature-continuity-protocol.md": "755cbe932d3d0cd098a45673c2d5b1691ddc7160",
+    "docs/sony-notification-access-focus-2026-09-25.md": "5d731f95518218b60514b31af1b4feb394acfe18",
+    "docs/stable-signing.md": "dd8c92a176cfa3a7d376af3e65184aef02e408fc",
+    "docs/tv-hardening-0.8.md": "6c48a17ec7e10dff88ed78ec421fedc4af0001a7",
+    "docs/tv-recovery-0.8.1.md": "6572daef08fc64ebf019898ad76435c27f9b37c3",
+    "docs/tv-release-hardening-0.8.2.md": "c481fb7696b327c5971223616f1e4713039d53f0",
+    "examples/asset-map.example.json": "4af3c892d81add8284e2be54f92d893b0c2fa9b9",
+    "examples/finaltrack-media-tv-poc.json": "7f13d39b297aada5d903c60c64c0a43401cdf089",
+    "gradle.properties": "a9a5893341537a9cf036d9b9d2d92ef53809f804",
+    "scripts/load-finaltrack-mediasession.ps1": "7de5f8777159ec3f484e0299a03836213ffa50b9",
+    "scripts/pair-tv.ps1": "3014e93a3d5daaed3d7ee9e8f9392da6f7c6829d",
+    "scripts/play-finaltrack-media.ps1": "3abe46522fe2db9a5e69fef8dea6c6362af61210",
+    "scripts/send-media-commentary.ps1": "a1620a651a9a89e860e3ed1a5cd1761318027930",
+    "settings.gradle": "1560b65e4b80bd0565b8cc03e0316ccba0618b42",
+    "tests/m5_phase_b_provenance.py": "b03dc954bc0b425607b04f90f9db9b0ffbcac63d",
+    "tests/m5_phase_c_provenance.py": "53a23b195b8180fdb2d86ba3b650e7991557a7cc",
+    "tests/sony_corrective_provenance.py": "ea6427c8f38099dd6b9886581c2852b982db0f1a",
+    "tests/test_m4_phase_b_boundary.py": "328a89b4198d47cdee02a004667282b4020d3bab",
+    "tests/test_m4_phase_c_boundary.py": "b7608edbd9fd058e5298218c2d9b5230652c9199",
+    "tests/test_m4_phase_d_boundary.py": "73ffcdc70297243a096adfa89a12ac88fa97c356",
+    "tests/test_m4_phase_e_boundary.py": "546b12dc839a1e07b40587aaa658c77765641fdc",
+    "tests/test_m4_phase_f_boundary.py": "36e489bcd6bf0c7fc7a1e1f4453643c1db74c294",
+    "tests/test_m4_phase_g_boundary.py": "23f076f1f263e28b08da7869dd9a68d223942b1d",
+    "tests/test_m4_sony_corrective_boundary.py": "34102502ae131ccbe7f28d0b78913ba179f21e1c",
+    "tests/test_m5_phase_b_boundary.py": "365ff84e68c84a5b54ad7ddbc13cf54efe3a3e86",
+    "tests/test_m5_phase_c_boundary.py": "bd93d0b67819f2acfe358f7d4231cbfc032925ed",
+    "tests/test_poc_contract.py": "1071b66cf6128674830e6dc5b13a2cae27de5027"
+  },
+  "additiveFiles": [
+    ".github/scripts/m5-phase-d-baseline.json",
+    "tests/m5_phase_d_provenance.py",
+    "tests/test_m5_phase_d_boundary.py",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoCutoverTest.java",
+    "docs/m5-phase-d-video-cutover-report.md",
+    "docs/m5-sony-targeted-qualification-protocol.md"
+  ],
+  "authorizedChanges": [
+    ".github/scripts/m4-phase-a-test-summary.py",
+    "app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M4SonyDurabilityInstrumentation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAInstallationTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDArmTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoInstallerTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGCloudAfterRestoreTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRuntimeControllerTest.java",
+    "tests/m5_phase_c_provenance.py",
+    "tests/test_m4_phase_f_boundary.py",
+    "tests/test_m4_phase_g_boundary.py",
+    "tests/test_m4_sony_corrective_boundary.py",
+    "tests/test_m5_phase_b_boundary.py",
+    "tests/test_m5_phase_c_boundary.py"
+  ],
+  "authorizedProductionChanges": [
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java"
+  ],
+  "provenancePatches": {
+    ".github/scripts/m4-phase-a-test-summary.py": [
+      {
+        "before": "    sony = json.loads(sony_path.read_text(encoding='utf-8')) if sony_path.exists() else {'phaseGCorrectiveSuites': {}}\n    m5_phase_b = json.loads((root / '.github/scripts/m5-phase-b-baseline.json').read_text(encoding='utf-8'))\n    m5_phase_c = json.loads((root / '.github/scripts/m5-phase-c-baseline.json').read_text(encoding='utf-8'))\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}\n    suites = {}\n    skipped = []\n",
+        "after": "    sony = json.loads(sony_path.read_text(encoding='utf-8')) if sony_path.exists() else {'phaseGCorrectiveSuites': {}}\n    m5_phase_b = json.loads((root / '.github/scripts/m5-phase-b-baseline.json').read_text(encoding='utf-8'))\n    m5_phase_c = json.loads((root / '.github/scripts/m5-phase-c-baseline.json').read_text(encoding='utf-8'))\n    m5_phase_d = json.loads((root / '.github/scripts/m5-phase-d-baseline.json').read_text(encoding='utf-8'))\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}\n    suites = {}\n    skipped = []\n"
+      },
+      {
+        "before": "                skipped.append(name + '.' + case.attrib['name'])\n            else:\n                counts['PASS'] += 1\n    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites']}\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n",
+        "after": "                skipped.append(name + '.' + case.attrib['name'])\n            else:\n                counts['PASS'] += 1\n    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites'], **m5_phase_d['m5PhaseDSuites']}\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
+      },
+      {
+        "before": "        'phaseGCases': sum(phase_g['phaseGSuites'].values()),\n        'phaseGCorrectiveCases': sum(sony['phaseGCorrectiveSuites'].values()),\n        'm5PhaseBCases': sum(m5_phase_b['m5PhaseBSuites'].values()),\n        'm5PhaseBFixtureSha256': m5_phase_b['fixtureSha256'],\n        'm5PhaseBHashMapEnvironment': oracle_journal['environment'],\n        'm5PhaseBHashMapRawFrames': raw_hashmap,\n",
+        "after": "        'phaseGCases': sum(phase_g['phaseGSuites'].values()),\n        'phaseGCorrectiveCases': sum(sony['phaseGCorrectiveSuites'].values()),\n        'm5PhaseBCases': sum(m5_phase_b['m5PhaseBSuites'].values()),\n        'm5PhaseDCases': sum(m5_phase_d['m5PhaseDSuites'].values()),\n        'm5PhaseBFixtureSha256': m5_phase_b['fixtureSha256'],\n        'm5PhaseBHashMapEnvironment': oracle_journal['environment'],\n        'm5PhaseBHashMapRawFrames': raw_hashmap,\n"
+      }
+    ],
+    "app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M4SonyDurabilityInstrumentation.java": [
+      {
+        "before": "            /** Owner abort/retirement invokes the same production controller without creating a window. */\n            @Override public void hideAll() {}\n        });\n        final MediaSyncedTrackScheduler scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n            /** An ARM without a media due event must not display a legacy card. */\n            @Override public void onRender(ScheduledTrack.Event event) {shows++;}\n            /** No playback input is injected during offline restoration. */\n            @Override public void onPlayback(boolean playing,boolean freeze) {}\n            /** No media eligibility event is needed to restore the exact package. */\n            @Override public void onEligibility(boolean eligible) {}\n        });\n        final OverlayService.LiveVideoRuntimePorts ports=new OverlayService.LiveVideoRuntimePorts(\n                ()->android.os.Looper.myLooper()==android.os.Looper.getMainLooper(),()->scheduler,()->controller,\n                ()->{},()->{},revision->selected=revision);\n        /** Construct no native window, credential, Cloud client, socket or second handler registry. */\n        Runtime() {}\n    }\n}\n",
+        "after": "            /** Owner abort/retirement invokes the same production controller without creating a window. */\n            @Override public void hideAll() {}\n        });\n        final com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts ports;\n        /** Select the actual runtime constructor by API presence so this same fixture still compiles against pre-fix M4. */\n        private com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts runtimePorts() {\n            try {\n                java.util.function.BooleanSupplier owner=()->android.os.Looper.myLooper()==android.os.Looper.getMainLooper();\n                java.util.function.Supplier<SceneRuntimeController> regie=()->controller;\n                Runnable retire=()->{};\n                java.util.function.LongConsumer select=revision->selected=revision;\n                Class<?> port=OverlayService.LiveVideoRuntimePorts.class;\n                for(java.lang.reflect.Constructor<?> constructor:port.getDeclaredConstructors()) {\n                    constructor.setAccessible(true);\n                    if(constructor.getParameterTypes().length==6) {\n                        MediaSyncedTrackScheduler scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                            /** An ARM without a media due event must not display a legacy card. */\n                            @Override public void onRender(ScheduledTrack.Event event) {shows++;}\n                            /** No playback input is injected during offline restoration. */\n                            @Override public void onPlayback(boolean playing,boolean freeze) {}\n                            /** No media eligibility event is needed to restore the exact package. */\n                            @Override public void onEligibility(boolean eligible) {}\n                        });\n                        return (com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts)\n                                constructor.newInstance(owner,(java.util.function.Supplier<Object>)()->scheduler,regie,retire,retire,select);\n                    }\n                    if(constructor.getParameterTypes().length==8) {\n                        Class<?> core=Class.forName(\"com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler\");\n                        Class<?> sink=Class.forName(core.getName()+\"$Sink\");\n                        Object listener=java.lang.reflect.Proxy.newProxyInstance(sink.getClassLoader(),new Class<?>[]{sink},\n                                (proxy,method,args)->{if(method.getName().equals(\"onDue\"))shows++;return null;});\n                        Object scheduler=core.getConstructor(sink).newInstance(listener);\n                        Class<?> legacy=constructor.getParameterTypes()[6];\n                        Object visual=java.lang.reflect.Proxy.newProxyInstance(legacy.getClassLoader(),new Class<?>[]{legacy},\n                                (proxy,method,args)->{if(method.getName().equals(\"due\"))shows++;return null;});\n                        return (com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts)\n                                constructor.newInstance(owner,(java.util.function.Supplier<Object>)()->scheduler,regie,retire,retire,select,\n                                        visual,(java.util.function.Consumer<Boolean>)eligible->{});\n                    }\n                }\n                throw new IllegalStateException(\"Unknown actual runtime port API\");\n            } catch(ReflectiveOperationException failed) {throw new IllegalStateException(\"Native runtime composition refused\",failed);}\n        }\n        /** Construct no native window, credential, Cloud client, socket or second handler registry. */\n        Runtime() {ports=runtimePorts();}\n    }\n}\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": [
+      {
+        "before": "    static String render(RuntimeDiagnostics d) {\n        StringBuilder sb = new StringBuilder();\n        line(sb, \"App version\", d.appVersion);\n        line(sb, \"Overlay service\", d.serviceRunning ? \"running\" : \"stopped\");\n        line(sb, \"Autostart\", d.autostartEnabled ? \"enabled\" : \"disabled\");\n        line(sb, \"Cloud\", d.cloudState.name());\n",
+        "after": "    static String render(RuntimeDiagnostics d) {\n        StringBuilder sb = new StringBuilder();\n        line(sb, \"App version\", d.appVersion);\n        line(sb, \"Temporal engine\", \"scenevibe.media-calendar.v1\");\n        line(sb, \"Overlay service\", d.serviceRunning ? \"running\" : \"stopped\");\n        line(sb, \"Autostart\", d.autostartEnabled ? \"enabled\" : \"disabled\");\n        line(sb, \"Cloud\", d.cloudState.name());\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": [
+      {
+        "before": "import android.os.Looper;\nimport android.provider.Settings;\nimport android.util.Log;\nimport com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationHandler;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationStatus;\n",
+        "after": "import android.os.Looper;\nimport android.provider.Settings;\nimport android.util.Log;\nimport com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler;\nimport com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationHandler;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationStatus;\n"
+      },
+      {
+        "before": "    private boolean bottomPosition;\n    private CommentaryServer commentaryServer;\n    private MediaSessionProbe mediaSessionProbe;\n    private MediaSyncedTrackScheduler trackScheduler;\n    /** Publish the owner's current instance for Cloud io's pre-ACK lifetime rechecks. */\n    private volatile CloudControlClient cloudClient;\n    /** One service-owned generic stack serializes every live assignment through the owner gate. */\n",
+        "after": "    private boolean bottomPosition;\n    private CommentaryServer commentaryServer;\n    private MediaSessionProbe mediaSessionProbe;\n    private MediaCalendarScheduler trackScheduler;\n    /** Publish the owner's current instance for Cloud io's pre-ACK lifetime rechecks. */\n    private volatile CloudControlClient cloudClient;\n    /** One service-owned generic stack serializes every live assignment through the owner gate. */\n"
+      },
+      {
+        "before": "                // SceneSink below delegates to a lazily created SceneRenderer and is the ONLY\n                // bridge between the Android-free controller and the overlay window.\n                sceneController = new SceneRuntimeController(sceneSink);\n                trackScheduler = new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                    @Override public void onRender(ScheduledTrack.Event event) {\n                        // Exactly one visual path per comment (section 10/30). When the regie\n                        // holds a valid manifest for the active revision this is Case B: forward\n                        // the due event to the controller (which drives SceneRenderer) and do\n                        // NOT touch the legacy OverlayRenderer. Otherwise Case A is unchanged.\n                        if (isSceneRendererActive()) {\n                            sceneController.onCommentDue(event);\n                            return;\n                        }\n                        // Case A: create the renderer lazily if the boot path has not shown it\n                        // yet, then display the tracked commentary (legacy behavior unchanged).\n                        showRenderer();\n                        if (renderer != null) renderer.showTrackedCommentary(\n                                event.text, event.durationMs, event.mediaBitmap);\n                    }\n                    @Override public void onPlayback(boolean playing, boolean freeze) {\n                        // Forward playback to whichever path is active; the controller records\n                        // the state without adding a second clock, the legacy renderer freezes.\n                        if (isSceneRendererActive()) {\n                            if (sceneController != null) sceneController.onPlayback(playing, freeze);\n                        } else if (renderer != null) {\n                            renderer.onPlayback(playing, freeze);\n                        }\n                    }\n                    @Override public void onExpire(ScheduledTrack.Event event) {\n                        // Case B ONLY: the scheduler (sole temporal authority) signals that a\n                        // scene's media-time window elapsed; the regie hides it under the\n                        // generation guard, so a stale/late expire from a superseded revision is\n                        // a no-op and never resurrects or wrongly hides a new-revision scene.\n                        // Case A is untouched: the legacy OverlayRenderer self-expires via its\n                        // own freeze-aware countdown, so onExpire is ignored for it.\n                        if (isSceneRendererActive() && sceneController != null) {\n                            sceneController.onCommentExpired(event);\n                        }\n                    }\n                    @Override public void onEligibility(boolean eligible) {\n                        // Observational only: mirror the last media-identity decision into the\n                        // bounded diagnostics store. This never influences the eligibility rule.\n                        DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible\n                                ? RuntimeDiagnostics.MediaIdentityState.ELIGIBLE\n                                : RuntimeDiagnostics.MediaIdentityState.BLOCKED);\n                        // Observational only: record a bounded block code on the eligibility\n                        // loss transition. The scheduler itself is frozen; this maps the\n                        // observable transition into DiagnosticsStore and never gates logic.\n                        if (!eligible) DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);\n                        // Media no longer matches: hide the active path immediately, never both.\n                        // The controller always receives the transition so a loaded manifest is\n                        // disarmed; the legacy renderer hides only when it owns the comment.\n                        if (sceneController != null) sceneController.onEligibility(eligible);\n                        if (!eligible && !isSceneRendererActive() && renderer != null) {\n                            renderer.onTrackEligibility(false);\n                        }\n                    }\n                });\n                installationStore = new InstallationStore(new AndroidInstallationBackend(this));\n",
+        "after": "                // SceneSink below delegates to a lazily created SceneRenderer and is the ONLY\n                // bridge between the Android-free controller and the overlay window.\n                sceneController = new SceneRuntimeController(sceneSink);\n                trackScheduler = new MediaCalendarScheduler(new MediaCalendarScheduler.Sink() {\n                    /** Route only callbacks bearing the immutable active activation token. */\n                    @Override public void onDue(String token,String eventId) {\n                        if(videoRuntimePorts!=null)videoRuntimePorts.onDue(token,eventId);\n                    }\n                    /** Legacy display countdown remains freeze-aware and owns its own visual expiry. */\n                    @Override public void onExpire(String token,String eventId) {\n                        if(videoRuntimePorts!=null)videoRuntimePorts.onExpire(token,eventId);\n                    }\n                    /** Preserve every passive playback callback without acquiring a second clock. */\n                    @Override public void onPlayback(String token,boolean playing,boolean freeze) {\n                        if(videoRuntimePorts!=null)videoRuntimePorts.onPlayback(token,playing,freeze);\n                    }\n                    /** Preserve old-binding load invalidation before any new activation becomes active. */\n                    @Override public void onEligibility(String token,boolean eligible) {\n                        if(videoRuntimePorts!=null)videoRuntimePorts.onEligibility(token,eligible);\n                    }\n                });\n                installationStore = new InstallationStore(new AndroidInstallationBackend(this));\n"
+      },
+      {
+        "before": "                        () -> trackScheduler, () -> sceneController,\n                        () -> { if (renderer != null) renderer.dismiss(); },\n                        () -> { if (sceneRenderer != null) sceneRenderer.dismissNow(); },\n                        revision -> activeRevision = revision);\n                // Complete durable restoration on main before either probe events or Cloud polling.\n                // Only the installer's same-revision path resolves/validates the durable handler.\n                InstallationStatus restored = restoreInstalledPackage(installationStore,\n",
+        "after": "                        () -> trackScheduler, () -> sceneController,\n                        () -> { if (renderer != null) renderer.dismiss(); },\n                        () -> { if (sceneRenderer != null) sceneRenderer.dismissNow(); },\n                        revision -> activeRevision = revision,\n                        new LiveVideoRuntimePorts.LegacySink() {\n                            /** Create the legacy window lazily using the exact prepared payload. */\n                            @Override public void due(ScheduledTrack.Event event) {\n                                showRenderer();\n                                if(renderer!=null)renderer.showTrackedCommentary(event.text,event.durationMs,event.mediaBitmap);\n                            }\n                            /** Forward repetitions to the existing freeze-aware visual countdown. */\n                            @Override public void playback(boolean playing,boolean freeze) {\n                                if(renderer!=null)renderer.onPlayback(playing, freeze);\n                            }\n                            /** Eligibility loss hides only the legacy owner, without constructing a window. */\n                            @Override public void eligibility(boolean eligible) {\n                                if(renderer!=null)renderer.onTrackEligibility(false);\n                            }\n                        }, eligible -> {\n                            // Observational only: diagnostics precede controller/native retirement.\n                            DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible\n                                    ?RuntimeDiagnostics.MediaIdentityState.ELIGIBLE:RuntimeDiagnostics.MediaIdentityState.BLOCKED);\n                            if(!eligible)DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);\n                        });\n                // Complete durable restoration on main before either probe events or Cloud polling.\n                // Only the installer's same-revision path resolves/validates the durable handler.\n                InstallationStatus restored = restoreInstalledPackage(installationStore,\n"
+      },
+      {
+        "before": "                        },\n                        track -> {\n                            if (trackScheduler != null) {\n                                trackScheduler.load(track);\n                            }\n                        }, PairingRuntime.get(this));\n                commentaryServer.start();\n",
+        "after": "                        },\n                        track -> {\n                            if (trackScheduler != null) {\n                                videoRuntimePorts.retireManifestedVisualOwner();\n                                videoRuntimePorts.retireLegacyVisualOwner();\n                                if(videoRuntimePorts.loadPreparedVideo(VideoPreparedState.lan(track))) {\n                                    if(!videoRuntimePorts.selectLanActivation())videoRuntimePorts.abortActivation();\n                                } else videoRuntimePorts.abortActivation();\n                            }\n                        }, PairingRuntime.get(this));\n                commentaryServer.start();\n"
+      },
+      {
+        "before": "                        if (snapshot != null) {\n                            DiagnosticsStore.INSTANCE.setLastObservedMediaApp(snapshot.packageName);\n                        }\n                        if (trackScheduler != null) trackScheduler.onPlaybackSnapshot(snapshot);\n                    }\n                    @Override public void onUnavailable() {\n                        // Observational only: no active/authorized session. Record a bounded\n                        // block code before forwarding to the frozen scheduler; never gates logic.\n                        DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_SESSION_UNAVAILABLE);\n                        if (trackScheduler != null) trackScheduler.onPlaybackUnavailable();\n                    }\n                });\n                mediaSessionProbe.start();\n",
+        "after": "                        if (snapshot != null) {\n                            DiagnosticsStore.INSTANCE.setLastObservedMediaApp(snapshot.packageName);\n                        }\n                        if (videoRuntimePorts != null) videoRuntimePorts.onSnapshot(snapshot);\n                    }\n                    @Override public void onUnavailable() {\n                        // Observational only: no active/authorized session. Record a bounded\n                        // block code before forwarding to the frozen scheduler; never gates logic.\n                        DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_SESSION_UNAVAILABLE);\n                        if (trackScheduler != null) trackScheduler.onUnavailable();\n                    }\n                });\n                mediaSessionProbe.start();\n"
+      },
+      {
+        "before": "                    renderer.dismiss();\n                    renderer = null;\n                }\n                // The reset wipe clears the cache + scheduler; disarm the regie and drop any\n                // visible scene too, so no stale manifested scene survives a reset.\n                if (sceneController != null) sceneController.unload();\n",
+        "after": "                    renderer.dismiss();\n                    renderer = null;\n                }\n                if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();\n                // The reset wipe clears the cache + scheduler; disarm the regie and drop any\n                // visible scene too, so no stale manifested scene survives a reset.\n                if (sceneController != null) sceneController.unload();\n"
+      },
+      {
+        "before": "     * only native retirement and the owner predicate are substituted. No parser, storage,\n     * network or ACK enters these ports. Selection is the final successful ARM operation.\n     */\n    static final class LiveVideoRuntimePorts implements VideoInstallationRuntimePorts {\n        private final java.util.function.BooleanSupplier owner;\n        private final java.util.function.Supplier<MediaSyncedTrackScheduler> scheduler;\n        private final java.util.function.Supplier<SceneRuntimeController> controller;\n        private final Runnable retireLegacy,retireScenes;\n        private final java.util.function.LongConsumer selection;\n\n        /** Bind the service's existing owners; construction never loads, renders or persists. */\n        LiveVideoRuntimePorts(java.util.function.BooleanSupplier owner,\n                java.util.function.Supplier<MediaSyncedTrackScheduler> scheduler,\n                java.util.function.Supplier<SceneRuntimeController> controller,\n                Runnable retireLegacy,Runnable retireScenes,java.util.function.LongConsumer selection) {\n            if(owner==null||scheduler==null||controller==null||retireLegacy==null\n                    ||retireScenes==null||selection==null)throw new IllegalArgumentException(\"Missing Video owner\");\n            this.owner=owner;this.scheduler=scheduler;this.controller=controller;\n            this.retireLegacy=retireLegacy;this.retireScenes=retireScenes;this.selection=selection;\n        }\n        /** Android composition returns true only on the actual main/window owner thread. */\n        @Override public boolean isOwnerThread() {return owner.getAsBoolean();}\n        /** Synchronously dismiss the existing legacy renderer; never construct a renderer. */\n        @Override public boolean retireLegacyVisualOwner() {\n            if(!isOwnerThread())return false;\n            retireLegacy.run();return true;\n        }\n        /** Unload/invalidate the regie, then force immediate removal of its existing window. */\n        @Override public boolean retireManifestedVisualOwner() {\n            if(!isOwnerThread())return false;\n            SceneRuntimeController runtime=controller.get();\n            if(runtime==null)return false;\n            runtime.unload();retireScenes.run();return true;\n        }\n        /** Load exactly the prepared immutable track, with no reparse or durable operation. */\n        @Override public boolean loadPreparedTrack(ScheduledTrack track) {\n            if(!isOwnerThread()||track==null)return false;\n            MediaSyncedTrackScheduler runtime=scheduler.get();\n            if(runtime==null)return false;\n            runtime.load(track);return true;\n        }\n        /** Replace the exact prepared manifest/revision using the existing controller generation guard. */\n        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n            if(!isOwnerThread()||revision<1||manifest==null)return false;\n            SceneRuntimeController runtime=controller.get();\n            if(runtime==null)return false;\n            runtime.replaceRevision(revision,manifest);\n            return runtime.isSceneRendererActiveFor(revision);\n        }\n        /** Select only an exact armed manifested revision, or a legacy revision with no manifested owner. */\n        @Override public boolean selectActiveRevision(long revision,boolean manifested) {\n            if(!isOwnerThread()||revision<1)return false;\n            SceneRuntimeController runtime=controller.get();\n            if(runtime==null||(manifested?!runtime.isSceneRendererActiveFor(revision):runtime.hasActiveManifest()))return false;\n            selection.accept(revision);return true;\n        }\n        /** Clear partial runtime ownership idempotently, attempting every cleanup even after one failure. */\n        @Override public void abortActivation() {\n            if(!isOwnerThread())return;\n            cleanup(()->{SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.unload();});\n            cleanup(retireScenes);cleanup(retireLegacy);\n            cleanup(()->{MediaSyncedTrackScheduler runtime=scheduler.get();if(runtime!=null)runtime.clear();});\n            selection.accept(0);\n        }\n        /** A failed native removal cannot skip the remaining runtime cleanup or expose raw exceptions. */\n        private static void cleanup(Runnable work) {\n            try {work.run();}catch(RuntimeException refused) { /* The handler returns bounded ARM_FAILED. */ }\n        }\n",
+        "after": "     * only native retirement and the owner predicate are substituted. No parser, storage,\n     * network or ACK enters these ports. Selection is the final successful ARM operation.\n     */\n    static final class LiveVideoRuntimePorts implements VideoInstallationRuntimePorts, MediaCalendarScheduler.Sink {\n        /** Native legacy drawing remains outside the temporal core and preserves its countdown. */\n        interface LegacySink {\n            /** Render the exact payload indexed by the active prepared Video binding. */\n            void due(ScheduledTrack.Event event);\n            /** Forward passive playback repetitions to the existing renderer. */\n            void playback(boolean playing,boolean freeze);\n            /** Hide the legacy visual immediately on loss of eligibility. */\n            void eligibility(boolean eligible);\n        }\n        /** Immutable activation identity and the generation captured at manifest ARM. */\n        private static final class Activation {\n            final VideoPreparedState state;\n            final String token;\n            final long generation;\n            /** Retain memory-only prepared values and a fixed local token/generation. */\n            Activation(VideoPreparedState state,String token,long generation) {\n                this.state=state;this.token=token;this.generation=generation;\n            }\n        }\n        private final java.util.function.BooleanSupplier owner;\n        private final java.util.function.Supplier<MediaCalendarScheduler> scheduler;\n        private final java.util.function.Supplier<SceneRuntimeController> controller;\n        private final Runnable retireLegacy,retireScenes;\n        private final java.util.function.LongConsumer selection;\n        private final LegacySink legacy;\n        private final java.util.function.Consumer<Boolean> diagnostics;\n        private long nextActivation;\n        private Activation pending,active,retiring;\n        private boolean invalidating;\n\n        /** Bind the service's existing owners; construction never loads, renders or persists. */\n        LiveVideoRuntimePorts(java.util.function.BooleanSupplier owner,\n                java.util.function.Supplier<MediaCalendarScheduler> scheduler,\n                java.util.function.Supplier<SceneRuntimeController> controller,\n                Runnable retireLegacy,Runnable retireScenes,java.util.function.LongConsumer selection,\n                LegacySink legacy,java.util.function.Consumer<Boolean> diagnostics) {\n            if(owner==null||scheduler==null||controller==null||retireLegacy==null\n                    ||retireScenes==null||selection==null||legacy==null||diagnostics==null)\n                throw new IllegalArgumentException(\"Missing Video owner\");\n            this.owner=owner;this.scheduler=scheduler;this.controller=controller;\n            this.retireLegacy=retireLegacy;this.retireScenes=retireScenes;this.selection=selection;\n            this.legacy=legacy;this.diagnostics=diagnostics;\n        }\n        /** Android composition returns true only on the actual main/window owner thread. */\n        @Override public boolean isOwnerThread() {return owner.getAsBoolean();}\n        /** Invalidate callback ownership before any synchronous native retirement can reenter. */\n        private void invalidate() {\n            if(active!=null)retiring=active;\n            else if(pending!=null)retiring=pending;\n            active=null;pending=null;\n        }\n        /** Synchronously dismiss the existing legacy renderer; never construct a renderer. */\n        @Override public boolean retireLegacyVisualOwner() {\n            if(!isOwnerThread())return false;\n            invalidate();retireLegacy.run();return true;\n        }\n        /** Unload/invalidate the regie, then force immediate removal of its existing window. */\n        @Override public boolean retireManifestedVisualOwner() {\n            if(!isOwnerThread())return false;\n            invalidate();SceneRuntimeController runtime=controller.get();\n            if(runtime==null)return false;\n            runtime.unload();retireScenes.run();return true;\n        }\n        /** Load the exact prepared calendar and payload index; pending callbacks cannot render. */\n        @Override public boolean loadPreparedVideo(VideoPreparedState state) {\n            if(!isOwnerThread()||state==null)return false;\n            MediaCalendarScheduler runtime=scheduler.get();if(runtime==null)return false;\n            invalidate();\n            if(nextActivation==Long.MAX_VALUE)return false;\n            pending=new Activation(state,\"video-activation-\"+(++nextActivation),-1L);\n            invalidating=true;\n            try {runtime.load(state.calendar,pending.token);return true;}\n            finally {invalidating=false;retiring=null;}\n        }\n        /** Replace the exact manifest, then capture its generation once before selection. */\n        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n            if(!isOwnerThread()||revision<1||manifest==null||pending==null\n                    ||pending.state.manifest!=manifest)return false;\n            SceneRuntimeController runtime=controller.get();if(runtime==null)return false;\n            runtime.replaceRevision(revision,manifest);\n            pending=new Activation(pending.state,pending.token,runtime.currentGeneration());\n            return runtime.isSceneRendererActiveFor(revision);\n        }\n        /** Promote pending only after every previous ARM operation has succeeded. */\n        @Override public boolean selectActiveRevision(long revision,boolean manifested) {\n            if(!isOwnerThread()||revision<1||pending==null)return false;\n            SceneRuntimeController runtime=controller.get();\n            if(runtime==null||(pending.state.manifest!=null)!=manifested\n                    ||(manifested?(pending.generation<0||!runtime.isSceneRendererActiveFor(revision))\n                        :runtime.hasActiveManifest()))return false;\n            selection.accept(revision);active=pending;pending=null;return true;\n        }\n        /** Preserve the supported LAN development activation without inventing a durable revision. */\n        boolean selectLanActivation() {\n            if(!isOwnerThread()||pending==null||pending.state.manifest!=null)return false;\n            SceneRuntimeController runtime=controller.get();if(runtime==null||runtime.hasActiveManifest())return false;\n            selection.accept(0);active=pending;pending=null;return true;\n        }\n        /** Project only the active prepared track through the qualified C observation adapter. */\n        void onSnapshot(MediaSessionProbe.Snapshot snapshot) {\n            if(!isOwnerThread()||active==null)return;\n            MediaCalendarScheduler runtime=scheduler.get();if(runtime!=null)\n                runtime.onObservation(VideoMediaObservationAdapter.observe(active.state.track,snapshot));\n        }\n        /** An opaque callback token must match the immutable active activation, never a revision. */\n        private Activation matching(String token) {\n            return isOwnerThread()&&active!=null&&active.token.equals(token)?active:null;\n        }\n        /** Route ID plus captured generation to the regie, or exact payload to the legacy renderer. */\n        @Override public void onDue(String token,String eventId) {\n            Activation binding=matching(token);if(binding==null)return;\n            if(binding.state.manifest!=null) {\n                SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEventDue(eventId,binding.generation);\n            } else {\n                ScheduledTrack.Event event=binding.state.eventsById.get(eventId);\n                if(event!=null)legacy.due(event);\n            }\n        }\n        /** Manifested expiry is generation-guarded; legacy retains its own freeze-aware countdown. */\n        @Override public void onExpire(String token,String eventId) {\n            Activation binding=matching(token);if(binding==null||binding.state.manifest==null)return;\n            SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEventExpired(eventId,binding.generation);\n        }\n        /** Preserve repetitions while ignoring every stale or pending playback token. */\n        @Override public void onPlayback(String token,boolean playing,boolean freeze) {\n            Activation binding=matching(token);if(binding==null)return;\n            if(binding.state.manifest!=null) {\n                SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onPlayback(playing,freeze);\n            } else legacy.playback(playing,freeze);\n        }\n        /** Diagnostics precede controller/hide; only synchronous old-binding invalidation bypasses active matching. */\n        @Override public void onEligibility(String token,boolean eligible) {\n            Activation binding=matching(token);\n            if(binding==null) {\n                if(!isOwnerThread()||!invalidating||eligible\n                        ||(retiring==null?token!=null:!retiring.token.equals(token)))return;\n                binding=retiring;\n            }\n            diagnostics.accept(eligible);\n            SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEligibility(eligible);\n            if(!eligible) {\n                if(binding!=null&&binding.state.manifest!=null)retireScenes.run();\n                else legacy.eligibility(false);\n            }\n        }\n        /** Clear partial ownership idempotently, attempting every cleanup even after a refusal. */\n        @Override public void abortActivation() {\n            if(!isOwnerThread())return;\n            invalidate();\n            cleanup(()->{SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.unload();});\n            cleanup(retireScenes);cleanup(retireLegacy);\n            invalidating=true;\n            try {cleanup(()->{\n                MediaCalendarScheduler runtime=scheduler.get();if(runtime==null)return;\n                try {runtime.clear();}\n                catch(RuntimeException refusedInvalidation) {\n                    // A native eligibility failure cannot retain the core's old token/calendar.\n                    // Retry the same qualified clear with all callbacks already invalidated.\n                    invalidating=false;runtime.clear();\n                }\n            });}\n            finally {invalidating=false;pending=null;active=null;retiring=null;cleanup(()->selection.accept(0));}\n        }\n        /** A failed native removal cannot skip the remaining cleanup or expose raw exceptions. */\n        private static void cleanup(Runnable work) {\n            try {work.run();}catch(RuntimeException refused) { /* The handler returns bounded ARM_FAILED. */ }\n        }\n"
+      },
+      {
+        "before": "            mediaSessionProbe.stop();\n            mediaSessionProbe = null;\n        }\n        if (trackScheduler != null) {\n            trackScheduler.clear();\n            trackScheduler = null;\n",
+        "after": "            mediaSessionProbe.stop();\n            mediaSessionProbe = null;\n        }\n        if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();\n        if (trackScheduler != null) {\n            trackScheduler.clear();\n            trackScheduler = null;\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java": [
+      {
+        "before": "\n/**\n * Android-independent runtime \"regie\" that coordinates the cache/manifest layer, the EXISTING\n * {@link MediaSyncedTrackScheduler} events, and the {@link SceneRenderer} (user sections 9, 10,\n * 12, 13, 14, 30). It is the single decision point for WHEN a manifested Video scene is shown\n * or hidden.\n *\n * <p>Deliberate non-responsibilities, so each collaborator keeps its single role:</p>\n * <ul>\n *   <li>It owns NO clock. Timing arrives only as scheduler events forwarded in through\n *       {@link #onCommentDue(ScheduledTrack.Event)} / {@link #onPlayback(boolean, boolean)} /\n *       {@link #onEligibility(boolean)}. It never creates a {@code Handler}/{@code postDelayed}\n *       timer and never re-derives media position.</li>\n *   <li>It NEVER commands the video player: there is no reference to transport controls or any\n",
+        "after": "\n/**\n * Android-independent runtime \"regie\" that coordinates the cache/manifest layer, the EXISTING\n * {@link com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler} events, and the {@link SceneRenderer} (user sections 9, 10,\n * 12, 13, 14, 30). It is the single decision point for WHEN a manifested Video scene is shown\n * or hidden.\n *\n * <p>Deliberate non-responsibilities, so each collaborator keeps its single role:</p>\n * <ul>\n *   <li>It owns NO clock. Timing arrives only as scheduler events forwarded in through\n *       {@link #onEventDue(String)} / {@link #onPlayback(boolean, boolean)} /\n *       {@link #onEligibility(boolean)}. It never creates a {@code Handler}/{@code postDelayed}\n *       timer and never re-derives media position.</li>\n *   <li>It NEVER commands the video player: there is no reference to transport controls or any\n"
+      },
+      {
+        "before": "    private boolean playing;\n    private boolean pauseFreezesDisplay;\n\n    SceneRuntimeController(SceneSink sink) {\n        if (sink == null) throw new IllegalArgumentException(\"sink\");\n        this.sink = sink;\n",
+        "after": "    private boolean playing;\n    private boolean pauseFreezesDisplay;\n\n    /** Bind the drawing seam without creating a clock, player or visible scene. */\n    SceneRuntimeController(SceneSink sink) {\n        if (sink == null) throw new IllegalArgumentException(\"sink\");\n        this.sink = sink;\n"
+      },
+      {
+        "before": "\n    /**\n     * The sole entry point for \"a Video comment became due\". It looks up the matching scene by\n     * {@code event.id}; if found it preflights then shows it, if not found it does NOTHING (no\n     * render). Idempotent for the same scene: a second due callback for the already-visible\n     * scene is a no-op, never a duplicate overlay. There is no generation argument here because\n     * the scheduler delivers synchronously under the current generation; the\n     * {@link #onCommentDue(ScheduledTrack.Event, long)} overload exists for tests that simulate\n     * a late callback carrying a stale generation.\n     */\n    synchronized void onCommentDue(ScheduledTrack.Event event) {\n        onCommentDue(event, generation);\n    }\n\n    /**\n     * Generation-guarded form (section 14/21). {@code callbackGeneration} is the generation that\n     * was active when the scheduler produced the event. A callback whose generation no longer\n     * matches the current one is a late/superseded event: it is ignored and can never resurrect\n     * an old scene. Use {@link #currentGeneration()} to tag an event at production time.\n     */\n    synchronized void onCommentDue(ScheduledTrack.Event event, long callbackGeneration) {\n        if (event == null) return;\n        // Superseded revision/generation: a stale callback must never show an old scene.\n        if (callbackGeneration != generation) return;\n        // No active manifest (unloaded/stopped) means Case A legacy path owns the comment, or\n",
+        "after": "\n    /**\n     * The sole entry point for \"a Video comment became due\". It looks up the matching scene by\n     * {@code eventId}; if found it preflights then shows it, if not found it does NOTHING (no\n     * render). Idempotent for the same scene: a second due callback for the already-visible\n     * scene is a no-op, never a duplicate overlay. There is no generation argument here because\n     * the scheduler delivers synchronously under the current generation; the\n     * {@link #onEventDue(String, long)} overload exists for tests that simulate\n     * a late callback carrying a stale generation.\n     */\n    synchronized void onEventDue(String eventId) {\n        onEventDue(eventId, generation);\n    }\n\n    /**\n     * Generation-guarded form (section 14/21). {@code callbackGeneration} is the generation that\n     * was active when the scheduler produced the event. A callback whose generation no longer\n     * matches the current one is a late/superseded event: it is ignored and can never resurrect\n     * an old scene. The service captures {@link #currentGeneration()} once during manifest ARM and forwards that fixed binding.\n     */\n    synchronized void onEventDue(String eventId, long callbackGeneration) {\n        if (eventId == null) return;\n        // Superseded revision/generation: a stale callback must never show an old scene.\n        if (callbackGeneration != generation) return;\n        // No active manifest (unloaded/stopped) means Case A legacy path owns the comment, or\n"
+      },
+      {
+        "before": "        if (scenesById == null) return;\n        // armed != visible: without current eligibility a due event does not become visible.\n        if (!eligible) return;\n        OverlayManifest.Scene scene = scenesById.get(event.id);\n        // Unknown scene id => no render (nothing matches this comment in this manifest).\n        if (scene == null) return;\n        // Idempotent: a double callback for the already-visible scene is a safe no-op.\n",
+        "after": "        if (scenesById == null) return;\n        // armed != visible: without current eligibility a due event does not become visible.\n        if (!eligible) return;\n        OverlayManifest.Scene scene = scenesById.get(eventId);\n        // Unknown scene id => no render (nothing matches this comment in this manifest).\n        if (scene == null) return;\n        // Idempotent: a double callback for the already-visible scene is a safe no-op.\n"
+      },
+      {
+        "before": "     * only if it is the currently visible one, under the current generation. A stale hide for an\n     * already-replaced scene is a no-op.\n     */\n    synchronized void onCommentExpired(ScheduledTrack.Event event, long callbackGeneration) {\n        if (event == null) return;\n        if (callbackGeneration != generation) return;\n        if (visibleScene == null) return;\n        if (!visibleScene.id.equals(event.id)) return;\n        dropVisibleScene();\n    }\n\n    /** Generation-current convenience overload. */\n    synchronized void onCommentExpired(ScheduledTrack.Event event) {\n        onCommentExpired(event, generation);\n    }\n\n    /**\n     * Eligibility transition forwarded from {@link MediaSyncedTrackScheduler.Listener#onEligibility}\n     * (section 13). On loss (false) the visible scene is hidden IMMEDIATELY (armed != visible),\n     * but the loaded in-memory manifest and the durable cache are kept intact so a later due\n     * event can show again when eligibility returns. On regain (true) nothing is forced visible;\n",
+        "after": "     * only if it is the currently visible one, under the current generation. A stale hide for an\n     * already-replaced scene is a no-op.\n     */\n    synchronized void onEventExpired(String eventId, long callbackGeneration) {\n        if (eventId == null) return;\n        if (callbackGeneration != generation) return;\n        if (visibleScene == null) return;\n        if (!visibleScene.id.equals(eventId)) return;\n        dropVisibleScene();\n    }\n\n    /** Generation-current convenience overload. */\n    synchronized void onEventExpired(String eventId) {\n        onEventExpired(eventId, generation);\n    }\n\n    /**\n     * Eligibility transition forwarded from {@link com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.Sink#onEligibility(String, boolean)}\n     * (section 13). On loss (false) the visible scene is hidden IMMEDIATELY (armed != visible),\n     * but the loaded in-memory manifest and the durable cache are kept intact so a later due\n     * event can show again when eligibility returns. On regain (true) nothing is forced visible;\n"
+      },
+      {
+        "before": "        return activeRevision;\n    }\n\n    /** The current generation; tag a scheduler event with this to detect stale callbacks later. */\n    synchronized long currentGeneration() {\n        return generation;\n    }\n",
+        "after": "        return activeRevision;\n    }\n\n    /** The current generation; capture once during ARM to detect stale callbacks later. */\n    synchronized long currentGeneration() {\n        return generation;\n    }\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationRuntimePorts.java": [
+      {
+        "before": "/**\n * Video-only owner-thread activation boundary for deterministic fakes and later composition.\n * Retirement is synchronous. Operations expose no Android window, transport or ACK API.\n * Phase D supplies no OverlayService adapter and no generic orchestration authority.\n */\ninterface VideoInstallationRuntimePorts extends InstallationHandler.RuntimePorts {\n    /** Verify the calling thread is allowed to mutate this runtime; false permits no mutation. */\n",
+        "after": "/**\n * Video-only owner-thread activation boundary for deterministic fakes and later composition.\n * Retirement is synchronous. Operations expose no Android window, transport or ACK API.\n * M4 Phase D supplied no adapter; M5 Phase D composes the sole service-owned temporal engine.\n */\ninterface VideoInstallationRuntimePorts extends InstallationHandler.RuntimePorts {\n    /** Verify the calling thread is allowed to mutate this runtime; false permits no mutation. */\n"
+      },
+      {
+        "before": "    boolean retireLegacyVisualOwner();\n    /** Synchronously hide/unload manifested ownership and invalidate its previous generation. */\n    boolean retireManifestedVisualOwner();\n    /** Load exactly the already parsed track through the existing media scheduler. */\n    boolean loadPreparedTrack(ScheduledTrack track);\n    /** Arm exactly the prepared manifest and revision without reparsing any artifact. */\n    boolean armPreparedManifest(long revision,OverlayManifest manifest);\n    /** Select the active revision only after all prior activation operations succeeded. */\n",
+        "after": "    boolean retireLegacyVisualOwner();\n    /** Synchronously hide/unload manifested ownership and invalidate its previous generation. */\n    boolean retireManifestedVisualOwner();\n    /** Load the exact prepared Video binding and its memory-only calendar together. */\n    boolean loadPreparedVideo(VideoPreparedState state);\n    /** Arm exactly the prepared manifest and revision without reparsing any artifact. */\n    boolean armPreparedManifest(long revision,OverlayManifest manifest);\n    /** Select the active revision only after all prior activation operations succeeded. */\n"
+      }
+    ],
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoPreparedState.java": [
+      {
+        "before": "package com.scenevibe.tvcompanionpoc;\n\nimport com.scenevibe.tvcompanionpoc.installation.ExecutionRequirements;\nimport com.scenevibe.tvcompanionpoc.installation.InstallRequest;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationHandler;\n",
+        "after": "package com.scenevibe.tvcompanionpoc;\n\nimport com.scenevibe.tvcompanionpoc.calendar.MediaCalendar;\nimport com.scenevibe.tvcompanionpoc.calendar.SceneEvent;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.Map;\nimport com.scenevibe.tvcompanionpoc.installation.ExecutionRequirements;\nimport com.scenevibe.tvcompanionpoc.installation.InstallRequest;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationHandler;\n"
+      },
+      {
+        "before": "final class VideoPreparedState implements InstallationHandler.PreparedState {\n    final ScheduledTrack track;\n    final OverlayManifest manifest;\n    private final InstallRequest canonical;\n    private final String handlerId;\n    private final ExecutionRequirements requirements;\n\n    /** Retain only qualified immutable parser values and optional immutable generic binding. */\n    private VideoPreparedState(ScheduledTrack track,OverlayManifest manifest,InstallRequest canonical,\n            String handlerId,ExecutionRequirements requirements) {\n        if (track==null) throw new IllegalArgumentException(\"Missing prepared Video state\");\n        for (ScheduledTrack.Event event:track.comments)\n            if (event.mediaBitmap!=null) throw new IllegalArgumentException(\"Invalid prepared Video state\");\n        this.track=track;this.manifest=manifest;this.canonical=canonical;\n        this.handlerId=handlerId;this.requirements=requirements;\n    }\n\n    /** Return a typed historical parse result without advertising generic capability acceptance. */\n    static VideoPreparedState compatibility(ScheduledTrack track,OverlayManifest manifest) {\n        return new VideoPreparedState(track,manifest,null,null,null);\n    }\n\n    /** Bind already validated parser values to their exact immutable generic candidate/profile. */\n    VideoPreparedState bind(InstallRequest request,String id,ExecutionRequirements needs) {\n        return new VideoPreparedState(track,manifest,request,id,needs);\n    }\n\n    /** Check ownership and exact canonical/profile identity without reinterpreting untrusted bytes. */\n",
+        "after": "final class VideoPreparedState implements InstallationHandler.PreparedState {\n    final ScheduledTrack track;\n    final OverlayManifest manifest;\n    final MediaCalendar calendar;\n    final Map<String,ScheduledTrack.Event> eventsById;\n    private final InstallRequest canonical;\n    private final String handlerId;\n    private final ExecutionRequirements requirements;\n\n    /** Retain qualified parser values and build their memory-only temporal projection once. */\n    private VideoPreparedState(ScheduledTrack track,OverlayManifest manifest,boolean textOnly) {\n        if (track==null) throw new IllegalArgumentException(\"Missing prepared Video state\");\n        ArrayList<SceneEvent> events=new ArrayList<>();\n        Map<String,ScheduledTrack.Event> index=new HashMap<>();\n        for (ScheduledTrack.Event event:track.comments) {\n            if (textOnly&&event.mediaBitmap!=null) throw new IllegalArgumentException(\"Invalid prepared Video state\");\n            events.add(new SceneEvent(event.id,event.startMs,event.durationMs));\n            index.put(event.id,event);\n        }\n        this.track=track;this.manifest=manifest;\n        this.calendar=new MediaCalendar(events,track.pauseFreezesDisplay);\n        this.eventsById=Collections.unmodifiableMap(index);\n        this.canonical=null;this.handlerId=null;this.requirements=null;\n    }\n\n    /** Bind identities while retaining the exact calendar/index already constructed at preparation. */\n    private VideoPreparedState(VideoPreparedState state,InstallRequest request,String id,\n            ExecutionRequirements needs) {\n        for (ScheduledTrack.Event event:state.track.comments)\n            if (event.mediaBitmap!=null) throw new IllegalArgumentException(\"Invalid prepared Video state\");\n        this.track=state.track;this.manifest=state.manifest;this.calendar=state.calendar;\n        this.eventsById=state.eventsById;this.canonical=request;this.handlerId=id;this.requirements=needs;\n    }\n\n    /** Return a typed historical parse result without advertising generic capability acceptance. */\n    static VideoPreparedState compatibility(ScheduledTrack track,OverlayManifest manifest) {\n        return new VideoPreparedState(track,manifest,true);\n    }\n\n    /** Project the existing LAN parser's optional bitmap payload outside the generic text-only ingress. */\n    static VideoPreparedState lan(ScheduledTrack track) {\n        return new VideoPreparedState(track,null,false);\n    }\n\n    /** Bind already validated parser values to their exact immutable generic candidate/profile. */\n    VideoPreparedState bind(InstallRequest request,String id,ExecutionRequirements needs) {\n        return new VideoPreparedState(this,request,id,needs);\n    }\n\n    /** Check ownership and exact canonical/profile identity without reinterpreting untrusted bytes. */\n"
+      },
+      {
+        "before": "            boolean retired=manifested\n                    ?runtime.retireLegacyVisualOwner()&&runtime.retireManifestedVisualOwner()\n                    :runtime.retireManifestedVisualOwner()&&runtime.retireLegacyVisualOwner();\n            if (!retired||!runtime.loadPreparedTrack(state.track)\n                    ||(manifested&&!runtime.armPreparedManifest(prepared.revision(),state.manifest))\n                    ||!runtime.selectActiveRevision(prepared.revision(),manifested)) {\n                abort(runtime);return InstallationStatus.ARM_FAILED;\n",
+        "after": "            boolean retired=manifested\n                    ?runtime.retireLegacyVisualOwner()&&runtime.retireManifestedVisualOwner()\n                    :runtime.retireManifestedVisualOwner()&&runtime.retireLegacyVisualOwner();\n            if (!retired||!runtime.loadPreparedVideo(state)\n                    ||(manifested&&!runtime.armPreparedManifest(prepared.revision(),state.manifest))\n                    ||!runtime.selectActiveRevision(prepared.revision(),manifested)) {\n                abort(runtime);return InstallationStatus.ARM_FAILED;\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGateTest.java": [
+      {
+        "before": "        return new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n            /** Forward a due comment through the actual regie. */\n            @Override public void onRender(ScheduledTrack.Event event) {\n                controller.onCommentDue(event);\n            }\n            /** Preserve playback as a passive state input. */\n            @Override public void onPlayback(boolean playing,boolean freeze) {\n",
+        "after": "        return new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n            /** Forward a due comment through the actual regie. */\n            @Override public void onRender(ScheduledTrack.Event event) {\n                controller.onEventDue(event.id);\n            }\n            /** Preserve playback as a passive state input. */\n            @Override public void onPlayback(boolean playing,boolean freeze) {\n"
+      },
+      {
+        "before": "                    cache,scheduler,installer));\n            ScheduledTrack track=TrackParser.parse(e.getJSONObject(\"runtimeTrack\"),media->null);\n            owner.gate.call(()->{controller.onEligibility(true);\n                controller.onCommentDue(track.comments.get(0));return null;});\n            assertTrue(sink.visible);\n\n            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,\n",
+        "after": "                    cache,scheduler,installer));\n            ScheduledTrack track=TrackParser.parse(e.getJSONObject(\"runtimeTrack\"),media->null);\n            owner.gate.call(()->{controller.onEligibility(true);\n                controller.onEventDue(track.comments.get(0).id);return null;});\n            assertTrue(sink.visible);\n\n            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,\n"
+      },
+      {
+        "before": "            assertEquals(\"redelivery does not retire anything again\",hides,sink.hides);\n\n            owner.gate.call(()->{controller.onEligibility(true);\n                controller.onCommentDue(track.comments.get(0));return null;});\n            assertTrue(sink.visible);\n            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,6,runtime,null,\n                    cache,scheduler,installer));\n",
+        "after": "            assertEquals(\"redelivery does not retire anything again\",hides,sink.hides);\n\n            owner.gate.call(()->{controller.onEligibility(true);\n                controller.onEventDue(track.comments.get(0).id);return null;});\n            assertTrue(sink.visible);\n            assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,6,runtime,null,\n                    cache,scheduler,installer));\n"
+      },
+      {
+        "before": "                    cache,scheduler,installer));\n            ScheduledTrack track=TrackParser.parse(e.getJSONObject(\"runtimeTrack\"),media->null);\n            owner.gate.call(()->{controller.onEligibility(true);\n                controller.onCommentDue(track.comments.get(0));return null;});\n            assertThrows(AssertionError.class,()->installer.install(5,runtime,manifest));\n        }\n    }\n",
+        "after": "                    cache,scheduler,installer));\n            ScheduledTrack track=TrackParser.parse(e.getJSONObject(\"runtimeTrack\"),media->null);\n            owner.gate.call(()->{controller.onEligibility(true);\n                controller.onEventDue(track.comments.get(0).id);return null;});\n            assertThrows(AssertionError.class,()->installer.install(5,runtime,manifest));\n        }\n    }\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAFixtures.java": [
+      {
+        "before": "            scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                /** Select the same mutually exclusive manifested/legacy owner predicate. */\n                @Override public void onRender(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onCommentDue(event);\n                    else legacyRenders++;\n                }\n                /** Forward passive playback state without creating another Video clock. */\n",
+        "after": "            scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                /** Select the same mutually exclusive manifested/legacy owner predicate. */\n                @Override public void onRender(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onEventDue(event.id);\n                    else legacyRenders++;\n                }\n                /** Forward passive playback state without creating another Video clock. */\n"
+      },
+      {
+        "before": "                }\n                /** Forward media-time expiry only to the manifested visual owner. */\n                @Override public void onExpire(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onCommentExpired(event);\n                }\n                /** A load resets eligibility only after the cache has committed. */\n                @Override public void onEligibility(boolean eligible) {\n",
+        "after": "                }\n                /** Forward media-time expiry only to the manifested visual owner. */\n                @Override public void onExpire(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onEventExpired(event.id);\n                }\n                /** A load resets eligibility only after the cache has committed. */\n                @Override public void onEligibility(boolean eligible) {\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAInstallationTest.java": [
+      {
+        "before": "        assertEquals(0,runtime.sink.visible);\n        assertEquals(13,runtime.cache.acknowledged());\n        assertTrue(runtime.controller.currentGeneration()>oldGeneration);\n        runtime.controller.onCommentDue(old,oldGeneration);\n        assertEquals(0,runtime.sink.visible);\n        runtime.due();\n        assertEquals(1,runtime.sink.visible);\n        runtime.controller.onCommentExpired(old,oldGeneration);\n        assertEquals(1,runtime.sink.visible);\n        runtime.controller.onCommentDue(runtime.firstEvent());\n        assertEquals(2,runtime.sink.shows);\n        assertEquals(1,runtime.sink.maxVisible);\n        assertEquals(0,runtime.legacyRenders);\n",
+        "after": "        assertEquals(0,runtime.sink.visible);\n        assertEquals(13,runtime.cache.acknowledged());\n        assertTrue(runtime.controller.currentGeneration()>oldGeneration);\n        runtime.controller.onEventDue(old.id,oldGeneration);\n        assertEquals(0,runtime.sink.visible);\n        runtime.due();\n        assertEquals(1,runtime.sink.visible);\n        runtime.controller.onEventExpired(old.id,oldGeneration);\n        assertEquals(1,runtime.sink.visible);\n        runtime.controller.onEventDue(runtime.firstEvent().id);\n        assertEquals(2,runtime.sink.shows);\n        assertEquals(1,runtime.sink.maxVisible);\n        assertEquals(0,runtime.legacyRenders);\n"
+      },
+      {
+        "before": "        assertFalse(runtime.controller.hasActiveManifest());\n        assertEquals(0,runtime.sink.visible);\n        assertTrue(memory.trace.indexOf(\"commit:14\")<memory.trace.indexOf(\"legacy-arm:14\"));\n        runtime.controller.onCommentDue(old,oldGeneration);\n        runtime.due();\n        assertEquals(1,runtime.legacyRenders);\n        assertEquals(1,runtime.sink.shows);\n",
+        "after": "        assertFalse(runtime.controller.hasActiveManifest());\n        assertEquals(0,runtime.sink.visible);\n        assertTrue(memory.trace.indexOf(\"commit:14\")<memory.trace.indexOf(\"legacy-arm:14\"));\n        runtime.controller.onEventDue(old.id,oldGeneration);\n        runtime.due();\n        assertEquals(1,runtime.legacyRenders);\n        assertEquals(1,runtime.sink.shows);\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDArmTest.java": [
+      {
+        "before": "            return step(\"retire-manifested\",()->{manifestVisible=false;armedManifest=null;manifestRevision=0;});\n        }\n        /** Retain the exact prepared object to detect any reparse or independent interpretation. */\n        @Override public boolean loadPreparedTrack(ScheduledTrack track) {return step(\"load\",()->loaded=track);}\n        /** Stress a partial activation that has become visible before returning a failure. */\n        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n            return step(\"manifest\",()->{manifestRevision=revision;armedManifest=manifest;manifestVisible=true;});\n",
+        "after": "            return step(\"retire-manifested\",()->{manifestVisible=false;armedManifest=null;manifestRevision=0;});\n        }\n        /** Retain the exact prepared object to detect any reparse or independent interpretation. */\n        @Override public boolean loadPreparedVideo(VideoPreparedState state) {return step(\"load\",()->loaded=state.track);}\n        /** Stress a partial activation that has become visible before returning a failure. */\n        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n            return step(\"manifest\",()->{manifestRevision=revision;armedManifest=manifest;manifestVisible=true;});\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFixtures.java": [
+      {
+        "before": "            scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                /** Route a due event through the actual controller or the isolated legacy visual. */\n                @Override public void onRender(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onCommentDue(event);\n                    else {legacyVisible=true;shows++;observe();}\n                }\n                /** Forward passive playback state without introducing a clock or player control. */\n                @Override public void onPlayback(boolean playing,boolean freeze) {controller.onPlayback(playing,freeze);}\n                /** Real media expiry reaches the same selected controller owner. */\n                @Override public void onExpire(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onCommentExpired(event);\n                }\n                /** Load/identity loss cannot cause a second visual owner. */\n                @Override public void onEligibility(boolean eligible) {\n",
+        "after": "            scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                /** Route a due event through the actual controller or the isolated legacy visual. */\n                @Override public void onRender(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onEventDue(event.id);\n                    else {legacyVisible=true;shows++;observe();}\n                }\n                /** Forward passive playback state without introducing a clock or player control. */\n                @Override public void onPlayback(boolean playing,boolean freeze) {controller.onPlayback(playing,freeze);}\n                /** Real media expiry reaches the same selected controller owner. */\n                @Override public void onExpire(ScheduledTrack.Event event) {\n                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onEventExpired(event.id);\n                }\n                /** Load/identity loss cannot cause a second visual owner. */\n                @Override public void onEligibility(boolean eligible) {\n"
+      },
+      {
+        "before": "        /** Unload the actual controller and invalidate old-generation callbacks synchronously. */\n        @Override public boolean retireManifestedVisualOwner() {return step(\"retire-manifested\",()->{controller.unload();armed=null;});}\n        /** The production handler supplies its rebuilt trusted track, rather than a copied parser result. */\n        @Override public boolean loadPreparedTrack(ScheduledTrack track) {return step(\"load\",()->{loaded=track;loads++;scheduler.load(track);});}\n        /** Arm the actual controller with the exact restored manifest/revision; do not show on ARM alone. */\n        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n            return step(\"manifest\",()->{armed=manifest;controller.replaceRevision(revision,manifest);});\n",
+        "after": "        /** Unload the actual controller and invalidate old-generation callbacks synchronously. */\n        @Override public boolean retireManifestedVisualOwner() {return step(\"retire-manifested\",()->{controller.unload();armed=null;});}\n        /** The production handler supplies its rebuilt trusted track, rather than a copied parser result. */\n        @Override public boolean loadPreparedVideo(VideoPreparedState state) {return step(\"load\",()->{loaded=state.track;loads++;scheduler.load(state.track);});}\n        /** Arm the actual controller with the exact restored manifest/revision; do not show on ARM alone. */\n        @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n            return step(\"manifest\",()->{armed=manifest;controller.replaceRevision(revision,manifest);});\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoInstallerTest.java": [
+      {
+        "before": "        assertEquals(InstallationStore.COMPAT_TRACK_HANDLER_ID,test.store.read().snapshot().handlerId());\n        assertNull(test.store.read().snapshot().canonical().artifact(\"manifest\"));assertEquals(13,test.store.read().acknowledgedRevision());\n        assertFalse(test.ports.manifestVisible);assertFalse(test.ports.controller.hasActiveManifest());test.ports.due();\n        test.ports.controller.onCommentDue(old,generation);test.ports.controller.onCommentExpired(old,generation);\n        assertTrue(test.ports.legacyVisible);assertFalse(test.ports.manifestVisible);assertEquals(1,test.ports.maxVisible);\n        assertEquals(1,test.backend.writes);assertEquals(0,test.backend.ackWrites);\n    }\n",
+        "after": "        assertEquals(InstallationStore.COMPAT_TRACK_HANDLER_ID,test.store.read().snapshot().handlerId());\n        assertNull(test.store.read().snapshot().canonical().artifact(\"manifest\"));assertEquals(13,test.store.read().acknowledgedRevision());\n        assertFalse(test.ports.manifestVisible);assertFalse(test.ports.controller.hasActiveManifest());test.ports.due();\n        test.ports.controller.onEventDue(old.id,generation);test.ports.controller.onEventExpired(old.id,generation);\n        assertTrue(test.ports.legacyVisible);assertFalse(test.ports.manifestVisible);assertEquals(1,test.ports.maxVisible);\n        assertEquals(1,test.backend.writes);assertEquals(0,test.backend.ackWrites);\n    }\n"
+      },
+      {
+        "before": "        Harness test=new Harness();test.install(true,13);test.ports.due();\n        ScheduledTrack.Event old=test.ports.loaded.comments.get(0);long generation=test.ports.controller.currentGeneration();\n        test.resetObservation();assertEquals(InstallationStatus.ARMED,test.install(true,14));\n        int shows=test.ports.shows;test.ports.controller.onCommentDue(old,generation);assertEquals(shows,test.ports.shows);\n        test.ports.due();test.ports.controller.onCommentExpired(old,generation);assertTrue(test.ports.manifestVisible);\n        assertEquals(14,test.ports.controller.activeRevision());assertEquals(1,test.ports.maxVisible);assertEquals(1,test.backend.writes);\n    }\n\n",
+        "after": "        Harness test=new Harness();test.install(true,13);test.ports.due();\n        ScheduledTrack.Event old=test.ports.loaded.comments.get(0);long generation=test.ports.controller.currentGeneration();\n        test.resetObservation();assertEquals(InstallationStatus.ARMED,test.install(true,14));\n        int shows=test.ports.shows;test.ports.controller.onEventDue(old.id,generation);assertEquals(shows,test.ports.shows);\n        test.ports.due();test.ports.controller.onEventExpired(old.id,generation);assertTrue(test.ports.manifestVisible);\n        assertEquals(14,test.ports.controller.activeRevision());assertEquals(1,test.ports.maxVisible);assertEquals(1,test.backend.writes);\n    }\n\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFFixtures.java": [
+      {
+        "before": "package com.scenevibe.tvcompanionpoc;\n\nimport com.scenevibe.tvcompanionpoc.installation.InstallRequest;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationStatus;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationStore;\n",
+        "after": "package com.scenevibe.tvcompanionpoc;\n\nimport com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler;\nimport com.scenevibe.tvcompanionpoc.installation.InstallRequest;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationStatus;\nimport com.scenevibe.tvcompanionpoc.installation.InstallationStore;\n"
+      },
+      {
+        "before": "    static final class Runtime {\n        final List<String> trace;\n        final SceneRuntimeController controller;\n        final MediaSyncedTrackScheduler scheduler;\n        final OverlayService.LiveVideoRuntimePorts live;\n        final Spy ports;\n        long active;\n",
+        "after": "    static final class Runtime {\n        final List<String> trace;\n        final SceneRuntimeController controller;\n        final MediaCalendarScheduler scheduler;\n        final OverlayService.LiveVideoRuntimePorts live;\n        final Spy ports;\n        long active;\n"
+      },
+      {
+        "before": "                /** Generation invalidation cannot leave the previous window visible. */\n                @Override public void hideAll() {manifestVisible=false;observe();}\n            });\n            scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {\n                /** Exactly one selected visual owner receives the real scheduler's due event. */\n                @Override public void onRender(ScheduledTrack.Event event) {\n                    if(controller.isSceneRendererActiveFor(active))controller.onCommentDue(event);\n                    else {legacyVisible=true;shows++;observe();}\n                }\n                /** Forward passive playback without adding a clock or a player control. */\n                @Override public void onPlayback(boolean playing,boolean freeze) {controller.onPlayback(playing,freeze);}\n                /** Expiry remains owned by the media scheduler and controller generation. */\n                @Override public void onExpire(ScheduledTrack.Event event) {\n                    if(controller.isSceneRendererActiveFor(active))controller.onCommentExpired(event);\n                }\n                /** Eligibility loss immediately retires the selected visual. */\n                @Override public void onEligibility(boolean eligible) {\n                    controller.onEligibility(eligible);if(!eligible)legacyVisible=false;observe();\n                }\n            });\n            live=new OverlayService.LiveVideoRuntimePorts(()->ownerAllowed&&owner.getAsBoolean(),\n                    ()->available?scheduler:null,()->available?controller:null,\n                    ()->{legacyVisible=false;observe();},()->{manifestVisible=false;observe();},\n                    revision->{active=revision;trace.add(revision==0?\"abort-select\":\"select\");observe();});\n            ports=new Spy();\n        }\n        /** At every native/runtime transition at most one owner may remain visible. */\n",
+        "after": "                /** Generation invalidation cannot leave the previous window visible. */\n                @Override public void hideAll() {manifestVisible=false;observe();}\n            });\n            scheduler=new MediaCalendarScheduler(new MediaCalendarScheduler.Sink() {\n                /** Route exact tokens through the actual service callback router. */\n                @Override public void onDue(String token,String id) {live.onDue(token,id);}\n                /** Preserve passive playback through the real binding router. */\n                @Override public void onPlayback(String token,boolean playing,boolean freeze) {live.onPlayback(token,playing,freeze);}\n                /** Expiry uses the generation captured at real manifest ARM. */\n                @Override public void onExpire(String token,String id) {live.onExpire(token,id);}\n                /** Mirror eligibility through the same controller/native retirement as production. */\n                @Override public void onEligibility(String token,boolean eligible) {live.onEligibility(token,eligible);}\n            });\n            live=new OverlayService.LiveVideoRuntimePorts(()->ownerAllowed&&owner.getAsBoolean(),\n                    ()->available?scheduler:null,()->available?controller:null,\n                    ()->{legacyVisible=false;observe();},()->{manifestVisible=false;observe();},\n                    revision->{active=revision;trace.add(revision==0?\"abort-select\":\"select\");observe();},\n                    new OverlayService.LiveVideoRuntimePorts.LegacySink() {\n                        /** Observe the exact legacy payload only when the active token matches. */\n                        @Override public void due(ScheduledTrack.Event event) {legacyVisible=true;shows++;observe();}\n                        /** The fixture owns no visual countdown. */\n                        @Override public void playback(boolean playing,boolean freeze) {}\n                        /** Loss retires the native substitute synchronously. */\n                        @Override public void eligibility(boolean eligible) {if(!eligible)legacyVisible=false;observe();}\n                    },eligible->{});\n            ports=new Spy();\n        }\n        /** At every native/runtime transition at most one owner may remain visible. */\n"
+      },
+      {
+        "before": "        void due() {\n            ScheduledTrack.MediaIdentity media=loaded.mediaIdentity;\n            long position=loaded.comments.get(0).startMs;\n            scheduler.onPlaybackSnapshot(new MediaSessionProbe.Snapshot(loaded.targetPackage,\n                    android.media.session.PlaybackState.STATE_PLAYING,\"PLAYING\",position,position,1.0f,0L,\n                    media.videoId,media.title,\"\",media.durationMs));\n        }\n",
+        "after": "        void due() {\n            ScheduledTrack.MediaIdentity media=loaded.mediaIdentity;\n            long position=loaded.comments.get(0).startMs;\n            live.onSnapshot(new MediaSessionProbe.Snapshot(loaded.targetPackage,\n                    android.media.session.PlaybackState.STATE_PLAYING,\"PLAYING\",position,position,1.0f,0L,\n                    media.videoId,media.title,\"\",media.durationMs));\n        }\n"
+      },
+      {
+        "before": "            /** Use the real controller unload and synchronous scene removal. */\n            @Override public boolean retireManifestedVisualOwner() {return step(\"retire-manifested\",live.retireManifestedVisualOwner());}\n            /** Capture the handler's trusted object identity without parsing or copying it. */\n            @Override public boolean loadPreparedTrack(ScheduledTrack track) {\n                loaded=track;loads++;return step(\"load\",live.loadPreparedTrack(track));\n            }\n            /** Capture the exact restored manifest passed to the actual controller. */\n            @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n",
+        "after": "            /** Use the real controller unload and synchronous scene removal. */\n            @Override public boolean retireManifestedVisualOwner() {return step(\"retire-manifested\",live.retireManifestedVisualOwner());}\n            /** Capture the handler's trusted object identity without parsing or copying it. */\n            @Override public boolean loadPreparedVideo(VideoPreparedState state) {\n                loaded=state.track;loads++;return step(\"load\",live.loadPreparedVideo(state));\n            }\n            /** Capture the exact restored manifest passed to the actual controller. */\n            @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeTest.java": [
+      {
+        "before": "        try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {\n            h.prior(true,13);ScheduledTrack.Event old=h.runtime.loaded.comments.get(0);long generation=h.runtime.controller.currentGeneration();\n            h.onOwner(()->{h.runtime.due();return null;});h.fetch();\n            h.onOwner(()->{h.runtime.controller.onCommentDue(old,generation);return null;});assertFalse(h.runtime.manifestVisible);\n            h.onOwner(()->{h.runtime.due();h.runtime.controller.onCommentExpired(old,generation);return null;});\n            assertTrue(h.runtime.manifestVisible);assertEquals(14,h.runtime.active);assertEquals(1,h.runtime.maxVisible);\n        }\n    }\n",
+        "after": "        try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {\n            h.prior(true,13);ScheduledTrack.Event old=h.runtime.loaded.comments.get(0);long generation=h.runtime.controller.currentGeneration();\n            h.onOwner(()->{h.runtime.due();return null;});h.fetch();\n            h.onOwner(()->{h.runtime.controller.onEventDue(old.id,generation);return null;});assertFalse(h.runtime.manifestVisible);\n            h.onOwner(()->{h.runtime.due();h.runtime.controller.onEventExpired(old.id,generation);return null;});\n            assertTrue(h.runtime.manifestVisible);assertEquals(14,h.runtime.active);assertEquals(1,h.runtime.maxVisible);\n        }\n    }\n"
+      },
+      {
+        "before": "    @Test public void everyDirectMutationRejectsOffOwner() throws Exception {\n        try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {\n            assertFalse(h.runtime.live.retireLegacyVisualOwner());assertFalse(h.runtime.live.retireManifestedVisualOwner());\n            assertFalse(h.runtime.live.loadPreparedTrack(null));assertFalse(h.runtime.live.armPreparedManifest(14,null));\n            assertFalse(h.runtime.live.selectActiveRevision(14,true));h.runtime.live.abortActivation();assertTrue(h.backend.trace.isEmpty());\n        }\n    }\n",
+        "after": "    @Test public void everyDirectMutationRejectsOffOwner() throws Exception {\n        try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {\n            assertFalse(h.runtime.live.retireLegacyVisualOwner());assertFalse(h.runtime.live.retireManifestedVisualOwner());\n            assertFalse(h.runtime.live.loadPreparedVideo(null));assertFalse(h.runtime.live.armPreparedManifest(14,null));\n            assertFalse(h.runtime.live.selectActiveRevision(14,true));h.runtime.live.abortActivation();assertTrue(h.backend.trace.isEmpty());\n        }\n    }\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGCloudAfterRestoreTest.java": [
+      {
+        "before": "            h.onAck=()->{assertEquals(16,h.runtime.active);assertEquals(13,h.store.read().acknowledgedRevision());};h.fetch();\n            assertEquals(1,h.backend.candidateWrites);assertEquals(1,h.acks);assertEquals(16,h.store.read().acknowledgedRevision());\n            assertFalse(h.runtime.manifestVisible);assertFalse(h.runtime.legacyVisible);\n            h.onOwner(()->{h.runtime.controller.onCommentDue(old,generation);h.runtime.due();\n                h.runtime.controller.onCommentExpired(old,generation);return null;});\n            assertEquals(manifested,h.runtime.manifestVisible);assertEquals(!manifested,h.runtime.legacyVisible);\n            assertEquals(1,h.runtime.maxVisible);\n        }\n",
+        "after": "            h.onAck=()->{assertEquals(16,h.runtime.active);assertEquals(13,h.store.read().acknowledgedRevision());};h.fetch();\n            assertEquals(1,h.backend.candidateWrites);assertEquals(1,h.acks);assertEquals(16,h.store.read().acknowledgedRevision());\n            assertFalse(h.runtime.manifestVisible);assertFalse(h.runtime.legacyVisible);\n            h.onOwner(()->{h.runtime.controller.onEventDue(old.id,generation);h.runtime.due();\n                h.runtime.controller.onEventExpired(old.id,generation);return null;});\n            assertEquals(manifested,h.runtime.manifestVisible);assertEquals(!manifested,h.runtime.legacyVisible);\n            assertEquals(1,h.runtime.maxVisible);\n        }\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupTest.java": [
+      {
+        "before": "        ScheduledTrack.Event old=h.runtime.loaded.comments.get(0);long generation=h.runtime.controller.currentGeneration();\n        assertEquals(InstallationStatus.ARMED,h.installer.install(M4PhaseEVideoFixtures.request(!manifested,16),h.runtime.ports));\n        assertFalse(h.runtime.manifestVisible);assertFalse(h.runtime.legacyVisible);\n        h.runtime.controller.onCommentDue(old,generation);assertFalse(h.runtime.manifestVisible);\n        h.runtime.due();h.runtime.controller.onCommentExpired(old,generation);\n        assertEquals(16,h.runtime.active);assertEquals(!manifested,h.runtime.manifestVisible);\n        assertEquals(manifested,h.runtime.legacyVisible);assertEquals(1,h.runtime.maxVisible);\n        assertEquals(1,h.backend.candidateWrites);assertEquals(0,h.backend.ackWrites+h.backend.clears);\n",
+        "after": "        ScheduledTrack.Event old=h.runtime.loaded.comments.get(0);long generation=h.runtime.controller.currentGeneration();\n        assertEquals(InstallationStatus.ARMED,h.installer.install(M4PhaseEVideoFixtures.request(!manifested,16),h.runtime.ports));\n        assertFalse(h.runtime.manifestVisible);assertFalse(h.runtime.legacyVisible);\n        h.runtime.controller.onEventDue(old.id,generation);assertFalse(h.runtime.manifestVisible);\n        h.runtime.due();h.runtime.controller.onEventExpired(old.id,generation);\n        assertEquals(16,h.runtime.active);assertEquals(!manifested,h.runtime.manifestVisible);\n        assertEquals(manifested,h.runtime.legacyVisible);assertEquals(1,h.runtime.maxVisible);\n        assertEquals(1,h.backend.candidateWrites);assertEquals(0,h.backend.ackWrites+h.backend.clears);\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ManifestInstallAckDecisionTest.java": [
+      {
+        "before": "        assertTrue(regie.isSceneRendererActiveFor(4));\n\n        // Prove there is an actually visible Case-B scene to remove, not only armed metadata.\n        regie.onCommentDue(new ScheduledTrack.Event(\"c1\",\"Hello\",1000,6000,null));\n        assertTrue(regie.hasVisibleScene());\n\n        M4PhaseFHistoricalCloudClient.ManifestInstaller transition=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {\n",
+        "after": "        assertTrue(regie.isSceneRendererActiveFor(4));\n\n        // Prove there is an actually visible Case-B scene to remove, not only armed metadata.\n        regie.onEventDue(new ScheduledTrack.Event(\"c1\",\"Hello\",1000,6000,null).id);\n        assertTrue(regie.hasVisibleScene());\n\n        M4PhaseFHistoricalCloudClient.ManifestInstaller transition=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {\n"
+      },
+      {
+        "before": "        assertFalse(SceneRuntimeController.shouldUseSceneRenderer(0,2));\n\n        // A due comment under Case A must not drive the SceneRenderer at all.\n        regie.onCommentDue(new ScheduledTrack.Event(\"c1\",\"Hello\",1000,6000,null));\n        assertTrue(\"regie must not show anything in Case A\",sink.shown.isEmpty());\n        assertFalse(regie.hasVisibleScene());\n    }\n",
+        "after": "        assertFalse(SceneRuntimeController.shouldUseSceneRenderer(0,2));\n\n        // A due comment under Case A must not drive the SceneRenderer at all.\n        regie.onEventDue(new ScheduledTrack.Event(\"c1\",\"Hello\",1000,6000,null).id);\n        assertTrue(\"regie must not show anything in Case A\",sink.shown.isEmpty());\n        assertFalse(regie.hasVisibleScene());\n    }\n"
+      }
+    ],
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRuntimeControllerTest.java": [
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n\n        assertEquals(Arrays.asList(\"comment-1\"), sink.shown);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n\n        assertEquals(Arrays.asList(\"comment-1\"), sink.shown);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onCommentDue(comment(\"comment-UNKNOWN\", 12_000, 6_000));\n\n        assertTrue(sink.shown.isEmpty());\n        assertEquals(0, sink.preflightCalls);\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onEventDue(comment(\"comment-UNKNOWN\", 12_000, 6_000).id);\n\n        assertTrue(sink.shown.isEmpty());\n        assertEquals(0, sink.preflightCalls);\n"
+      },
+      {
+        "before": "\n        // A new revision supersedes generation; the old-gen callback must not resurrect a scene.\n        regie.replaceRevision(2, manifest(\"track-1\", scene(\"comment-9\", 1_000, 2_000)));\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000), oldGeneration);\n\n        assertTrue(\"stale-generation callback must show nothing\", sink.shown.isEmpty());\n        assertFalse(regie.hasVisibleScene());\n",
+        "after": "\n        // A new revision supersedes generation; the old-gen callback must not resurrect a scene.\n        regie.replaceRevision(2, manifest(\"track-1\", scene(\"comment-9\", 1_000, 2_000)));\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id, oldGeneration);\n\n        assertTrue(\"stale-generation callback must show nothing\", sink.shown.isEmpty());\n        assertFalse(regie.hasVisibleScene());\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        long gen1 = regie.currentGeneration();\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        regie.replaceRevision(2, manifest(\"track-2\", scene(\"comment-2\", 3_000, 4_000)));\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        long gen1 = regie.currentGeneration();\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        regie.replaceRevision(2, manifest(\"track-2\", scene(\"comment-2\", 3_000, 4_000)));\n"
+      },
+      {
+        "before": "        assertFalse(regie.hasVisibleScene());\n\n        // A late revision-1 callback (old generation) must never show the old scene.\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000), gen1);\n        assertFalse(regie.hasVisibleScene());\n        assertEquals(\"comment-1\", sink.lastShown()); // nothing new shown since\n\n        // Only the new revision's scenes can show now.\n        regie.onCommentDue(comment(\"comment-2\", 3_000, 4_000));\n        assertEquals(\"comment-2\", regie.visibleSceneId());\n    }\n\n",
+        "after": "        assertFalse(regie.hasVisibleScene());\n\n        // A late revision-1 callback (old generation) must never show the old scene.\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id, gen1);\n        assertFalse(regie.hasVisibleScene());\n        assertEquals(\"comment-1\", sink.lastShown()); // nothing new shown since\n\n        // Only the new revision's scenes can show now.\n        regie.onEventDue(comment(\"comment-2\", 3_000, 4_000).id);\n        assertEquals(\"comment-2\", regie.visibleSceneId());\n    }\n\n"
+      },
+      {
+        "before": "        RecordingSink sink = new RecordingSink();\n        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertTrue(regie.hasVisibleScene());\n\n        regie.onEligibility(false);\n",
+        "after": "        RecordingSink sink = new RecordingSink();\n        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertTrue(regie.hasVisibleScene());\n\n        regie.onEligibility(false);\n"
+      },
+      {
+        "before": "\n        // Eligibility returns: a subsequent due event shows again per policy.\n        regie.onEligibility(true);\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n    }\n\n",
+        "after": "\n        // Eligibility returns: a subsequent due event shows again per policy.\n        regie.onEligibility(true);\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n    }\n\n"
+      },
+      {
+        "before": "        RecordingSink sink = new RecordingSink();\n        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertTrue(regie.hasVisibleScene());\n\n        // Paused with freeze: the controller must not force-expire the scene by wall time.\n",
+        "after": "        RecordingSink sink = new RecordingSink();\n        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertTrue(regie.hasVisibleScene());\n\n        // Paused with freeze: the controller must not force-expire the scene by wall time.\n"
+      },
+      {
+        "before": "        regie.unload(); // service stop / manifest unload\n\n        // A due callback arriving after unload (even current gen) shows nothing.\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertFalse(regie.hasVisibleScene());\n        // A late callback carrying the pre-unload generation is also ignored.\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000), genBeforeUnload);\n        assertTrue(sink.shown.isEmpty());\n        assertFalse(regie.hasActiveManifest());\n    }\n",
+        "after": "        regie.unload(); // service stop / manifest unload\n\n        // A due callback arriving after unload (even current gen) shows nothing.\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertFalse(regie.hasVisibleScene());\n        // A late callback carrying the pre-unload generation is also ignored.\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id, genBeforeUnload);\n        assertTrue(sink.shown.isEmpty());\n        assertFalse(regie.hasActiveManifest());\n    }\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n\n        assertEquals(\"second callback must be a no-op\", 1, sink.shown.size());\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n\n        assertEquals(\"second callback must be a no-op\", 1, sink.shown.size());\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        long gen1 = regie.currentGeneration();\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertTrue(regie.hasVisibleScene());\n\n        regie.replaceRevision(2, manifest(\"track-2\",\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        long gen1 = regie.currentGeneration();\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertTrue(regie.hasVisibleScene());\n\n        regie.replaceRevision(2, manifest(\"track-2\",\n"
+      },
+      {
+        "before": "        assertFalse(regie.hasVisibleScene());\n\n        // A late revision-1 event is ignored; new revision scenes show normally.\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000), gen1);\n        assertFalse(regie.hasVisibleScene());\n        regie.onCommentDue(comment(\"comment-3\", 9_000, 2_000));\n        assertEquals(\"comment-3\", regie.visibleSceneId());\n        assertEquals(2, sink.shown.size()); // comment-1 then comment-3, never a duplicate\n    }\n",
+        "after": "        assertFalse(regie.hasVisibleScene());\n\n        // A late revision-1 event is ignored; new revision scenes show normally.\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id, gen1);\n        assertFalse(regie.hasVisibleScene());\n        regie.onEventDue(comment(\"comment-3\", 9_000, 2_000).id);\n        assertEquals(\"comment-3\", regie.visibleSceneId());\n        assertEquals(2, sink.shown.size()); // comment-1 then comment-3, never a duplicate\n    }\n"
+      },
+      {
+        "before": "        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onEligibility(false);\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertFalse(\"a due event while ineligible must not show\", regie.hasVisibleScene());\n        assertTrue(sink.shown.isEmpty());\n\n        regie.onEligibility(true);\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n    }\n\n",
+        "after": "        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onEligibility(false);\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertFalse(\"a due event while ineligible must not show\", regie.hasVisibleScene());\n        assertTrue(sink.shown.isEmpty());\n\n        regie.onEligibility(true);\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n    }\n\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n\n        assertEquals(1, sink.preflightCalls);\n        assertTrue(\"preflight false must suppress show\", sink.shown.isEmpty());\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n\n        assertEquals(1, sink.preflightCalls);\n        assertTrue(\"preflight false must suppress show\", sink.shown.isEmpty());\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\",\n                scene(\"comment-1\", 12_000, 6_000), scene(\"comment-2\", 20_000, 3_000)));\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n\n        // Expiry for a non-visible scene is a no-op.\n        regie.onCommentExpired(comment(\"comment-2\", 20_000, 3_000));\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        // Expiry for the visible scene hides it.\n        regie.onCommentExpired(comment(\"comment-1\", 12_000, 6_000));\n        assertFalse(regie.hasVisibleScene());\n        assertTrue(sink.hidden.contains(\"comment-1\"));\n    }\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\",\n                scene(\"comment-1\", 12_000, 6_000), scene(\"comment-2\", 20_000, 3_000)));\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n\n        // Expiry for a non-visible scene is a no-op.\n        regie.onEventExpired(comment(\"comment-2\", 20_000, 3_000).id);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        // Expiry for the visible scene hides it.\n        regie.onEventExpired(comment(\"comment-1\", 12_000, 6_000).id);\n        assertFalse(regie.hasVisibleScene());\n        assertTrue(sink.hidden.contains(\"comment-1\"));\n    }\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        long gen1 = regie.currentGeneration();\n        regie.onCommentDue(comment(\"comment-1\", 12_000, 6_000));\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        // Revision 2 takes over and shows its own scene under the new generation.\n        regie.replaceRevision(2, manifest(\"track-2\", scene(\"comment-2\", 3_000, 4_000)));\n        regie.onCommentDue(comment(\"comment-2\", 3_000, 4_000));\n        assertEquals(\"comment-2\", regie.visibleSceneId());\n\n        // A late expiry from the superseded revision-1 generation must do nothing: it cannot\n        // hide the new comment-2 scene, and comment-1 is already gone.\n        regie.onCommentExpired(comment(\"comment-1\", 12_000, 6_000), gen1);\n        assertEquals(\"stale-generation expiry must not hide the new scene\",\n                \"comment-2\", regie.visibleSceneId());\n        assertFalse(\"stale-generation expiry must not hide the comment-2 scene\",\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        long gen1 = regie.currentGeneration();\n        regie.onEventDue(comment(\"comment-1\", 12_000, 6_000).id);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        // Revision 2 takes over and shows its own scene under the new generation.\n        regie.replaceRevision(2, manifest(\"track-2\", scene(\"comment-2\", 3_000, 4_000)));\n        regie.onEventDue(comment(\"comment-2\", 3_000, 4_000).id);\n        assertEquals(\"comment-2\", regie.visibleSceneId());\n\n        // A late expiry from the superseded revision-1 generation must do nothing: it cannot\n        // hide the new comment-2 scene, and comment-1 is already gone.\n        regie.onEventExpired(comment(\"comment-1\", 12_000, 6_000).id, gen1);\n        assertEquals(\"stale-generation expiry must not hide the new scene\",\n                \"comment-2\", regie.visibleSceneId());\n        assertFalse(\"stale-generation expiry must not hide the comment-2 scene\",\n"
+      },
+      {
+        "before": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\",\n                scene(\"comment-1\", 1_000, 6_000), scene(\"comment-2\", 12_000, 6_000)));\n        regie.onCommentDue(comment(\"comment-1\", 1_000, 6_000));\n\n        // Expiry of a non-visible scene is a no-op.\n        regie.onCommentExpired(comment(\"comment-2\", 12_000, 6_000));\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        // Expiry of the visible scene hides it; a second (duplicate/late) expiry is harmless.\n        regie.onCommentExpired(comment(\"comment-1\", 1_000, 6_000));\n        assertFalse(regie.hasVisibleScene());\n        regie.onCommentExpired(comment(\"comment-1\", 1_000, 6_000));\n        assertEquals(\"duplicate expiry must not hide twice\", 1,\n                java.util.Collections.frequency(sink.hidden, \"comment-1\"));\n    }\n",
+        "after": "        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\",\n                scene(\"comment-1\", 1_000, 6_000), scene(\"comment-2\", 12_000, 6_000)));\n        regie.onEventDue(comment(\"comment-1\", 1_000, 6_000).id);\n\n        // Expiry of a non-visible scene is a no-op.\n        regie.onEventExpired(comment(\"comment-2\", 12_000, 6_000).id);\n        assertEquals(\"comment-1\", regie.visibleSceneId());\n\n        // Expiry of the visible scene hides it; a second (duplicate/late) expiry is harmless.\n        regie.onEventExpired(comment(\"comment-1\", 1_000, 6_000).id);\n        assertFalse(regie.hasVisibleScene());\n        regie.onEventExpired(comment(\"comment-1\", 1_000, 6_000).id);\n        assertEquals(\"duplicate expiry must not hide twice\", 1,\n                java.util.Collections.frequency(sink.hidden, \"comment-1\"));\n    }\n"
+      },
+      {
+        "before": "        RecordingSink sink = new RecordingSink();\n        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        regie.onCommentDue(null);\n        regie.onCommentExpired(null);\n        assertFalse(regie.hasVisibleScene());\n        assertTrue(sink.shown.isEmpty());\n    }\n",
+        "after": "        RecordingSink sink = new RecordingSink();\n        SceneRuntimeController regie = new SceneRuntimeController(sink);\n        regie.loadManifest(1, manifest(\"track-1\", scene(\"comment-1\", 12_000, 6_000)));\n        regie.onEventDue(null);\n        regie.onEventExpired(null);\n        assertFalse(regie.hasVisibleScene());\n        assertTrue(sink.shown.isEmpty());\n    }\n"
+      }
+    ],
+    "tests/m5_phase_c_provenance.py": [
+      {
+        "before": "import hashlib\nimport json\nfrom pathlib import Path\n",
+        "after": "from m5_phase_d_provenance import phase_d_retained_bytes\nimport hashlib\nimport json\nfrom pathlib import Path\n"
+      },
+      {
+        "before": "def phase_c_retained_bytes(path):\n    \"\"\"Undo only unique C provenance/accounting edits and require exact final B blob identity.\"\"\"\n    path = Path(path)\n    content = path.read_bytes()\n    inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))\n    relative = str(path.relative_to(ROOT))\n    patches = inventory['provenancePatches'].get(relative)\n",
+        "after": "def phase_c_retained_bytes(path):\n    \"\"\"Undo only unique C provenance/accounting edits and require exact final B blob identity.\"\"\"\n    path = Path(path)\n    content = phase_d_retained_bytes(path)\n    inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))\n    relative = str(path.relative_to(ROOT))\n    patches = inventory['provenancePatches'].get(relative)\n"
+      }
+    ],
+    "tests/test_m4_phase_f_boundary.py": [
+      {
+        "before": "import ast\nimport hashlib\nimport json\n",
+        "after": "from m5_phase_d_provenance import phase_d_retained_bytes\nimport ast\nimport hashlib\nimport json\n"
+      },
+      {
+        "before": "            self.assertEqual(1, source.count(token), token)\n        self.assertIn('VideoInstallationHandlers.registry(), TvCapabilities.current()', source)\n        self.assertIn('() -> Looper.myLooper() == Looper.getMainLooper()', source)\n        historical = inverse((ROOT / JAVA / 'OverlayService.java').read_text(),\n                             PHASE_G.get('productionPatches', {}).get(JAVA + 'OverlayService.java', []))\n        self.assertIn('new CloudTrackRepository(installationStore)', code_only(historical))\n        self.assertIn('videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient', source)\n",
+        "after": "            self.assertEqual(1, source.count(token), token)\n        self.assertIn('VideoInstallationHandlers.registry(), TvCapabilities.current()', source)\n        self.assertIn('() -> Looper.myLooper() == Looper.getMainLooper()', source)\n        historical = inverse(phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8'),\n                             PHASE_G.get('productionPatches', {}).get(JAVA + 'OverlayService.java', []))\n        self.assertIn('new CloudTrackRepository(installationStore)', code_only(historical))\n        self.assertIn('videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient', source)\n"
+      },
+      {
+        "before": "                            r'TrackParser|OverlayManifestParser|VideoOverlayManifestBridge)\\b')\n        for token in ('java.net.', 'markAcknowledged', '.commit(', 'new SceneRenderer', 'new OverlayRenderer'):\n            self.assertNotIn(token, ports)\n        self.assertEqual(6, ports.count('if(!isOwnerThread()'))\n        for token in ('runtime.unload();retireScenes.run()', 'runtime.load(track)',\n                      'runtime.replaceRevision(revision,manifest)', 'runtime.isSceneRendererActiveFor(revision)',\n                      'selection.accept(revision)', 'runtime.clear()', 'selection.accept(0)'):\n            self.assertIn(token, ports)\n",
+        "after": "                            r'TrackParser|OverlayManifestParser|VideoOverlayManifestBridge)\\b')\n        for token in ('java.net.', 'markAcknowledged', '.commit(', 'new SceneRenderer', 'new OverlayRenderer'):\n            self.assertNotIn(token, ports)\n        self.assertEqual(9, ports.count('if(!isOwnerThread()'))\n        for token in ('runtime.unload();retireScenes.run()', 'runtime.load(state.calendar,pending.token)',\n                      'runtime.replaceRevision(revision,manifest)', 'runtime.isSceneRendererActiveFor(revision)',\n                      'selection.accept(revision)', 'runtime.clear()', 'selection.accept(0)'):\n            self.assertIn(token, ports)\n"
+      }
+    ],
+    "tests/test_m4_phase_g_boundary.py": [
+      {
+        "before": "import ast\nimport hashlib\nimport json\n",
+        "after": "from m5_phase_d_provenance import phase_d_retained_bytes\nimport ast\nimport hashlib\nimport json\n"
+      },
+      {
+        "before": "        for signature, expected in PHASE_F['protectedServiceMethods'].items():\n            source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else (ROOT / JAVA / 'OverlayService.java').read_text()\n            self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)\n        current = (ROOT / JAVA / 'OverlayService.java').read_text()\n        previous = inverse(current, BASELINE['productionPatches'][JAVA + 'OverlayService.java'])\n        self.assertEqual(java_block(previous, 'static final class LiveVideoRuntimePorts'), java_block(current, 'static final class LiveVideoRuntimePorts'))\n        fixture = (ROOT / TEST / 'M4PhaseGFixtures.java').read_text()\n",
+        "after": "        for signature, expected in PHASE_F['protectedServiceMethods'].items():\n            source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else (ROOT / JAVA / 'OverlayService.java').read_text()\n            self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)\n        current = phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8')\n        previous = inverse(current, BASELINE['productionPatches'][JAVA + 'OverlayService.java'])\n        self.assertEqual(java_block(previous, 'static final class LiveVideoRuntimePorts'), java_block(current, 'static final class LiveVideoRuntimePorts'))\n        fixture = (ROOT / TEST / 'M4PhaseGFixtures.java').read_text()\n"
+      }
+    ],
+    "tests/test_m4_sony_corrective_boundary.py": [
+      {
+        "before": "import ast\nimport json\nfrom pathlib import Path\n",
+        "after": "from m5_phase_d_provenance import phase_d_added_paths\nimport ast\nimport json\nfrom pathlib import Path\n"
+      },
+      {
+        "before": "        allowed.update(POST_CORRECTIVE_DOCUMENTS)\n        allowed.update(phase_b_added_paths())\n        allowed.update(phase_c_added_paths())\n        for directory in ('app/src','tests','.github','docs'):\n            for path in (ROOT / directory).rglob('*'):\n                if not path.is_file() or '__pycache__' in path.parts:\n",
+        "after": "        allowed.update(POST_CORRECTIVE_DOCUMENTS)\n        allowed.update(phase_b_added_paths())\n        allowed.update(phase_c_added_paths())\n        allowed.update(phase_d_added_paths())\n        for directory in ('app/src','tests','.github','docs'):\n            for path in (ROOT / directory).rglob('*'):\n                if not path.is_file() or '__pycache__' in path.parts:\n"
+      },
+      {
+        "before": "                      'seedPid!=Process.myPid()', 'diskDigest()', 'SAME_REVISION_STARTUP_ARMED',\n                      'EXACT_ARTIFACT_BYTES','EXACT_CODEC_AND_HANDLER','EXACT_HISTORICAL_RESIDUE',\n                      'backend.commits==0&&backend.acks==0&&backend.clears==0',\n                      'OverlayService.restoreInstalledPackage(', 'new OverlayService.LiveVideoRuntimePorts(',\n                      'REAL_DISK_COMMIT_REFUSED','android.system.Os.chmod(directory.getPath(),0500)',\n                      'finally {android.system.Os.chmod(directory.getPath(),mode);}'):\n            self.assertIn(token, fixture)\n",
+        "after": "                      'seedPid!=Process.myPid()', 'diskDigest()', 'SAME_REVISION_STARTUP_ARMED',\n                      'EXACT_ARTIFACT_BYTES','EXACT_CODEC_AND_HANDLER','EXACT_HISTORICAL_RESIDUE',\n                      'backend.commits==0&&backend.acks==0&&backend.clears==0',\n                      'OverlayService.restoreInstalledPackage(', 'constructor.newInstance(owner',\n                      'REAL_DISK_COMMIT_REFUSED','android.system.Os.chmod(directory.getPath(),0500)',\n                      'finally {android.system.Os.chmod(directory.getPath(),mode);}'):\n            self.assertIn(token, fixture)\n"
+      }
+    ],
+    "tests/test_m5_phase_b_boundary.py": [
+      {
+        "before": "import ast\nimport hashlib\nimport json\n",
+        "after": "from m5_phase_d_provenance import phase_d_added_paths, phase_d_retained_bytes\nimport ast\nimport hashlib\nimport json\n"
+      },
+      {
+        "before": "\n    def test_no_unlisted_production_test_config_or_document_file(self):\n        \"\"\"A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture.\"\"\"\n        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths()\n        actual = set()\n        for directory in ('app/src', 'tests', '.github', 'docs'):\n            for path in (ROOT / directory).rglob('*'):\n",
+        "after": "\n    def test_no_unlisted_production_test_config_or_document_file(self):\n        \"\"\"A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture.\"\"\"\n        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths()\n        actual = set()\n        for directory in ('app/src', 'tests', '.github', 'docs'):\n            for path in (ROOT / directory).rglob('*'):\n"
+      },
+      {
+        "before": "                self.assertTrue(imported.startswith('java.util.'), path)\n\n    def test_existing_production_has_no_calendar_consumer(self):\n        \"\"\"All old callers remain byte-identical and none imports or constructs any new value.\"\"\"\n        for path in BASELINE['startingBlobs']:\n            if path.startswith('app/src/main/java/') and path.endswith('.java'):\n                source = code(path)\n                self.assertNotIn('com.scenevibe.tvcompanionpoc.calendar', source, path)\n                self.assertIsNone(re.search(r'\\b(?:SceneEvent|MediaCalendar|MediaObservation)\\b', source), path)\n\n",
+        "after": "                self.assertTrue(imported.startswith('java.util.'), path)\n\n    def test_existing_production_has_no_calendar_consumer(self):\n        \"\"\"Reconstructed accepted B/C callers remain non-live; D checks actual temporal ownership.\"\"\"\n        for path in BASELINE['startingBlobs']:\n            if path.startswith('app/src/main/java/') and path.endswith('.java'):\n                source = re.sub(r'/\\*.*?\\*/|//[^\\n]*', '', phase_d_retained_bytes(ROOT / path).decode('utf-8'), flags=re.S)\n                self.assertNotIn('com.scenevibe.tvcompanionpoc.calendar', source, path)\n                self.assertIsNone(re.search(r'\\b(?:SceneEvent|MediaCalendar|MediaObservation)\\b', source), path)\n\n"
+      }
+    ],
+    "tests/test_m5_phase_c_boundary.py": [
+      {
+        "before": "import ast\nimport json\nfrom pathlib import Path\n",
+        "after": "from m5_phase_d_provenance import phase_d_added_paths, phase_d_changed_paths, phase_d_retained_bytes\nimport ast\nimport json\nfrom pathlib import Path\n"
+      },
+      {
+        "before": "        \"\"\"No inverse exists for production or fixtures; complete final-B bytes are independently restored.\"\"\"\n        for path, digest in BASE['startingBlobs'].items():\n            self.assertEqual(digest, blob_hash(phase_c_retained_bytes(ROOT / path)), path)\n            if path not in CHANGED:\n                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)\n        self.assertFalse(any(path.startswith('app/') for path in CHANGED))\n        old_b = json.loads((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_text())\n",
+        "after": "        \"\"\"No inverse exists for production or fixtures; complete final-B bytes are independently restored.\"\"\"\n        for path, digest in BASE['startingBlobs'].items():\n            self.assertEqual(digest, blob_hash(phase_c_retained_bytes(ROOT / path)), path)\n            if path not in CHANGED | phase_d_changed_paths():\n                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)\n        self.assertFalse(any(path.startswith('app/') for path in CHANGED))\n        old_b = json.loads((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_text())\n"
+      },
+      {
+        "before": "\n    def test_no_unlisted_file_in_any_retained_scope(self):\n        \"\"\"A namespace wildcard, extra engine or hidden fixture cannot pass the finite inventory.\"\"\"\n        expected = set(BASE['startingBlobs']) | ADDED\n        actual = set()\n        for directory in ('app/src', 'tests', '.github', 'docs'):\n            for path in (ROOT / directory).rglob('*'):\n",
+        "after": "\n    def test_no_unlisted_file_in_any_retained_scope(self):\n        \"\"\"A namespace wildcard, extra engine or hidden fixture cannot pass the finite inventory.\"\"\"\n        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths()\n        actual = set()\n        for directory in ('app/src', 'tests', '.github', 'docs'):\n            for path in (ROOT / directory).rglob('*'):\n"
+      },
+      {
+        "before": "            self.assertIn(expression, source)\n\n    def test_adapter_is_external_and_old_callers_remain_nonlive(self):\n        \"\"\"No runtime integration, new identity policy or probe acquisition is admitted in C.\"\"\"\n        adapter = code(JAVA + 'VideoMediaObservationAdapter.java')\n        for token in ('track == null || snapshot == null', 'MediaIdentityMatcher.matches(track, snapshot)',\n                      'snapshot.estimatedPositionMs >= 0L', 'snapshot.state == PlaybackState.STATE_PLAYING',\n",
+        "after": "            self.assertIn(expression, source)\n\n    def test_adapter_is_external_and_old_callers_remain_nonlive(self):\n        \"\"\"The exact C boundary remains non-live; D separately proves the sole actual live engine.\"\"\"\n        adapter = code(JAVA + 'VideoMediaObservationAdapter.java')\n        for token in ('track == null || snapshot == null', 'MediaIdentityMatcher.matches(track, snapshot)',\n                      'snapshot.estimatedPositionMs >= 0L', 'snapshot.state == PlaybackState.STATE_PLAYING',\n"
+      },
+      {
+        "before": "        self.assertNotIn('MediaCalendarScheduler', adapter)\n        for path in BASE['startingBlobs']:\n            if path.startswith('app/src/main/') and path.endswith('.java'):\n                source = code(path)\n                self.assertNotIn('MediaCalendarScheduler', source, path)\n                self.assertNotIn('VideoMediaObservationAdapter', source, path)\n\n",
+        "after": "        self.assertNotIn('MediaCalendarScheduler', adapter)\n        for path in BASE['startingBlobs']:\n            if path.startswith('app/src/main/') and path.endswith('.java'):\n                source = re.sub(r'/\\*.*?\\*/|//[^\\n]*', '', phase_d_retained_bytes(ROOT / path).decode('utf-8'), flags=re.S)\n                self.assertNotIn('MediaCalendarScheduler', source, path)\n                self.assertNotIn('VideoMediaObservationAdapter', source, path)\n\n"
+      }
+    ]
+  },
+  "forbiddenChanges": [
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/2026-10-02-104953-review.md",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/context.json",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-001.json",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-002.json",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-003.json",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-004.json",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/features/FEAT-005.json",
+    ".agents/tasks/task-overlay-manifest-runtime-integration-0.10a/task.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/context.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-001.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-002.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-003.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-004.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/features/FEAT-005.json",
+    ".agents/tasks/task-tv-release-hardening-0.8.2/task.json",
+    ".github/scripts/android-15-smoke.sh",
+    ".github/scripts/m4-phase-a-baseline.json",
+    ".github/scripts/m4-phase-b-baseline.json",
+    ".github/scripts/m4-phase-c-baseline.json",
+    ".github/scripts/m4-phase-d-baseline.json",
+    ".github/scripts/m4-phase-e-baseline.json",
+    ".github/scripts/m4-phase-f-baseline.json",
+    ".github/scripts/m4-phase-g-baseline.json",
+    ".github/scripts/m4-phase-g-sony-corrective-baseline.json",
+    ".github/scripts/m4-sony-durability-summary.py",
+    ".github/scripts/m4-sony-durability.init.gradle",
+    ".github/scripts/m4-sony-durability.sh",
+    ".github/scripts/m5-media-differential-summary.py",
+    ".github/scripts/m5-media-differential.init.gradle",
+    ".github/scripts/m5-media-differential.sh",
+    ".github/scripts/m5-phase-b-baseline.json",
+    ".github/scripts/m5-phase-c-baseline.json",
+    ".github/workflows/android-15-smoke.yml",
+    ".github/workflows/android-debug.yml",
+    ".github/workflows/android-installation-durability.yml",
+    ".github/workflows/android-media-differential.yml",
+    ".github/workflows/android-release.yml",
+    ".gitignore",
+    "README.md",
+    "app/build.gradle",
+    "app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M5MediaDifferentialInstrumentation.java",
+    "app/src/main/AndroidManifest.xml",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AssignmentMutationGate.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPreference.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudControlClient.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentials.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudProtocol.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CloudV1InstallationAdapter.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/CommentaryServer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DisplayCountdown.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/InstallationIdentity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaIdentityMatcher.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionAccessService.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackScheduler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NotificationAccess.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifest.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayManifestParser.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRenderer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingPolicy.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/PairingRuntime.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/RuntimeDiagnostics.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/ScheduledTrack.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/TrackParser.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoInstallationHandlers.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoLegacyInstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoManifestInstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoMediaObservationAdapter.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridge.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoRuntimePreparation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendar.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendarScheduler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaObservation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/SceneEvent.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/ExecutionRequirements.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallRequest.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationBounds.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandler.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationHandlerRegistry.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshot.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationSnapshotCodec.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStatus.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/InstallationStore.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PreparedInstallation.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java",
+    "app/src/main/res/drawable/ic_launcher.png",
+    "app/src/main/res/drawable/tv_banner.png",
+    "app/src/main/res/values/strings.xml",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/AutostartPolicyTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudActivationDiagnosticsTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudClientRestartAfterResetTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudDeviceCredentialsTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudManifestCacheTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudProtocolTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetAsyncTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudResetTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CloudTrackRepositoryTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/CommentaryServerAuthTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/ConsumerModeTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DiagnosticsNoSecretTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/DisplayCountdownTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/InstallationIdentityTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M1CloudInteropTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAAtomicStoreTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseAIdentityTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseATransportTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseBSideEffectTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseCCompatibilityTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDCompatibilityEdgeTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDDifferentialTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHandlerFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDHistoricalRepository.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDLegacyHandlerTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDManifestedHandlerTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseDRegistryTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEHistoricalInstallerTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseEVideoFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFAdapterRejectionTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFAdapterTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCapabilityDiagnosticsTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFClearStoreTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCloudClientTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFCorruptionTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalCloudClient.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHistoricalRedeliveryTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFHttps.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFNonArmedTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFOwnerGateTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFResetFixture.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFResetTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFRuntimeFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGArmFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGBootTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGDiagnosticsStateTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGDiagnosticsTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGHistoricalService.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGResetTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGRestoreFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseGStartupStateTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M4SonyReadFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CandidateDifferentialTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5FrozenLegacyOracle.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5JournalComparatorTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5LegacyOracleCorpusTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5NegativeSensitivityTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SchedulerDirectTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SinkFailureDifferentialTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5TemporalJournal.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoObservationAdapterTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoProjectionTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoTestProjection.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerExpiryTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/MediaSyncedTrackSchedulerIdentityTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayArmedNotVisibleTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/OverlayManifestParserTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/PairingPolicyTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SceneRendererPreflightTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/SecretStoreMigrationTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/VideoOverlayManifestBridgeTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5MediaCalendarTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5MediaObservationTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5SceneEventTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackendTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationModelTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationRegistryTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/InstallationStoreTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4PhaseEInstallerFixtures.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/M4SonyPreferenceTransportTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerFailureTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerReadbackTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/PackageInstallerTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilitiesTest.java",
+    "app/src/test/resources/m1/cloud-envelopes.json",
+    "app/src/test/resources/m1/overlay-corpus.json",
+    "app/src/test/resources/m4/video-legacy-cache-v1.json",
+    "app/src/test/resources/m4/video-manifested-cache-v1.json",
+    "app/src/test/resources/m5-phase-b/corpus.json",
+    "app/src/test/resources/m5-phase-b/oracle/MediaIdentityMatcher.java.txt",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSessionAccessService.java.txt",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSessionProbe.java.txt",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSyncedTrackScheduler.java.txt",
+    "app/src/test/resources/m5-phase-b/oracle/NotificationAccess.java.txt",
+    "app/src/test/resources/m5-phase-b/oracle/ScheduledTrack.java.txt",
+    "build.gradle",
+    "docs/lan-pairing-protocol-v1.md",
+    "docs/m1-final-closure-ui-boundary.md",
+    "docs/m1-video-coordination.md",
+    "docs/m4-final-sony-physical-closure.md",
+    "docs/m4-phase-a-characterization-report.md",
+    "docs/m4-phase-b-generic-model-capabilities-report.md",
+    "docs/m4-phase-b-generic-model-capabilities-work-order.md",
+    "docs/m4-phase-c-generic-durable-store-report.md",
+    "docs/m4-phase-c-generic-durable-store-work-order.md",
+    "docs/m4-phase-d-video-compatibility-handlers-report.md",
+    "docs/m4-phase-d-video-compatibility-handlers-work-order.md",
+    "docs/m4-phase-e-package-installer-orchestration-report.md",
+    "docs/m4-phase-e-package-installer-orchestration-work-order.md",
+    "docs/m4-phase-f-cloud-v1-adapter-report.md",
+    "docs/m4-phase-f-cloud-v1-adapter-work-order.md",
+    "docs/m4-phase-g-generic-restore-diagnostics-report.md",
+    "docs/m4-phase-g-generic-restore-diagnostics-work-order.md",
+    "docs/m4-phase-g-sony-hard-reboot-corrective-report.md",
+    "docs/m4-sony-physical-qualification-protocol.md",
+    "docs/m5-phase-a-architecture-report.md",
+    "docs/m5-phase-b-models-oracle-report.md",
+    "docs/m5-phase-c-scheduler-differential-report.md",
+    "docs/overlay-manifest-0.10a-tv.md",
+    "docs/physical-qualification-v0.5-2026-09-25.md",
+    "docs/physical-qualification-v0.6-2026-09-25.md",
+    "docs/pr-0.8.0-tv-hardening.md",
+    "docs/scenevibe-os-m4-tv-installation-architecture.md",
+    "docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md",
+    "docs/signature-continuity-protocol.md",
+    "docs/sony-notification-access-focus-2026-09-25.md",
+    "docs/stable-signing.md",
+    "docs/tv-hardening-0.8.md",
+    "docs/tv-recovery-0.8.1.md",
+    "docs/tv-release-hardening-0.8.2.md",
+    "examples/asset-map.example.json",
+    "examples/finaltrack-media-tv-poc.json",
+    "gradle.properties",
+    "scripts/load-finaltrack-mediasession.ps1",
+    "scripts/pair-tv.ps1",
+    "scripts/play-finaltrack-media.ps1",
+    "scripts/send-media-commentary.ps1",
+    "settings.gradle",
+    "tests/m5_phase_b_provenance.py",
+    "tests/sony_corrective_provenance.py",
+    "tests/test_m4_phase_b_boundary.py",
+    "tests/test_m4_phase_c_boundary.py",
+    "tests/test_m4_phase_d_boundary.py",
+    "tests/test_m4_phase_e_boundary.py",
+    "tests/test_poc_contract.py"
+  ],
+  "m5PhaseDSuites": {
+    "M5VideoCutoverTest": 44
+  },
+  "phaseBBaselineBlob": "3f1457fbf9ab5781af6e61f1c55d433fb15ef923",
+  "phaseCBaselineBlob": "49adb576ee45fa9267cffdb2917162c39c29e1cc",
+  "qualifiedCoreBlobs": {
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/VideoMediaObservationAdapter.java": "68d1b28559e60c848058968cb73d424b2a71b95b",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendar.java": "c90cc87afb682417d4cb89f2bc663b8058778c37",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendarScheduler.java": "817447e570b8e1ee6ecd1e9eaeaa4eb1f8eb5c19",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaObservation.java": "2b07951084c295223b5746c05e526ef4b33dbd03",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/SceneEvent.java": "235d0bea7244c96fbd769b417e2cd04224a85d8f"
+  },
+  "oracleAndFixtureBlobs": {
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java": "f9959888b402657582b374c3847bf6c55cc05af4",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CandidateDifferentialTest.java": "18af8b5be4630e7b0933d7b1344a13c1c841a579",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5FrozenLegacyOracle.java": "deb3bda4aff405d20bd5c92ff5022766b4a8608c",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5NegativeSensitivityTest.java": "785d166fd743ec587694c3c9a74675082e21f612",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SchedulerDirectTest.java": "59005295bb8cde1c479740db0558f198c8664fe8",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SinkFailureDifferentialTest.java": "a37cda7a02b146bc6a9b673f59b641a561a5e99b",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5TemporalJournal.java": "0d1a3f8c0f674c8060eb5ade42e40c19e270ddfb",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoObservationAdapterTest.java": "1e812399d04962bae0ea917ec676e3441bf3bb9a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoTestProjection.java": "d985c42e20d0a45475bae22aca7a0635cbb11b54",
+    "app/src/test/resources/m5-phase-b/corpus.json": "3ca518b28e820c05ae3ed6a08540ff8a1b615d55",
+    "app/src/test/resources/m5-phase-b/oracle/MediaIdentityMatcher.java.txt": "f022a48c78151a11508d7feb12ba91239191a43a",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSessionAccessService.java.txt": "c8728643be07f405a47b62a84f525302dbb73cab",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSessionProbe.java.txt": "9c205b09ff5ffd85977250175eaab5019984b1b1",
+    "app/src/test/resources/m5-phase-b/oracle/MediaSyncedTrackScheduler.java.txt": "441d983409d94ae6d5e31198ec739dec86166754",
+    "app/src/test/resources/m5-phase-b/oracle/NotificationAccess.java.txt": "b79a16d128c533169305e8a814b56488c3846559",
+    "app/src/test/resources/m5-phase-b/oracle/ScheduledTrack.java.txt": "38219f1130a0243272d3b1df5ad2e63461d7cc1e"
+  }
+}

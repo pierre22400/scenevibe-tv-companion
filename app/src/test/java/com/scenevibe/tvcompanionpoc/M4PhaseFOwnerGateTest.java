@@ -37,14 +37,27 @@ public final class M4PhaseFOwnerGateTest {
             assertTrue(failed);assertEquals(0,h.installCalls+h.acks+h.backend.candidateWrites);
         }
     }
-    /** Interrupting the real io wait cancels the queued FutureTask; releasing the owner cannot install later. */
+    /**
+     * Stopping queued owner work fails closed whether IO interruption or the stopped-client
+     * owner guard wins the race; neither path may install, mutate durable state or ACK later.
+     */
     @Test public void interruptedWaitCancelsLateOwnerInstallation() throws Exception {
         try(M4PhaseFFixtures.Harness h=new M4PhaseFFixtures.Harness(true,14)) {
             CountDownLatch release=blockOwner(h);Future<?> fetch=h.fetchAsync("fetchAssignment");
             assertTrue(h.dispatched.await(3,TimeUnit.SECONDS));h.client.stop();release.countDown();
-            try {M4PhaseFFixtures.Harness.await(fetch);fail("interrupted owner wait must fail");}
-            catch(InterruptedException expected) { /* Original interrupted-wait discipline is preserved. */ }
-            h.onOwner(()->null);assertEquals(0,h.installCalls+h.acks+h.backend.candidateWrites);
+            try {M4PhaseFFixtures.Harness.await(fetch);fail("stopped owner wait must fail closed");}
+            catch(InterruptedException expected) { /* Valid outcome: IO observes interruption first. */ }
+            catch(Exception expected) {
+                assertEquals("com.scenevibe.tvcompanionpoc.CloudControlClient$CloudException",
+                        expected.getClass().getName());
+                assertEquals("Local installation refused",expected.getMessage());
+            }
+            h.onOwner(()->null);
+            assertEquals(0,h.installCalls);
+            assertEquals(0,h.acks);
+            assertEquals(0,h.backend.candidateWrites);
+            assertEquals(0,h.backend.ackWrites);
+            assertEquals(0,h.store.read().acknowledgedRevision());
         }
     }
     /** Loss of current-client identity after successful ARM prevents the subsequent HTTP request. */

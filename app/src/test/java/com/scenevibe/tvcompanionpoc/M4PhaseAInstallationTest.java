@@ -154,13 +154,13 @@ public final class M4PhaseAInstallationTest {
         assertEquals(0,runtime.sink.visible);
         assertEquals(13,runtime.cache.acknowledged());
         assertTrue(runtime.controller.currentGeneration()>oldGeneration);
-        runtime.controller.onCommentDue(old,oldGeneration);
+        runtime.controller.onEventDue(old.id,oldGeneration);
         assertEquals(0,runtime.sink.visible);
         runtime.due();
         assertEquals(1,runtime.sink.visible);
-        runtime.controller.onCommentExpired(old,oldGeneration);
+        runtime.controller.onEventExpired(old.id,oldGeneration);
         assertEquals(1,runtime.sink.visible);
-        runtime.controller.onCommentDue(runtime.firstEvent());
+        runtime.controller.onEventDue(runtime.firstEvent().id);
         assertEquals(2,runtime.sink.shows);
         assertEquals(1,runtime.sink.maxVisible);
         assertEquals(0,runtime.legacyRenders);
@@ -180,7 +180,7 @@ public final class M4PhaseAInstallationTest {
         assertFalse(runtime.controller.hasActiveManifest());
         assertEquals(0,runtime.sink.visible);
         assertTrue(memory.trace.indexOf("commit:14")<memory.trace.indexOf("legacy-arm:14"));
-        runtime.controller.onCommentDue(old,oldGeneration);
+        runtime.controller.onEventDue(old.id,oldGeneration);
         runtime.due();
         assertEquals(1,runtime.legacyRenders);
         assertEquals(1,runtime.sink.shows);

@@ -1,0 +1,20 @@
+// Test-only shared sources are copied byte-for-byte; no production build configuration changes.
+gradle.beforeProject { project ->
+    if (project.path == ":app") {
+        project.plugins.withId("com.android.application") {
+            def shared = new File(project.buildDir, "generated/m5c-shared")
+            project.copy {
+                from new File(project.projectDir, "src/test/java")
+                include "com/scenevibe/tvcompanionpoc/M5TemporalJournal.java"
+                include "com/scenevibe/tvcompanionpoc/M5VideoTestProjection.java"
+                include "com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java"
+                into shared
+            }
+            project.android.defaultConfig.testInstrumentationRunner =
+                "com.scenevibe.tvcompanionpoc.M5MediaDifferentialInstrumentation"
+            project.android.sourceSets.androidTest.java.srcDirs += [shared]
+            project.android.sourceSets.androidTest.assets.srcDirs =
+                [new File(project.projectDir, "src/test/resources/m5-phase-b")]
+        }
+    }
+}

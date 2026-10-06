@@ -48,8 +48,8 @@ public final class M4PhaseGCloudAfterRestoreTest {
             h.onAck=()->{assertEquals(16,h.runtime.active);assertEquals(13,h.store.read().acknowledgedRevision());};h.fetch();
             assertEquals(1,h.backend.candidateWrites);assertEquals(1,h.acks);assertEquals(16,h.store.read().acknowledgedRevision());
             assertFalse(h.runtime.manifestVisible);assertFalse(h.runtime.legacyVisible);
-            h.onOwner(()->{h.runtime.controller.onCommentDue(old,generation);h.runtime.due();
-                h.runtime.controller.onCommentExpired(old,generation);return null;});
+            h.onOwner(()->{h.runtime.controller.onEventDue(old.id,generation);h.runtime.due();
+                h.runtime.controller.onEventExpired(old.id,generation);return null;});
             assertEquals(manifested,h.runtime.manifestVisible);assertEquals(!manifested,h.runtime.legacyVisible);
             assertEquals(1,h.runtime.maxVisible);
         }

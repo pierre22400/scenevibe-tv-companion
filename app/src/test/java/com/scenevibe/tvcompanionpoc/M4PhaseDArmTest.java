@@ -52,7 +52,7 @@ public final class M4PhaseDArmTest {
             return step("retire-manifested",()->{manifestVisible=false;armedManifest=null;manifestRevision=0;});
         }
         /** Retain the exact prepared object to detect any reparse or independent interpretation. */
-        @Override public boolean loadPreparedTrack(ScheduledTrack track) {return step("load",()->loaded=track);}
+        @Override public boolean loadPreparedVideo(VideoPreparedState state) {return step("load",()->loaded=state.track);}
         /** Stress a partial activation that has become visible before returning a failure. */
         @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {
             return step("manifest",()->{manifestRevision=revision;armedManifest=manifest;manifestVisible=true;});

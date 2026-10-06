@@ -1,9 +1,12 @@
+from m5_phase_d_provenance import phase_d_added_paths
 import ast
 import json
 from pathlib import Path
 import re
 import unittest
 from sony_corrective_provenance import blob_hash, retained_bytes
+from m5_phase_b_provenance import calendar_model_files, phase_b_added_paths, qualification_retained_bytes
+from m5_phase_c_provenance import phase_c_production_files, phase_c_added_paths
 
 """Qualify the localized hard-reboot correction without weakening a single retained A–G gate.
 
@@ -16,6 +19,12 @@ native negative-control/process gate. Software preparation never counts as Sony 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-g-sony-corrective-baseline.json').read_text())
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
+POST_CORRECTIVE_DOCUMENTS = {
+    'docs/m4-final-sony-physical-closure.md',
+    'docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md',
+    'docs/m5-phase-a-architecture-report.md',
+    'docs/m5-final-sony-physical-closure.md',
+}
 
 
 def executable(path):
@@ -36,7 +45,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
                          'installation/InstallationStore.java','RuntimeDiagnostics.java','DiagnosticsActivity.java')},
                          set(BASELINE['authorizedProductionChanges']))
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
 
     def test_every_retained_blob_and_corrective_inverse_is_exact(self):
         """Every starting production/config/test/evidence file is preserved or reconstructed with unique finite edits."""
@@ -44,17 +53,21 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         expected.add('docs/m4-sony-physical-qualification-protocol.md')
         self.assertEqual(expected, set(BASELINE['correctivePatches']))
         for path, digest in BASELINE['startingBlobs'].items():
-            content = retained_bytes(ROOT / path) if path in expected else (ROOT / path).read_bytes()
+            content = retained_bytes(ROOT / path) if path in expected else qualification_retained_bytes(ROOT / path)
             self.assertEqual(digest, blob_hash(content), path)
 
     def test_retained_java_tests_fixtures_and_prior_inventories_have_no_exception(self):
-        """No retained business assertion, frozen fixture or Phase A–G inventory may be rewritten or skipped."""
+        """Pin retained M4 bytes while admitting only the exact post-corrective documentary evidence."""
         for path, digest in BASELINE['startingBlobs'].items():
             if path.startswith('app/src/test/') or re.fullmatch(r'\.github/scripts/m4-phase-[a-g]-baseline.json', path):
                 self.assertNotIn(path, BASELINE['correctivePatches'])
-                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+                self.assertEqual(digest, blob_hash(qualification_retained_bytes(ROOT / path)), path)
         allowed = set(BASELINE['additiveFiles'])
         allowed.add('docs/m4-phase-g-sony-hard-reboot-corrective-report.md')
+        allowed.update(POST_CORRECTIVE_DOCUMENTS)
+        allowed.update(phase_b_added_paths())
+        allowed.update(phase_c_added_paths())
+        allowed.update(phase_d_added_paths())
         for directory in ('app/src','tests','.github','docs'):
             for path in (ROOT / directory).rglob('*'):
                 if not path.is_file() or '__pycache__' in path.parts:
@@ -105,7 +118,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
                       'seedPid!=Process.myPid()', 'diskDigest()', 'SAME_REVISION_STARTUP_ARMED',
                       'EXACT_ARTIFACT_BYTES','EXACT_CODEC_AND_HANDLER','EXACT_HISTORICAL_RESIDUE',
                       'backend.commits==0&&backend.acks==0&&backend.clears==0',
-                      'OverlayService.restoreInstalledPackage(', 'new OverlayService.LiveVideoRuntimePorts(',
+                      'OverlayService.restoreInstalledPackage(', 'constructor.newInstance(owner',
                       'REAL_DISK_COMMIT_REFUSED','android.system.Os.chmod(directory.getPath(),0500)',
                       'finally {android.system.Os.chmod(directory.getPath(),mode);}'):
             self.assertIn(token, fixture)

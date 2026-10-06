@@ -5,14 +5,14 @@ import java.util.Map;
 
 /**
  * Android-independent runtime "regie" that coordinates the cache/manifest layer, the EXISTING
- * {@link MediaSyncedTrackScheduler} events, and the {@link SceneRenderer} (user sections 9, 10,
+ * {@link com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler} events, and the {@link SceneRenderer} (user sections 9, 10,
  * 12, 13, 14, 30). It is the single decision point for WHEN a manifested Video scene is shown
  * or hidden.
  *
  * <p>Deliberate non-responsibilities, so each collaborator keeps its single role:</p>
  * <ul>
  *   <li>It owns NO clock. Timing arrives only as scheduler events forwarded in through
- *       {@link #onCommentDue(ScheduledTrack.Event)} / {@link #onPlayback(boolean, boolean)} /
+ *       {@link #onEventDue(String)} / {@link #onPlayback(boolean, boolean)} /
  *       {@link #onEligibility(boolean)}. It never creates a {@code Handler}/{@code postDelayed}
  *       timer and never re-derives media position.</li>
  *   <li>It NEVER commands the video player: there is no reference to transport controls or any
@@ -73,6 +73,7 @@ final class SceneRuntimeController {
     private boolean playing;
     private boolean pauseFreezesDisplay;
 
+    /** Bind the drawing seam without creating a clock, player or visible scene. */
     SceneRuntimeController(SceneSink sink) {
         if (sink == null) throw new IllegalArgumentException("sink");
         this.sink = sink;
@@ -130,25 +131,25 @@ final class SceneRuntimeController {
 
     /**
      * The sole entry point for "a Video comment became due". It looks up the matching scene by
-     * {@code event.id}; if found it preflights then shows it, if not found it does NOTHING (no
+     * {@code eventId}; if found it preflights then shows it, if not found it does NOTHING (no
      * render). Idempotent for the same scene: a second due callback for the already-visible
      * scene is a no-op, never a duplicate overlay. There is no generation argument here because
      * the scheduler delivers synchronously under the current generation; the
-     * {@link #onCommentDue(ScheduledTrack.Event, long)} overload exists for tests that simulate
+     * {@link #onEventDue(String, long)} overload exists for tests that simulate
      * a late callback carrying a stale generation.
      */
-    synchronized void onCommentDue(ScheduledTrack.Event event) {
-        onCommentDue(event, generation);
+    synchronized void onEventDue(String eventId) {
+        onEventDue(eventId, generation);
     }
 
     /**
      * Generation-guarded form (section 14/21). {@code callbackGeneration} is the generation that
      * was active when the scheduler produced the event. A callback whose generation no longer
      * matches the current one is a late/superseded event: it is ignored and can never resurrect
-     * an old scene. Use {@link #currentGeneration()} to tag an event at production time.
+     * an old scene. The service captures {@link #currentGeneration()} once during manifest ARM and forwards that fixed binding.
      */
-    synchronized void onCommentDue(ScheduledTrack.Event event, long callbackGeneration) {
-        if (event == null) return;
+    synchronized void onEventDue(String eventId, long callbackGeneration) {
+        if (eventId == null) return;
         // Superseded revision/generation: a stale callback must never show an old scene.
         if (callbackGeneration != generation) return;
         // No active manifest (unloaded/stopped) means Case A legacy path owns the comment, or
@@ -156,7 +157,7 @@ final class SceneRuntimeController {
         if (scenesById == null) return;
         // armed != visible: without current eligibility a due event does not become visible.
         if (!eligible) return;
-        OverlayManifest.Scene scene = scenesById.get(event.id);
+        OverlayManifest.Scene scene = scenesById.get(eventId);
         // Unknown scene id => no render (nothing matches this comment in this manifest).
         if (scene == null) return;
         // Idempotent: a double callback for the already-visible scene is a safe no-op.
@@ -176,21 +177,21 @@ final class SceneRuntimeController {
      * only if it is the currently visible one, under the current generation. A stale hide for an
      * already-replaced scene is a no-op.
      */
-    synchronized void onCommentExpired(ScheduledTrack.Event event, long callbackGeneration) {
-        if (event == null) return;
+    synchronized void onEventExpired(String eventId, long callbackGeneration) {
+        if (eventId == null) return;
         if (callbackGeneration != generation) return;
         if (visibleScene == null) return;
-        if (!visibleScene.id.equals(event.id)) return;
+        if (!visibleScene.id.equals(eventId)) return;
         dropVisibleScene();
     }
 
     /** Generation-current convenience overload. */
-    synchronized void onCommentExpired(ScheduledTrack.Event event) {
-        onCommentExpired(event, generation);
+    synchronized void onEventExpired(String eventId) {
+        onEventExpired(eventId, generation);
     }
 
     /**
-     * Eligibility transition forwarded from {@link MediaSyncedTrackScheduler.Listener#onEligibility}
+     * Eligibility transition forwarded from {@link com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.Sink#onEligibility(String, boolean)}
      * (section 13). On loss (false) the visible scene is hidden IMMEDIATELY (armed != visible),
      * but the loaded in-memory manifest and the durable cache are kept intact so a later due
      * event can show again when eligibility returns. On regain (true) nothing is forced visible;
@@ -252,7 +253,7 @@ final class SceneRuntimeController {
         return activeRevision;
     }
 
-    /** The current generation; tag a scheduler event with this to detect stale callbacks later. */
+    /** The current generation; capture once during ARM to detect stale callbacks later. */
     synchronized long currentGeneration() {
         return generation;
     }

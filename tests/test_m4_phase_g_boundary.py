@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_retained_bytes
 import ast
 import hashlib
 import json
@@ -5,6 +6,8 @@ from pathlib import Path
 import re
 import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
+from m5_phase_b_provenance import calendar_model_files
+from m5_phase_c_provenance import phase_c_production_files
 
 """Qualify generic startup, metadata and reset with exact provenance for every retained gate.
 
@@ -207,7 +210,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
     def test_generic_core_bridge_and_static_registry_remain_isolated(self):
         """No new parser, registry, runtime capability, future milestone or second restore authority can appear."""
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
         bridges, lookup = [], []
         for path in actual:
             source = code_only((ROOT / path).read_text())
@@ -234,7 +237,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         for signature, expected in PHASE_F['protectedServiceMethods'].items():
             source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else (ROOT / JAVA / 'OverlayService.java').read_text()
             self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)
-        current = (ROOT / JAVA / 'OverlayService.java').read_text()
+        current = phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8')
         previous = inverse(current, BASELINE['productionPatches'][JAVA + 'OverlayService.java'])
         self.assertEqual(java_block(previous, 'static final class LiveVideoRuntimePorts'), java_block(current, 'static final class LiveVideoRuntimePorts'))
         fixture = (ROOT / TEST / 'M4PhaseGFixtures.java').read_text()

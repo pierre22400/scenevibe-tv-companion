@@ -1,5 +1,11 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.calendar.MediaCalendar;
+import com.scenevibe.tvcompanionpoc.calendar.SceneEvent;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import com.scenevibe.tvcompanionpoc.installation.ExecutionRequirements;
 import com.scenevibe.tvcompanionpoc.installation.InstallRequest;
 import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
@@ -15,28 +21,50 @@ import com.scenevibe.tvcompanionpoc.installation.PreparedInstallation;
 final class VideoPreparedState implements InstallationHandler.PreparedState {
     final ScheduledTrack track;
     final OverlayManifest manifest;
+    final MediaCalendar calendar;
+    final Map<String,ScheduledTrack.Event> eventsById;
     private final InstallRequest canonical;
     private final String handlerId;
     private final ExecutionRequirements requirements;
 
-    /** Retain only qualified immutable parser values and optional immutable generic binding. */
-    private VideoPreparedState(ScheduledTrack track,OverlayManifest manifest,InstallRequest canonical,
-            String handlerId,ExecutionRequirements requirements) {
+    /** Retain qualified parser values and build their memory-only temporal projection once. */
+    private VideoPreparedState(ScheduledTrack track,OverlayManifest manifest,boolean textOnly) {
         if (track==null) throw new IllegalArgumentException("Missing prepared Video state");
-        for (ScheduledTrack.Event event:track.comments)
+        ArrayList<SceneEvent> events=new ArrayList<>();
+        Map<String,ScheduledTrack.Event> index=new HashMap<>();
+        for (ScheduledTrack.Event event:track.comments) {
+            if (textOnly&&event.mediaBitmap!=null) throw new IllegalArgumentException("Invalid prepared Video state");
+            events.add(new SceneEvent(event.id,event.startMs,event.durationMs));
+            index.put(event.id,event);
+        }
+        this.track=track;this.manifest=manifest;
+        this.calendar=new MediaCalendar(events,track.pauseFreezesDisplay);
+        this.eventsById=Collections.unmodifiableMap(index);
+        this.canonical=null;this.handlerId=null;this.requirements=null;
+    }
+
+    /** Bind identities while retaining the exact calendar/index already constructed at preparation. */
+    private VideoPreparedState(VideoPreparedState state,InstallRequest request,String id,
+            ExecutionRequirements needs) {
+        for (ScheduledTrack.Event event:state.track.comments)
             if (event.mediaBitmap!=null) throw new IllegalArgumentException("Invalid prepared Video state");
-        this.track=track;this.manifest=manifest;this.canonical=canonical;
-        this.handlerId=handlerId;this.requirements=requirements;
+        this.track=state.track;this.manifest=state.manifest;this.calendar=state.calendar;
+        this.eventsById=state.eventsById;this.canonical=request;this.handlerId=id;this.requirements=needs;
     }
 
     /** Return a typed historical parse result without advertising generic capability acceptance. */
     static VideoPreparedState compatibility(ScheduledTrack track,OverlayManifest manifest) {
-        return new VideoPreparedState(track,manifest,null,null,null);
+        return new VideoPreparedState(track,manifest,true);
+    }
+
+    /** Project the existing LAN parser's optional bitmap payload outside the generic text-only ingress. */
+    static VideoPreparedState lan(ScheduledTrack track) {
+        return new VideoPreparedState(track,null,false);
     }
 
     /** Bind already validated parser values to their exact immutable generic candidate/profile. */
     VideoPreparedState bind(InstallRequest request,String id,ExecutionRequirements needs) {
-        return new VideoPreparedState(track,manifest,request,id,needs);
+        return new VideoPreparedState(this,request,id,needs);
     }
 
     /** Check ownership and exact canonical/profile identity without reinterpreting untrusted bytes. */
@@ -61,7 +89,7 @@ final class VideoPreparedState implements InstallationHandler.PreparedState {
             boolean retired=manifested
                     ?runtime.retireLegacyVisualOwner()&&runtime.retireManifestedVisualOwner()
                     :runtime.retireManifestedVisualOwner()&&runtime.retireLegacyVisualOwner();
-            if (!retired||!runtime.loadPreparedTrack(state.track)
+            if (!retired||!runtime.loadPreparedVideo(state)
                     ||(manifested&&!runtime.armPreparedManifest(prepared.revision(),state.manifest))
                     ||!runtime.selectActiveRevision(prepared.revision(),manifested)) {
                 abort(runtime);return InstallationStatus.ARM_FAILED;

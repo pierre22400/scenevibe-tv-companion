@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_retained_bytes
 import ast
 import hashlib
 import json
@@ -5,6 +6,8 @@ from pathlib import Path
 import re
 import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
+from m5_phase_b_provenance import calendar_model_files
+from m5_phase_c_provenance import phase_c_production_files
 
 """Qualify the live Cloud cutover without weakening the retained M4 evidence.
 
@@ -128,7 +131,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
             self.assertEqual(1, source.count(token), token)
         self.assertIn('VideoInstallationHandlers.registry(), TvCapabilities.current()', source)
         self.assertIn('() -> Looper.myLooper() == Looper.getMainLooper()', source)
-        historical = inverse((ROOT / JAVA / 'OverlayService.java').read_text(),
+        historical = inverse(phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8'),
                              PHASE_G.get('productionPatches', {}).get(JAVA + 'OverlayService.java', []))
         self.assertIn('new CloudTrackRepository(installationStore)', code_only(historical))
         self.assertIn('videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient', source)
@@ -144,8 +147,8 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
                             r'TrackParser|OverlayManifestParser|VideoOverlayManifestBridge)\b')
         for token in ('java.net.', 'markAcknowledged', '.commit(', 'new SceneRenderer', 'new OverlayRenderer'):
             self.assertNotIn(token, ports)
-        self.assertEqual(6, ports.count('if(!isOwnerThread()'))
-        for token in ('runtime.unload();retireScenes.run()', 'runtime.load(track)',
+        self.assertEqual(9, ports.count('if(!isOwnerThread()'))
+        for token in ('runtime.unload();retireScenes.run()', 'runtime.load(state.calendar,pending.token)',
                       'runtime.replaceRevision(revision,manifest)', 'runtime.isSceneRendererActiveFor(revision)',
                       'selection.accept(revision)', 'runtime.clear()', 'selection.accept(0)'):
             self.assertIn(token, ports)
@@ -233,7 +236,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
     def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):
         """Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned."""
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
         bridges, ports = [], []
         for relative in actual:
             source = code_only((ROOT / relative).read_text())
