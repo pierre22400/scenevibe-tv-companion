@@ -3,21 +3,15 @@
     ISOLATED experimental Android TV manifest for the media-interlude POC.
 
     Isolation: this module declares its OWN package identity
-    (com.scenevibe.tvcompanionpoc.mediaexperiment) and shares NOTHING with :app
-    — no shared authority, no BootReceiver, no RECEIVE_BOOT_COMPLETED, no INTERNET,
-    no Cloud component. It is an evidence-gathering capability spike only.
+    (com.scenevibe.tvcompanionpoc.mediaexperiment) and shares NOTHING with :app.
 
-    Permissions are deliberately minimal:
-      * SYSTEM_ALERT_WINDOW            — the fullscreen local interlude overlay.
-      * FOREGROUND_SERVICE             — the user-started foreground service.
-      * FOREGROUND_SERVICE_MEDIA_PLAYBACK — targetSdk 35 requires the typed
-        permission that matches foregroundServiceType="mediaPlayback". Unlike
-        :app (which uses specialUse), this module performs media pause/play and a
-        local media interlude, so mediaPlayback is the honest service type.
+    The launcher Activity is deliberately translucent and short-lived. Physical Sony
+    evidence showed that keeping the old opaque diagnostic Activity in foreground
+    caused Prime's otherwise healthy PLAYING MediaSession to disappear. Diagnostic
+    controls now live in a TYPE_APPLICATION_OVERLAY window owned by InterludeService.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- TV form factor: declared leanback, touchscreen explicitly not required. -->
     <uses-feature
         android:name="android.software.leanback"
         android:required="true" />
@@ -36,28 +30,21 @@
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
-        <!-- The TV launcher entry for the experimental app, distinct from :app's
-             MainActivity. It is the five-action diagnostic screen. -->
         <activity
             android:name=".MediaExperimentActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.SceneVibe.MediaExperiment.Launcher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- User-started foreground service that owns the interlude runtime. It is
-             a mediaPlayback service: it pauses/plays the active media session and
-             runs a local media interlude. Distinct notification channel from :app. -->
         <service
             android:name=".InterludeService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <!-- This module's OWN notification-listener gate (NOT :app's). It is the
-             access requirement for MediaSessionManager.getActiveSessions(). It
-             inspects, stores and forwards nothing. -->
         <service
             android:name=".ExperimentMediaAccessService"
             android:label="SceneVibe media-interlude POC access"

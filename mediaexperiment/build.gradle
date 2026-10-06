@@ -11,8 +11,7 @@ plugins {
 //     cache, database, signing-identity assumption, BootReceiver, or autostart.
 //   * NO dependency on project(":app"). This module shares nothing with :app; it
 //     only MIRRORS :app's compileSdk/minSdk/targetSdk/Java-17/testOptions toolchain.
-//   * NO Cloud/LAN BuildConfig logic (unlike app/build.gradle). No buildConfigField,
-//     no SCENEVIBE_CLOUD_ORIGIN / SCENEVIBE_ENABLE_LAN_DEV wiring.
+//   * NO Cloud/LAN BuildConfig logic.
 android {
     namespace "com.scenevibe.tvcompanionpoc.mediaexperiment"
     compileSdk 35
@@ -21,14 +20,11 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc.mediaexperiment"
         minSdk 26
         targetSdk 35
-        versionCode 2
-        versionName "0.1.1-media-interlude-poc-corrective"
+        versionCode 3
+        versionName "0.1.2-media-interlude-poc-overlay-controls"
     }
 
     buildTypes {
-        // Keep release unsigned (no signingConfig), consistent with the repo
-        // convention: the real signature is applied post-build by CI, so no key
-        // material is required at Gradle configure time.
         release {
             minifyEnabled false
             shrinkResources false

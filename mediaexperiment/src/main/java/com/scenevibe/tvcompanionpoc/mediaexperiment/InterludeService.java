@@ -22,17 +22,16 @@ import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeRuntime;
 
 /**
  * User-started mediaPlayback foreground service that owns the interlude runtime for
- * the POC. It wires the Android-free {@link InterludeRuntime} to the
- * real Android ports (FEAT-003) and drives everything on the MAIN THREAD.
+ * the POC. It wires the Android-free {@link InterludeRuntime} to the real Android
+ * ports and owns the diagnostic TYPE_APPLICATION_OVERLAY control panel.
  *
- * <p>Lifecycle mirrors :app's {@code OverlayService} (createNotificationChannel +
- * startForeground in onCreate, START_STICKY, stopSelf on overlay-permission loss)
- * but shares NO code, NO SharedPreferences, and uses a DISTINCT channel id. It is a
- * {@code mediaPlayback} foreground service, matching the honest work it performs.</p>
+ * <p>The control panel deliberately lives outside the Activity stack. This keeps
+ * the native streaming Activity underneath the panel instead of replacing it with
+ * the POC launcher, which is required for meaningful physical MediaSession tests.</p>
  *
  * <p>The service runs a 1-second fresh active-session rescan so dispatched
  * pause/play commands are confirmed only by OBSERVED state, and so pending
- * confirmation deadlines (pause/play timeouts) are evaluated via {@code onTick()}.</p>
+ * confirmation deadlines are evaluated via {@code onTick()}.</p>
  */
 public final class InterludeService extends Service
         implements AndroidOverlayVideoPort.Callbacks {
@@ -40,16 +39,17 @@ public final class InterludeService extends Service
     private static final String CHANNEL_ID = "media_interlude_poc";
     private static final int NOTIFICATION_ID = 2001;
     private static final long SAMPLE_INTERVAL_MS = 1000L;
+    private static final String ACTION_SHOW_PANEL =
+            "com.scenevibe.tvcompanionpoc.mediaexperiment.action.SHOW_PANEL";
 
-    /** Receives bounded diagnostics after each runtime step (never content/credentials). */
+    /** Optional in-process listener retained for bounded diagnostics. */
     interface DiagnosticsListener {
         /** Receive bounded mechanism facts after a service step. */
         void onDiagnostics(Diagnostics diagnostics, InterludeState state, boolean accessGranted);
     }
 
-    /** Local binder so the diagnostic Activity can drive the five actions in-process. */
+    /** Local binder retained for diagnostic/instrumentation use. */
     final class LocalBinder extends Binder {
-        /** Expose this service to the local diagnostic Activity. */
         InterludeService service() {
             return InterludeService.this;
         }
@@ -63,6 +63,7 @@ public final class InterludeService extends Service
     private AndroidMediaControlPort mediaControl;
     private AndroidOverlayVideoPort overlayVideo;
     private AndroidLocalAudioPort localAudio;
+    private DiagnosticOverlayWindow diagnosticOverlay;
     private final ElapsedRealtimeClock clock = new ElapsedRealtimeClock();
 
     private InterludeRuntime runtime;
@@ -71,7 +72,6 @@ public final class InterludeService extends Service
     private DiagnosticsListener listener;
 
     private final Runnable sampler = new Runnable() {
-        /** Drive the tested runtime with live active-session queries. */
         @Override
         public void run() {
             if (!sampling || runtime == null) return;
@@ -96,6 +96,16 @@ public final class InterludeService extends Service
         localAudio = new AndroidLocalAudioPort(this);
         runtime = new InterludeRuntime(scanner, audioFocus, mediaControl,
                 overlayVideo, localAudio, clock);
+
+        diagnosticOverlay = new DiagnosticOverlayWindow(this,
+                new DiagnosticOverlayWindow.Actions() {
+                    @Override public void scan() { scanMediaSession(); }
+                    @Override public void duck() { testAudioDuck(); }
+                    @Override public void pause() { testPause(); }
+                    @Override public void fullInterlude() { testFullInterlude(); }
+                    @Override public void emergencyStop() { emergencyStop(); }
+                });
+
         try {
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(new NotificationChannel(
@@ -108,13 +118,10 @@ public final class InterludeService extends Service
             Notification notification = new Notification.Builder(this, CHANNEL_ID)
                     .setSmallIcon(R.drawable.banner)
                     .setContentTitle(getString(R.string.interlude_notification_title))
-                    .setContentText(getString(R.string.interlude_notification_text))
+                    .setContentText("Diagnostic overlay ready above the native media app.")
                     .setContentIntent(open)
                     .setOngoing(true)
                     .build();
-            // The typed foreground-service-type overload exists from API 29. On
-            // 26-28 the service type comes solely from the manifest, so the 2-arg
-            // startForeground is correct there.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(NOTIFICATION_ID, notification,
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
@@ -129,7 +136,7 @@ public final class InterludeService extends Service
         }
     }
 
-    /** Validate foreground/overlay readiness without starting any test automatically. */
+    /** Validate readiness and show the diagnostic overlay when explicitly requested. */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!foregroundReady) {
@@ -140,16 +147,27 @@ public final class InterludeService extends Service
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (intent != null && ACTION_SHOW_PANEL.equals(intent.getAction())) {
+            try {
+                diagnosticOverlay.show();
+                publish();
+                Log.i(TAG, "DIAGNOSTIC_OVERLAY_SHOWN");
+            } catch (RuntimeException error) {
+                Log.e(TAG, "Diagnostic overlay attach failed", error);
+                stopSelf();
+                return START_NOT_STICKY;
+            }
+        }
         return START_STICKY;
     }
 
-    /** Return the local diagnostic binder without initiating media actions. */
+    /** Return the local binder without initiating media actions. */
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
     }
 
-    /** Attach or detach the local bounded-diagnostics listener. */
+    /** Attach or detach the optional in-process bounded-diagnostics listener. */
     void setDiagnosticsListener(DiagnosticsListener listener) {
         this.listener = listener;
     }
@@ -179,7 +197,6 @@ public final class InterludeService extends Service
     /**
      * TEST PAUSE: require live PLAYING, dispatch PAUSE, await bounded PAUSED.
      * Success ends this attempt without any cue, overlay, local video or PLAY.
-     * The operator must manually restart native media before the full test.
      */
     void testPause() {
         resetSampler();
@@ -200,8 +217,9 @@ public final class InterludeService extends Service
     }
 
     /**
-     * EMERGENCY RESTORE / STOP removes local audio/video/overlay and abandons focus.
-     * It always sends NO PLAY, even when this attempt owns a confirmed pause.
+     * EMERGENCY RESTORE / STOP removes local audio/video/interlude overlay and
+     * abandons focus. It always sends NO PLAY. The diagnostic control panel remains
+     * available so the operator can inspect the terminal state or start a new test.
      */
     void emergencyStop() {
         resetSampler();
@@ -224,14 +242,22 @@ public final class InterludeService extends Service
         handler.postDelayed(sampler, SAMPLE_INTERVAL_MS);
     }
 
-    /** Deliver coarse diagnostics without exposing media text or token values. */
+    /** Deliver coarse diagnostics to both overlay UI and optional in-process listener. */
     private void publish() {
-        if (listener != null && runtime != null) {
-            listener.onDiagnostics(runtime.diagnostics(), runtime.state(), accessGranted());
+        if (runtime == null) return;
+        Diagnostics diagnostics = runtime.diagnostics();
+        InterludeState state = runtime.state();
+        boolean granted = accessGranted();
+
+        if (diagnosticOverlay != null) {
+            diagnosticOverlay.update(diagnostics, state, granted);
+        }
+        if (listener != null) {
+            listener.onDiagnostics(diagnostics, state, granted);
         }
     }
 
-    // --- Overlay video callbacks (delivered on the main thread) ----------------
+    // --- Overlay video callbacks ---------------------------------------------
 
     /** Forward normal completion to the tested runtime for fresh guarded resume. */
     @Override
@@ -252,18 +278,28 @@ public final class InterludeService extends Service
         }
     }
 
-    /** Cancel polling and release every local resource when the service is destroyed. */
+    /** Cancel polling and release every local resource/window. */
     @Override
     public void onDestroy() {
         sampling = false;
         handler.removeCallbacks(sampler);
+        if (diagnosticOverlay != null) {
+            diagnosticOverlay.remove();
+        }
         if (runtime != null) {
             runtime.stop();
         }
         super.onDestroy();
     }
 
-    /** Convenience for the Activity to start this service as a foreground service. */
+    /** Start this service and explicitly request the diagnostic overlay panel. */
+    static void startWithPanel(Context context) {
+        Intent intent = new Intent(context, InterludeService.class);
+        intent.setAction(ACTION_SHOW_PANEL);
+        context.startForegroundService(intent);
+    }
+
+    /** Backward-compatible start helper without forcing panel visibility. */
     static void start(Context context) {
         context.startForegroundService(new Intent(context, InterludeService.class));
     }
