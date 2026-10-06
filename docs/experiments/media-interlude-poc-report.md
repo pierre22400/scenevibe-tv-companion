@@ -453,3 +453,28 @@ Build qualification for the corrected physical candidate:
 This correction is **ready for renewed physical qualification**. It does not itself
 prove audible ducking, native PAUSE ownership, fullscreen interlude rendering or guarded
 resume; those remain physical observations to execute in the operator protocol.
+
+
+## Sony physical audio-duck corrective — 2026-10-06
+
+Physical test on Sony BRAVIA with Prime Video foreground and the 0.1.2 overlay-controls candidate established:
+
+- SCAN PASS: Prime session selected as `com.amazon.amazonvideo.livingroom`, state `PLAYING`, play/pause/play_pause actions available, mediaId present.
+- TEST AUDIO DUCK: SceneVibe requested `USAGE_ASSISTANT / CONTENT_TYPE_SPEECH` with transient-may-duck focus; Android granted focus and Prime received `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK`.
+- Prime nevertheless transitioned to PAUSED without any SceneVibe PAUSE command. This is an application reaction to focus, not SceneVibe pause ownership.
+- The local spoken fixture then failed before playback: Sony/MediaTek logged `MtkMP4Extractor parseMP4Chunk error(-1007)`, followed by `MediaPlayerNative error (1, -2147483648)` and `LOCAL_AUDIO_START_FAILED`.
+- Runtime failed closed: focus was abandoned, SceneVibe did not claim pause ownership and did not dispatch PLAY.
+
+Corrective candidate 0.1.3 changes only local fixture transport:
+
+- `AndroidLocalAudioPort` copies the bundled `scenevibe_cue.m4a` byte-for-byte from `res/raw` to the app cache, then gives MediaPlayer a standalone file path.
+- This avoids the Sony/MediaTek extractor path that receives an APK file descriptor plus resource offset.
+- Audio-focus semantics, MediaSession scanning, pause ownership, safe-resume guard, overlay/video runtime and production `:app` remain unchanged.
+- Version: `versionCode=4`, `versionName=0.1.3-media-interlude-poc-audio-materialized`.
+- Corrective code commit: `76be69271328dc289df2cb75973bcbdc3b820856`.
+- Version bump commit: `5e845983a6bfc5aa83539b21ee2a334cf4e172ad`.
+- CI candidate commit: `3c0b49fac9de762f77a50893f168f047be96983b`.
+- GitHub Actions run: `37527203668` — SUCCESS.
+- Gate: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`, `:mediaexperiment:assembleDebug` — SUCCESS.
+- APK SHA-256: `5b1126b3e2b6c068f43ecf9b2308369317d979566b4e281b96d32176220d2d1c`.
+- Physical qualification of AUDIO DUCK remains pending on the 0.1.3 APK.
