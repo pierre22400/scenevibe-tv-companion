@@ -478,3 +478,27 @@ Corrective candidate 0.1.3 changes only local fixture transport:
 - Gate: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`, `:mediaexperiment:assembleDebug` — SUCCESS.
 - APK SHA-256: `5b1126b3e2b6c068f43ecf9b2308369317d979566b4e281b96d32176220d2d1c`.
 - Physical qualification of AUDIO DUCK remains pending on the 0.1.3 APK.
+
+
+## Sony physical audio-duck follow-up — 0.1.3 result and 0.1.4 ADTS candidate — 2026-10-06
+
+The 0.1.3 physical gate eliminated the APK-resource-offset hypothesis:
+
+- `LOCAL_AUDIO_MATERIALIZED bytes=7722` proves the bundled cue was copied successfully to a standalone cache file before MediaPlayer preparation.
+- Sony/MediaTek then parsed the standalone file and explicitly reported `Incompatible brand: M4A`.
+- The extractor reached the AAC-LC audio track (mono, 22050 Hz) but failed on the MP4 chunk table with `Invalid chunk size: 4`, `parseMP4Chunk error(-1007)`, then `MediaPlayerNative error (1, -2147483648)`.
+- `AndroidLocalAudioPort.playShortClip()` consequently failed at `MediaPlayer.prepare()`; runtime remained fail-closed and sent no SceneVibe transport PLAY.
+- Prime's pause on focus remains an application response to `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK`, not SceneVibe pause ownership.
+
+Corrective candidate 0.1.4 preserves the exact AAC-LC access units and removes only the rejected MP4/M4A container:
+
+- Source M4A: 41 AAC access units, 6745 bytes AAC payload.
+- New fixture: 7032-byte AAC/ADTS stream, same AAC access units, no audio re-encoding.
+- Resource renamed from `scenevibe_cue.m4a` to `scenevibe_cue.aac`; cache file follows the ADTS extension.
+- Audio-focus semantics, MediaSession discovery, pause ownership, safe-resume guard, overlay/video runtime and production `:app` are unchanged.
+- Corrective commit: `5c4cca5d0255b42d16e5c955d63b070e14dd09f9`.
+- Version: `versionCode=5`, `versionName=0.1.4-media-interlude-poc-audio-adts`.
+- GitHub Actions run: `37528995979` — SUCCESS.
+- Gate: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`, `:mediaexperiment:assembleDebug` — SUCCESS.
+- APK SHA-256: `00cc409e180dcbbb18b1a943cd00c6b95274261f0e14d01ac0251c7e0772db63`.
+- Physical AUDIO DUCK qualification remains pending on 0.1.4.
