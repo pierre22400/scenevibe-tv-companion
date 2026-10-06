@@ -1,6 +1,6 @@
 # Media Interlude Capability Spike — Corrective Pass
 
-> **Post-qualification fixture update — 6 October 2026.** The isolated ducking cue was replaced at source commit `75dcefbfafe7b23c7cd16d48ae85ba676c8ff2d3` by a locally generated French spoken fixture saying **“Bienvenue sur SceneVibe Audio”**. The file remains `mediaexperiment/src/main/res/raw/scenevibe_cue.m4a`, AAC-LC mono, 22.05 kHz, ~1.81 s. The interlude video fixture is unchanged. This fixture-only change does not alter pause/session/guard logic. The current overlay-controls physical candidate and its APK SHA-256 are recorded in section J.
+> **Physical qualification closure — 6 October 2026.** Sony BRAVIA / Prime Video qualification is now **CLOSED / PASS for the Media Interlude capability** on candidate `0.1.4-media-interlude-poc-audio-adts`. The spoken fixture still says **“Bienvenue sur SceneVibe Audio”** and keeps the original AAC-LC access units; only the rejected M4A container was replaced by ADTS. The isolated AUDIO DUCK experiment remains a **semantic FAIL for Prime on this Sony** because Prime reacts to `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK` by pausing rather than ducking. The controlled `PLAYING -> SceneVibe-owned PAUSE -> fullscreen local interlude -> fresh revalidation -> guarded PLAY -> PLAYING` path is physically validated end to end. Full physical evidence is recorded in section K.
 
 
 ## A. Status and scope
@@ -17,21 +17,28 @@ corrected. Automated decision, wiring, compilation, packaging and lint gates
 passed as described below. The frozen Python boundary suite retains its
 **14 expected experimental failures**, with no new failing test.
 
-**PHYSICAL SONY / PRIME: PARTIAL — HARNESS BLOCKER OBSERVED AND CORRECTED.**
-An authorized Sony run proved that Prime exposes a healthy PLAYING MediaSession
-before the original opaque POC Activity takes foreground, then the POC sampler
-falls to repeated NO_ACTIVE_SESSIONS after that Activity becomes foreground.
-That finding is recorded in section J. Audible ducking, POC-owned PAUSE,
-fullscreen interlude rendering and guarded resume remain NOT YET QUALIFIED on
-the corrected overlay-controls candidate.
+**PHYSICAL SONY / PRIME: CLOSED / PASS — MEDIA INTERLUDE CAPABILITY VALIDATED.**
+The physical campaign first exposed and corrected the opaque-Activity harness
+blocker, then isolated a Sony/MediaTek M4A parser incompatibility, and finally
+qualified candidate `0.1.4-media-interlude-poc-audio-adts`. SCAN and isolated
+PAUSE are physically PASS. AUDIO DUCK is mechanically functional but semantically
+FAIL for Prime on this Sony because Prime pauses on `MAY_DUCK` and does not
+self-resume. The full controlled interlude path is physically PASS: SceneVibe
+owns a confirmed PAUSE, renders the fullscreen local video, completes normally,
+freshly revalidates the original session in PAUSED state, sends one guarded PLAY,
+and observes Prime return to PLAYING. Section K records the exact observations
+and terminal diagnostics.
 
 - Repository: `pierre22400/scenevibe-tv-companion`.
 - Branch: `experiment/scenevibe-media-interlude-poc-001`.
 - Starting HEAD: `0d0f15dbd26732532f7f62e3897a88c72c61132c`.
 - Experimental base: `c9b0efd4acfaaae9ed7da13dcec505b2f653c548`.
-- Earlier core corrective checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.\n- Overlay-controls physical-candidate code checkpoint: `13e4684c19d18711befb8d1f5999fb71469b76cc`.
-- This report is a documentation-only commit after that checkpoint; the final
-  branch HEAD is supplied in the delivery. APK source bytes are unchanged by it.
+- Earlier core corrective checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.
+- Overlay-controls physical-candidate checkpoint: `13e4684c19d18711befb8d1f5999fb71469b76cc`.
+- Final audio-container corrective checkpoint: `5c4cca5d0255b42d16e5c955d63b070e14dd09f9`.
+- Qualified APK source/CI checkpoint: `69ef5c156ff0a180baffa1b4a667a8cbb831ff59`.
+- This report closure is documentation-only after the qualified APK bytes; the
+  final branch HEAD is supplied in the delivery.
 - No merge PR was opened and nothing was merged. Only this experimental branch
   is pushed after qualification. `main`, PR #15 and PR #16 are not modified.
 
@@ -247,78 +254,49 @@ cue deadline and controller disappearance between guard and dispatch.
 **AUTOMATED PASS below means logic/wiring/static/build evidence only. It does not
 mean a physical TV behavior passed.**
 
-| REQUIREMENT | IMPLEMENTED | AUTOMATED PASS | PHYSICAL TEST REQUIRED |
+| REQUIREMENT | IMPLEMENTED | AUTOMATED PASS | SONY / PRIME PHYSICAL RESULT |
 | --- | --- | --- | --- |
-| Scan is observation only | Yes, separate runtime action | Yes, scan-only test | Yes, actual Prime discovery |
-| Audio duck contains no pause/video | Yes, isolated focus/cue path | Yes, grant/deny/deadline tests | Yes, audible duck/restoration |
-| TEST PAUSE contains no cue/overlay/video/PLAY | Yes, pause-only mode | Yes, confirmed and timeout runtime tests | Yes, observed Prime PAUSED and absence of interlude |
-| Only PLAYING -> POC PAUSE -> observed PAUSED acquires ownership | Yes, explicit initial state and ownership | Yes, non-PLAYING matrix and dispatch race | Yes, real state reporting and pre-paused refusal |
-| Fresh live session/token/package validation | Yes, scanner uses SessionCatalog | Yes, package/token/missing/equal-adapter tests | Yes, platform session changes |
-| No resume after relevant-app/media change | Yes, relevance and identity checks | Yes, replacement/priority/competing/media tests | Yes, native app-switch behavior |
-| Latest live state must remain PAUSED | Yes, guard plus transport recheck | Yes, all non-PAUSED states rejected | Yes, genuine Prime state |
-| Full happy path issues one guarded PLAY and confirms PLAYING | Yes | Yes, real runtime/catalog seam | Yes, Prime pause/video/resume |
-| Error/STOP never sends PLAY; teardown idempotent | Yes; no emergency-resume branch | Yes, error/STOP/late-callback/removal tests | Yes, real surface/focus teardown |
-| Cue attributes precede preparation | Yes, new player then attributes/source/prepare/start | Yes, compiled source inspection and lint | Yes, audio behavior |
-| Bounded content-free diagnostics | Yes, coarse fields and enum reasons | Yes, source inspection and compiled UI | Yes, readability and diagnostic correspondence |
-| Isolated package, no app dependency or prohibited mechanisms | Yes, retained architecture | Yes, manifest/build inspection and empty app diff | Yes, later side-by-side installation |
-| Frozen boundary guards retained | Yes, unmodified | Yes, identical **expected 14-failure delta** | No |
+| Scan is observation only | Yes, separate runtime action | Yes, scan-only test | **PASS** — Prime discovered PLAYING with advertised play/pause/play_pause |
+| Audio duck contains no pause/video | Yes, isolated focus/cue path | Yes, grant/deny/deadline tests | **SEMANTIC FAIL on Prime/Sony** — cue audible on 0.1.4, but Prime pauses instead of ducking and does not self-resume |
+| TEST PAUSE contains no cue/overlay/video/PLAY | Yes, pause-only mode | Yes, confirmed and timeout runtime tests | **PASS** — Prime PAUSED; no cue, no SceneVibe video, no automatic PLAY |
+| Only PLAYING -> POC PAUSE -> observed PAUSED acquires ownership | Yes, explicit initial state and ownership | Yes, non-PLAYING matrix and dispatch race | **PASS on happy path** — sent=true, confirmed=true, ownership=true, initial=PLAYING |
+| Fresh live session/token/package validation | Yes, scanner uses SessionCatalog | Yes, package/token/missing/equal-adapter tests | **PASS on full happy path** — original session present and revalidation succeeded |
+| No resume after relevant-app/media change | Yes, relevance and identity checks | Yes, replacement/priority/competing/media tests | **NOT PHYSICALLY EXERCISED** in this closure |
+| Latest live state must remain PAUSED | Yes, guard plus transport recheck | Yes, all non-PAUSED states rejected | **PASS** — latest state before resume = PAUSED |
+| Full happy path issues one guarded PLAY and confirms PLAYING | Yes | Yes, real runtime/catalog seam | **PASS** — one PLAY sent and Prime observed PLAYING |
+| Error/STOP never sends PLAY; teardown idempotent | Yes; no emergency-resume branch | Yes, error/STOP/late-callback/removal tests | **NOT PHYSICALLY EXERCISED** in this closure |
+| Cue attributes precede preparation | Yes, new player then attributes/source/prepare/start | Yes, compiled source inspection and lint | **PASS mechanically** on 0.1.4; audio quality of fixture is poor but playback succeeds |
+| Bounded content-free diagnostics | Yes, coarse fields and enum reasons | Yes, source inspection and compiled UI | **PASS** — terminal diagnostics correspond to observed full flow |
+| Isolated package, no app dependency or prohibited mechanisms | Yes, retained architecture | Yes, manifest/build inspection and empty app diff | **PASS** — experimental package installed and exercised independently |
+| Frozen boundary guards retained | Yes, unmodified | Yes, identical **expected 14-failure delta** | No physical gate required |
 
-## F. APK and exact changed-file list
+## F. Qualified APK and exact changed-file list
 
-Current corrected physical candidate:
+Final physically qualified candidate:
 
 - Package: `com.scenevibe.tvcompanionpoc.mediaexperiment`.
-- versionName: `0.1.2-media-interlude-poc-overlay-controls`.
-- versionCode: `3`.
-- Build source code checkpoint: `13e4684c19d18711befb8d1f5999fb71469b76cc`.
-- GitHub Actions build run: `37524232444` — **SUCCESS**.
+- versionName: `0.1.4-media-interlude-poc-audio-adts`.
+- versionCode: `5`.
+- Final audio-container corrective commit: `5c4cca5d0255b42d16e5c955d63b070e14dd09f9`.
+- GitHub Actions candidate commit: `69ef5c156ff0a180baffa1b4a667a8cbb831ff59`.
+- GitHub Actions run: `37528995979` — **SUCCESS**.
 - Gate: `:mediaexperiment:testDebugUnitTest :mediaexperiment:lintDebug :mediaexperiment:assembleDebug`.
-- APK: `mediaexperiment-debug.apk`, **78,125 bytes**.
-- APK SHA-256: `aab99a593e36b64f63123e485fdda8ba73dd13173b69c14dd176aa4e0cb17210`.
+- APK SHA-256: `00cc409e180dcbbb18b1a943cd00c6b95274261f0e14d01ac0251c7e0772db63`.
 - The temporary build workflow was removed after artifact capture; its create/delete
-  commits do not alter the final source tree or APK source bytes.
+  commits do not alter the final source tree or qualified APK bytes.
+- Physical Sony/Prime qualification: **CLOSED / PASS for Media Interlude**.
 
-Exactly **30 files** differ from the report's starting HEAD
-`0d0f15dbd26732532f7f62e3897a88c72c61132c`:
+Exactly **31 files** differ from the report's starting HEAD
+`0d0f15dbd26732532f7f62e3897a88c72c61132c`. The final fixture transition is
+explicit: `scenevibe_cue.m4a` is removed and `scenevibe_cue.aac` is added.
+The production `app/` diff remains empty.
 
-```text
-docs/experiments/media-interlude-poc-report.md
-mediaexperiment/build.gradle
-mediaexperiment/src/main/AndroidManifest.xml
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidLocalAudioPort.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidMediaControlPort.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidOverlayVideoPort.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/DiagnosticOverlayWindow.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeService.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/MediaExperimentActivity.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/MediaSessionScanner.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/ActiveSessionSource.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/DeniedReason.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/Diagnostics.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/InterludeRuntime.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/InterludeStateMachine.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/PauseOwnership.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/PlaybackSnapshot.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SafeResumeGuard.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionCatalog.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionController.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionPort.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionRevalidation.java
-mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionTarget.java
-mediaexperiment/src/main/res/raw/scenevibe_cue.m4a
-mediaexperiment/src/main/res/values/styles.xml
-mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeRuntimeTest.java
-mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeStateMachineTest.java
-mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/SafeResumeGuardTest.java
-mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/SessionCatalogTest.java
-mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/TestFakes.java
-```
+## G. Operator protocol — executed Sony / Prime qualification
 
-## G. Short operator protocol — later authorized Sony / Prime qualification
-
-**Do not run or install as part of this corrective work. Physical qualification
-requires separate authorization. The following is the protocol for that later
-session, not a record of a test already performed.**
+This protocol was executed on 6 October 2026 against the isolated experimental
+package on the Sony BRAVIA. The historical sequence included the 0.1.2 harness
+candidate, the 0.1.3 materialized-M4A diagnostic candidate and the final 0.1.4
+ADTS candidate. Exact results are in sections J and K.
 
 1. Install the delivered experimental APK beside SceneVibe, keeping production
    pairing/data. Grant overlay and notification access to the **experimental**
@@ -502,3 +480,201 @@ Corrective candidate 0.1.4 preserves the exact AAC-LC access units and removes o
 - Gate: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`, `:mediaexperiment:assembleDebug` — SUCCESS.
 - APK SHA-256: `00cc409e180dcbbb18b1a943cd00c6b95274261f0e14d01ac0251c7e0772db63`.
 - Physical AUDIO DUCK qualification remains pending on 0.1.4.
+
+
+## K. Final Sony BRAVIA / Prime Video physical qualification — CLOSED / PASS — 2026-10-06
+
+### K.1 Environment and candidate
+
+- Device: Sony BRAVIA, Android TV 12.
+- Native provider under test: Prime Video package `com.amazon.amazonvideo.livingroom`.
+- Experimental package: `com.scenevibe.tvcompanionpoc.mediaexperiment`.
+- Candidate: `versionCode=5`, `versionName=0.1.4-media-interlude-poc-audio-adts`.
+- Qualified APK SHA-256:
+  `00cc409e180dcbbb18b1a943cd00c6b95274261f0e14d01ac0251c7e0772db63`.
+- Build run: GitHub Actions `37528995979` — SUCCESS.
+- Production SceneVibe application was not modified by this physical campaign.
+
+### K.2 Trial history and findings
+
+#### Trial 1 — original opaque diagnostic Activity
+
+Before the POC Activity took foreground, Android and SceneVibe both observed Prime
+as a healthy PLAYING MediaSession with advancing position. The original opaque
+Activity then caused the session to disappear from the POC's active-session view.
+This invalidated the physical test condition. The harness was corrected to use a
+short-lived translucent Activity plus a focusable `TYPE_APPLICATION_OVERLAY`
+control panel, leaving Prime underneath.
+
+**Result:** harness defect identified and corrected; not a Prime MediaSession failure.
+
+#### Trial 2 — SCAN MEDIA SESSION on corrected overlay harness
+
+Observed on the panel:
+
+- selected package: `com.amazon.amazonvideo.livingroom`
+- playback state: `PLAYING`
+- actions: `play=true pause=true play_pause=true`
+- mediaId present: `true`
+
+Prime remained visible and playing behind the narrow SceneVibe control panel.
+
+**Result: PASS.**
+
+#### Trial 3 — TEST AUDIO DUCK on 0.1.2
+
+SceneVibe requested transient-may-duck focus with
+`USAGE_ASSISTANT / CONTENT_TYPE_SPEECH`. Android granted focus and Prime received
+`AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK`. Prime nevertheless paused its own playback.
+SceneVibe had sent no PAUSE and therefore acquired no pause ownership.
+
+The spoken cue failed to start. Sony/MediaTek reported MP4 extractor failure and
+the runtime failed closed: focus was abandoned and no compensating PLAY was sent.
+
+**Result:** focus path works; target ducking semantics FAIL; local cue playback FAIL.
+
+#### Trial 4 — TEST AUDIO DUCK on 0.1.3 materialized M4A
+
+The resource was successfully copied to a standalone cache file
+(`LOCAL_AUDIO_MATERIALIZED bytes=7722`). Sony/MediaTek still rejected the
+standalone file: `Incompatible brand: M4A`, then `Invalid chunk size: 4`,
+`parseMP4Chunk error(-1007)`, `MediaPlayerNative error (1, -2147483648)`,
+and `MediaPlayer.prepare()` failed.
+
+This eliminated the APK file-descriptor/resource-offset hypothesis and isolated
+the incompatibility to the M4A/MP4 container path on this device.
+
+**Result:** diagnostic PASS; M4A container incompatible on this Sony/MediaTek path.
+
+#### Trial 5 — TEST AUDIO DUCK on final 0.1.4 AAC/ADTS candidate
+
+The exact original AAC-LC access units were remuxed from M4A into ADTS without
+re-encoding the voice.
+
+Physical observations:
+
+- Prime freezes/pauses: **YES**
+- spoken cue “Bienvenue sur SceneVibe Audio” audible: **YES**
+- Prime sound stops with the paused video: **YES**
+- Prime self-resumes when focus is abandoned: **NO**
+- cue quality: audibly poor/robotic, acceptable only as a test fixture
+
+The local-audio mechanism is therefore physically functional, but Prime does not
+honour the desired semantic meaning of MAY_DUCK on this Sony. It chooses a full
+pause and remains paused. Because SceneVibe did not send that PAUSE, the existing
+safety model correctly refuses to claim ownership and does not send PLAY.
+
+**Result: AUDIO DUCK = SEMANTIC FAIL for Prime/Sony; safety behavior = PASS.**
+
+Product consequence: do not treat transient-may-duck focus as a portable
+SceneVibe commentary-over-native-video mechanism. Any future provider capability
+matrix must distinguish actual provider/device behavior from Android focus intent.
+
+#### Trial 6 — TEST PAUSE
+
+Prime was manually restored to PLAYING before the test.
+
+Physical observations:
+
+- Prime pauses: **YES**
+- Prime remains paused: **YES**
+- SceneVibe spoken cue: **NO**
+- SceneVibe fullscreen video: **NO**
+- automatic PLAY: **NO**
+
+Terminal diagnostics:
+
+- `pause command sent = true`
+- `pause confirmed = true`
+- `pause ownership acquired = true`
+- `initial playback state = PLAYING`
+- `resume denied reason = NONE`
+
+**Result: PASS.** The isolated PAUSE test proves actual command dispatch,
+subsequent PAUSED observation and explicit SceneVibe pause ownership without
+audio-focus, cue, video or automatic resume.
+
+#### Trial 7 — TEST FULL INTERLUDE
+
+Prime was again manually restored to PLAYING before the independent full test.
+
+Physical observations:
+
+1. Prime paused: **YES**.
+2. SceneVibe fullscreen local interlude appeared: **YES**.
+3. The local interlude ended normally after approximately five seconds: **YES**.
+4. Prime resumed automatically: **YES**.
+
+Terminal diagnostics captured without starting a new SCAN/run:
+
+- `state = STOPPED`
+- `notification access = granted`
+- selected package = `com.amazon.amazonvideo.livingroom`
+- `playback state = PLAYING`
+- actions = `play=true pause=true play_pause=true`
+- `mediaId present = true`
+- `audio focus = granted`
+- `pause command sent = true`
+- `pause confirmed = true`
+- `pause timeout = false`
+- `initial playback state = PLAYING`
+- `pause ownership acquired = true`
+- `original session present = true`
+- `session revalidation attempted = true`
+- `session revalidation succeeded = true`
+- `relevant active package changed = false`
+- `latest state before resume = PAUSED`
+- `resume denied reason = NONE`
+- `overlay attached = true`
+- `local video completed = true`
+- `local video error = false`
+- `play command sent = true`
+- `resume confirmed = true`
+- `resume timeout = false`
+
+These diagnostics are internally consistent with the observed physical sequence:
+SceneVibe started from a live PLAYING Prime session, dispatched and confirmed its
+own PAUSE, acquired ownership, completed the local interlude normally, found the
+same original session still valid and PAUSED, passed the safe-resume guard,
+dispatched PLAY once, and subsequently observed PLAYING.
+
+**Result: TEST FULL INTERLUDE = PASS.**
+
+### K.3 Final verdict
+
+**MEDIA INTERLUDE CAPABILITY POC — SONY BRAVIA / PRIME VIDEO — CLOSED / PASS.**
+
+Physically proven on this provider/device pair:
+
+```text
+Prime PLAYING
+-> SceneVibe sends PAUSE
+-> same session observed PAUSED
+-> pause ownership acquired
+-> fullscreen local SceneVibe video
+-> normal local completion
+-> local resources/focus released
+-> original session freshly revalidated
+-> latest state still PAUSED
+-> safe-resume guard permits PLAY
+-> SceneVibe sends PLAY
+-> same native session observed PLAYING
+```
+
+This proves the controlled interlude mechanism on the qualified Sony/Prime pair.
+It does **not** prove universal provider/device compatibility. In particular,
+isolated AUDIO DUCK is explicitly not qualified as a usable Prime/Sony behavior.
+
+### K.4 Physically unexercised safety cases
+
+The automated suite covers these paths, but they were not required for this
+physical closure and must not be represented as physically tested:
+
+- relevant app/session/media changes during the interlude;
+- pre-paused refusal as a separate physical attempt;
+- emergency STOP during fullscreen local video;
+- repeated STOP/idempotence on device;
+- deliberate overlay/video failure;
+- focus denial and confirmation timeouts.
+
+They remain automated safety evidence, not Sony physical evidence.
