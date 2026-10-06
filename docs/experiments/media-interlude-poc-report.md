@@ -5,11 +5,17 @@
 
 ## A. Status and scope
 
-This remains an **ISOLATED EXPERIMENTAL CAPABILITY SPIKE**, **NOT M9** and
-**NOT PRODUCTION CODE**. The four pause/resume blockers and the local-cue
-AudioAttributes issue are corrected. Automated decision, wiring, compilation,
-packaging and lint gates passed as described below. The frozen Python boundary
-suite retains its **14 expected experimental failures**, with no new failing test.
+This remains an **ISOLATED EXPERIMENTAL CAPABILITY SPIKE**, **NOT A NUMBERED
+POST-M6 MILESTONE** and **NOT PRODUCTION CODE**. Under the canonical SceneVibe
+roadmap, its purpose is to feed the provider/device capability matrix for the
+future **Generic Multimedia Track Model** and to constrain what **SceneVibe Studio**
+may safely expose to creators for AUDIO/DUCK and VIDEO/PAUSE. It does not create a
+special Track type and does not authorize player-control production code.
+
+The four pause/resume blockers and the local-cue AudioAttributes issue are
+corrected. Automated decision, wiring, compilation, packaging and lint gates
+passed as described below. The frozen Python boundary suite retains its
+**14 expected experimental failures**, with no new failing test.
 
 **PHYSICAL SONY / PRIME: NOT TESTED.** No device or emulator was used and no APK
 was installed on the Sony. Audio-focus grants and JVM command counters are not
@@ -24,6 +30,11 @@ physical evidence of ducking, Prime pause/play or fullscreen rendering.
   branch HEAD is supplied in the delivery. APK source bytes are unchanged by it.
 - No merge PR was opened and nothing was merged. Only this experimental branch
   is pushed after qualification. `main`, PR #15 and PR #16 are not modified.
+
+Roadmap reference: the canonical post-M6 plan now uses unnumbered workstreams
+(controlled assets, Generic Multimedia Track Model, Public Track Platform,
+SceneVibe Studio, Creator/Identity/Publication) until M6 reconciliation and
+physical capability evidence justify final milestone numbering.
 
 ## B. Isolation and retained architecture
 
