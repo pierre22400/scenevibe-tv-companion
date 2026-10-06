@@ -57,7 +57,9 @@ workflows et signature sont inchangés. Les nouveaux modèles existent **NON-LIV
 ## Vrai oracle historique et provenance
 
 Les six fichiers suivants sont copiés **byte pour byte** depuis BASE_TV_M5 dans
-`app/src/test/resources/m5-phase-b/oracle/`. Les pins Git sont indépendants dans le
+`app/src/test/resources/m5-phase-b/oracle/` avec l’extension resource `.java.txt`.
+L’extension conserve les bytes et évite le filtre AGP `.java` ; la copie temporaire
+compilée reprend son nom Java original. Les pins Git sont indépendants dans le
 baseline, le gate Python et le wrapper JVM. Toute référence divergente fait échouer
 la qualification. Les sources de production correspondantes sont également figées.
 
@@ -201,12 +203,12 @@ comme un rejet du scheduler historique : ScheduledTrack n'est pas le parser Vide
 | Ajout test/oracle | `app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5MediaObservationTest.java` |
 | Ajout test/oracle | `app/src/test/java/com/scenevibe/tvcompanionpoc/calendar/M5SceneEventTest.java` |
 | Ajout test/oracle | `app/src/test/resources/m5-phase-b/corpus.json` |
-| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaIdentityMatcher.java` |
-| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaSessionAccessService.java` |
-| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaSessionProbe.java` |
-| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaSyncedTrackScheduler.java` |
-| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/NotificationAccess.java` |
-| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/ScheduledTrack.java` |
+| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaIdentityMatcher.java.txt` |
+| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaSessionAccessService.java.txt` |
+| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaSessionProbe.java.txt` |
+| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/MediaSyncedTrackScheduler.java.txt` |
+| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/NotificationAccess.java.txt` |
+| Ajout test/oracle | `app/src/test/resources/m5-phase-b/oracle/ScheduledTrack.java.txt` |
 | Ajout test/oracle | `tests/m5_phase_b_provenance.py` |
 | Ajout test/oracle | `tests/test_m5_phase_b_boundary.py` |
 | Ajout provenance | `.github/scripts/m5-phase-b-baseline.json` |
@@ -261,6 +263,14 @@ Après correction, une première exécution locale complète a donné 902 PASS /
 a échoué (historique sensible au scheduling). Le rerun des **mêmes bytes inchangés**
 a donné 903 PASS / 0 FAIL / 1 SKIP. Aucune assertion, timeout, source Cloud ou test
 retenu n’a été changé. Les deux tentatives restent distinguées de l’erreur CI B.
+
+Le debug `37417522815`, HEAD `f44907ec1ced9811de4e37386c877ada7c0b299e`,
+a ensuite compilé mais échoué sur 83 nouveaux tests oracle : les resources `.java`
+sont filtrées par AGP. Le seul autre échec était le test d’interruption historique
+ci-dessus. Les six resources sont renommées `.java.txt` sans changer un seul byte,
+blob oracle, seuil, branche ou callback. Aucun workflow/build/config n’est modifié.
+Le filtre est documenté dans [PackagingUtils officiel](https://android.googlesource.com/platform/tools/base/+/HEAD/build-system/builder/src/main/java/com/android/builder/packaging/PackagingUtils.java).
+Cette correction reste entièrement dans les nouvelles additions B.
 
 L'auto-audit couvre le diff complet, l'inventaire fini, l'absence de callers, la
 compilation JDK seule, imports/signatures, dépendances interdites, immutabilité,

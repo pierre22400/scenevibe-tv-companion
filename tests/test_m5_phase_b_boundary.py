@@ -141,6 +141,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
         self.assertEqual(ORACLE_BLOBS, {item['class']: item['blob'] for item in BASELINE['oracleSources']})
         harness = code(TEST + 'M5FrozenLegacyOracle.java')
         for item in BASELINE['oracleSources']:
+            self.assertTrue(item['resource'].endswith('.java.txt'))
             self.assertEqual(item['blob'], blob_hash((ROOT / item['resource']).read_bytes()), item['resource'])
             self.assertEqual(item['blob'], BASELINE['startingBlobs'][item['production']])
             self.assertIn(item['blob'], harness)

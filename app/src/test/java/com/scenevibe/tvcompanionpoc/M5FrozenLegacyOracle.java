@@ -77,7 +77,7 @@ final class M5FrozenLegacyOracle {
         Path classes = Files.createDirectory(directory.resolve("classes"));
         List<String> sources = new ArrayList<>();
         for (Map.Entry<String, String> entry : BLOBS.entrySet()) {
-            byte[] bytes = resource("oracle/" + entry.getKey() + ".java");
+            byte[] bytes = resource("oracle/" + entry.getKey() + ".java.txt");
             if (!entry.getValue().equals(blob(bytes))) {
                 throw new IllegalStateException("Frozen oracle Git blob mismatch");
             }
