@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Implement the Android-free CORE of the POC: a deterministic interlude state machine and a safe-resume guard, with all Android dependencies behind injectable interfaces, plus the full set of required pure-JVM JUnit4 tests. This is the heart of the capability spike's correctness and is testable off-device. No Android framework classes may be referenced by the core logic classes (only plain Java), so the tests run under testOptions.unitTests.returnDefaultValues without needing a device. This feature depends on FEAT-001 (module exists).",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "In mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/ create an Android-free enum InterludeState modeling the sequence: IDLE, SCANNING, FOCUS_REQUESTED, FOCUS_GRANTED, FOCUS_DENIED, PAUSE_SENT, PAUSE_CONFIRMED, PAUSE_TIMEOUT, OVERLAY_ATTACHED, VIDEO_PLAYING, VIDEO_COMPLETED, VIDEO_ERROR, PLAY_SENT, PLAY_CONFIRMED, PLAY_TIMEOUT, STOPPED/CLEANED. Keep names explicit and bounded.",
     "Create InterludeStateMachine (plain Java) that enforces legal transitions ONLY. It must: never move to a PLAY_SENT state unless the guard permits (see SafeResumeGuard); treat an out-of-order or unexpected event as a transition to a cleanup/STOPPED state rather than crashing; expose the current state and a bounded transition log (enum values only, no content strings).",
