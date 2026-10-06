@@ -1,256 +1,348 @@
-# Media Interlude Capability Spike Report
+# Media Interlude Capability Spike — Corrective Pass
 
-## A. Overview
+## A. Status and scope
 
-This document reports an **experimental capability spike**, not production code. It is
-**NOT M9** and **NOT** part of any shipping SceneVibe release. The spike exists only to
-gather engineering evidence for three capability questions, using an isolated,
-side-by-side Android TV app:
+This remains an **ISOLATED EXPERIMENTAL CAPABILITY SPIKE**, **NOT M9** and
+**NOT PRODUCTION CODE**. The four pause/resume blockers and the local-cue
+AudioAttributes issue are corrected. Automated decision, wiring, compilation,
+packaging and lint gates passed as described below. The frozen Python boundary
+suite retains its **14 expected experimental failures**, with no new failing test.
 
-1. Can the companion request **audio ducking** (transient, may-duck) while another app
-   (for example Prime Video) is the active media owner?
-2. Can the companion **pause and later resume** the active media session through the
-   `MediaController` transport, confirmed by observed `PlaybackState` transitions rather
-   than by firing-and-hoping?
-3. Can the companion present a **fullscreen local video interlude** over the paused
-   content and then **safely resume** only when it still owns the same media identity?
+**PHYSICAL SONY / PRIME: NOT TESTED.** No device or emulator was used and no APK
+was installed on the Sony. Audio-focus grants and JVM command counters are not
+physical evidence of ducking, Prime pause/play or fullscreen rendering.
 
-The spike answers these questions at the level of **logic, packaging, and static checks
-only**. The real audio, real Prime transport, and real on-TV overlay behavior are
-explicitly **NOT** verified here (see section E).
+- Repository: `pierre22400/scenevibe-tv-companion`.
+- Branch: `experiment/scenevibe-media-interlude-poc-001`.
+- Starting HEAD: `0d0f15dbd26732532f7f62e3897a88c72c61132c`.
+- Experimental base: `c9b0efd4acfaaae9ed7da13dcec505b2f653c548`.
+- Corrective code / APK source checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.
+- This report is a documentation-only commit after that checkpoint; the final
+  branch HEAD is supplied in the delivery. APK source bytes are unchanged by it.
+- No merge PR was opened and nothing was merged. Only this experimental branch
+  is pushed after qualification. `main`, PR #15 and PR #16 are not modified.
 
-## B. Isolation
+## B. Isolation and retained architecture
 
-Isolation is the core requirement of this spike. The experimental app is a **separate
-Gradle module** (`:mediaexperiment`) with a **distinct applicationId**
-`com.scenevibe.tvcompanionpoc.mediaexperiment`, so it installs **side-by-side** with the
-production `:app` and shares **none** of the following with it:
+The installable module remains `:mediaexperiment`, with the distinct applicationId
+`com.scenevibe.tvcompanionpoc.mediaexperiment`. It has no `:app` dependency and no
+shared pairing, Installation ID, Cloud device ID, preferences, cache or database.
+It retains MediaSession-only transport, local `TYPE_APPLICATION_OVERLAY` video,
+a `mediaPlayback` foreground service and an Android-free Java decision core.
 
-- SharedPreferences
-- Installation ID
-- Cloud device ID / Cloud client
-- Pairing state
-- Cache
-- Database
-- Signing-identity assumptions
-- BootReceiver / autostart
+The corrective diff changes **only `mediaexperiment/` and this existing report**.
+`settings.gradle` has not changed during the corrective pass: its existing
+`include(":mediaexperiment")` is the experimental delta inherited from the spike.
+No production `app/`, Cloud, durable installation, ACK, scheduler, FinalTrack,
+M6 WALL code, `.github/`, boundary test or frozen baseline is modified.
 
-The experimental module contains **no** Cloud client, **no** SceneVibe assignment logic,
-**no** FinalTrack ingestion, and **no** `PackageInstaller` usage. It declares **no**
-`INTERNET` and **no** `RECEIVE_BOOT_COMPLETED` permission and ships **no** BootReceiver.
-It does **not** depend on `project(":app")`; it only **mirrors** `:app`'s toolchain
-(compileSdk 35 / minSdk 26 / targetSdk 35 / Java 17 / `testOptions.unitTests.returnDefaultValues`).
+Measured check:
 
-The **only** change made to any shared or root file is the single mandatory one-line
-module registration in `settings.gradle` (`include(":mediaexperiment")`) plus the
-gitignored `local.properties`. **No file under `app/` was modified** (verified by
-`git diff --stat` against the pre-spike commit: empty).
-
-## C. Implemented
-
-The following was built in the isolated `:mediaexperiment` module:
-
-- **Isolated Android TV application module** `:mediaexperiment` with its own
-  `build.gradle`, manifest, resources, and assets. No dependency on `:app`.
-- **Manifest** declaring:
-  - `SYSTEM_ALERT_WINDOW` (for the fullscreen local interlude overlay).
-  - `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` (typed permission that
-    matches `foregroundServiceType="mediaPlayback"`, as required by targetSdk 35).
-  - A `mediaPlayback` **foreground service**.
-  - Its **own** `NotificationListenerService` (`ExperimentMediaAccessService`) pointing at
-    its **own** `ComponentName`, with an isolated notification-access check (equivalent of
-    `:app`'s `NotificationAccess`, not shared).
-  - A `LEANBACK_LAUNCHER` diagnostic Activity (`MediaExperimentActivity`).
-- **AudioFocusPort** requesting `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with
-  `USAGE_ASSISTANT` / `CONTENT_TYPE_SPEECH`.
-- **MediaControlPort** issuing transport `pause()` / `play()` through a `MediaController`
-  (MediaSession transport controls only; **no** accessibility, **no** simulated remote
-  buttons, **no** `adb input`, **no** coordinate injection, **no** UI scraping).
-- **OverlayVideoPort**: fullscreen `TYPE_APPLICATION_OVERLAY` window with a `TextureView` +
-  `MediaPlayer` playing a bundled local `assets/interlude.mp4`. Unlike `:app`'s passive
-  commentary overlay, this one is interactive and `MATCH_PARENT`, so it does **not** use
-  `FLAG_NOT_TOUCHABLE`.
-- **LocalAudioPort** playing a bundled short cue (`res/raw/scenevibe_cue.m4a`).
-- **Android-free core logic** (plain Java, no Android framework references, JUnit-testable
-  under `returnDefaultValues`):
-  - `InterludeStateMachine` enforcing only legal transitions, routing unexpected events to
-    a cleanup/STOPPED state rather than crashing, with a bounded enum-only transition log.
-  - `SafeResumeGuard` (fail-closed) that permits a resume `PLAY` only when the same media
-    identity is still owned and the pause was actually confirmed.
-  - **Intentional fail-safe narrowing:** although `SafeResumeGuard` can also authorize a
-    resume during explicit emergency cleanup, the state machine never drives that branch at
-    runtime. Every emergency or error teardown (`STOP`, overlay/video failure, out-of-order
-    events) tears down and leaves the other app paused WITHOUT issuing `PLAY`; only the
-    normal interlude-completed path attempts a guarded resume. This is deliberately more
-    conservative than the spec, which permits resume during emergency cleanup, because an
-    automatic `PLAY` while the POC's own overlay or playback is failing is the riskier
-    behavior. The emergency-resume branch therefore exists in the guard (and is covered by a
-    unit test) but is not reachable at runtime by design.
-- **TV diagnostic UI** (`MediaExperimentActivity`), programmatic D-pad layout, with five
-  operator actions plus stop: **SCAN MEDIA SESSION**, **TEST AUDIO DUCK**, **TEST PAUSE**,
-  **TEST FULL INTERLUDE**, **EMERGENCY RESTORE**, **STOP**, and bounded on-screen
-  diagnostics.
-
-## D. Automated Pass
-
-All automated gates below were run **locally in this sandbox** and passed. They prove
-**logic correctness, packaging, and static checks ONLY**. They prove **nothing** about
-real audio, real Prime transport, or real on-TV rendering.
-
-### Toolchain note
-
-- Local builds used **Gradle 8.14.5** at
-  `/root/.local/share/mise/installs/gradle/8.14/gradle-8.14.5/bin/gradle`, with
-  **JDK 17** (`/opt/toolchains/.local/share/mise/installs/java/17.0.2`) and
-  `ANDROID_HOME=/opt/android-sdk`.
-- **CI uses Gradle 8.9**, which is **not installed in this sandbox** (there is no 8.9
-  binary here). The 8.14.5 toolchain assembles, lints, and tests cleanly; it only emits
-  harmless Gradle 9 deprecation warnings. This toolchain difference is called out here for
-  transparency; the CI gate should be re-run on Gradle 8.9 to confirm parity.
-
-### Commands and results
-
-Gate command (all four targets green):
-
+```bash
+git diff c9b0efd4acfaaae9ed7da13dcec505b2f653c548 -- app/
 ```
-JAVA_HOME=/opt/toolchains/.local/share/mise/installs/java/17.0.2 \
-ANDROID_HOME=/opt/android-sdk \
-/root/.local/share/mise/installs/gradle/8.14/gradle-8.14.5/bin/gradle \
-  :app:assembleDebug \
-  :mediaexperiment:testDebugUnitTest \
+
+Result: **empty**. The corrective diff against the starting HEAD is also empty
+for `app/`, `tests/`, `.github/`, root build configuration and `settings.gradle`.
+
+Static source/manifest/build inspection found no operational use of an
+AccessibilityService, simulated remote/input, `adb input`, coordinate injection,
+UI scraping, `setStreamVolume`, Cloud client, FinalTrack ingestion,
+PackageInstaller, BootReceiver or boot/autostart registration. The experimental
+manifest has no INTERNET or RECEIVE_BOOT_COMPLETED permission. References to
+forbidden mechanisms in explanatory comments are not implementations.
+
+## C. Corrected implementation
+
+### Independent operator flows
+
+`InterludeService` delegates its separate actions to the Android-free
+`InterludeRuntime`, which is exercised by the runtime/catalog tests. No full-test
+entry point calls the pause-only action.
+
+| Action | Sequence and effect |
+| --- | --- |
+| SCAN MEDIA SESSION | Query and record coarse session/action facts only. No focus, cue, transport or video. |
+| TEST AUDIO DUCK | Request transient-may-duck focus; if granted, play the local cue only. Stop cue and abandon focus after a bounded two seconds. No PAUSE or video. |
+| TEST PAUSE | Require a live PLAYING target advertising PAUSE/PLAY_PAUSE, send PAUSE, await a subsequent PAUSED observation within four seconds. Report confirmed/timeout and end. No focus request, cue, overlay, local video or automatic PLAY. |
+| TEST FULL INTERLUDE | Require live PLAYING, request focus for the bundled video's audio, recheck PLAYING, send PAUSE, confirm same-session PAUSED, attach/play fullscreen local video, finish normally, remove local resources, freshly validate the original live session, guard one PLAY, await PLAYING within four seconds. No duck-test cue. |
+| EMERGENCY RESTORE / STOP | Stop local media, remove overlay and abandon focus. Idempotent; always NO PLAY. The operator resumes native media manually. |
+
+The full flow retains a pre-pause focus gate because `interlude.mp4` contains an
+AAC audio stream alongside H.264 video. A denied focus request causes no native
+PAUSE and no local video. The player state is freshly checked **after** focus,
+so a native player that independently pauses in response to focus cannot have
+that pause claimed. The isolated PAUSE test does not take this focus path.
+
+The service polls once per second on the main thread. A new operator action
+cancels earlier sampler callbacks and tears down the previous attempt without
+PLAY. The duck deadline belongs to its own machine, so an earlier cue cannot
+later abandon focus belonging to a new interlude.
+
+### Explicit pause ownership
+
+`PauseOwnership` records the initial playback state, PAUSE sent, subsequent
+PAUSED confirmed, and normal completion. `ownsPause()` requires:
+
+```text
+observed PLAYING immediately before dispatch
+-> this POC dispatched PAUSE
+-> a subsequent same-session/media observation confirmed PAUSED
+```
+
+`SessionCatalog.pause()` also performs a fresh active-session/token/PLAYING/action
+check immediately at transport dispatch. Sent is never treated as confirmed.
+Already PAUSED, BUFFERING, STOPPED, NONE, ERROR, CONNECTING, skipping/seeking or
+unknown initial state cannot acquire ownership or launch the interlude.
+
+### Live session-token revalidation
+
+The Android scanner wraps controllers from
+`MediaSessionManager.getActiveSessions(ownNotificationListenerComponent)` in a
+thin `SessionController` adapter. Each `PlaybackSnapshot` carries the actual
+`MediaController.getSessionToken()` as an **opaque Object**. The captured
+`SessionTarget` retains that token separately from package and media metadata.
+Tokens are compared by equality; their contents are never logged or persisted.
+
+`SessionCatalog` is the Android-free selection/revalidation seam used by the
+**real scanner**, the runtime observations and the transport port. It queries
+the source afresh rather than holding and sampling a stale controller.
+
+Before guarded PLAY it requires the original token to be present exactly once,
+the package to match, sufficient media identity to remain consistent, and no
+competing relevant session. The platform priority owner at index zero and any
+other playing/preparing/seeking session are treated conservatively: a changed
+priority owner or competing active playback denies resume, including a paused
+replacement owner. Multiple PLAYING sessions at selection, missing tokens,
+duplicate token entries, failed queries or lost access also fail closed.
+
+A different controller **adapter instance** with an equal original token is
+allowed; the same package/media with a **different token** is denied. A lower
+priority inactive session alone does not replace the original relevant owner.
+Relevance is inferred from observable MediaSession priority/state, not from
+foreground-app inspection. An app switch producing no observable session/state
+change cannot be proved by this seam; this POC adds no UI scraping to infer it.
+
+During the video, each poll can invalidate the session and immediately tear down.
+Normal completion first removes local video/overlay/audio and abandons focus,
+then performs a new query. `SafeResumeGuard` requires all ownership facts, normal
+completion, successful original-token/package/media/relevance revalidation and
+a latest live **STATE_PAUSED**. `SessionCatalog.play()` rechecks again at actual
+dispatch to catch disappearance/change between guard evaluation and transport.
+The fresh recheck cannot make external app changes atomic with Android transport;
+uncertainty detected before dispatch always denies PLAY.
+
+No cached snapshot alone authorizes PLAY. No emergency/error branch authorizes
+resume; the old `emergencyCleanup` semantic branch was removed. Failure of local
+resource teardown also denies normal resume. Late callbacks after STOP are
+ignored, and player completion/error/prepared callbacks are tied to the owned
+MediaPlayer lifetime. Synchronous local-video errors cannot overwrite STOPPED
+with VIDEO_PLAYING.
+
+### Audio duck implementation
+
+`AndroidLocalAudioPort` now uses `new MediaPlayer()`, configures
+`USAGE_ASSISTANT` / `CONTENT_TYPE_SPEECH`, sets the bundled raw-resource data
+source, and only then calls `prepare()` followed by `start()`. It no longer uses
+an already-prepared `MediaPlayer.create()` followed by late attributes.
+Partially prepared players are retained for reliable cleanup on failure.
+
+`AndroidAudioFocusPort` still requests `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with
+`USAGE_ASSISTANT` / `CONTENT_TYPE_SPEECH`. It does not manipulate Prime or stream
+volume. A granted request does not prove that Prime actually ducked.
+
+### Bounded diagnostics
+
+The operator UI includes initial playback state, pause ownership acquired,
+original session identity present, revalidation attempted/succeeded, relevant
+active package changed, latest state before resume and an enum-only denial
+reason, alongside the earlier sent/confirmed/timeout flags. No title, subtitle,
+media content, token contents or credentials are logged. Media metadata stays
+internal to the transient comparison. `localVideoStarted` records the requested
+local playback path; it is not proof of physically visible rendering.
+
+## D. Automated qualification
+
+Toolchain: **Gradle 8.9**, **Temurin JDK 17.0.20.1+1**, Android SDK platform 35,
+Build Tools 34.0.0 and 35.0.0 installed. Local dependency transport settings are
+outside the repository. No build-file changes or lint suppressions were used to
+force the gate green.
+
+The full local gate was:
+
+```bash
+gradle --no-daemon --console=plain --stacktrace \
+  :app:assembleDebug :app:lintDebug :app:testDebugUnitTest \
   :mediaexperiment:lintDebug \
-  :mediaexperiment:assembleDebug --console=plain
+  :mediaexperiment:testDebugUnitTest \
+  :mediaexperiment:assembleDebug
 ```
 
-Result: **BUILD SUCCESSFUL**.
+Result: **BUILD SUCCESSFUL** (96 tasks executed on the full gate).
 
-- `:app:assembleDebug`: **green** (regression anchor; `:app` deliberately untouched).
-- `:mediaexperiment:lintDebug`: **green** (no lint errors; no isolation-relevant
-  suppressions added).
-- `:mediaexperiment:assembleDebug`: **green**; produced the debug APK (see section F).
-- `:mediaexperiment:testDebugUnitTest`: **green**, **17 tests, 0 failures, 0 errors**
-  across the Android-free core:
-  - `InterludeStateMachineTest`: **9 tests, 0 failures**. These are the nine required
-    scenarios:
-    1. `happyPath_confirmedOwned_playsExactlyOnce`
-    2. `focusDenied_noPauseNoAudio_zeroPlay`
-    3. `pauseTimeout_notConfirmed_doesNotContinue_zeroPlay`
-    4. `sessionReplacement_differentPackage_guardFails_zeroPlay`
-    5. `mediaIdentityChange_samePackageNewId_guardFails_zeroPlay`
-    6. `overlayFailure_emergencyCleanup_zeroPlay`
-    7. `repeatedStop_isIdempotent`
-    8. `noAccidentalPlay_afterUnconfirmedPause`
-    9. `pauseSentIsNotPauseConfirmed`
-  - `SafeResumeGuardTest`: **8 tests, 0 failures**:
-    `allConditionsHold_true`, `pauseNotSent_false`, `pauseSentButNotConfirmed_false`,
-    `mediaIdentityChanged_false`, `appSwitchedToDifferentPackage_false`,
-    `noObservationAvailable_false`, `interludeNotEndedNormallyAndNotEmergency_false`,
-    `emergencyCleanupAllowsResumeWhenOtherwiseOwned_true`.
+| Gate | Measured result |
+| --- | --- |
+| `:app:assembleDebug` | PASS |
+| `:app:lintDebug` | PASS; 0 errors/fatal, 24 warnings on unchanged production sources |
+| `:app:testDebugUnitTest` | 1,051 discovered: **1,050 passed, 1 skipped**, 0 failures/errors |
+| `:mediaexperiment:lintDebug` | PASS; 0 errors/fatal, 7 warnings |
+| `:mediaexperiment:testDebugUnitTest` | **63 passed**, 0 failures/errors/skipped |
+| `:mediaexperiment:assembleDebug` | PASS |
+| APK inspection/signature | Distinct package/version verified; APK v2 signature verifies |
+| `git diff --check` | PASS |
+| Production diff against experimental base | Empty |
+| Python boundary suite | **118 tests: 104 passed, 14 expected failures**, same failing tests before/after |
 
-Python boundary suite:
+The seven experimental lint warnings are one VectorRaster, one DataExtractionRules
+and five SetTextI18n warnings. They do not concern pause ownership, session identity,
+MediaPlayer preparation or prohibited control mechanisms. They are reported rather
+than suppressed.
 
-```
-python3 -m unittest discover -s tests
-```
+JVM breakdown:
 
-Result: **Ran 118 tests, 10 failures** (all solely the `settings.gradle` module-include
-byte pin; see section H). Everything else in the boundary suite passes.
+| Test class | Passed |
+| --- | ---: |
+| `InterludeStateMachineTest` | 9 |
+| `SafeResumeGuardTest` | 12 |
+| `InterludeRuntimeTest` | 32 |
+| `SessionCatalogTest` | 10 |
+| **Total** | **63** |
 
-**Explicit scope limit:** the above proves state-machine and guard **logic**, APK
-**packaging**, and **static analysis** only. No automated gate here exercises real audio
-focus, a real `MediaController` against Prime Video, or real overlay rendering on a TV.
+The useful original nine machine tests and valid guard scenarios are retained,
+with explicit live-session inputs. The obsolete emergency-resume-positive test
+is replaced by the pre-existing-pause ownership rejection. Runtime/catalog
+coverage changes the actual active-controller inventory source used by Android,
+including replacement/missing sessions and a dispatch-time race; it does not
+merely inject a different package into a stale-controller core test.
 
-## E. Physical Sony / Prime NOT YET TESTED
+The runtime tests cover every required case: denied focus, isolated duck/pause,
+PAUSE sent versus confirmed, full/pause-only timeout, all non-PLAYING initial
+states, one guarded PLAY on normal completion, package/token replacement,
+original disappearance, another relevant app, media change, every non-PAUSED
+latest state, overlay/video error, repeated STOP, and unsupported/unconfirmed
+pause. Extra checks cover query/access failure, priority-owner replacement,
+focus-induced pause, synchronous video error, overlay-removal failure, stale
+cue deadline and controller disappearance between guard and dispatch.
 
-The following are **physical behaviors** and are **NOT verified** by anything in this
-sandbox. No emulator was available and no physical device was used, so **no JVM or
-emulator claim is made** about any of them:
+## E. Requirement audit
 
-- **Real audio ducking** while Prime Video is actively playing. NOT TESTED.
-- **Real Prime Video MediaSession pause/play confirmation** (observing a true
-  `PlaybackState` transition to PAUSED and back on real content). NOT TESTED.
-- **Real fullscreen interlude** rendered over genuinely paused Prime content on a real TV,
-  and **real safe resume** afterward. NOT TESTED.
+**AUTOMATED PASS below means logic/wiring/static/build evidence only. It does not
+mean a physical TV behavior passed.**
 
-The **Sony BRAVIA is reserved for M5** and **MUST NOT be used for this spike**. Do **NOT**
-install the experimental APK on the Sony for this work. Physical validation is deferred to
-a later, deliberately scheduled on-hardware session following the operator protocol in
-section G.
+| REQUIREMENT | IMPLEMENTED | AUTOMATED PASS | PHYSICAL TEST REQUIRED |
+| --- | --- | --- | --- |
+| Scan is observation only | Yes, separate runtime action | Yes, scan-only test | Yes, actual Prime discovery |
+| Audio duck contains no pause/video | Yes, isolated focus/cue path | Yes, grant/deny/deadline tests | Yes, audible duck/restoration |
+| TEST PAUSE contains no cue/overlay/video/PLAY | Yes, pause-only mode | Yes, confirmed and timeout runtime tests | Yes, observed Prime PAUSED and absence of interlude |
+| Only PLAYING -> POC PAUSE -> observed PAUSED acquires ownership | Yes, explicit initial state and ownership | Yes, non-PLAYING matrix and dispatch race | Yes, real state reporting and pre-paused refusal |
+| Fresh live session/token/package validation | Yes, scanner uses SessionCatalog | Yes, package/token/missing/equal-adapter tests | Yes, platform session changes |
+| No resume after relevant-app/media change | Yes, relevance and identity checks | Yes, replacement/priority/competing/media tests | Yes, native app-switch behavior |
+| Latest live state must remain PAUSED | Yes, guard plus transport recheck | Yes, all non-PAUSED states rejected | Yes, genuine Prime state |
+| Full happy path issues one guarded PLAY and confirms PLAYING | Yes | Yes, real runtime/catalog seam | Yes, Prime pause/video/resume |
+| Error/STOP never sends PLAY; teardown idempotent | Yes; no emergency-resume branch | Yes, error/STOP/late-callback/removal tests | Yes, real surface/focus teardown |
+| Cue attributes precede preparation | Yes, new player then attributes/source/prepare/start | Yes, compiled source inspection and lint | Yes, audio behavior |
+| Bounded content-free diagnostics | Yes, coarse fields and enum reasons | Yes, source inspection and compiled UI | Yes, readability and diagnostic correspondence |
+| Isolated package, no app dependency or prohibited mechanisms | Yes, retained architecture | Yes, manifest/build inspection and empty app diff | Yes, later side-by-side installation |
+| Frozen boundary guards retained | Yes, unmodified | Yes, identical **expected 14-failure delta** | No |
 
-## F. Deliverables
+## F. APK and exact changed-file list
 
-- **Branch:** `experiment/scenevibe-media-interlude-poc-001`
-- **HEAD at build time (code commit):** `75bb58d64342e00c1138148c8a42508d934c46d2`
-  (`75bb58d`). This report is committed on top of that code commit, so the branch tip
-  moves forward by exactly this docs commit; the built APK below corresponds to the
-  `75bb58d` code state.
-- **Package id:** `com.scenevibe.tvcompanionpoc.mediaexperiment`
-- **versionName:** `0.1.0-media-interlude-poc` (versionCode `1`)
-- **APK path:** `mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk`
-- **APK SHA-256:**
-  `48fd2e4ce41c8e92acd288bc3379b321d6dd55af0be3817d684837f27a306462`
+- Code checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.
+- Package: `com.scenevibe.tvcompanionpoc.mediaexperiment`.
+- versionName: `0.1.1-media-interlude-poc-corrective`.
+- versionCode: `2`.
+- Build APK path: `mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk`.
+- APK size: **80,457 bytes**.
+- APK SHA-256: `aed354daa66ada3c3cb97820a9e2904b4e5aaa359e7162ee54162064e4c15a35`.
+- APK signature: debug-signed; verified with `apksigner verify --verbose`.
 
-**APK digest caveat:** this is a **debug** build signed with the ephemeral Android debug
-keystore. The SHA-256 is therefore **informational and non-reproducible** across machines
-and rebuilds (the debug signature and build timestamps differ per environment). Treat the
-digest as a record of the artifact produced in this sandbox, not as a reproducible release
-hash.
+This digest identifies this delivered APK. A different debug keystore or rebuild
+can produce a different APK digest; it is not a reproducible release-hash claim.
+The final documentation-only commit does not change APK source bytes.
 
-## G. Operator Protocol (for later physical testing)
+Exactly **26 files** change from the starting HEAD (25 code/build/test files
+and this existing report):
 
-To be run **by a human on real hardware** in a future, deliberately scheduled session (not
-on the Sony reserved for M5):
-
-1. Install the experimental APK **beside** the production SceneVibe app (distinct
-   applicationId means they coexist; do not uninstall SceneVibe).
-2. In Android TV settings, grant the **experimental** app:
-   - **Display over other apps** (Settings > Apps > Special app access > Display over other
-     apps), and
-   - **Notification access** (Settings > Apps > Special app access > Notification access),
-   pointing at the **experimental** app only, not SceneVibe.
-3. Open **Prime Video** and start playback of any title; let it play.
-4. Launch the experimental diagnostic app and run the actions in order, recording the
-   observed `PlaybackState` transitions at each step:
-   1. **SCAN MEDIA SESSION**: confirm the active Prime session is discovered.
-   2. **TEST AUDIO DUCK**: confirm Prime audio ducks (quiets) while the cue plays, then
-      restores.
-   3. **TEST PAUSE**: confirm the session reports **PAUSED** (observe the transition, do
-      not assume).
-   4. **TEST FULL INTERLUDE**: confirm the fullscreen local interlude renders over the
-      paused content.
-   5. **Verify safe resume**: confirm playback resumes only if the same media identity is
-      still owned.
-   6. **EMERGENCY RESTORE / STOP**: confirm the overlay is torn down and no accidental
-      PLAY is issued.
-5. Record every observed `PlaybackState` transition and any divergence from the expected
-   state-machine sequence.
-
-Android documentation references:
-[MediaController](https://developer.android.com/reference/android/media/session/MediaController),
-[MediaSession](https://developer.android.com/reference/android/media/session/MediaSession),
-[Audio focus](https://developer.android.com/guide/topics/media-apps/audio-focus),
-[Display over other apps](https://developer.android.com/reference/android/provider/Settings#ACTION_MANAGE_OVERLAY_PERMISSION).
-
-## H. Known Boundary-Test Delta (documented, not hidden)
-
-Adding an installable isolated module **requires** registering it in the repo's single
-tracked `settings.gradle`. That one mandatory line:
-
-```
-include(":mediaexperiment")
+```text
+docs/experiments/media-interlude-poc-report.md
+mediaexperiment/build.gradle
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidLocalAudioPort.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidMediaControlPort.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidOverlayVideoPort.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeService.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/MediaExperimentActivity.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/MediaSessionScanner.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/ActiveSessionSource.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/DeniedReason.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/Diagnostics.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/InterludeRuntime.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/InterludeStateMachine.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/PauseOwnership.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/PlaybackSnapshot.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SafeResumeGuard.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionCatalog.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionController.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionPort.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionRevalidation.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionTarget.java
+mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeRuntimeTest.java
+mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeStateMachineTest.java
+mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/SafeResumeGuardTest.java
+mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/SessionCatalogTest.java
+mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/TestFakes.java
 ```
 
-changes the byte content of `settings.gradle` from the pinned hash `1560b65...` to
-`384d9c8...`. Several M4 and M5 **release provenance guards** pin `settings.gradle`
-**byte-for-byte**, so on this experimental branch exactly **10** of their assertions fail
-**solely on the `settings.gradle` byte hash and nothing else**.
+## G. Short operator protocol — later authorized Sony / Prime qualification
 
-In addition, `docs/` is itself within the boundary guards' **file inventory** scope, so
-adding this report file (`docs/experiments/media-interlude-poc-report.md`) trips **4**
-further inventory assertions that each flag the new, unlisted docs file. That brings the
-**actual final total to 14 failures** when the python suite is run **after this report file
-exists**. The breakdown is reported honestly below; both groups are expected and benign on
-an experimental branch, and neither reflects any change to production/M5 bytes.
+**Do not run or install as part of this corrective work. Physical qualification
+requires separate authorization. The following is the protocol for that later
+session, not a record of a test already performed.**
+
+1. Install the delivered experimental APK beside SceneVibe, keeping production
+   pairing/data. Grant overlay and notification access to the **experimental**
+   package only. Confirm version `0.1.1-media-interlude-poc-corrective`.
+2. Start Prime native playback. Run **SCAN MEDIA SESSION** and verify the relevant
+   package, PLAYING and advertised PAUSE support. If opening the diagnostic app
+   has already paused Prime, record that limitation and restore native playback;
+   never treat an initial PAUSED state as POC ownership.
+3. Run **TEST AUDIO DUCK**. Listen for the cue and any reduction/restoration of
+   Prime audio. Record audible behavior separately from focus GRANTED. Verify
+   no PAUSE, fullscreen video or PLAY was dispatched.
+4. Re-establish native PLAYING, then run **TEST PAUSE**. Require sent=true followed
+   by confirmed=true and ownership=true within four seconds. Confirm that there
+   is no cue or video and no automatic resume. Timeout is UNSUPPORTED / NOT
+   CONFIRMED. **Manually resume Prime and verify PLAYING before the next step.**
+5. Run **TEST FULL INTERLUDE**. Observe genuine PAUSED before the fullscreen local
+   video. On normal completion record live revalidation, latest PAUSED, one PLAY
+   sent and a genuine later PLAYING confirmation. If any gate is denied, the
+   expected behavior is teardown and no POC PLAY.
+6. Check refusal while Prime was manually pre-paused. In separate attempts check
+   STOP during the video, and a relevant app/session/media change when feasible.
+   STOP must remove the overlay and leave native resume to the operator. Repeat
+   STOP and verify no additional effects or accidental PLAY.
+7. Record only coarse diagnostics, transitions, visible/audible behavior, APK
+   digest and TV/Prime versions. Do not log tokens, title/subtitle, content or
+   credentials. Cases not actually exercised remain **NOT TESTED**.
+
+## H. Exact expected Python boundary delta
+
+Both the starting tree and the final corrective tree were tested with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
+```
+
+Each reports **118 tests, 14 failures**: **10** inherited `settings.gradle`
+module-registration byte-pin failures plus **4** report-file inventory failures.
+There are **104 passing tests** and no additional corrective failure. The ordered
+failing-test list is identical before and after. The former statement claiming
+10 failures for the final tree has been removed: 10 is only one component of the
+same final **14-failure** delta.
+
+The base `settings.gradle` SHA-256 pin begins `1560b65...`; the experimental module
+registration produces `384d9c8...`. The existing report lies outside the frozen
+`docs/` inventories. Neither the shared registration nor the inventory/baseline
+expectations were changed by this corrective pass.
 
 ### Group 1: the `settings.gradle` module-include pin (10 failures)
 
@@ -278,24 +370,18 @@ Each of these fails only because this report is a **new, unlisted file under `do
 3. `test_m5_phase_c_boundary.M5PhaseCBoundaryTest.test_no_unlisted_file_in_any_retained_scope`
 4. `test_m5_phase_d_boundary.M5PhaseDBoundaryTest.test_exact_file_inventory`
 
-Why this is acceptable and what was deliberately **not** done:
+The exact named failures above remain expected on this isolated experimental
+branch. No release guard, frozen M4/M5 baseline or production byte was edited to
+make them green. No physical Sony qualification result follows from this suite.
 
-- **(a)** This is the expected, unavoidable consequence of adding an installable isolated
-  module on an experimental branch: the module must be registered, and registration edits
-  the one pinned shared file.
-- **(b)** The M4/M5 **frozen baselines were deliberately NOT altered**
-  (`.github/scripts/m4-*-baseline.json`, `.github/scripts/m5-*-baseline.json`), the
-  boundary tests were **not edited**, and `settings.gradle` was **not** manipulated to hide
-  the module. Editing a release guard to force it green would be worse than an honest,
-  documented delta.
-- **(c)** The **M5 physical qualification is unaffected**: no `:app` / production /
-  M5-scheduler / FinalTrack / Cloud byte changed. Everything the guards actually inventory
-  (`app/src/`, `tests/`, `.github/`, and the frozen production/oracle bytes) is unchanged,
-  and the `mediaexperiment/` module is entirely **outside** their inventory scope.
+## I. Primary Android references
 
-**Measured final result (after this report file exists):**
-`python3 -m unittest discover -s tests` reports **118 tests, 14 failures** = **10**
-`settings.gradle` byte-pin failures (Group 1) **+ 4** docs-inventory failures caused by this
-new report file itself (Group 2). These numbers are the real, as-measured result and were
-**not** worked around: the M4/M5 baselines, boundary tests, and `:app`/production bytes were
-all deliberately left untouched, so M5 physical qualification is unaffected.
+- [MediaPlayer — AudioAttributes must precede preparation](https://developer.android.com/reference/android/media/MediaPlayer).
+- [MediaSessionManager — active sessions and priority order](https://developer.android.com/reference/android/media/session/MediaSessionManager).
+- [MediaController — session token and transport controls](https://developer.android.com/reference/android/media/session/MediaController).
+- [MediaSession.Token](https://developer.android.com/reference/android/media/session/MediaSession.Token).
+- [Audio focus](https://developer.android.com/guide/topics/media-apps/audio-focus).
+
+Implementation policy about a competing/changed-priority owner is a conservative
+POC inference from the observable active-session list, not an Android guarantee
+of foreground-app identity.
