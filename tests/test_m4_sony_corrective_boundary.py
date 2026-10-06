@@ -16,6 +16,11 @@ native negative-control/process gate. Software preparation never counts as Sony 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-g-sony-corrective-baseline.json').read_text())
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
+POST_CORRECTIVE_DOCUMENTS = {
+    'docs/m4-final-sony-physical-closure.md',
+    'docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md',
+    'docs/m5-phase-a-architecture-report.md',
+}
 
 
 def executable(path):
@@ -48,13 +53,14 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
             self.assertEqual(digest, blob_hash(content), path)
 
     def test_retained_java_tests_fixtures_and_prior_inventories_have_no_exception(self):
-        """No retained business assertion, frozen fixture or Phase A–G inventory may be rewritten or skipped."""
+        """Pin retained M4 bytes while admitting only the exact post-corrective documentary evidence."""
         for path, digest in BASELINE['startingBlobs'].items():
             if path.startswith('app/src/test/') or re.fullmatch(r'\.github/scripts/m4-phase-[a-g]-baseline.json', path):
                 self.assertNotIn(path, BASELINE['correctivePatches'])
                 self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
         allowed = set(BASELINE['additiveFiles'])
         allowed.add('docs/m4-phase-g-sony-hard-reboot-corrective-report.md')
+        allowed.update(POST_CORRECTIVE_DOCUMENTS)
         for directory in ('app/src','tests','.github','docs'):
             for path in (ROOT / directory).rglob('*'):
                 if not path.is_file() or '__pycache__' in path.parts:
