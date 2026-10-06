@@ -77,6 +77,15 @@ The following was built in the isolated `:mediaexperiment` module:
     a cleanup/STOPPED state rather than crashing, with a bounded enum-only transition log.
   - `SafeResumeGuard` (fail-closed) that permits a resume `PLAY` only when the same media
     identity is still owned and the pause was actually confirmed.
+  - **Intentional fail-safe narrowing:** although `SafeResumeGuard` can also authorize a
+    resume during explicit emergency cleanup, the state machine never drives that branch at
+    runtime. Every emergency or error teardown (`STOP`, overlay/video failure, out-of-order
+    events) tears down and leaves the other app paused WITHOUT issuing `PLAY`; only the
+    normal interlude-completed path attempts a guarded resume. This is deliberately more
+    conservative than the spec, which permits resume during emergency cleanup, because an
+    automatic `PLAY` while the POC's own overlay or playback is failing is the riskier
+    behavior. The emergency-resume branch therefore exists in the guard (and is covered by a
+    unit test) but is not reachable at runtime by design.
 - **TV diagnostic UI** (`MediaExperimentActivity`), programmatic D-pad layout, with five
   operator actions plus stop: **SCAN MEDIA SESSION**, **TEST AUDIO DUCK**, **TEST PAUSE**,
   **TEST FULL INTERLUDE**, **EMERGENCY RESTORE**, **STOP**, and bounded on-screen
