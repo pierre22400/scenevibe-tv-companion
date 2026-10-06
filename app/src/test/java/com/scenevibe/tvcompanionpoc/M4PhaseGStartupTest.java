@@ -70,8 +70,8 @@ public final class M4PhaseGStartupTest {
         ScheduledTrack.Event old=h.runtime.loaded.comments.get(0);long generation=h.runtime.controller.currentGeneration();
         assertEquals(InstallationStatus.ARMED,h.installer.install(M4PhaseEVideoFixtures.request(!manifested,16),h.runtime.ports));
         assertFalse(h.runtime.manifestVisible);assertFalse(h.runtime.legacyVisible);
-        h.runtime.controller.onCommentDue(old,generation);assertFalse(h.runtime.manifestVisible);
-        h.runtime.due();h.runtime.controller.onCommentExpired(old,generation);
+        h.runtime.controller.onEventDue(old.id,generation);assertFalse(h.runtime.manifestVisible);
+        h.runtime.due();h.runtime.controller.onEventExpired(old.id,generation);
         assertEquals(16,h.runtime.active);assertEquals(!manifested,h.runtime.manifestVisible);
         assertEquals(manifested,h.runtime.legacyVisible);assertEquals(1,h.runtime.maxVisible);
         assertEquals(1,h.backend.candidateWrites);assertEquals(0,h.backend.ackWrites+h.backend.clears);

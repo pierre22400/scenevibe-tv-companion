@@ -114,7 +114,7 @@ final class M4PhaseAFixtures {
             scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
                 /** Select the same mutually exclusive manifested/legacy owner predicate. */
                 @Override public void onRender(ScheduledTrack.Event event) {
-                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onCommentDue(event);
+                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onEventDue(event.id);
                     else legacyRenders++;
                 }
                 /** Forward passive playback state without creating another Video clock. */
@@ -123,7 +123,7 @@ final class M4PhaseAFixtures {
                 }
                 /** Forward media-time expiry only to the manifested visual owner. */
                 @Override public void onExpire(ScheduledTrack.Event event) {
-                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onCommentExpired(event);
+                    if (controller.isSceneRendererActiveFor(cache.revision())) controller.onEventExpired(event.id);
                 }
                 /** A load resets eligibility only after the cache has committed. */
                 @Override public void onEligibility(boolean eligible) {

@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_added_paths
 import ast
 import json
 from pathlib import Path
@@ -65,6 +66,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         allowed.update(POST_CORRECTIVE_DOCUMENTS)
         allowed.update(phase_b_added_paths())
         allowed.update(phase_c_added_paths())
+        allowed.update(phase_d_added_paths())
         for directory in ('app/src','tests','.github','docs'):
             for path in (ROOT / directory).rglob('*'):
                 if not path.is_file() or '__pycache__' in path.parts:
@@ -115,7 +117,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
                       'seedPid!=Process.myPid()', 'diskDigest()', 'SAME_REVISION_STARTUP_ARMED',
                       'EXACT_ARTIFACT_BYTES','EXACT_CODEC_AND_HANDLER','EXACT_HISTORICAL_RESIDUE',
                       'backend.commits==0&&backend.acks==0&&backend.clears==0',
-                      'OverlayService.restoreInstalledPackage(', 'new OverlayService.LiveVideoRuntimePorts(',
+                      'OverlayService.restoreInstalledPackage(', 'constructor.newInstance(owner',
                       'REAL_DISK_COMMIT_REFUSED','android.system.Os.chmod(directory.getPath(),0500)',
                       'finally {android.system.Os.chmod(directory.getPath(),mode);}'):
             self.assertIn(token, fixture)

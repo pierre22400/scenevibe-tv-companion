@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_retained_bytes
 import hashlib
 import json
 from pathlib import Path
@@ -35,7 +36,7 @@ def phase_c_added_paths():
 def phase_c_retained_bytes(path):
     """Undo only unique C provenance/accounting edits and require exact final B blob identity."""
     path = Path(path)
-    content = path.read_bytes()
+    content = phase_d_retained_bytes(path)
     inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))
     relative = str(path.relative_to(ROOT))
     patches = inventory['provenancePatches'].get(relative)

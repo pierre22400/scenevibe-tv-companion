@@ -12,6 +12,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler;
 import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
 import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
@@ -57,7 +58,7 @@ public final class OverlayService extends Service {
     private boolean bottomPosition;
     private CommentaryServer commentaryServer;
     private MediaSessionProbe mediaSessionProbe;
-    private MediaSyncedTrackScheduler trackScheduler;
+    private MediaCalendarScheduler trackScheduler;
     /** Publish the owner's current instance for Cloud io's pre-ACK lifetime rechecks. */
     private volatile CloudControlClient cloudClient;
     /** One service-owned generic stack serializes every live assignment through the owner gate. */
@@ -152,59 +153,22 @@ public final class OverlayService extends Service {
                 // SceneSink below delegates to a lazily created SceneRenderer and is the ONLY
                 // bridge between the Android-free controller and the overlay window.
                 sceneController = new SceneRuntimeController(sceneSink);
-                trackScheduler = new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
-                    @Override public void onRender(ScheduledTrack.Event event) {
-                        // Exactly one visual path per comment (section 10/30). When the regie
-                        // holds a valid manifest for the active revision this is Case B: forward
-                        // the due event to the controller (which drives SceneRenderer) and do
-                        // NOT touch the legacy OverlayRenderer. Otherwise Case A is unchanged.
-                        if (isSceneRendererActive()) {
-                            sceneController.onCommentDue(event);
-                            return;
-                        }
-                        // Case A: create the renderer lazily if the boot path has not shown it
-                        // yet, then display the tracked commentary (legacy behavior unchanged).
-                        showRenderer();
-                        if (renderer != null) renderer.showTrackedCommentary(
-                                event.text, event.durationMs, event.mediaBitmap);
+                trackScheduler = new MediaCalendarScheduler(new MediaCalendarScheduler.Sink() {
+                    /** Route only callbacks bearing the immutable active activation token. */
+                    @Override public void onDue(String token,String eventId) {
+                        if(videoRuntimePorts!=null)videoRuntimePorts.onDue(token,eventId);
                     }
-                    @Override public void onPlayback(boolean playing, boolean freeze) {
-                        // Forward playback to whichever path is active; the controller records
-                        // the state without adding a second clock, the legacy renderer freezes.
-                        if (isSceneRendererActive()) {
-                            if (sceneController != null) sceneController.onPlayback(playing, freeze);
-                        } else if (renderer != null) {
-                            renderer.onPlayback(playing, freeze);
-                        }
+                    /** Legacy display countdown remains freeze-aware and owns its own visual expiry. */
+                    @Override public void onExpire(String token,String eventId) {
+                        if(videoRuntimePorts!=null)videoRuntimePorts.onExpire(token,eventId);
                     }
-                    @Override public void onExpire(ScheduledTrack.Event event) {
-                        // Case B ONLY: the scheduler (sole temporal authority) signals that a
-                        // scene's media-time window elapsed; the regie hides it under the
-                        // generation guard, so a stale/late expire from a superseded revision is
-                        // a no-op and never resurrects or wrongly hides a new-revision scene.
-                        // Case A is untouched: the legacy OverlayRenderer self-expires via its
-                        // own freeze-aware countdown, so onExpire is ignored for it.
-                        if (isSceneRendererActive() && sceneController != null) {
-                            sceneController.onCommentExpired(event);
-                        }
+                    /** Preserve every passive playback callback without acquiring a second clock. */
+                    @Override public void onPlayback(String token,boolean playing,boolean freeze) {
+                        if(videoRuntimePorts!=null)videoRuntimePorts.onPlayback(token,playing,freeze);
                     }
-                    @Override public void onEligibility(boolean eligible) {
-                        // Observational only: mirror the last media-identity decision into the
-                        // bounded diagnostics store. This never influences the eligibility rule.
-                        DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible
-                                ? RuntimeDiagnostics.MediaIdentityState.ELIGIBLE
-                                : RuntimeDiagnostics.MediaIdentityState.BLOCKED);
-                        // Observational only: record a bounded block code on the eligibility
-                        // loss transition. The scheduler itself is frozen; this maps the
-                        // observable transition into DiagnosticsStore and never gates logic.
-                        if (!eligible) DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);
-                        // Media no longer matches: hide the active path immediately, never both.
-                        // The controller always receives the transition so a loaded manifest is
-                        // disarmed; the legacy renderer hides only when it owns the comment.
-                        if (sceneController != null) sceneController.onEligibility(eligible);
-                        if (!eligible && !isSceneRendererActive() && renderer != null) {
-                            renderer.onTrackEligibility(false);
-                        }
+                    /** Preserve old-binding load invalidation before any new activation becomes active. */
+                    @Override public void onEligibility(String token,boolean eligible) {
+                        if(videoRuntimePorts!=null)videoRuntimePorts.onEligibility(token,eligible);
                     }
                 });
                 installationStore = new InstallationStore(new AndroidInstallationBackend(this));
@@ -215,7 +179,27 @@ public final class OverlayService extends Service {
                         () -> trackScheduler, () -> sceneController,
                         () -> { if (renderer != null) renderer.dismiss(); },
                         () -> { if (sceneRenderer != null) sceneRenderer.dismissNow(); },
-                        revision -> activeRevision = revision);
+                        revision -> activeRevision = revision,
+                        new LiveVideoRuntimePorts.LegacySink() {
+                            /** Create the legacy window lazily using the exact prepared payload. */
+                            @Override public void due(ScheduledTrack.Event event) {
+                                showRenderer();
+                                if(renderer!=null)renderer.showTrackedCommentary(event.text,event.durationMs,event.mediaBitmap);
+                            }
+                            /** Forward repetitions to the existing freeze-aware visual countdown. */
+                            @Override public void playback(boolean playing,boolean freeze) {
+                                if(renderer!=null)renderer.onPlayback(playing, freeze);
+                            }
+                            /** Eligibility loss hides only the legacy owner, without constructing a window. */
+                            @Override public void eligibility(boolean eligible) {
+                                if(renderer!=null)renderer.onTrackEligibility(false);
+                            }
+                        }, eligible -> {
+                            // Observational only: diagnostics precede controller/native retirement.
+                            DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible
+                                    ?RuntimeDiagnostics.MediaIdentityState.ELIGIBLE:RuntimeDiagnostics.MediaIdentityState.BLOCKED);
+                            if(!eligible)DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);
+                        });
                 // Complete durable restoration on main before either probe events or Cloud polling.
                 // Only the installer's same-revision path resolves/validates the durable handler.
                 InstallationStatus restored = restoreInstalledPackage(installationStore,
@@ -235,7 +219,11 @@ public final class OverlayService extends Service {
                         },
                         track -> {
                             if (trackScheduler != null) {
-                                trackScheduler.load(track);
+                                videoRuntimePorts.retireManifestedVisualOwner();
+                                videoRuntimePorts.retireLegacyVisualOwner();
+                                if(videoRuntimePorts.loadPreparedVideo(VideoPreparedState.lan(track))) {
+                                    if(!videoRuntimePorts.selectLanActivation())videoRuntimePorts.abortActivation();
+                                } else videoRuntimePorts.abortActivation();
                             }
                         }, PairingRuntime.get(this));
                 commentaryServer.start();
@@ -249,13 +237,13 @@ public final class OverlayService extends Service {
                         if (snapshot != null) {
                             DiagnosticsStore.INSTANCE.setLastObservedMediaApp(snapshot.packageName);
                         }
-                        if (trackScheduler != null) trackScheduler.onPlaybackSnapshot(snapshot);
+                        if (videoRuntimePorts != null) videoRuntimePorts.onSnapshot(snapshot);
                     }
                     @Override public void onUnavailable() {
                         // Observational only: no active/authorized session. Record a bounded
                         // block code before forwarding to the frozen scheduler; never gates logic.
                         DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_SESSION_UNAVAILABLE);
-                        if (trackScheduler != null) trackScheduler.onPlaybackUnavailable();
+                        if (trackScheduler != null) trackScheduler.onUnavailable();
                     }
                 });
                 mediaSessionProbe.start();
@@ -294,6 +282,7 @@ public final class OverlayService extends Service {
                     renderer.dismiss();
                     renderer = null;
                 }
+                if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();
                 // The reset wipe clears the cache + scheduler; disarm the regie and drop any
                 // visible scene too, so no stale manifested scene survives a reset.
                 if (sceneController != null) sceneController.unload();
@@ -404,68 +393,171 @@ public final class OverlayService extends Service {
      * only native retirement and the owner predicate are substituted. No parser, storage,
      * network or ACK enters these ports. Selection is the final successful ARM operation.
      */
-    static final class LiveVideoRuntimePorts implements VideoInstallationRuntimePorts {
+    static final class LiveVideoRuntimePorts implements VideoInstallationRuntimePorts, MediaCalendarScheduler.Sink {
+        /** Native legacy drawing remains outside the temporal core and preserves its countdown. */
+        interface LegacySink {
+            /** Render the exact payload indexed by the active prepared Video binding. */
+            void due(ScheduledTrack.Event event);
+            /** Forward passive playback repetitions to the existing renderer. */
+            void playback(boolean playing,boolean freeze);
+            /** Hide the legacy visual immediately on loss of eligibility. */
+            void eligibility(boolean eligible);
+        }
+        /** Immutable activation identity and the generation captured at manifest ARM. */
+        private static final class Activation {
+            final VideoPreparedState state;
+            final String token;
+            final long generation;
+            /** Retain memory-only prepared values and a fixed local token/generation. */
+            Activation(VideoPreparedState state,String token,long generation) {
+                this.state=state;this.token=token;this.generation=generation;
+            }
+        }
         private final java.util.function.BooleanSupplier owner;
-        private final java.util.function.Supplier<MediaSyncedTrackScheduler> scheduler;
+        private final java.util.function.Supplier<MediaCalendarScheduler> scheduler;
         private final java.util.function.Supplier<SceneRuntimeController> controller;
         private final Runnable retireLegacy,retireScenes;
         private final java.util.function.LongConsumer selection;
+        private final LegacySink legacy;
+        private final java.util.function.Consumer<Boolean> diagnostics;
+        private long nextActivation;
+        private Activation pending,active,retiring;
+        private boolean invalidating;
 
         /** Bind the service's existing owners; construction never loads, renders or persists. */
         LiveVideoRuntimePorts(java.util.function.BooleanSupplier owner,
-                java.util.function.Supplier<MediaSyncedTrackScheduler> scheduler,
+                java.util.function.Supplier<MediaCalendarScheduler> scheduler,
                 java.util.function.Supplier<SceneRuntimeController> controller,
-                Runnable retireLegacy,Runnable retireScenes,java.util.function.LongConsumer selection) {
+                Runnable retireLegacy,Runnable retireScenes,java.util.function.LongConsumer selection,
+                LegacySink legacy,java.util.function.Consumer<Boolean> diagnostics) {
             if(owner==null||scheduler==null||controller==null||retireLegacy==null
-                    ||retireScenes==null||selection==null)throw new IllegalArgumentException("Missing Video owner");
+                    ||retireScenes==null||selection==null||legacy==null||diagnostics==null)
+                throw new IllegalArgumentException("Missing Video owner");
             this.owner=owner;this.scheduler=scheduler;this.controller=controller;
             this.retireLegacy=retireLegacy;this.retireScenes=retireScenes;this.selection=selection;
+            this.legacy=legacy;this.diagnostics=diagnostics;
         }
         /** Android composition returns true only on the actual main/window owner thread. */
         @Override public boolean isOwnerThread() {return owner.getAsBoolean();}
+        /** Invalidate callback ownership before any synchronous native retirement can reenter. */
+        private void invalidate() {
+            if(active!=null)retiring=active;
+            else if(pending!=null)retiring=pending;
+            active=null;pending=null;
+        }
         /** Synchronously dismiss the existing legacy renderer; never construct a renderer. */
         @Override public boolean retireLegacyVisualOwner() {
             if(!isOwnerThread())return false;
-            retireLegacy.run();return true;
+            invalidate();retireLegacy.run();return true;
         }
         /** Unload/invalidate the regie, then force immediate removal of its existing window. */
         @Override public boolean retireManifestedVisualOwner() {
             if(!isOwnerThread())return false;
-            SceneRuntimeController runtime=controller.get();
+            invalidate();SceneRuntimeController runtime=controller.get();
             if(runtime==null)return false;
             runtime.unload();retireScenes.run();return true;
         }
-        /** Load exactly the prepared immutable track, with no reparse or durable operation. */
-        @Override public boolean loadPreparedTrack(ScheduledTrack track) {
-            if(!isOwnerThread()||track==null)return false;
-            MediaSyncedTrackScheduler runtime=scheduler.get();
-            if(runtime==null)return false;
-            runtime.load(track);return true;
+        /** Load the exact prepared calendar and payload index; pending callbacks cannot render. */
+        @Override public boolean loadPreparedVideo(VideoPreparedState state) {
+            if(!isOwnerThread()||state==null)return false;
+            MediaCalendarScheduler runtime=scheduler.get();if(runtime==null)return false;
+            invalidate();
+            if(nextActivation==Long.MAX_VALUE)return false;
+            pending=new Activation(state,"video-activation-"+(++nextActivation),-1L);
+            invalidating=true;
+            try {runtime.load(state.calendar,pending.token);return true;}
+            finally {invalidating=false;retiring=null;}
         }
-        /** Replace the exact prepared manifest/revision using the existing controller generation guard. */
+        /** Replace the exact manifest, then capture its generation once before selection. */
         @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {
-            if(!isOwnerThread()||revision<1||manifest==null)return false;
-            SceneRuntimeController runtime=controller.get();
-            if(runtime==null)return false;
+            if(!isOwnerThread()||revision<1||manifest==null||pending==null
+                    ||pending.state.manifest!=manifest)return false;
+            SceneRuntimeController runtime=controller.get();if(runtime==null)return false;
             runtime.replaceRevision(revision,manifest);
+            pending=new Activation(pending.state,pending.token,runtime.currentGeneration());
             return runtime.isSceneRendererActiveFor(revision);
         }
-        /** Select only an exact armed manifested revision, or a legacy revision with no manifested owner. */
+        /** Promote pending only after every previous ARM operation has succeeded. */
         @Override public boolean selectActiveRevision(long revision,boolean manifested) {
-            if(!isOwnerThread()||revision<1)return false;
+            if(!isOwnerThread()||revision<1||pending==null)return false;
             SceneRuntimeController runtime=controller.get();
-            if(runtime==null||(manifested?!runtime.isSceneRendererActiveFor(revision):runtime.hasActiveManifest()))return false;
-            selection.accept(revision);return true;
+            if(runtime==null||(pending.state.manifest!=null)!=manifested
+                    ||(manifested?(pending.generation<0||!runtime.isSceneRendererActiveFor(revision))
+                        :runtime.hasActiveManifest()))return false;
+            selection.accept(revision);active=pending;pending=null;return true;
         }
-        /** Clear partial runtime ownership idempotently, attempting every cleanup even after one failure. */
+        /** Preserve the supported LAN development activation without inventing a durable revision. */
+        boolean selectLanActivation() {
+            if(!isOwnerThread()||pending==null||pending.state.manifest!=null)return false;
+            SceneRuntimeController runtime=controller.get();if(runtime==null||runtime.hasActiveManifest())return false;
+            selection.accept(0);active=pending;pending=null;return true;
+        }
+        /** Project only the active prepared track through the qualified C observation adapter. */
+        void onSnapshot(MediaSessionProbe.Snapshot snapshot) {
+            if(!isOwnerThread()||active==null)return;
+            MediaCalendarScheduler runtime=scheduler.get();if(runtime!=null)
+                runtime.onObservation(VideoMediaObservationAdapter.observe(active.state.track,snapshot));
+        }
+        /** An opaque callback token must match the immutable active activation, never a revision. */
+        private Activation matching(String token) {
+            return isOwnerThread()&&active!=null&&active.token.equals(token)?active:null;
+        }
+        /** Route ID plus captured generation to the regie, or exact payload to the legacy renderer. */
+        @Override public void onDue(String token,String eventId) {
+            Activation binding=matching(token);if(binding==null)return;
+            if(binding.state.manifest!=null) {
+                SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEventDue(eventId,binding.generation);
+            } else {
+                ScheduledTrack.Event event=binding.state.eventsById.get(eventId);
+                if(event!=null)legacy.due(event);
+            }
+        }
+        /** Manifested expiry is generation-guarded; legacy retains its own freeze-aware countdown. */
+        @Override public void onExpire(String token,String eventId) {
+            Activation binding=matching(token);if(binding==null||binding.state.manifest==null)return;
+            SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEventExpired(eventId,binding.generation);
+        }
+        /** Preserve repetitions while ignoring every stale or pending playback token. */
+        @Override public void onPlayback(String token,boolean playing,boolean freeze) {
+            Activation binding=matching(token);if(binding==null)return;
+            if(binding.state.manifest!=null) {
+                SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onPlayback(playing,freeze);
+            } else legacy.playback(playing,freeze);
+        }
+        /** Diagnostics precede controller/hide; only synchronous old-binding invalidation bypasses active matching. */
+        @Override public void onEligibility(String token,boolean eligible) {
+            Activation binding=matching(token);
+            if(binding==null) {
+                if(!isOwnerThread()||!invalidating||eligible
+                        ||(retiring==null?token!=null:!retiring.token.equals(token)))return;
+                binding=retiring;
+            }
+            diagnostics.accept(eligible);
+            SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEligibility(eligible);
+            if(!eligible) {
+                if(binding!=null&&binding.state.manifest!=null)retireScenes.run();
+                else legacy.eligibility(false);
+            }
+        }
+        /** Clear partial ownership idempotently, attempting every cleanup even after a refusal. */
         @Override public void abortActivation() {
             if(!isOwnerThread())return;
+            invalidate();
             cleanup(()->{SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.unload();});
             cleanup(retireScenes);cleanup(retireLegacy);
-            cleanup(()->{MediaSyncedTrackScheduler runtime=scheduler.get();if(runtime!=null)runtime.clear();});
-            selection.accept(0);
+            invalidating=true;
+            try {cleanup(()->{
+                MediaCalendarScheduler runtime=scheduler.get();if(runtime==null)return;
+                try {runtime.clear();}
+                catch(RuntimeException refusedInvalidation) {
+                    // A native eligibility failure cannot retain the core's old token/calendar.
+                    // Retry the same qualified clear with all callbacks already invalidated.
+                    invalidating=false;runtime.clear();
+                }
+            });}
+            finally {invalidating=false;pending=null;active=null;retiring=null;cleanup(()->selection.accept(0));}
         }
-        /** A failed native removal cannot skip the remaining runtime cleanup or expose raw exceptions. */
+        /** A failed native removal cannot skip the remaining cleanup or expose raw exceptions. */
         private static void cleanup(Runnable work) {
             try {work.run();}catch(RuntimeException refused) { /* The handler returns bounded ARM_FAILED. */ }
         }
@@ -562,6 +654,7 @@ public final class OverlayService extends Service {
             mediaSessionProbe.stop();
             mediaSessionProbe = null;
         }
+        if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();
         if (trackScheduler != null) {
             trackScheduler.clear();
             trackScheduler = null;

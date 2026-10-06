@@ -275,7 +275,7 @@ public final class ManifestInstallAckDecisionTest {
         assertTrue(regie.isSceneRendererActiveFor(4));
 
         // Prove there is an actually visible Case-B scene to remove, not only armed metadata.
-        regie.onCommentDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null));
+        regie.onEventDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null).id);
         assertTrue(regie.hasVisibleScene());
 
         M4PhaseFHistoricalCloudClient.ManifestInstaller transition=new M4PhaseFHistoricalCloudClient.ManifestInstaller() {
@@ -322,7 +322,7 @@ public final class ManifestInstallAckDecisionTest {
         assertFalse(SceneRuntimeController.shouldUseSceneRenderer(0,2));
 
         // A due comment under Case A must not drive the SceneRenderer at all.
-        regie.onCommentDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null));
+        regie.onEventDue(new ScheduledTrack.Event("c1","Hello",1000,6000,null).id);
         assertTrue("regie must not show anything in Case A",sink.shown.isEmpty());
         assertFalse(regie.hasVisibleScene());
     }

@@ -123,7 +123,7 @@ public final class AssignmentMutationGateTest {
         return new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
             /** Forward a due comment through the actual regie. */
             @Override public void onRender(ScheduledTrack.Event event) {
-                controller.onCommentDue(event);
+                controller.onEventDue(event.id);
             }
             /** Preserve playback as a passive state input. */
             @Override public void onPlayback(boolean playing,boolean freeze) {
@@ -151,7 +151,7 @@ public final class AssignmentMutationGateTest {
                     cache,scheduler,installer));
             ScheduledTrack track=TrackParser.parse(e.getJSONObject("runtimeTrack"),media->null);
             owner.gate.call(()->{controller.onEligibility(true);
-                controller.onCommentDue(track.comments.get(0));return null;});
+                controller.onEventDue(track.comments.get(0).id);return null;});
             assertTrue(sink.visible);
 
             assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,5,runtime,manifest,
@@ -165,7 +165,7 @@ public final class AssignmentMutationGateTest {
             assertEquals("redelivery does not retire anything again",hides,sink.hides);
 
             owner.gate.call(()->{controller.onEligibility(true);
-                controller.onCommentDue(track.comments.get(0));return null;});
+                controller.onEventDue(track.comments.get(0).id);return null;});
             assertTrue(sink.visible);
             assertTrue(M4PhaseFHistoricalCloudClient.applyAssignment(owner.gate,()->true,6,runtime,null,
                     cache,scheduler,installer));
@@ -189,7 +189,7 @@ public final class AssignmentMutationGateTest {
                     cache,scheduler,installer));
             ScheduledTrack track=TrackParser.parse(e.getJSONObject("runtimeTrack"),media->null);
             owner.gate.call(()->{controller.onEligibility(true);
-                controller.onCommentDue(track.comments.get(0));return null;});
+                controller.onEventDue(track.comments.get(0).id);return null;});
             assertThrows(AssertionError.class,()->installer.install(5,runtime,manifest));
         }
     }

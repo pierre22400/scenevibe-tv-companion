@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_retained_bytes
 import ast
 import hashlib
 import json
@@ -236,7 +237,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         for signature, expected in PHASE_F['protectedServiceMethods'].items():
             source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else (ROOT / JAVA / 'OverlayService.java').read_text()
             self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)
-        current = (ROOT / JAVA / 'OverlayService.java').read_text()
+        current = phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8')
         previous = inverse(current, BASELINE['productionPatches'][JAVA + 'OverlayService.java'])
         self.assertEqual(java_block(previous, 'static final class LiveVideoRuntimePorts'), java_block(current, 'static final class LiveVideoRuntimePorts'))
         fixture = (ROOT / TEST / 'M4PhaseGFixtures.java').read_text()

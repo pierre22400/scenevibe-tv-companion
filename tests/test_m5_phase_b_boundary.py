@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_added_paths, phase_d_retained_bytes
 import ast
 import hashlib
 import json
@@ -101,7 +102,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_production_test_config_or_document_file(self):
         """A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture."""
-        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths()
+        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths()
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):
@@ -162,10 +163,10 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
                 self.assertTrue(imported.startswith('java.util.'), path)
 
     def test_existing_production_has_no_calendar_consumer(self):
-        """All old callers remain byte-identical and none imports or constructs any new value."""
+        """Reconstructed accepted B/C callers remain non-live; D checks actual temporal ownership."""
         for path in BASELINE['startingBlobs']:
             if path.startswith('app/src/main/java/') and path.endswith('.java'):
-                source = code(path)
+                source = re.sub(r'/\*.*?\*/|//[^\n]*', '', phase_d_retained_bytes(ROOT / path).decode('utf-8'), flags=re.S)
                 self.assertNotIn('com.scenevibe.tvcompanionpoc.calendar', source, path)
                 self.assertIsNone(re.search(r'\b(?:SceneEvent|MediaCalendar|MediaObservation)\b', source), path)
 

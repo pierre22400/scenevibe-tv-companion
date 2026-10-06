@@ -1,5 +1,6 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler;
 import com.scenevibe.tvcompanionpoc.installation.InstallRequest;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
@@ -81,7 +82,7 @@ final class M4PhaseFFixtures {
     static final class Runtime {
         final List<String> trace;
         final SceneRuntimeController controller;
-        final MediaSyncedTrackScheduler scheduler;
+        final MediaCalendarScheduler scheduler;
         final OverlayService.LiveVideoRuntimePorts live;
         final Spy ports;
         long active;
@@ -106,27 +107,28 @@ final class M4PhaseFFixtures {
                 /** Generation invalidation cannot leave the previous window visible. */
                 @Override public void hideAll() {manifestVisible=false;observe();}
             });
-            scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
-                /** Exactly one selected visual owner receives the real scheduler's due event. */
-                @Override public void onRender(ScheduledTrack.Event event) {
-                    if(controller.isSceneRendererActiveFor(active))controller.onCommentDue(event);
-                    else {legacyVisible=true;shows++;observe();}
-                }
-                /** Forward passive playback without adding a clock or a player control. */
-                @Override public void onPlayback(boolean playing,boolean freeze) {controller.onPlayback(playing,freeze);}
-                /** Expiry remains owned by the media scheduler and controller generation. */
-                @Override public void onExpire(ScheduledTrack.Event event) {
-                    if(controller.isSceneRendererActiveFor(active))controller.onCommentExpired(event);
-                }
-                /** Eligibility loss immediately retires the selected visual. */
-                @Override public void onEligibility(boolean eligible) {
-                    controller.onEligibility(eligible);if(!eligible)legacyVisible=false;observe();
-                }
+            scheduler=new MediaCalendarScheduler(new MediaCalendarScheduler.Sink() {
+                /** Route exact tokens through the actual service callback router. */
+                @Override public void onDue(String token,String id) {live.onDue(token,id);}
+                /** Preserve passive playback through the real binding router. */
+                @Override public void onPlayback(String token,boolean playing,boolean freeze) {live.onPlayback(token,playing,freeze);}
+                /** Expiry uses the generation captured at real manifest ARM. */
+                @Override public void onExpire(String token,String id) {live.onExpire(token,id);}
+                /** Mirror eligibility through the same controller/native retirement as production. */
+                @Override public void onEligibility(String token,boolean eligible) {live.onEligibility(token,eligible);}
             });
             live=new OverlayService.LiveVideoRuntimePorts(()->ownerAllowed&&owner.getAsBoolean(),
                     ()->available?scheduler:null,()->available?controller:null,
                     ()->{legacyVisible=false;observe();},()->{manifestVisible=false;observe();},
-                    revision->{active=revision;trace.add(revision==0?"abort-select":"select");observe();});
+                    revision->{active=revision;trace.add(revision==0?"abort-select":"select");observe();},
+                    new OverlayService.LiveVideoRuntimePorts.LegacySink() {
+                        /** Observe the exact legacy payload only when the active token matches. */
+                        @Override public void due(ScheduledTrack.Event event) {legacyVisible=true;shows++;observe();}
+                        /** The fixture owns no visual countdown. */
+                        @Override public void playback(boolean playing,boolean freeze) {}
+                        /** Loss retires the native substitute synchronously. */
+                        @Override public void eligibility(boolean eligible) {if(!eligible)legacyVisible=false;observe();}
+                    },eligible->{});
             ports=new Spy();
         }
         /** At every native/runtime transition at most one owner may remain visible. */
@@ -138,7 +140,7 @@ final class M4PhaseFFixtures {
         void due() {
             ScheduledTrack.MediaIdentity media=loaded.mediaIdentity;
             long position=loaded.comments.get(0).startMs;
-            scheduler.onPlaybackSnapshot(new MediaSessionProbe.Snapshot(loaded.targetPackage,
+            live.onSnapshot(new MediaSessionProbe.Snapshot(loaded.targetPackage,
                     android.media.session.PlaybackState.STATE_PLAYING,"PLAYING",position,position,1.0f,0L,
                     media.videoId,media.title,"",media.durationMs));
         }
@@ -160,8 +162,8 @@ final class M4PhaseFFixtures {
             /** Use the real controller unload and synchronous scene removal. */
             @Override public boolean retireManifestedVisualOwner() {return step("retire-manifested",live.retireManifestedVisualOwner());}
             /** Capture the handler's trusted object identity without parsing or copying it. */
-            @Override public boolean loadPreparedTrack(ScheduledTrack track) {
-                loaded=track;loads++;return step("load",live.loadPreparedTrack(track));
+            @Override public boolean loadPreparedVideo(VideoPreparedState state) {
+                loaded=state.track;loads++;return step("load",live.loadPreparedVideo(state));
             }
             /** Capture the exact restored manifest passed to the actual controller. */
             @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {

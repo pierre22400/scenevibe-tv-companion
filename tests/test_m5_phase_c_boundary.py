@@ -1,3 +1,4 @@
+from m5_phase_d_provenance import phase_d_added_paths, phase_d_changed_paths, phase_d_retained_bytes
 import ast
 import json
 from pathlib import Path
@@ -66,7 +67,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         """No inverse exists for production or fixtures; complete final-B bytes are independently restored."""
         for path, digest in BASE['startingBlobs'].items():
             self.assertEqual(digest, blob_hash(phase_c_retained_bytes(ROOT / path)), path)
-            if path not in CHANGED:
+            if path not in CHANGED | phase_d_changed_paths():
                 self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
         self.assertFalse(any(path.startswith('app/') for path in CHANGED))
         old_b = json.loads((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_text())
@@ -74,7 +75,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_file_in_any_retained_scope(self):
         """A namespace wildcard, extra engine or hidden fixture cannot pass the finite inventory."""
-        expected = set(BASE['startingBlobs']) | ADDED
+        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths()
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):
@@ -110,7 +111,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
             self.assertIn(expression, source)
 
     def test_adapter_is_external_and_old_callers_remain_nonlive(self):
-        """No runtime integration, new identity policy or probe acquisition is admitted in C."""
+        """The exact C boundary remains non-live; D separately proves the sole actual live engine."""
         adapter = code(JAVA + 'VideoMediaObservationAdapter.java')
         for token in ('track == null || snapshot == null', 'MediaIdentityMatcher.matches(track, snapshot)',
                       'snapshot.estimatedPositionMs >= 0L', 'snapshot.state == PlaybackState.STATE_PLAYING',
@@ -119,7 +120,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         self.assertNotIn('MediaCalendarScheduler', adapter)
         for path in BASE['startingBlobs']:
             if path.startswith('app/src/main/') and path.endswith('.java'):
-                source = code(path)
+                source = re.sub(r'/\*.*?\*/|//[^\n]*', '', phase_d_retained_bytes(ROOT / path).decode('utf-8'), flags=re.S)
                 self.assertNotIn('MediaCalendarScheduler', source, path)
                 self.assertNotIn('VideoMediaObservationAdapter', source, path)
 

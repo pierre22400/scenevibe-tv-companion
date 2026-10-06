@@ -70,7 +70,7 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
 
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
 
         assertEquals(Arrays.asList("comment-1"), sink.shown);
         assertEquals("comment-1", regie.visibleSceneId());
@@ -83,7 +83,7 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
 
-        regie.onCommentDue(comment("comment-UNKNOWN", 12_000, 6_000));
+        regie.onEventDue(comment("comment-UNKNOWN", 12_000, 6_000).id);
 
         assertTrue(sink.shown.isEmpty());
         assertEquals(0, sink.preflightCalls);
@@ -99,7 +99,7 @@ public final class SceneRuntimeControllerTest {
 
         // A new revision supersedes generation; the old-gen callback must not resurrect a scene.
         regie.replaceRevision(2, manifest("track-1", scene("comment-9", 1_000, 2_000)));
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000), oldGeneration);
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id, oldGeneration);
 
         assertTrue("stale-generation callback must show nothing", sink.shown.isEmpty());
         assertFalse(regie.hasVisibleScene());
@@ -111,7 +111,7 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
         long gen1 = regie.currentGeneration();
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertEquals("comment-1", regie.visibleSceneId());
 
         regie.replaceRevision(2, manifest("track-2", scene("comment-2", 3_000, 4_000)));
@@ -121,12 +121,12 @@ public final class SceneRuntimeControllerTest {
         assertFalse(regie.hasVisibleScene());
 
         // A late revision-1 callback (old generation) must never show the old scene.
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000), gen1);
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id, gen1);
         assertFalse(regie.hasVisibleScene());
         assertEquals("comment-1", sink.lastShown()); // nothing new shown since
 
         // Only the new revision's scenes can show now.
-        regie.onCommentDue(comment("comment-2", 3_000, 4_000));
+        regie.onEventDue(comment("comment-2", 3_000, 4_000).id);
         assertEquals("comment-2", regie.visibleSceneId());
     }
 
@@ -135,7 +135,7 @@ public final class SceneRuntimeControllerTest {
         RecordingSink sink = new RecordingSink();
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertTrue(regie.hasVisibleScene());
 
         regie.onEligibility(false);
@@ -148,7 +148,7 @@ public final class SceneRuntimeControllerTest {
 
         // Eligibility returns: a subsequent due event shows again per policy.
         regie.onEligibility(true);
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertEquals("comment-1", regie.visibleSceneId());
     }
 
@@ -157,7 +157,7 @@ public final class SceneRuntimeControllerTest {
         RecordingSink sink = new RecordingSink();
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertTrue(regie.hasVisibleScene());
 
         // Paused with freeze: the controller must not force-expire the scene by wall time.
@@ -202,10 +202,10 @@ public final class SceneRuntimeControllerTest {
         regie.unload(); // service stop / manifest unload
 
         // A due callback arriving after unload (even current gen) shows nothing.
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertFalse(regie.hasVisibleScene());
         // A late callback carrying the pre-unload generation is also ignored.
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000), genBeforeUnload);
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id, genBeforeUnload);
         assertTrue(sink.shown.isEmpty());
         assertFalse(regie.hasActiveManifest());
     }
@@ -216,8 +216,8 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
 
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
 
         assertEquals("second callback must be a no-op", 1, sink.shown.size());
         assertEquals("comment-1", regie.visibleSceneId());
@@ -230,7 +230,7 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
         long gen1 = regie.currentGeneration();
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertTrue(regie.hasVisibleScene());
 
         regie.replaceRevision(2, manifest("track-2",
@@ -240,9 +240,9 @@ public final class SceneRuntimeControllerTest {
         assertFalse(regie.hasVisibleScene());
 
         // A late revision-1 event is ignored; new revision scenes show normally.
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000), gen1);
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id, gen1);
         assertFalse(regie.hasVisibleScene());
-        regie.onCommentDue(comment("comment-3", 9_000, 2_000));
+        regie.onEventDue(comment("comment-3", 9_000, 2_000).id);
         assertEquals("comment-3", regie.visibleSceneId());
         assertEquals(2, sink.shown.size()); // comment-1 then comment-3, never a duplicate
     }
@@ -254,12 +254,12 @@ public final class SceneRuntimeControllerTest {
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
 
         regie.onEligibility(false);
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertFalse("a due event while ineligible must not show", regie.hasVisibleScene());
         assertTrue(sink.shown.isEmpty());
 
         regie.onEligibility(true);
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertEquals("comment-1", regie.visibleSceneId());
     }
 
@@ -270,7 +270,7 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
 
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
 
         assertEquals(1, sink.preflightCalls);
         assertTrue("preflight false must suppress show", sink.shown.isEmpty());
@@ -283,14 +283,14 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1",
                 scene("comment-1", 12_000, 6_000), scene("comment-2", 20_000, 3_000)));
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
 
         // Expiry for a non-visible scene is a no-op.
-        regie.onCommentExpired(comment("comment-2", 20_000, 3_000));
+        regie.onEventExpired(comment("comment-2", 20_000, 3_000).id);
         assertEquals("comment-1", regie.visibleSceneId());
 
         // Expiry for the visible scene hides it.
-        regie.onCommentExpired(comment("comment-1", 12_000, 6_000));
+        regie.onEventExpired(comment("comment-1", 12_000, 6_000).id);
         assertFalse(regie.hasVisibleScene());
         assertTrue(sink.hidden.contains("comment-1"));
     }
@@ -305,17 +305,17 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
         long gen1 = regie.currentGeneration();
-        regie.onCommentDue(comment("comment-1", 12_000, 6_000));
+        regie.onEventDue(comment("comment-1", 12_000, 6_000).id);
         assertEquals("comment-1", regie.visibleSceneId());
 
         // Revision 2 takes over and shows its own scene under the new generation.
         regie.replaceRevision(2, manifest("track-2", scene("comment-2", 3_000, 4_000)));
-        regie.onCommentDue(comment("comment-2", 3_000, 4_000));
+        regie.onEventDue(comment("comment-2", 3_000, 4_000).id);
         assertEquals("comment-2", regie.visibleSceneId());
 
         // A late expiry from the superseded revision-1 generation must do nothing: it cannot
         // hide the new comment-2 scene, and comment-1 is already gone.
-        regie.onCommentExpired(comment("comment-1", 12_000, 6_000), gen1);
+        regie.onEventExpired(comment("comment-1", 12_000, 6_000).id, gen1);
         assertEquals("stale-generation expiry must not hide the new scene",
                 "comment-2", regie.visibleSceneId());
         assertFalse("stale-generation expiry must not hide the comment-2 scene",
@@ -332,16 +332,16 @@ public final class SceneRuntimeControllerTest {
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1",
                 scene("comment-1", 1_000, 6_000), scene("comment-2", 12_000, 6_000)));
-        regie.onCommentDue(comment("comment-1", 1_000, 6_000));
+        regie.onEventDue(comment("comment-1", 1_000, 6_000).id);
 
         // Expiry of a non-visible scene is a no-op.
-        regie.onCommentExpired(comment("comment-2", 12_000, 6_000));
+        regie.onEventExpired(comment("comment-2", 12_000, 6_000).id);
         assertEquals("comment-1", regie.visibleSceneId());
 
         // Expiry of the visible scene hides it; a second (duplicate/late) expiry is harmless.
-        regie.onCommentExpired(comment("comment-1", 1_000, 6_000));
+        regie.onEventExpired(comment("comment-1", 1_000, 6_000).id);
         assertFalse(regie.hasVisibleScene());
-        regie.onCommentExpired(comment("comment-1", 1_000, 6_000));
+        regie.onEventExpired(comment("comment-1", 1_000, 6_000).id);
         assertEquals("duplicate expiry must not hide twice", 1,
                 java.util.Collections.frequency(sink.hidden, "comment-1"));
     }
@@ -351,8 +351,8 @@ public final class SceneRuntimeControllerTest {
         RecordingSink sink = new RecordingSink();
         SceneRuntimeController regie = new SceneRuntimeController(sink);
         regie.loadManifest(1, manifest("track-1", scene("comment-1", 12_000, 6_000)));
-        regie.onCommentDue(null);
-        regie.onCommentExpired(null);
+        regie.onEventDue(null);
+        regie.onEventExpired(null);
         assertFalse(regie.hasVisibleScene());
         assertTrue(sink.shown.isEmpty());
     }
