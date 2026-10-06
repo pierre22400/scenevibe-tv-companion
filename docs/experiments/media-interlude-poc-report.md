@@ -428,9 +428,7 @@ Build qualification for the corrected physical candidate:
 - APK SHA-256:
   `aab99a593e36b64f63123e485fdda8ba73dd13173b69c14dd176aa4e0cb17210`.
 
-This correction is **ready for renewed physical qualification**. It does not itself
-prove audible ducking, native PAUSE ownership, fullscreen interlude rendering or guarded
-resume; those remain physical observations to execute in the operator protocol.
+At this historical 0.1.2 checkpoint the correction was **ready for renewed physical qualification** but had not yet proved audible ducking, native PAUSE ownership, fullscreen interlude rendering or guarded resume. Those tests were subsequently executed; see section K for final results.
 
 
 ## Sony physical audio-duck corrective — 2026-10-06
@@ -455,7 +453,7 @@ Corrective candidate 0.1.3 changes only local fixture transport:
 - GitHub Actions run: `37527203668` — SUCCESS.
 - Gate: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`, `:mediaexperiment:assembleDebug` — SUCCESS.
 - APK SHA-256: `5b1126b3e2b6c068f43ecf9b2308369317d979566b4e281b96d32176220d2d1c`.
-- Physical qualification of AUDIO DUCK remains pending on the 0.1.3 APK.
+- At this historical 0.1.3 checkpoint, AUDIO DUCK qualification was still pending. The subsequent 0.1.4 result is recorded in section K.
 
 
 ## Sony physical audio-duck follow-up — 0.1.3 result and 0.1.4 ADTS candidate — 2026-10-06
@@ -479,7 +477,7 @@ Corrective candidate 0.1.4 preserves the exact AAC-LC access units and removes o
 - GitHub Actions run: `37528995979` — SUCCESS.
 - Gate: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`, `:mediaexperiment:assembleDebug` — SUCCESS.
 - APK SHA-256: `00cc409e180dcbbb18b1a943cd00c6b95274261f0e14d01ac0251c7e0772db63`.
-- Physical AUDIO DUCK qualification remains pending on 0.1.4.
+- At candidate creation, physical AUDIO DUCK qualification was pending. It was subsequently executed: local cue playback PASS, desired ducking semantics FAIL for Prime/Sony; see section K.
 
 
 ## K. Final Sony BRAVIA / Prime Video physical qualification — CLOSED / PASS — 2026-10-06
