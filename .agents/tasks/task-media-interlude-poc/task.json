@@ -1,9 +1,25 @@
 {
   "task_id": "task-media-interlude-poc",
   "task_description": "Experimental capability spike (NOT M9, NOT production): build an ISOLATED Android TV experimental app in a new :mediaexperiment module (applicationId com.scenevibe.tvcompanionpoc.mediaexperiment) on branch experiment/scenevibe-media-interlude-poc-001 (base c9b0efd4acfaaae9ed7da13dcec505b2f653c548) that answers three physical capability questions: (1) temporary audio focus with ducking (AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK) while Prime plays; (2) reliable PAUSE/PLAY to the active Prime MediaSession with bounded confirmation; (3) a local fullscreen TYPE_APPLICATION_OVERLAY video interlude while Prime stays paused. Reuse existing MediaSessionProbe/SceneRenderer/OverlayService patterns as READ-ONLY references and implement isolated equivalents; share no SharedPreferences/Installation ID/Cloud/pairing/cache/db/signing/BootReceiver/autostart; no Cloud/assignment/FinalTrack/PackageInstaller; MediaSession transport only (no accessibility/input injection/UI scraping). Mandatory mediaPlayback FGS + FOREGROUND_SERVICE_MEDIA_PLAYBACK permission + SYSTEM_ALERT_WINDOW in the experimental manifest only. Deliver automated qualification (build+lint+the required JVM state-machine/safe-resume-guard tests), the experimental APK + SHA-256, and docs/experiments/media-interlude-poc-report.md separating IMPLEMENTED/AUTOMATED PASS/PHYSICAL SONY-PRIME NOT YET TESTED. Do NOT modify :app/main/Cloud/durable installation/ACK/M5 scheduler/FinalTrack schema/M6 WALL/PR#15/PR#16. Do NOT push, do NOT open a PR, do NOT install on the Sony. STOP after delivering the APK and protocol.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
   "blocked_reason": null,
   "base_sha": "c9b0efd4acfaaae9ed7da13dcec505b2f653c548",
-  "branch": "experiment/scenevibe-media-interlude-poc-001"
+  "branch": "experiment/scenevibe-media-interlude-poc-001",
+  "head_sha": "445b56a234afa466cae422909a783aaa016ade40",
+  "semantic_review": "v1 APPROVED (.agents/tasks/task-media-interlude-poc/2026-10-06-132629-review.md). Three non-blocking findings: (1) SafeResumeGuard's emergencyCleanup=true resume branch is unit-tested but never driven at runtime - every emergency/error teardown fails safe without PLAY, strictly more conservative than the spec; now explicitly documented in report section C as an intentional fail-safe narrowing (commit 445b56a). (2) lastSnapshot is seeded with a pre-pause sample refreshed by the 1s sampler before any resume - sound in logic, flagged for hardware verification. (3) CI uses Gradle 8.9 vs sandbox 8.14.5 - re-run gate on 8.9 for CI parity. The deliberate settings.gradle byte-pin delta (honest documented delta over mutating an M4/M5 release guard) was judged sound by the reviewer.",
+  "apk": {
+    "path": "mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk",
+    "sha256": "48fd2e4ce41c8e92acd288bc3379b321d6dd55af0be3817d684837f27a306462",
+    "note": "debug-keystore signed; informational / non-reproducible"
+  },
+  "applicationId": "com.scenevibe.tvcompanionpoc.mediaexperiment",
+  "versionName": "0.1.0-media-interlude-poc",
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "Final gate (Gradle 8.14.5 / JDK 17 / ANDROID_HOME=/opt/android-sdk): :app:assembleDebug (regression anchor, app/ 0 files changed vs base c9b0efd), :mediaexperiment:lintDebug, :mediaexperiment:assembleDebug all BUILD SUCCESSFUL. :mediaexperiment:testDebugUnitTest = 17 JVM tests, 0 failures (9 InterludeStateMachineTest covering the nine required scenarios: happy-path-plays-once, focus-denied-zero-play, pause-timeout-not-confirmed-zero-play, session-replacement-zero-play, media-identity-change-zero-play, overlay-failure-emergency-cleanup-zero-play, repeated-STOP-idempotent, no-accidental-play-after-unconfirmed-pause, sent!=confirmed; + 8 SafeResumeGuardTest). Test-quality review (orchestrator read InterludeStateMachineTest + core classes): tests assert exact recording-port call counts against the real Android-free InterludeStateMachine/SafeResumeGuard decision core (play()==0 in every failure scenario, play()==1 only in the fully-confirmed-owned happy path) plus state transitions; they would fail if the guard/state-machine logic were reverted. Not static-value or fully-mocked tests. Isolation verified: no file under app/ changed; forbidden-API grep (AccessibilityService/input injection/setStreamVolume/UI scraping) finds only a doc comment stating setStreamVolume is NOT used; required APIs present (AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK, TYPE_APPLICATION_OVERLAY, getActiveSessions, mediaPlayback FGS + FOREGROUND_SERVICE_MEDIA_PLAYBACK). Docker: N/A (no Dockerfile). KNOWN DELTA (documented in report section H, deliberately NOT worked around): python3 -m unittest discover -s tests = 118 tests, 14 failures = 10 M4/M5 provenance guards citing solely the settings.gradle module-include byte pin + 4 docs-inventory assertions tripped by the new report file; M4/M5 frozen baselines, boundary tests, and all :app production bytes were deliberately left untouched, so M5 physical qualification is unaffected. PHYSICAL (real ducking / real Prime pause/play / real on-TV interlude) remains NOT TESTED (no device/emulator) and is never claimed PASS; Sony reserved for M5."
+  }
 }
