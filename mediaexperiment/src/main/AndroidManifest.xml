@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ISOLATED experimental Android TV manifest for the media-interlude POC.
+
+    This is the minimal compile baseline established in FEAT-001. Permissions
+    (SYSTEM_ALERT_WINDOW, FOREGROUND_SERVICE, FOREGROUND_SERVICE_MEDIA_PLAYBACK),
+    the mediaPlayback foreground service, the LEANBACK_LAUNCHER diagnostic
+    Activity, and this module's OWN NotificationListenerService are fleshed out
+    in FEAT-003. A manifest with no launchable activity is acceptable for the
+    assembleDebug baseline.
+
+    Isolation: this module declares its OWN package identity
+    (com.scenevibe.tvcompanionpoc.mediaexperiment) and shares nothing with :app
+    — no shared authority, no BootReceiver, no RECEIVE_BOOT_COMPLETED, no INTERNET.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- TV form factor: declared leanback, touchscreen explicitly not required. -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:banner="@drawable/banner"
+        android:icon="@drawable/banner"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Material.NoActionBar" />
+
+</manifest>

@@ -1,0 +1,9 @@
+{
+  "task_id": "task-media-interlude-poc",
+  "task_description": "Experimental capability spike (NOT M9, NOT production): build an ISOLATED Android TV experimental app in a new :mediaexperiment module (applicationId com.scenevibe.tvcompanionpoc.mediaexperiment) on branch experiment/scenevibe-media-interlude-poc-001 (base c9b0efd4acfaaae9ed7da13dcec505b2f653c548) that answers three physical capability questions: (1) temporary audio focus with ducking (AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK) while Prime plays; (2) reliable PAUSE/PLAY to the active Prime MediaSession with bounded confirmation; (3) a local fullscreen TYPE_APPLICATION_OVERLAY video interlude while Prime stays paused. Reuse existing MediaSessionProbe/SceneRenderer/OverlayService patterns as READ-ONLY references and implement isolated equivalents; share no SharedPreferences/Installation ID/Cloud/pairing/cache/db/signing/BootReceiver/autostart; no Cloud/assignment/FinalTrack/PackageInstaller; MediaSession transport only (no accessibility/input injection/UI scraping). Mandatory mediaPlayback FGS + FOREGROUND_SERVICE_MEDIA_PLAYBACK permission + SYSTEM_ALERT_WINDOW in the experimental manifest only. Deliver automated qualification (build+lint+the required JVM state-machine/safe-resume-guard tests), the experimental APK + SHA-256, and docs/experiments/media-interlude-poc-report.md separating IMPLEMENTED/AUTOMATED PASS/PHYSICAL SONY-PRIME NOT YET TESTED. Do NOT modify :app/main/Cloud/durable installation/ACK/M5 scheduler/FinalTrack schema/M6 WALL/PR#15/PR#16. Do NOT push, do NOT open a PR, do NOT install on the Sony. STOP after delivering the APK and protocol.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null,
+  "base_sha": "c9b0efd4acfaaae9ed7da13dcec505b2f653c548",
+  "branch": "experiment/scenevibe-media-interlude-poc-001"
+}

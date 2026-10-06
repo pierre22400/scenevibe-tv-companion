@@ -16,4 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "SceneVibeTvCompanionPoc"
 include(":app")
+include(":mediaexperiment")
 

@@ -1,0 +1,49 @@
+plugins {
+    id "com.android.application"
+}
+
+// ISOLATED experimental Android TV module for the media-interlude capability spike.
+//
+// Isolation contract (see .agents/tasks/task-media-interlude-poc/context.json):
+//   * DISTINCT applicationId (com.scenevibe.tvcompanionpoc.mediaexperiment) so this
+//     app installs side-by-side with the production :app and shares NO package
+//     identity, SharedPreferences, Installation ID, Cloud device ID, pairing,
+//     cache, database, signing-identity assumption, BootReceiver, or autostart.
+//   * NO dependency on project(":app"). This module shares nothing with :app; it
+//     only MIRRORS :app's compileSdk/minSdk/targetSdk/Java-17/testOptions toolchain.
+//   * NO Cloud/LAN BuildConfig logic (unlike app/build.gradle). No buildConfigField,
+//     no SCENEVIBE_CLOUD_ORIGIN / SCENEVIBE_ENABLE_LAN_DEV wiring.
+android {
+    namespace "com.scenevibe.tvcompanionpoc.mediaexperiment"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.scenevibe.tvcompanionpoc.mediaexperiment"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "0.1.0-media-interlude-poc"
+    }
+
+    buildTypes {
+        // Keep release unsigned (no signingConfig), consistent with the repo
+        // convention: the real signature is applied post-build by CI, so no key
+        // material is required at Gradle configure time.
+        release {
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.json:json:20240303"
+}

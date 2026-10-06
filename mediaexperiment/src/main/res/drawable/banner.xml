@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Minimal placeholder TV banner/icon for the isolated media-interlude POC module.
+    A solid-fill vector keeps the scaffold self-contained with no binary assets and
+    satisfies the leanback banner requirement for the compile baseline.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M130,70l70,20l-70,20z" />
+</vector>
