@@ -102,7 +102,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_production_test_config_or_document_file(self):
         """A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture."""
-        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths()
+        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'}
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):

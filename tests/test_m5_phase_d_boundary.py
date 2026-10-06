@@ -82,7 +82,7 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
         for directory in ('app/src', 'tests', '.github', 'docs'):
             actual.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob('*')
                           if p.is_file() and '__pycache__' not in p.parts)
-        expected = {p for p in set(BASE['startingBlobs']) | ADDED if p.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}
+        expected = {p for p in set(BASE['startingBlobs']) | ADDED | {'docs/m5-final-sony-physical-closure.md'} if p.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}
         self.assertEqual(expected, actual)
         self.assertFalse(any('*' in p for p in ADDED | CHANGED))
 

@@ -75,7 +75,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_file_in_any_retained_scope(self):
         """A namespace wildcard, extra engine or hidden fixture cannot pass the finite inventory."""
-        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths()
+        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'}
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):

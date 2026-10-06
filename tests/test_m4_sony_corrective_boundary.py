@@ -23,6 +23,7 @@ POST_CORRECTIVE_DOCUMENTS = {
     'docs/m4-final-sony-physical-closure.md',
     'docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md',
     'docs/m5-phase-a-architecture-report.md',
+    'docs/m5-final-sony-physical-closure.md',
 }
 
 
