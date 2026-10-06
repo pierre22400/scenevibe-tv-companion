@@ -106,6 +106,10 @@ public final class M5VideoCutoverTest {
             if(binding==null)return null;Field token=binding.getClass().getDeclaredField("token");token.setAccessible(true);
             return (String)token.get(binding);
         }
+        /** Inspect actual controller flags so stale playback cannot hide behind an unchanged visual trace. */
+        boolean flag(String name) throws Exception {
+            Field field=controller.getClass().getDeclaredField(name);field.setAccessible(true);return field.getBoolean(controller);
+        }
         /** First exact parser event drives media positions; the fixture owns no scheduling rule. */
         ScheduledTrack.Event event() {return prepared.track.comments.get(0);}
         /** Build a passive MediaSession value and run the actual C Video observation adapter. */
@@ -150,15 +154,19 @@ public final class M5VideoCutoverTest {
     @Test public void replacementRejectsEveryOldCallbackWithoutHidingB() throws Exception {
         Runtime r=new Runtime();r.install(12);r.due();String old=r.token("active");r.install(13);assertFalse(r.visible());r.due();
         assertTrue(r.visible());assertNotEquals(old,r.token("active"));List<String> before=new ArrayList<>(r.visual);
+        boolean playing=r.flag("playing"),freeze=r.flag("pauseFreezesDisplay");
         r.ports.onDue(old,r.event().id);r.ports.onExpire(old,r.event().id);r.ports.onPlayback(old,false,true);
         r.ports.onEligibility(old,false);assertEquals(before,r.visual);assertTrue(r.visible());
+        assertEquals(playing,r.flag("playing"));assertEquals(freeze,r.flag("pauseFreezesDisplay"));
     }
     /** Pending callbacks cannot render, hide, change playback or affect eligibility before selection. */
     @Test public void pendingBindingCannotConsumeCallbacks() throws Exception {
         Runtime r=new Runtime();r.install(12);r.due();r.ports.retireManifestedVisualOwner();r.ports.retireLegacyVisualOwner();
         assertTrue(r.ports.loadPreparedVideo(r.prepared));String pending=r.token("pending");assertNull(r.token("active"));
+        boolean playing=r.flag("playing"),freeze=r.flag("pauseFreezesDisplay");
         List<String> before=new ArrayList<>(r.visual);r.ports.onDue(pending,r.event().id);r.ports.onExpire(pending,r.event().id);
-        r.ports.onPlayback(pending,true,true);r.ports.onEligibility(pending,true);assertEquals(before,r.visual);assertFalse(r.visible());
+        r.ports.onPlayback(pending,false,false);r.ports.onEligibility(pending,true);assertEquals(before,r.visual);assertFalse(r.visible());
+        assertEquals(playing,r.flag("playing"));assertEquals(freeze,r.flag("pauseFreezesDisplay"));
     }
     /** Abort clears pending and active, then rejects both callback identities idempotently. */
     @Test public void abortInvalidatesEveryBindingAndSelection() throws Exception {
@@ -246,6 +254,7 @@ public final class M5VideoCutoverTest {
     @Test public void playbackRepetitionsPreserveSelectedOwner() throws Exception {
         Runtime r=new Runtime();r.install(12);r.due();String token=r.token("active");int before=r.playback;
         r.ports.onPlayback(token,false,true);r.ports.onPlayback(token,false,true);assertEquals(manifested?before:before+2,r.playback);assertTrue(r.visible());
+        if(manifested) {assertFalse(r.flag("playing"));assertTrue(r.flag("pauseFreezesDisplay"));}
     }
     /** Actual media-window expiry traverses the qualified generic core and the selected router path. */
     @Test public void mediaWindowExpiryTraversesActualCore() throws Exception {

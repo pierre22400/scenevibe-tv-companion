@@ -1,7 +1,9 @@
 # M5 — Qualification ciblée Sony
 
 PHYSICAL SONY PENDING. Exécuter avec Pierre, une action puis son observation à la fois.
-APK exact, SHA-256, signer et HEAD : voir le rapport Phase D livré avec ce protocole.
+APK : `scenevibe-tv-companion-cloud-qualification-stable.apk`.
+SHA-256 : `43a9bb12ecc7712afdcf7ed5486d4eff1c1be1767308c8832d919ac0dca817d2`.
+HEAD et identité finale de l'artefact : manifeste Phase D de la PR #15, cité dans le rapport.
 
 1. Avant upgrade, ouvrir Diagnostics et relever version, Cloud deviceId, installationId,
    permissions overlay/MediaSession, autostart, installed/acknowledged revision, codec/handler,
