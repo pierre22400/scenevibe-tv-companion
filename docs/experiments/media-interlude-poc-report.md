@@ -1,5 +1,8 @@
 # Media Interlude Capability Spike — Corrective Pass
 
+> **Post-qualification fixture update — 6 October 2026.** The isolated ducking cue was replaced at source commit `75dcefbfafe7b23c7cd16d48ae85ba676c8ff2d3` by a locally generated French spoken fixture saying **“Bienvenue sur SceneVibe Audio”**. The file remains `mediaexperiment/src/main/res/raw/scenevibe_cue.m4a`, AAC-LC mono, 22.05 kHz, ~1.81 s. The interlude video fixture is unchanged. This fixture-only change does not alter pause/session/guard logic. The APK SHA-256 recorded later in this report belongs to the pre-replacement APK and MUST NOT be used for the physical test; rebuild `:mediaexperiment:assembleDebug` from this branch before installation.
+
+
 ## A. Status and scope
 
 This remains an **ISOLATED EXPERIMENTAL CAPABILITY SPIKE**, **NOT M9** and
