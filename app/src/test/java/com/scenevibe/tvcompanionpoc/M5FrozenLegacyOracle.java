@@ -18,11 +18,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
+import java.util.concurrent.TimeUnit;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -76,14 +72,10 @@ final class M5FrozenLegacyOracle {
         if (frozen != null) {
             return frozen;
         }
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new IllegalStateException("Oracle qualification requires a JDK compiler");
-        }
         Path directory = Files.createTempDirectory("scenevibe-m5-frozen-");
         directory.toFile().deleteOnExit();
         Path classes = Files.createDirectory(directory.resolve("classes"));
-        List<java.io.File> sources = new ArrayList<>();
+        List<String> sources = new ArrayList<>();
         for (Map.Entry<String, String> entry : BLOBS.entrySet()) {
             byte[] bytes = resource("oracle/" + entry.getKey() + ".java");
             if (!entry.getValue().equals(blob(bytes))) {
@@ -92,19 +84,27 @@ final class M5FrozenLegacyOracle {
             Path source = directory.resolve(entry.getKey() + ".java");
             Files.write(source, bytes);
             source.toFile().deleteOnExit();
-            sources.add(source.toFile());
+            sources.add(source.toString());
         }
         URL android = Log.class.getProtectionDomain().getCodeSource().getLocation();
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager manager = compiler.getStandardFileManager(
-                diagnostics, null, StandardCharsets.UTF_8)) {
-            boolean success = compiler.getTask(null, manager, diagnostics,
-                    Arrays.asList("-encoding", "UTF-8", "-classpath", Path.of(android.toURI()).toString(),
-                            "-sourcepath", directory.toString(), "-d", classes.toString()),
-                    null, manager.getJavaFileObjectsFromFiles(sources)).call();
-            if (!success) {
-                throw new IllegalStateException("Pinned oracle compilation failed");
-            }
+        List<String> command = new ArrayList<>(Arrays.asList(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-m", "jdk.compiler/com.sun.tools.javac.Main", "-encoding", "UTF-8",
+                "-classpath", Path.of(android.toURI()).toString(), "-sourcepath", directory.toString(),
+                "-d", classes.toString()));
+        command.addAll(sources);
+        Path compilerLog = directory.resolve("compiler.log");
+        compilerLog.toFile().deleteOnExit();
+        // AGP's Android compilation image excludes javax.tools from test compilation.
+        // Invoke the host JDK directly; this changes no frozen source or algorithm.
+        Process process = new ProcessBuilder(command).redirectErrorStream(true)
+                .redirectOutput(compilerLog.toFile()).start();
+        if (!process.waitFor(30, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            throw new IllegalStateException("Pinned oracle compilation timed out");
+        }
+        if (process.exitValue() != 0) {
+            throw new IllegalStateException("Pinned oracle compilation failed");
         }
         frozen = new FrozenLoader(classes.toUri().toURL());
         return frozen;

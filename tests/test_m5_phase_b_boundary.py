@@ -145,7 +145,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
             self.assertEqual(item['blob'], BASELINE['startingBlobs'][item['production']])
             self.assertIn(item['blob'], harness)
         self.assertEqual([], BASELINE['oracleAdaptations'])
-        for token in ('compiler.getTask', 'source.toFile()', 'new FrozenLoader', 'findClass(name)',
+        for token in ('jdk.compiler/com.sun.tools.javac.Main', 'new ProcessBuilder(command)', 'new FrozenLoader', 'findClass(name)',
                       'getMethod("onPlaybackSnapshot"', 'getMethod("onPlaybackUnavailable"'):
             self.assertIn(token, harness)
         for token in ('MAX_LATE_MS', 'FORWARD_SEEK_THRESHOLD_MS', 'BACKWARD_SEEK_THRESHOLD_MS',

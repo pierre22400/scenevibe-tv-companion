@@ -92,8 +92,9 @@ public final class M5LegacyOracleCorpusTest {
     public static void saveRawTraces() throws Exception {
         Path destination = Path.of("build/reports/m5-phase-b-oracle-traces.json");
         Files.createDirectories(destination.getParent());
-        Files.writeString(destination, new JSONObject().put("candidateImplemented", false)
+        String result = new JSONObject().put("candidateImplemented", false)
                 .put("environment", System.getProperty("java.vm.name") + " " + System.getProperty("java.version"))
-                .put("traces", TRACES).toString(2) + "\n", StandardCharsets.UTF_8);
+                .put("traces", TRACES).toString(2) + "\n";
+        Files.write(destination, result.getBytes(StandardCharsets.UTF_8));
     }
 }

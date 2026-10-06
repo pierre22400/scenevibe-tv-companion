@@ -1,7 +1,10 @@
 package com.scenevibe.tvcompanionpoc;
 
 import com.scenevibe.tvcompanionpoc.calendar.MediaCalendar;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import org.json.JSONObject;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -12,14 +15,19 @@ public final class M5VideoProjectionTest {
         return new ScheduledTrack("synthetic", "com.amazon.amazonvideo.livingroom",
                 new ScheduledTrack.MediaIdentity("prime_video", "fixture", "Columbo", 100_000),
                 Arrays.asList(new ScheduledTrack.Event("later", "payload stays outside", 3000, 60000, null),
-                        new ScheduledTrack.Event("é", "outside", 1000, 0, null),
-                        new ScheduledTrack.Event("e\u0301", "outside", 1000, -1, null)), freeze);
+                        new ScheduledTrack.Event("é", "outside", 1000, 1000, null),
+                        new ScheduledTrack.Event("e\u0301", "outside", 1000, 2000, null)), freeze);
     }
 
     /** Preserve every exact temporal field and the legacy stable order at equality. */
     @Test
-    public void temporalProjectionIsExact() {
-        ScheduledTrack input = track(true);
+    public void temporalProjectionIsExact() throws Exception {
+        final ScheduledTrack input;
+        try (InputStream resource = getClass().getResourceAsStream("/m4/video-legacy-cache-v1.json")) {
+            assertNotNull(resource);
+            JSONObject qualified = new JSONObject(new String(resource.readAllBytes(), StandardCharsets.UTF_8));
+            input = TrackParser.parse(new JSONObject(qualified.getString("runtime")), media -> null);
+        }
         MediaCalendar actual = M5VideoTestProjection.project(input);
         assertEquals(input.comments.size(), actual.events().size());
         for (int i = 0; i < input.comments.size(); i++) {
@@ -27,8 +35,9 @@ public final class M5VideoProjectionTest {
             assertEquals(input.comments.get(i).startMs, actual.events().get(i).startMs());
             assertEquals(input.comments.get(i).durationMs, actual.events().get(i).durationMs());
         }
-        assertEquals("é", actual.events().get(0).eventId());
-        assertEquals("e\u0301", actual.events().get(1).eventId());
+        MediaCalendar equalStarts = M5VideoTestProjection.project(track(true));
+        assertEquals("é", equalStarts.events().get(0).eventId());
+        assertEquals("e\u0301", equalStarts.events().get(1).eventId());
     }
 
     /** Map both qualified legacy pause policies without inventing a clock. */

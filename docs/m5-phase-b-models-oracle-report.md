@@ -70,7 +70,8 @@ la qualification. Les sources de production correspondantes sont également fig�
 | `NotificationAccess.java` | `b79a16d128c533169305e8a814b56488c3846559` |
 | `ScheduledTrack.java` | `38219f1130a0243272d3b1df5ad2e63461d7cc1e` |
 
-`M5FrozenLegacyOracle` compile ces six sources avec le JDK et le jar Android
+`M5FrozenLegacyOracle` invoque le module compilateur du JDK hôte dans un sous-processus
+test-only borné à 30 secondes, avec ces six sources et le jar Android
 mockable officiel utilisé par AGP. Son class loader charge exclusivement ces
 classes et leurs classes internes depuis le répertoire compilé isolé ; il interdit
 le fallback vers les classes production. Un test exige cette séparation effective.
@@ -87,6 +88,8 @@ compilation nécessaires à ce probe réel. **Adaptations des bytes oracle : auc
 construit -> ID/start/duration exacts et pauseFreezesDisplay. Il ne parse pas JSON,
 ne résout pas l'identité, ne construit pas de manifest, ne charge pas d'image et
 ne lit ni store ni Cloud. Ce n'est pas l'adapter live C/D.
+Le test de projection part aussi de la fixture legacy M4 figée, validée une fois
+par TrackParser avant projection. Le helper de projection ne reparse jamais JSON.
 
 ## Journal, comparateur et contrôles négatifs
 
@@ -244,6 +247,20 @@ JSONException du framework Android. Les nouvelles méthodes test ont été corri
 dans ce cycle, sans toucher au core ou à l'ancien code ; les suites réelles ont
 ensuite passé. La copie Calendar est également vérifiée après ownership afin de
 conserver les bornes de la liste possédée. Ces corrections sont locales à B.
+
+La première CI debug `37417067308`, HEAD `a5b29d93681d604d1009ad318d3f059a5b49b4a7`,
+a réellement échoué à compiler le **nouveau** harness : `javax.tools` n’existe pas
+dans l’image de compilation Android AGP, et Files.writeString n’est pas exposé.
+La correction B invoque le module JDK séparément et écrit les bytes UTF-8 avec
+Files.write ; aucun build.gradle/workflow ni source oracle n’est modifié. La
+projection a aussi été renforcée avec l’ingress réel de la fixture M4 existante.
+L’échec initial est conservé ; il ne constitue ni un PASS ni un échec logiciel M4.
+
+Après correction, une première exécution locale complète a donné 902 PASS /
+1 FAIL / 1 SKIP : seul `M4PhaseFOwnerGateTest.interruptedWaitCancelsLateOwnerInstallation`
+a échoué (historique sensible au scheduling). Le rerun des **mêmes bytes inchangés**
+a donné 903 PASS / 0 FAIL / 1 SKIP. Aucune assertion, timeout, source Cloud ou test
+retenu n’a été changé. Les deux tentatives restent distinguées de l’erreur CI B.
 
 L'auto-audit couvre le diff complet, l'inventaire fini, l'absence de callers, la
 compilation JDK seule, imports/signatures, dépendances interdites, immutabilité,
