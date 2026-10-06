@@ -407,3 +407,85 @@ PR #15 reste OPEN / DRAFT / unmerged, sans Ready, rebase, force-push ni merge.
 Prochaine recommandation, après la vérification du HEAD documentaire final : **M5 PHASE C — GENERIC MEDIA
 SCHEDULER + MEDIA OBSERVATION ADAPTERS + EXACT LEGACY/CANDIDATE DIFFERENTIAL**.
 C n'est pas commencé dans ce cycle.
+
+## Pre-Phase-C qualification corrective — historical owner-gate race
+
+Ce cycle est **hors implémentation fonctionnelle Phase B**. Il corrige uniquement
+la qualification du comportement fail-closed historique. Phase C est **NON
+COMMENCÉE**, production **SHADOW**, PR #15 **OPEN / DRAFT / unmerged**.
+
+### Échecs du HEAD final B conservés
+
+Le HEAD documentaire final B `ce724e9058dbf56eee2b235174e18556807bcf1d` a échoué
+deux fois sans changement des bytes, dans le run debug `37420016735` :
+
+| Tentative | Job | Python | JVM | Échec unique |
+| --- | --- | --- | --- | --- |
+| 1 | `112127060876` | 98/0/0 | 902/1/1 | M4PhaseFOwnerGateTest.interruptedWaitCancelsLateOwnerInstallation |
+| 2 | `112128254759` | 98/0/0 | 902/1/1 | Même test, même CloudException |
+
+L'exception observée était exactement
+`com.scenevibe.tvcompanionpoc.CloudControlClient$CloudException`, message
+`Local installation refused`, à CloudControlClient.java:256. Le test n'acceptait
+que InterruptedException. Les runs rouges précédents et la réussite distincte
+sur `9978884f75698138d3eae16e3d053922419b514f` ci-dessus restent historiques ;
+aucun PASS antérieur ne vaut qualification du nouveau HEAD.
+
+### Cause et correction limitée
+
+Après `stop()`, IO peut observer l'interruption avant l'owner : la tâche est
+annulée et InterruptedException est valide. Si l'owner gagne la course, sa garde
+`running && currentClient.getAsBoolean()` est false : aucune installation,
+ARM_FAILED puis CloudException / `Local installation refused`. Le type unique
+attendu était trop prescriptif ; les deux issues doivent échouer fermement.
+
+Seule la méthode `interruptedWaitCancelsLateOwnerInstallation` est modifiée dans
+le test Java existant. Son nom, ses trois secondes de timeout et sa frontière
+owner restent identiques. Le catch supplémentaire vérifie **classe exacte ET
+message exact** ; toute autre exception échoue. Après drainage via
+`h.onOwner(() -> null)`, cinq assertions distinctes exigent : installCalls=0,
+acks=0, candidateWrites=0, ackWrites=0 et acknowledgedRevision=0.
+
+**ZERO PRODUCTION CHANGE** : aucun Java production, CloudControlClient,
+AssignmentMutationGate, scheduler, installer/store, ACK, modèle Phase B, oracle,
+corpus, timeout, workflow ou signature n'est modifié. Aucun skip ajouté.
+
+### Provenance finie et réversible
+
+Le manifeste M5 existant ajoute `qualificationCorrective`, référence
+`ce724e9058dbf56eee2b235174e18556807bcf1d`, avec exactement quatre inverses :
+le test Java, m5_phase_b_provenance.py, test_m4_sony_corrective_boundary.py et
+test_m5_phase_b_boundary.py. Les seuls autres chemins autorisés sont le manifeste
+M5 lui-même et ce rapport. Aucun wildcard ni nouvelle admission de runtime.
+Les hashes historiques M4, le baseline Sony et les pins B existants sont
+inchangés. La chaîne inverse qualification → B → Sony reconstruit les bytes
+historiques complets, notamment blob test `68a94c47dc7f9ef6d75e858221acbec618202a0a`.
+Le contrôle B nouveau vérifie cette admission exacte et les cinq assertions.
+Les contrôles comportementaux/compilation exécutent toujours les bytes actuels.
+
+### Résultats locaux avant la qualification complète
+
+Sur les bytes correctifs destinés au commit, JDK17 et framework mockable Android
+AGP officiel, sans modification des sources production :
+
+| Contrôle exécuté | Résultat |
+| --- | --- |
+| Classe M4PhaseFOwnerGateTest, 1 exécution avant suite complète | 6 PASS / 0 FAIL / 0 SKIP |
+| interruptedWaitCancelsLateOwnerInstallation, 100 exécutions finies mêmes bytes | 100 PASS / 0 FAIL / 0 SKIP |
+| Bloc catch extrait du test et compilé dans un contrôle local temporaire | Deux issues valides acceptées ; trois invalides rejetées |
+| Contrôles invalides | IllegalStateException avec message valide, CloudException avec message incorrect, Exception générique avec message valide |
+| Python complet, incluant nouveau contrôle de provenance | 99 PASS / 0 FAIL / 0 SKIP |
+| JDK-only core, classpath/sourcepath vides | PASS dans Python |
+| JVM complet local | 903 PASS / 0 FAIL / 1 SKIP historique / 904 total |
+| JVM M5 seuls local | 127 PASS / 0 FAIL / 0 SKIP |
+
+Le SKIP reste M1CloudInteropTest.originalColumboProjectionIsInstallable.
+Les répétitions naturelles ne prétendent pas mesurer la fréquence de chacun des
+ordonnancements ; les contrôles synthétiques vérifient la stricte acceptation.
+Pas de boucle permanente ajoutée au test ni de Thread.sleep.
+
+La qualification Android/CI sur le SHA correctif est **PENDING** à ce commit :
+assembleDebug, lintDebug, testDebugUnitTest, LAN DEV, Cloud qualification, signer,
+API35 smoke et native durability API31/API35 doivent encore passer. Le manifeste
+PR #15 enregistrera le SHA correctif et les résultats réels sur le HEAD final
+exact après qualification. Verdict actuel : **NOT READY FOR M5 PHASE C**.

@@ -34,10 +34,34 @@ def phase_b_added_paths():
     return set(inventory['additiveFiles']) | set(inventory['documents'])
 
 
+def qualification_retained_bytes(path):
+    """Undo only finite pre-Phase-C qualification edits to the exact ce724e9 blobs.
+
+    Compilation and behavior checks still execute actual bytes. This inverse is
+    exclusively for provenance, before the existing B and Sony inverse layers.
+    """
+    path = Path(path)
+    content = path.read_bytes()
+    inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))['qualificationCorrective']
+    relative = str(path.relative_to(ROOT))
+    patches = inventory['patches'].get(relative)
+    if patches is None:
+        return content
+    source = content.decode('utf-8')
+    for patch in reversed(patches):
+        if source.count(patch['after']) != 1:
+            raise ValueError('Missing or ambiguous pre-Phase-C qualification edit')
+        source = source.replace(patch['after'], patch['before'])
+    previous = source.encode('utf-8')
+    if blob_hash(previous) != inventory['startingBlobs'][relative]:
+        raise ValueError('Qualification inverse differs from immutable ce724e9 blob')
+    return previous
+
+
 def phase_b_retained_bytes(path):
     """Reverse uniquely inventoried provenance edits and verify the complete starting blob."""
     path = Path(path)
-    content = path.read_bytes()
+    content = qualification_retained_bytes(path)
     inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))
     relative = str(path.relative_to(ROOT))
     patches = inventory['provenancePatches'].get(relative)

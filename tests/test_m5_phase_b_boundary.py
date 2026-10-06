@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from m5_phase_b_provenance import blob_hash, calendar_model_files, phase_b_retained_bytes
+from m5_phase_b_provenance import blob_hash, calendar_model_files, phase_b_retained_bytes, qualification_retained_bytes
 
 """Qualify the additive temporal values and the byte-exact test-only legacy oracle.
 
@@ -64,9 +64,39 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
     def test_all_retained_bytes_and_reversible_provenance_are_exact(self):
         """Pin runtime, Cloud/store/ACK/identity, old tests, docstrings and signing/config bytes."""
         for path, digest in BASELINE['startingBlobs'].items():
-            content = phase_b_retained_bytes(ROOT / path) if path in PROVENANCE_FILES else (ROOT / path).read_bytes()
+            content = phase_b_retained_bytes(ROOT / path)
             self.assertEqual(digest, blob_hash(content), path)
         self.assertNotIn('.github/scripts/m4-phase-g-sony-corrective-baseline.json', PROVENANCE_FILES)
+
+    def test_pre_phase_c_qualification_inverse_and_acceptance_are_exact(self):
+        """Pin the finite test-only corrective separately from B and reject wider exception acceptance."""
+        corrective = BASELINE['qualificationCorrective']
+        owner = TEST + 'M4PhaseFOwnerGateTest.java'
+        exact = {owner, 'tests/m5_phase_b_provenance.py',
+                 'tests/test_m4_sony_corrective_boundary.py', 'tests/test_m5_phase_b_boundary.py'}
+        self.assertEqual('ce724e9058dbf56eee2b235174e18556807bcf1d', corrective['referenceHead'])
+        self.assertEqual(exact, set(corrective['patches']))
+        self.assertEqual(exact, set(corrective['startingBlobs']))
+        self.assertEqual(exact | {'.github/scripts/m5-phase-b-baseline.json',
+                                 'docs/m5-phase-b-models-oracle-report.md'}, set(corrective['authorizedChanges']))
+        self.assertEqual('68a94c47dc7f9ef6d75e858221acbec618202a0a', corrective['startingBlobs'][owner])
+        for path in exact:
+            self.assertEqual(corrective['startingBlobs'][path], blob_hash(qualification_retained_bytes(ROOT / path)), path)
+        source = code(owner)
+        method = source.split('public void interruptedWaitCancelsLateOwnerInstallation()', 1)[1].split(
+            '@Test public void replacementAfterArmPreventsAck()', 1)[0]
+        self.assertEqual(1, method.count('catch(InterruptedException expected)'))
+        self.assertEqual(1, method.count('catch(Exception expected)'))
+        self.assertIn('assertEquals("com.scenevibe.tvcompanionpoc.CloudControlClient$CloudException",', method)
+        self.assertIn('expected.getClass().getName());', method)
+        self.assertIn('assertEquals("Local installation refused",expected.getMessage());', method)
+        self.assertIn('fail("stopped owner wait must fail closed");', method)
+        self.assertIn('h.onOwner(()->null);', method)
+        for invariant in ('h.installCalls', 'h.acks', 'h.backend.candidateWrites',
+                          'h.backend.ackWrites', 'h.store.read().acknowledgedRevision()'):
+            self.assertIn('assertEquals(0,' + invariant + ');', method)
+        self.assertNotIn('Thread.sleep', method)
+        self.assertNotIn('@Ignore', method)
 
     def test_no_unlisted_production_test_config_or_document_file(self):
         """A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture."""

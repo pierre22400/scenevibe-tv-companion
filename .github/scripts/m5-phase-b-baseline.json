@@ -562,5 +562,73 @@
     "M6 WALL/Banner/anchors",
     "M7 remote assets/cache",
     "M8+ partner/SDK/UX"
-  ]
+  ],
+  "qualificationCorrective": {
+    "referenceHead": "ce724e9058dbf56eee2b235174e18556807bcf1d",
+    "kind": "PRE-PHASE-C QUALIFICATION CORRECTIVE",
+    "authorizedChanges": [
+      ".github/scripts/m5-phase-b-baseline.json",
+      "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFOwnerGateTest.java",
+      "docs/m5-phase-b-models-oracle-report.md",
+      "tests/m5_phase_b_provenance.py",
+      "tests/test_m4_sony_corrective_boundary.py",
+      "tests/test_m5_phase_b_boundary.py"
+    ],
+    "startingBlobs": {
+      "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFOwnerGateTest.java": "68a94c47dc7f9ef6d75e858221acbec618202a0a",
+      "tests/m5_phase_b_provenance.py": "a1629e5624ae2b83bec8386e9be1ef7c64265621",
+      "tests/test_m4_sony_corrective_boundary.py": "6f7698db29d5218fed5f851d7a49acd6a41652e4",
+      "tests/test_m5_phase_b_boundary.py": "bdcb21700608cf59c03b6499a03fda8749a6a139"
+    },
+    "patches": {
+      "app/src/test/java/com/scenevibe/tvcompanionpoc/M4PhaseFOwnerGateTest.java": [
+        {
+          "before": "    /** Interrupting the real io wait cancels the queued FutureTask; releasing the owner cannot install later. */",
+          "after": "    /**\n     * Stopping queued owner work fails closed whether IO interruption or the stopped-client\n     * owner guard wins the race; neither path may install, mutate durable state or ACK later.\n     */"
+        },
+        {
+          "before": "            try {M4PhaseFFixtures.Harness.await(fetch);fail(\"interrupted owner wait must fail\");}\n            catch(InterruptedException expected) { /* Original interrupted-wait discipline is preserved. */ }\n            h.onOwner(()->null);assertEquals(0,h.installCalls+h.acks+h.backend.candidateWrites);",
+          "after": "            try {M4PhaseFFixtures.Harness.await(fetch);fail(\"stopped owner wait must fail closed\");}\n            catch(InterruptedException expected) { /* Valid outcome: IO observes interruption first. */ }\n            catch(Exception expected) {\n                assertEquals(\"com.scenevibe.tvcompanionpoc.CloudControlClient$CloudException\",\n                        expected.getClass().getName());\n                assertEquals(\"Local installation refused\",expected.getMessage());\n            }\n            h.onOwner(()->null);\n            assertEquals(0,h.installCalls);\n            assertEquals(0,h.acks);\n            assertEquals(0,h.backend.candidateWrites);\n            assertEquals(0,h.backend.ackWrites);\n            assertEquals(0,h.store.read().acknowledgedRevision());"
+        }
+      ],
+      "tests/m5_phase_b_provenance.py": [
+        {
+          "before": "    content = path.read_bytes()\n    inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))\n    relative = str(path.relative_to(ROOT))\n    patches = inventory['provenancePatches'].get(relative)",
+          "after": "    content = qualification_retained_bytes(path)\n    inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))\n    relative = str(path.relative_to(ROOT))\n    patches = inventory['provenancePatches'].get(relative)"
+        },
+        {
+          "before": "def phase_b_retained_bytes(path):",
+          "after": "def qualification_retained_bytes(path):\n    \"\"\"Undo only finite pre-Phase-C qualification edits to the exact ce724e9 blobs.\n\n    Compilation and behavior checks still execute actual bytes. This inverse is\n    exclusively for provenance, before the existing B and Sony inverse layers.\n    \"\"\"\n    path = Path(path)\n    content = path.read_bytes()\n    inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))['qualificationCorrective']\n    relative = str(path.relative_to(ROOT))\n    patches = inventory['patches'].get(relative)\n    if patches is None:\n        return content\n    source = content.decode('utf-8')\n    for patch in reversed(patches):\n        if source.count(patch['after']) != 1:\n            raise ValueError('Missing or ambiguous pre-Phase-C qualification edit')\n        source = source.replace(patch['after'], patch['before'])\n    previous = source.encode('utf-8')\n    if blob_hash(previous) != inventory['startingBlobs'][relative]:\n        raise ValueError('Qualification inverse differs from immutable ce724e9 blob')\n    return previous\n\n\ndef phase_b_retained_bytes(path):"
+        }
+      ],
+      "tests/test_m4_sony_corrective_boundary.py": [
+        {
+          "before": "from m5_phase_b_provenance import calendar_model_files, phase_b_added_paths",
+          "after": "from m5_phase_b_provenance import calendar_model_files, phase_b_added_paths, qualification_retained_bytes"
+        },
+        {
+          "before": "content = retained_bytes(ROOT / path) if path in expected else (ROOT / path).read_bytes()",
+          "after": "content = retained_bytes(ROOT / path) if path in expected else qualification_retained_bytes(ROOT / path)"
+        },
+        {
+          "before": "self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)",
+          "after": "self.assertEqual(digest, blob_hash(qualification_retained_bytes(ROOT / path)), path)"
+        }
+      ],
+      "tests/test_m5_phase_b_boundary.py": [
+        {
+          "before": "from m5_phase_b_provenance import blob_hash, calendar_model_files, phase_b_retained_bytes",
+          "after": "from m5_phase_b_provenance import blob_hash, calendar_model_files, phase_b_retained_bytes, qualification_retained_bytes"
+        },
+        {
+          "before": "content = phase_b_retained_bytes(ROOT / path) if path in PROVENANCE_FILES else (ROOT / path).read_bytes()",
+          "after": "content = phase_b_retained_bytes(ROOT / path)"
+        },
+        {
+          "before": "    def test_no_unlisted_production_test_config_or_document_file(self):",
+          "after": "    def test_pre_phase_c_qualification_inverse_and_acceptance_are_exact(self):\n        \"\"\"Pin the finite test-only corrective separately from B and reject wider exception acceptance.\"\"\"\n        corrective = BASELINE['qualificationCorrective']\n        owner = TEST + 'M4PhaseFOwnerGateTest.java'\n        exact = {owner, 'tests/m5_phase_b_provenance.py',\n                 'tests/test_m4_sony_corrective_boundary.py', 'tests/test_m5_phase_b_boundary.py'}\n        self.assertEqual('ce724e9058dbf56eee2b235174e18556807bcf1d', corrective['referenceHead'])\n        self.assertEqual(exact, set(corrective['patches']))\n        self.assertEqual(exact, set(corrective['startingBlobs']))\n        self.assertEqual(exact | {'.github/scripts/m5-phase-b-baseline.json',\n                                 'docs/m5-phase-b-models-oracle-report.md'}, set(corrective['authorizedChanges']))\n        self.assertEqual('68a94c47dc7f9ef6d75e858221acbec618202a0a', corrective['startingBlobs'][owner])\n        for path in exact:\n            self.assertEqual(corrective['startingBlobs'][path], blob_hash(qualification_retained_bytes(ROOT / path)), path)\n        source = code(owner)\n        method = source.split('public void interruptedWaitCancelsLateOwnerInstallation()', 1)[1].split(\n            '@Test public void replacementAfterArmPreventsAck()', 1)[0]\n        self.assertEqual(1, method.count('catch(InterruptedException expected)'))\n        self.assertEqual(1, method.count('catch(Exception expected)'))\n        self.assertIn('assertEquals(\"com.scenevibe.tvcompanionpoc.CloudControlClient$CloudException\",', method)\n        self.assertIn('expected.getClass().getName());', method)\n        self.assertIn('assertEquals(\"Local installation refused\",expected.getMessage());', method)\n        self.assertIn('fail(\"stopped owner wait must fail closed\");', method)\n        self.assertIn('h.onOwner(()->null);', method)\n        for invariant in ('h.installCalls', 'h.acks', 'h.backend.candidateWrites',\n                          'h.backend.ackWrites', 'h.store.read().acknowledgedRevision()'):\n            self.assertIn('assertEquals(0,' + invariant + ');', method)\n        self.assertNotIn('Thread.sleep', method)\n        self.assertNotIn('@Ignore', method)\n\n    def test_no_unlisted_production_test_config_or_document_file(self):"
+        }
+      ]
+    }
+  }
 }

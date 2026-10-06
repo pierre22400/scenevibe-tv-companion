@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import unittest
 from sony_corrective_provenance import blob_hash, retained_bytes
-from m5_phase_b_provenance import calendar_model_files, phase_b_added_paths
+from m5_phase_b_provenance import calendar_model_files, phase_b_added_paths, qualification_retained_bytes
 
 """Qualify the localized hard-reboot correction without weakening a single retained A–G gate.
 
@@ -50,7 +50,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         expected.add('docs/m4-sony-physical-qualification-protocol.md')
         self.assertEqual(expected, set(BASELINE['correctivePatches']))
         for path, digest in BASELINE['startingBlobs'].items():
-            content = retained_bytes(ROOT / path) if path in expected else (ROOT / path).read_bytes()
+            content = retained_bytes(ROOT / path) if path in expected else qualification_retained_bytes(ROOT / path)
             self.assertEqual(digest, blob_hash(content), path)
 
     def test_retained_java_tests_fixtures_and_prior_inventories_have_no_exception(self):
@@ -58,7 +58,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         for path, digest in BASELINE['startingBlobs'].items():
             if path.startswith('app/src/test/') or re.fullmatch(r'\.github/scripts/m4-phase-[a-g]-baseline.json', path):
                 self.assertNotIn(path, BASELINE['correctivePatches'])
-                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+                self.assertEqual(digest, blob_hash(qualification_retained_bytes(ROOT / path)), path)
         allowed = set(BASELINE['additiveFiles'])
         allowed.add('docs/m4-phase-g-sony-hard-reboot-corrective-report.md')
         allowed.update(POST_CORRECTIVE_DOCUMENTS)
