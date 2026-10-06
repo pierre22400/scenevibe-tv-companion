@@ -1,6 +1,6 @@
 # SCENEVIBE OS — M5 Phase A : architecture et caractérisation
 
-Date : 2026-10-05. Périmètre : les deux documents Phase A uniquement.
+Date : 2026-10-05. Phase A initiale : deux documents uniquement. Un correctif de qualification tests-only a ensuite levé le défaut d’inventaire documentaire, sans modifier aucun byte de production M5/M4.
 Production : **SHADOW**. Aucune Phase B commencée, aucune nouvelle qualification Sony.
 
 ## Bases et publication
@@ -28,9 +28,11 @@ Deux ajouts seulement :
 - [m5-phase-a-architecture-report.md](m5-phase-a-architecture-report.md)
 
 Publication par commits ordinaires à un parent, branche issue du main exact,
-updates fast-forward sans force ni rebase. Main TV/Cloud, ancien chantier M4,
-sources production, tests, fixtures, build, workflows et documents M4 sont
-inchangés. La nouvelle PR reste OPEN / DRAFT / unmerged ; aucun passage Ready
+updates fast-forward sans force ni rebase. Les deux commits Phase A n’ont modifié
+que les deux documents ci-dessus. Le correctif de qualification ultérieur modifie
+uniquement `tests/test_m4_sony_corrective_boundary.py` pour admettre trois chemins
+documentaires exacts ; aucun source production, fixture, build, workflow ou document
+M4 n’est modifié. La nouvelle PR reste OPEN / DRAFT / unmerged ; aucun passage Ready
 ou merge n'est demandé ni effectué. Le manifest final donne les SHAs exacts
 et l'état des checks relus après publication, sans les inventer dans ce rapport.
 
@@ -82,7 +84,7 @@ l'architecture, un lien de source/test actuel et un verrou différentiel futur.
 
 | Point rencontré | Résolution fondée sur la base |
 | --- | --- |
-| Baseline annoncée Python 86/0, mais main exact ne passe plus l'inventaire | Le 86/0 qualifie le cycle correctif antérieur. Le seul ajout final M4 depuis le corrective HEAD est refusé par le gate figé ; exécution actuelle 85/1, sans le transformer en PASS. Blocage ci-dessous. |
+| Baseline annoncée Python 86/0, mais main exact ne passait plus l'inventaire | Le défaut était un gate de provenance trop fermé après la clôture M4, pas une régression runtime. Le correctif tests-only admet exactement la clôture M4 et les deux docs M5 Phase A ; le rerun exact-head revient à 86/0. |
 | Formulation « exact media identity obligatoire » | Appeler le matcher qualifié inchangé. Il admet mediaId exact en priorité puis son fallback actuel, y compris après un ID différent. Pas de nouvelle politique ID-only ou de nouvelle heuristique. |
 | « Aucun second clock » versus compteur legacy | Ne créer aucune autorité/horloge d'exécution supplémentaire. Conserver l'estimation passive de la sonde et la durée visuelle legacy actuelle ; les scènes manifestées gardent l'expiration MEDIA. |
 | « Ordre exact » de plusieurs expirations | L'ancien moteur utilise `HashMap.values()`. Conserver les mêmes mutations et comparer les journaux bruts sur le même environnement ; ne pas prétendre à un tri temporel garanti cross-VM. |
@@ -140,8 +142,8 @@ Ils ne sont pas des prérequis à la neutralité du core.
 | `python3 -m unittest discover -s tests` sur main intact | 86 tests : **85 PASS / 1 FAIL**, zéro SKIP. |
 | Python complète après ajout des deux docs | 86 tests : **85 PASS / 1 FAIL**, zéro SKIP ; même échec sur le document M4. Les trois paths sont indépendamment confirmés non admis. |
 | Auto-audit documentaire | Matrice vingt règles et dix contrôles ci-dessous ; corrections locales effectuées avant push. |
-| Sources/fixtures/config/M4 docs | Diff limité aux deux nouveaux docs ; surfaces exécutables et historiques inchangées. |
-| JVM / lint / APK / signature / smoke / native / Sony | Pas réexécutés localement dans cette Phase A documentaire. Résultats M4 hérités seulement ; statut GitHub du HEAD final consigné dans la PR. |
+| Sources/fixtures/config/M4 docs | Phase A : deux nouveaux docs seulement. Correctif de qualification : un test de provenance seulement ; surfaces exécutables, fixtures, config, workflows et documents M4 inchangés. |
+| JVM / lint / APK / signature / smoke / native / Sony | Après le correctif tests-only : CI exact-head rerun successful pour debug, lint/build/JVM, signature, API 35 smoke et native durability 31/35. Aucune nouvelle qualification Sony physique. |
 
 Preuves héritées exactes :
 [rapport correctif M4](m4-phase-g-sony-hard-reboot-corrective-report.md), section
@@ -159,34 +161,41 @@ Unicode/reboot revision 5 PASS. Le seul SKIP JVM historique reste
 fixture privée, pas un PASS. Les checks physiques same-revision NOT RUN acceptés
 par le protocole M4 ne sont pas remplacés par un nouveau mécanisme produit.
 
-## Blocage reproductible, sans modification hors scope
+## Correctif de qualification et levée du blocage
 
-L'unique échec Python est
+Le blocage initial était exactement
 `M4SonyCorrectiveBoundaryTest.test_retained_java_tests_fixtures_and_prior_inventories_have_no_exception`
-dans [tests/test_m4_sony_corrective_boundary.py](../tests/test_m4_sony_corrective_boundary.py),
-lignes 56–63 à la base. Le test parcourt `app/src`, `tests`, `.github`, `docs`
-et exige chaque path dans `startingBlobs` ou `additiveFiles` du
-[baseline correctif](../.github/scripts/m4-phase-g-sony-corrective-baseline.json),
-avec une seule admission locale pour le rapport correctif. Il ne connaît pas :
+dans [tests/test_m4_sony_corrective_boundary.py](../tests/test_m4_sony_corrective_boundary.py).
+Le gate correctif M4 parcourait `app/src`, `tests`, `.github` et `docs` et refusait
+tout path postérieur à son inventaire, y compris la clôture physique M4 elle-même.
 
-1. `docs/m4-final-sony-physical-closure.md`, déjà dans main au départ ;
-2. `docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md` ;
+Un correctif tests-only minimal a été publié au commit
+`03a46c2084f4a9cffb7519e6dceb7cb217760944`.
+
+Il n'ajoute aucune whitelist globale. Il admet exactement trois chemins :
+
+1. `docs/m4-final-sony-physical-closure.md`;
+2. `docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md`;
 3. `docs/m5-phase-a-architecture-report.md`.
 
-L'assertion échoue d'abord sur le document M4. L'absence indépendante des deux
-nouveaux paths dans l'ensemble admis confirme qu'ils demandent également une
-extension explicite de provenance. Cela ne démontre aucune régression runtime,
-aucun nouveau défaut Sony et n'invalide pas la clôture physique M4.
+Tous les hashes, assertions métier, fixtures, baselines M4, sources production,
+workflows et règles correctives restent inchangés. Aucun test n'est supprimé,
+skippé ou rendu permissif sur un répertoire entier.
 
-Réparation minimale requise **avant implémentation** : un périmètre autorisant
-l'admission documentaire exacte de ces trois paths dans le gate de provenance,
-sans toucher aux hashes/assertions métier/fixtures M4, sans whitelist globale
-de `docs/`, suppression de tests ou SKIP. Puis réexécuter les 86 tests sur le
-HEAD réel et vérifier tous les checks exigés. Ce report ne réalise pas cette
-réparation : la commande Phase A interdit tests/config/source et impose STOP
-avant une modification CI nécessaire. Aucun changement de workflow n'est
-proposé comme raccourci ; aucun test ou fichier baseline n'a été modifié.
-La branche documentaire peut être revue en Draft avec son état en échec explicite.
+Qualification GitHub sur ce correctif :
+
+- Android debug run **37413662557**, job **112107428969** : SUCCESS ;
+  `Check POC boundary` SUCCESS, Python **86 PASS / 0 FAIL**, Gradle/lint/build SUCCESS,
+  JVM **776 PASS / 0 FAIL / 1 SKIP historique documenté**, LAN/Cloud APK builds SUCCESS,
+  signature stable vérifiée ;
+- Android 15 smoke run **37413662563**, job **112107428954** : SUCCESS ;
+- native durability run **37413662588** : API 31 job **112107428987** SUCCESS,
+  API 35 job **112107429161** SUCCESS ;
+- certificat SHA-256 vérifié :
+  `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c`.
+
+Ce correctif ne constitue pas une Phase B et ne change aucune sémantique du produit.
+Il lève uniquement le défaut de qualification documentaire identifié par Phase A.
 
 ## Auto-audit du même cycle
 
@@ -205,9 +214,8 @@ La branche documentaire peut être revue en Draft avec son état en échec expli
 
 L'architecture ne demande aucun changement Cloud/store/codec/permission/player,
 aucune politique pause/seek/replay nouvelle et aucune décision physique préalable.
-Le blocage restant est **la qualification de provenance documentaire sur la base
-exacte**, pas une impossibilité d'extraction MEDIA. La résolution hors scope
-doit être autorisée avant tout code M5. PR conservée Draft, Production SHADOW,
-aucune Phase B ni gate Sony nouveau dans ce cycle.
+Le défaut de provenance documentaire est désormais levé par le correctif tests-only
+ci-dessus. L’architecture reste inchangée, la PR est conservée Draft, Production SHADOW,
+et aucune Phase B ni gate Sony nouveau n’est lancé dans ce cycle.
 
-**NOT READY FOR M5 IMPLEMENTATION**
+**READY FOR M5 IMPLEMENTATION**
