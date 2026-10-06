@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SceneVibe Media Interlude POC</string>
+    <string name="interlude_channel_name">Media interlude POC</string>
+    <string name="interlude_notification_title">SceneVibe Media Interlude POC</string>
+    <string name="interlude_notification_text">Local interlude diagnostics runtime is active.</string>
 </resources>
