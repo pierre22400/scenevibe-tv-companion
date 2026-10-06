@@ -38,4 +38,13 @@ public final class Diagnostics {
     public boolean playCommandSent;
     public boolean resumeConfirmed;
     public boolean resumeTimedOut;
+
+    public String initialPlaybackStateName = "NONE";
+    public boolean pauseOwnershipAcquired;
+    public boolean originalSessionIdentityPresent;
+    public boolean sessionRevalidationAttempted;
+    public boolean sessionRevalidationSucceeded;
+    public boolean relevantActivePackageChanged;
+    public String latestStateBeforeResume = "NONE";
+    public DeniedReason resumeDeniedReason = DeniedReason.NONE;
 }

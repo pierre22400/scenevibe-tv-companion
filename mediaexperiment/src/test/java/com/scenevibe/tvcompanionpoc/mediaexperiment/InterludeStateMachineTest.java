@@ -16,6 +16,7 @@ import com.scenevibe.tvcompanionpoc.mediaexperiment.core.PlaybackSnapshot;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.PlaybackStateCodes;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SafeResumeGuard;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SessionTarget;
+import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SessionCatalog;
 
 import org.junit.Test;
 
@@ -38,28 +39,42 @@ public class InterludeStateMachineTest {
     private final RecordingLocalAudioPort audio = new RecordingLocalAudioPort();
     private final FakeClock clock = new FakeClock();
 
+    private final TestFakes.MutableSessions sessions = new TestFakes.MutableSessions();
+    private final TestFakes.RecordingController original = new TestFakes.RecordingController();
+    private final SessionCatalog catalog = new SessionCatalog(sessions);
+
+    /** Build the core with the same active-session policy used in Android. */
     private InterludeStateMachine machine() {
+        sessions.active.clear();
+        sessions.active.add(original);
+        catalog.scan();
         return new InterludeStateMachine(
-                focus, media, overlay, audio, SafeResumeGuard.create(),
+                focus, media, catalog, overlay, audio, SafeResumeGuard.create(),
                 clock, PAUSE_TIMEOUT, PLAY_TIMEOUT);
     }
 
+    /** Capture the original token separately from its media identity. */
     private SessionTarget target() {
-        return new SessionTarget(PKG, "mid-123", "The Expanse", "Episode 1", 3_600_000L);
+        return new SessionTarget(PKG, "mid-123", "The Expanse", "Episode 1", 3_600_000L, "original-token");
     }
 
+    /** Change the live source and return the corresponding observation. */
     private PlaybackSnapshot snapshot(String pkg, int state, String mediaId, String title) {
-        return new PlaybackSnapshot(pkg, state, mediaId, title, "Episode 1", 3_600_000L);
+        original.packageName = pkg;
+        original.state = state;
+        original.mediaId = mediaId;
+        return new PlaybackSnapshot(pkg, state, mediaId, title, "Episode 1", 3_600_000L, "original-token");
     }
 
     // (a) Happy path: full confirmed-and-owned sequence issues exactly one PLAY.
+    /** Verify happyPath confirmedOwned playsExactlyOnce. */
     @Test public void happyPath_confirmedOwned_playsExactlyOnce() {
         InterludeStateMachine m = machine();
         m.begin(target());
 
         assertEquals(InterludeState.PAUSE_SENT, m.state());
         assertEquals(1, media.pauseCalls);
-        assertEquals(1, audio.playShortClipCalls);
+        assertEquals("full flow does not play the isolated duck cue", 0, audio.playShortClipCalls);
 
         // Observe PAUSED on the same package -> interlude attaches and plays.
         m.observe(snapshot(PKG, PlaybackStateCodes.STATE_PAUSED, "mid-123", "The Expanse"));
@@ -82,6 +97,7 @@ public class InterludeStateMachineTest {
     }
 
     // (b) Focus DENIED: no local audio, no pause, clean abandon, zero play.
+    /** Verify focusDenied noPauseNoAudio zeroPlay. */
     @Test public void focusDenied_noPauseNoAudio_zeroPlay() {
         focus.result = AudioFocusPort.Result.DENIED;
         InterludeStateMachine m = machine();
@@ -96,6 +112,7 @@ public class InterludeStateMachineTest {
     }
 
     // (c) Pause timeout: report NOT CONFIRMED, do not continue, zero play.
+    /** Verify pauseTimeout notConfirmed doesNotContinue zeroPlay. */
     @Test public void pauseTimeout_notConfirmed_doesNotContinue_zeroPlay() {
         InterludeStateMachine m = machine();
         m.begin(target());
@@ -115,6 +132,7 @@ public class InterludeStateMachineTest {
     }
 
     // (d) Session replacement: a different package appears -> guard fails, zero play.
+    /** Verify sessionReplacement differentPackage guardFails zeroPlay. */
     @Test public void sessionReplacement_differentPackage_guardFails_zeroPlay() {
         InterludeStateMachine m = machine();
         m.begin(target());
@@ -133,6 +151,7 @@ public class InterludeStateMachineTest {
     }
 
     // (e) Media identity change: same package, different mediaId -> guard fails, zero play.
+    /** Verify mediaIdentityChange samePackageNewId guardFails zeroPlay. */
     @Test public void mediaIdentityChange_samePackageNewId_guardFails_zeroPlay() {
         InterludeStateMachine m = machine();
         m.begin(target());
@@ -150,6 +169,7 @@ public class InterludeStateMachineTest {
     }
 
     // (f) Overlay/video failure: emergency cleanup, overlay removed, focus abandoned, zero play.
+    /** Verify overlayFailure emergencyCleanup zeroPlay. */
     @Test public void overlayFailure_emergencyCleanup_zeroPlay() {
         overlay.throwOnPlay = true;
         InterludeStateMachine m = machine();
@@ -164,6 +184,7 @@ public class InterludeStateMachineTest {
     }
 
     // (g) Repeated STOP / emergency cleanup is idempotent and never throws.
+    /** Verify repeatedStop isIdempotent. */
     @Test public void repeatedStop_isIdempotent() {
         InterludeStateMachine m = machine();
         m.begin(target());
@@ -191,6 +212,7 @@ public class InterludeStateMachineTest {
     }
 
     // (h) No accidental PLAY after an unsupported / unconfirmed pause.
+    /** Verify noAccidentalPlay afterUnconfirmedPause. */
     @Test public void noAccidentalPlay_afterUnconfirmedPause() {
         InterludeStateMachine m = machine();
         m.begin(target());
@@ -205,6 +227,7 @@ public class InterludeStateMachineTest {
     }
 
     // Reinforces (sent != confirmed): pausing is dispatched but interlude waits.
+    /** Verify pauseSentIsNotPauseConfirmed. */
     @Test public void pauseSentIsNotPauseConfirmed() {
         InterludeStateMachine m = machine();
         m.begin(target());

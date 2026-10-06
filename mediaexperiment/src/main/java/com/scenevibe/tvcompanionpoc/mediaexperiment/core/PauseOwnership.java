@@ -6,6 +6,8 @@ package com.scenevibe.tvcompanionpoc.mediaexperiment.core;
  * from "confirmed": a sent-but-unconfirmed pause must never authorize PLAY.
  */
 public final class PauseOwnership {
+    /** State observed immediately before this POC dispatched PAUSE. */
+    public final int initialPlaybackState;
     /** This POC successfully dispatched the PAUSE transport command. */
     public final boolean pauseSent;
 
@@ -15,17 +17,21 @@ public final class PauseOwnership {
     /** The interlude ended normally (video completed) rather than erroring/aborting. */
     public final boolean interludeEndedNormally;
 
-    /** The POC is explicitly performing emergency cleanup (allows resume attempt). */
-    public final boolean emergencyCleanup;
-
+    /** Record the observed PLAYING -> sent PAUSE -> observed PAUSED chain. */
     public PauseOwnership(
+            int initialPlaybackState,
             boolean pauseSent,
             boolean pauseConfirmed,
-            boolean interludeEndedNormally,
-            boolean emergencyCleanup) {
+            boolean interludeEndedNormally) {
+        this.initialPlaybackState = initialPlaybackState;
         this.pauseSent = pauseSent;
         this.pauseConfirmed = pauseConfirmed;
         this.interludeEndedNormally = interludeEndedNormally;
-        this.emergencyCleanup = emergencyCleanup;
+    }
+
+    /** Ownership cannot arise from a pre-existing pause or a sent-only command. */
+    public boolean ownsPause() {
+        return initialPlaybackState == PlaybackStateCodes.STATE_PLAYING
+                && pauseSent && pauseConfirmed;
     }
 }

@@ -1,11 +1,14 @@
 package com.scenevibe.tvcompanionpoc.mediaexperiment;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.util.Log;
 
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.LocalAudioPort;
+
+import java.io.IOException;
 
 /**
  * Android implementation of {@link LocalAudioPort}: plays the SHORT bundled
@@ -22,37 +25,45 @@ final class AndroidLocalAudioPort implements LocalAudioPort {
     private final Context context;
     private MediaPlayer player;
 
+    /** Keep only the application context for the bundled cue. */
     AndroidLocalAudioPort(Context context) {
         this.context = context.getApplicationContext();
     }
 
+    /** Configure AudioAttributes and the local data source before preparing the player. */
     @Override
     public void playShortClip() {
         stop();
         try {
-            MediaPlayer created = MediaPlayer.create(context, R.raw.scenevibe_cue);
-            if (created == null) {
-                Log.w(TAG, "LOCAL_AUDIO_CREATE_FAILED");
-                return;
-            }
+            MediaPlayer created = new MediaPlayer();
+            player = created;
             created.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ASSISTANT)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build());
+            try (AssetFileDescriptor descriptor =
+                    context.getResources().openRawResourceFd(R.raw.scenevibe_cue)) {
+                if (descriptor == null) throw new IOException("Local cue unavailable");
+                created.setDataSource(descriptor.getFileDescriptor(),
+                        descriptor.getStartOffset(), descriptor.getLength());
+            }
             created.setOnCompletionListener(mp -> Log.i(TAG, "LOCAL_AUDIO_COMPLETED"));
             created.setOnErrorListener((mp, what, extra) -> {
                 Log.w(TAG, "LOCAL_AUDIO_ERROR what=" + what + " extra=" + extra);
-                return false;
+                stop();
+                return true;
             });
-            player = created;
+            created.prepare();
             created.start();
             Log.i(TAG, "LOCAL_AUDIO_STARTED");
-        } catch (RuntimeException error) {
+        } catch (IOException | RuntimeException error) {
             Log.w(TAG, "LOCAL_AUDIO_START_FAILED");
             stop();
+            throw new IllegalStateException("Local cue setup failed", error);
         }
     }
 
+    /** Release cue playback safely, including partially prepared players. */
     @Override
     public void stop() {
         MediaPlayer existing = player;

@@ -51,6 +51,7 @@ public final class MediaExperimentActivity extends Activity
     private boolean bound;
 
     private final ServiceConnection connection = new ServiceConnection() {
+        /** Bind operator actions to the isolated foreground runtime. */
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
             service = ((InterludeService.LocalBinder) binder).service();
@@ -58,6 +59,7 @@ public final class MediaExperimentActivity extends Activity
             bound = true;
         }
 
+        /** Clear a disconnected runtime without issuing transport commands. */
         @Override
         public void onServiceDisconnected(ComponentName name) {
             service = null;
@@ -65,6 +67,7 @@ public final class MediaExperimentActivity extends Activity
         }
     };
 
+    /** Create D-pad controls and bounded, content-free diagnostics. */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +131,7 @@ public final class MediaExperimentActivity extends Activity
         setContentView(scroll);
     }
 
+    /** Start and bind the isolated foreground service when permitted. */
     @Override
     protected void onStart() {
         super.onStart();
@@ -144,12 +148,14 @@ public final class MediaExperimentActivity extends Activity
         bindService(new Intent(this, InterludeService.class), connection, Context.BIND_AUTO_CREATE);
     }
 
+    /** Refresh permission status after returning from settings. */
     @Override
     protected void onResume() {
         super.onResume();
         refreshStatus();
     }
 
+    /** Detach the UI listener while allowing the explicit test to finish. */
     @Override
     protected void onStop() {
         if (bound) {
@@ -162,6 +168,7 @@ public final class MediaExperimentActivity extends Activity
         super.onStop();
     }
 
+    /** Render only bounded mechanism facts on the UI thread. */
     @Override
     public void onDiagnostics(Diagnostics diagnostics, InterludeState state, boolean accessGranted) {
         handler.post(() -> {
@@ -170,6 +177,7 @@ public final class MediaExperimentActivity extends Activity
         });
     }
 
+    /** Route an operator action only when the local runtime is bound. */
     private void withService(java.util.function.Consumer<InterludeService> action) {
         if (service == null) {
             Toast.makeText(this, "Runtime not ready yet.", Toast.LENGTH_SHORT).show();
@@ -178,6 +186,7 @@ public final class MediaExperimentActivity extends Activity
         action.accept(service);
     }
 
+    /** Show overlay and media-access permission state. */
     private void refreshStatus() {
         overlayStatus.setText(Settings.canDrawOverlays(this)
                 ? "Display over other apps: Granted"
@@ -208,6 +217,14 @@ public final class MediaExperimentActivity extends Activity
         out.append("pause command sent: ").append(d.pauseCommandSent).append('\n');
         out.append("pause confirmed: ").append(d.pauseConfirmed).append('\n');
         out.append("pause timeout: ").append(d.pauseTimedOut).append('\n');
+        out.append("initial playback state: ").append(d.initialPlaybackStateName).append('\n');
+        out.append("pause ownership acquired: ").append(d.pauseOwnershipAcquired).append('\n');
+        out.append("original session present: ").append(d.originalSessionIdentityPresent).append('\n');
+        out.append("session revalidation attempted: ").append(d.sessionRevalidationAttempted).append('\n');
+        out.append("session revalidation succeeded: ").append(d.sessionRevalidationSucceeded).append('\n');
+        out.append("relevant active package changed: ").append(d.relevantActivePackageChanged).append('\n');
+        out.append("latest state before resume: ").append(d.latestStateBeforeResume).append('\n');
+        out.append("resume denied reason: ").append(d.resumeDeniedReason.name()).append('\n');
         out.append("overlay attached: ").append(d.overlayAttached).append('\n');
         out.append("local video started: ").append(d.localVideoStarted).append('\n');
         out.append("local video completed: ").append(d.localVideoCompleted).append('\n');
@@ -218,6 +235,7 @@ public final class MediaExperimentActivity extends Activity
         return out.toString();
     }
 
+    /** Render focus result without implying physical ducking. */
     private String focusText(AudioFocusPort.Result result) {
         if (result == null) {
             return "-";
@@ -225,10 +243,12 @@ public final class MediaExperimentActivity extends Activity
         return result == AudioFocusPort.Result.GRANTED ? "granted" : "denied";
     }
 
+    /** Render missing coarse diagnostic labels consistently. */
     private String valueOrDash(String value) {
         return value == null || value.isEmpty() ? "-" : value;
     }
 
+    /** Create a readable permission-status label. */
     private TextView statusLabel(LinearLayout parent) {
         TextView label = new TextView(this);
         label.setTextColor(0xFFFFFFFF);
@@ -238,6 +258,7 @@ public final class MediaExperimentActivity extends Activity
         return label;
     }
 
+    /** Create a focusable D-pad action button. */
     private Button addButton(LinearLayout parent, String label, Runnable action) {
         Button button = new Button(this);
         button.setText(label);
@@ -285,6 +306,7 @@ public final class MediaExperimentActivity extends Activity
         }
     }
 
+    /** Convert logical UI dimensions to device pixels. */
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }

@@ -44,7 +44,9 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
 
     /** Delivered back to the state machine on the main thread. */
     interface Callbacks {
+        /** Normal completion can request fresh guarded resume. */
         void onVideoCompleted();
+        /** Errors require teardown without native PLAY. */
         void onVideoError();
     }
 
@@ -57,12 +59,14 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
     private MediaPlayer player;
     private Surface surface;
 
+    /** Keep the overlay lifecycle isolated from the production companion. */
     AndroidOverlayVideoPort(Context context, Callbacks callbacks) {
         this.context = context.getApplicationContext();
         this.callbacks = callbacks;
         this.windows = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
     }
 
+    /** Attach a fullscreen local surface only when overlay permission is available. */
     @Override
     public void attach() {
         if (windows == null) {
@@ -103,26 +107,32 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
         Log.i(TAG, "OVERLAY_ATTACHED fullscreen=true");
     }
 
+    /** Start local video once its texture exists; stale surface callbacks are ignored. */
     @Override
     public void playLocalVideo() {
         if (textureView == null) {
             throw new IllegalStateException("Overlay not attached");
         }
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            /** Prepare video only while this attempt still owns the overlay. */
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture st, int width, int height) {
+                if (textureView == null || root == null) return;
                 startPlayback(st);
             }
 
+            /** The fullscreen window already owns size management. */
             @Override
             public void onSurfaceTextureSizeChanged(SurfaceTexture st, int width, int height) {
             }
 
+            /** Allow framework texture release during overlay teardown. */
             @Override
             public boolean onSurfaceTextureDestroyed(SurfaceTexture st) {
                 return true;
             }
 
+            /** Texture refresh has no transport effect. */
             @Override
             public void onSurfaceTextureUpdated(SurfaceTexture st) {
             }
@@ -133,6 +143,7 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
         }
     }
 
+    /** Configure the local player before preparation and bind callbacks to its lifetime. */
     private void startPlayback(SurfaceTexture texture) {
         if (player != null) {
             return;
@@ -140,6 +151,7 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
         try {
             surface = new Surface(texture);
             MediaPlayer created = new MediaPlayer();
+            player = created;
             created.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
@@ -150,17 +162,20 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
             }
             created.setSurface(surface);
             created.setOnCompletionListener(mp -> {
+                if (player != mp || root == null) return;
                 Log.i(TAG, "LOCAL_VIDEO_COMPLETED");
                 callbacks.onVideoCompleted();
             });
             created.setOnErrorListener((mp, what, extra) -> {
+                if (player != mp || root == null) return true;
                 Log.w(TAG, "LOCAL_VIDEO_ERROR what=" + what + " extra=" + extra);
                 callbacks.onVideoError();
                 return true;
             });
-            created.setOnPreparedListener(MediaPlayer::start);
+            created.setOnPreparedListener(mp -> {
+                if (player == mp && root != null) mp.start();
+            });
             created.prepareAsync();
-            player = created;
             Log.i(TAG, "LOCAL_VIDEO_PREPARING asset=" + LOCAL_VIDEO_ASSET);
         } catch (Exception error) {
             Log.w(TAG, "LOCAL_VIDEO_SETUP_FAILED");
@@ -168,6 +183,7 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
         }
     }
 
+    /** Stop/release video and remove the overlay safely, including partial setup. */
     @Override
     public void remove() {
         MediaPlayer existing = player;

@@ -16,17 +16,13 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
-import com.scenevibe.tvcompanionpoc.mediaexperiment.core.AudioFocusPort;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.Diagnostics;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeState;
-import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeStateMachine;
-import com.scenevibe.tvcompanionpoc.mediaexperiment.core.PlaybackSnapshot;
-import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SafeResumeGuard;
-import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SessionTarget;
+import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeRuntime;
 
 /**
  * User-started mediaPlayback foreground service that owns the interlude runtime for
- * the POC. It wires the Android-free {@link InterludeStateMachine} (FEAT-002) to the
+ * the POC. It wires the Android-free {@link InterludeRuntime} to the
  * real Android ports (FEAT-003) and drives everything on the MAIN THREAD.
  *
  * <p>Lifecycle mirrors :app's {@code OverlayService} (createNotificationChannel +
@@ -34,7 +30,7 @@ import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SessionTarget;
  * but shares NO code, NO SharedPreferences, and uses a DISTINCT channel id. It is a
  * {@code mediaPlayback} foreground service, matching the honest work it performs.</p>
  *
- * <p>The service runs a 1-second sampler of the selected MediaSession so dispatched
+ * <p>The service runs a 1-second fresh active-session rescan so dispatched
  * pause/play commands are confirmed only by OBSERVED state, and so pending
  * confirmation deadlines (pause/play timeouts) are evaluated via {@code onTick()}.</p>
  */
@@ -44,16 +40,16 @@ public final class InterludeService extends Service
     private static final String CHANNEL_ID = "media_interlude_poc";
     private static final int NOTIFICATION_ID = 2001;
     private static final long SAMPLE_INTERVAL_MS = 1000L;
-    private static final long PAUSE_TIMEOUT_MS = 4000L;
-    private static final long PLAY_TIMEOUT_MS = 4000L;
 
     /** Receives bounded diagnostics after each runtime step (never content/credentials). */
     interface DiagnosticsListener {
+        /** Receive bounded mechanism facts after a service step. */
         void onDiagnostics(Diagnostics diagnostics, InterludeState state, boolean accessGranted);
     }
 
     /** Local binder so the diagnostic Activity can drive the five actions in-process. */
     final class LocalBinder extends Binder {
+        /** Expose this service to the local diagnostic Activity. */
         InterludeService service() {
             return InterludeService.this;
         }
@@ -67,29 +63,21 @@ public final class InterludeService extends Service
     private AndroidMediaControlPort mediaControl;
     private AndroidOverlayVideoPort overlayVideo;
     private AndroidLocalAudioPort localAudio;
-    private final SafeResumeGuard guard = SafeResumeGuard.create();
     private final ElapsedRealtimeClock clock = new ElapsedRealtimeClock();
 
-    private InterludeStateMachine machine;
+    private InterludeRuntime runtime;
     private boolean sampling;
     private boolean foregroundReady;
     private DiagnosticsListener listener;
 
     private final Runnable sampler = new Runnable() {
+        /** Drive the tested runtime with live active-session queries. */
         @Override
         public void run() {
-            if (!sampling || machine == null) {
-                return;
-            }
-            PlaybackSnapshot snapshot = scanner.sampleCurrent();
-            if (snapshot != null) {
-                machine.observe(snapshot);
-            } else {
-                // No live sample: still advance any pending timeout deadline.
-                machine.onTick();
-            }
+            if (!sampling || runtime == null) return;
+            runtime.poll();
             publish();
-            if (machine.state() == InterludeState.STOPPED) {
+            if (runtime.state() == InterludeState.STOPPED) {
                 sampling = false;
             } else {
                 handler.postDelayed(this, SAMPLE_INTERVAL_MS);
@@ -97,6 +85,7 @@ public final class InterludeService extends Service
         }
     };
 
+    /** Create isolated Android ports and start the mediaPlayback foreground service. */
     @Override
     public void onCreate() {
         super.onCreate();
@@ -105,6 +94,8 @@ public final class InterludeService extends Service
         mediaControl = new AndroidMediaControlPort(scanner);
         overlayVideo = new AndroidOverlayVideoPort(this, this);
         localAudio = new AndroidLocalAudioPort(this);
+        runtime = new InterludeRuntime(scanner, audioFocus, mediaControl,
+                overlayVideo, localAudio, clock);
         try {
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(new NotificationChannel(
@@ -138,6 +129,7 @@ public final class InterludeService extends Service
         }
     }
 
+    /** Validate foreground/overlay readiness without starting any test automatically. */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!foregroundReady) {
@@ -151,185 +143,122 @@ public final class InterludeService extends Service
         return START_STICKY;
     }
 
+    /** Return the local diagnostic binder without initiating media actions. */
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
     }
 
+    /** Attach or detach the local bounded-diagnostics listener. */
     void setDiagnosticsListener(DiagnosticsListener listener) {
         this.listener = listener;
     }
 
+    /** Report this isolated app's notification-listener access. */
     boolean accessGranted() {
         return scanner != null && scanner.accessGranted();
     }
 
-    // --- The five diagnostic actions -----------------------------------------
+    // --- Independent diagnostic actions --------------------------------------
 
-    /** SCAN MEDIA SESSION: discover the active session and record its facts. */
+    /** SCAN MEDIA SESSION: discover only; no focus, pause, overlay or local playback. */
     void scanMediaSession() {
-        ensureFreshMachine();
-        PlaybackSnapshot snapshot = scanner.scan();
-        Diagnostics diagnostics = machine.diagnostics();
-        if (snapshot == null) {
-            diagnostics.selectedPackage = null;
-            Log.i(TAG, "SCAN no active/authorized session");
-        } else {
-            diagnostics.selectedPackage = snapshot.packageName;
-            diagnostics.playbackStateName = snapshot.stateName();
-            diagnostics.mediaIdPresent =
-                    snapshot.mediaId != null && !snapshot.mediaId.trim().isEmpty();
-            scanner.recordActions(diagnostics);
-            Log.i(TAG, "SCAN selected package=" + snapshot.packageName
-                    + " state=" + snapshot.stateName());
-        }
+        resetSampler();
+        runtime.scanMediaSession();
         publish();
     }
 
-    /**
-     * TEST AUDIO DUCK: request transient-may-duck focus; play the short local cue
-     * ONLY if granted; then finish and abandon focus. Never plays on DENIED.
-     */
+    /** TEST AUDIO DUCK: focus/cue only, bounded to two seconds, never transport/video. */
     void testAudioDuck() {
-        ensureFreshMachine();
-        Diagnostics diagnostics = machine.diagnostics();
-        AudioFocusPort.Result result = audioFocus.requestTransientMayDuck();
-        diagnostics.audioFocusResult = result;
-        if (result == AudioFocusPort.Result.GRANTED) {
-            localAudio.playShortClip();
-            // Short clip: schedule a bounded stop + focus abandon.
-            handler.postDelayed(() -> {
-                localAudio.stop();
-                audioFocus.abandon();
-                publish();
-            }, 2000L);
-        } else {
-            // Not granted: DO NOT play. Nothing to abandon.
-            Log.i(TAG, "AUDIO_DUCK denied; not playing local cue");
-        }
-        publish();
-    }
-
-    /**
-     * TEST PAUSE: on a scanned session that advertises PAUSE, dispatch pause via
-     * the state machine and wait (bounded) for an OBSERVED STATE_PAUSED. Dispatch is
-     * not confirmation; a timeout reports UNSUPPORTED / NOT CONFIRMED.
-     */
-    void testPause() {
-        PlaybackSnapshot snapshot = scanner.scan();
-        if (snapshot == null) {
-            ensureFreshMachine();
-            machine.diagnostics().selectedPackage = null;
-            Log.i(TAG, "PAUSE no active session to target");
-            publish();
-            return;
-        }
-        if (!scanner.canPause()) {
-            // Session does not advertise PAUSE: report UNSUPPORTED, do not dispatch.
-            ensureFreshMachine();
-            Diagnostics diagnostics = machine.diagnostics();
-            diagnostics.selectedPackage = snapshot.packageName;
-            diagnostics.playbackStateName = snapshot.stateName();
-            scanner.recordActions(diagnostics);
-            Log.i(TAG, "PAUSE unsupported: session does not advertise ACTION_PAUSE");
-            publish();
-            return;
-        }
-        beginSequence(snapshot);
-    }
-
-    /**
-     * TEST FULL INTERLUDE: same confirmed-pause gate as TEST PAUSE, after which the
-     * core attaches the overlay and plays the local video. The overlay is only
-     * attached after an observed STATE_PAUSED (enforced inside the state machine).
-     */
-    void testFullInterlude() {
-        testPause();
-    }
-
-    /**
-     * EMERGENCY RESTORE / STOP: stop local audio/video, abandon focus, remove every
-     * overlay, clear POC state. The core only sends PLAY if the SafeResumeGuard
-     * proves this POC owns a confirmed pause; a bare STOP never forces resume.
-     */
-    void emergencyStop() {
-        if (machine != null) {
-            machine.stop();
-        }
-        // Defensive teardown independent of machine state.
-        localAudio.stop();
-        overlayVideo.remove();
-        audioFocus.abandon();
-        sampling = false;
-        handler.removeCallbacks(sampler);
-        publish();
-    }
-
-    // --- Internal wiring -------------------------------------------------------
-
-    private void beginSequence(PlaybackSnapshot snapshot) {
-        ensureFreshMachine();
-        Diagnostics diagnostics = machine.diagnostics();
-        diagnostics.selectedPackage = snapshot.packageName;
-        diagnostics.playbackStateName = snapshot.stateName();
-        scanner.recordActions(diagnostics);
-
-        SessionTarget target = scanner.toTarget(snapshot);
-        // Seed the machine with the current observation so the guard has a live
-        // snapshot, then begin: begin() requests focus, plays the cue, dispatches
-        // pause; the sampler drives confirmation and the interlude.
-        machine.observe(snapshot);
-        machine.begin(target);
+        resetSampler();
+        runtime.testAudioDuck();
         startSampling();
         publish();
     }
 
-    private void ensureFreshMachine() {
-        if (machine == null || machine.state() == InterludeState.STOPPED) {
-            machine = new InterludeStateMachine(
-                    audioFocus, mediaControl, overlayVideo, localAudio,
-                    guard, clock, PAUSE_TIMEOUT_MS, PLAY_TIMEOUT_MS);
-        }
+    /**
+     * TEST PAUSE: require live PLAYING, dispatch PAUSE, await bounded PAUSED.
+     * Success ends this attempt without any cue, overlay, local video or PLAY.
+     * The operator must manually restart native media before the full test.
+     */
+    void testPause() {
+        resetSampler();
+        runtime.testPause();
+        startSampling();
+        publish();
     }
 
+    /**
+     * TEST FULL INTERLUDE: independent focus/confirmed-pause/video/guarded-resume
+     * flow. Fresh active-session/token revalidation is mandatory before PLAY.
+     */
+    void testFullInterlude() {
+        resetSampler();
+        runtime.testFullInterlude();
+        startSampling();
+        publish();
+    }
+
+    /**
+     * EMERGENCY RESTORE / STOP removes local audio/video/overlay and abandons focus.
+     * It always sends NO PLAY, even when this attempt owns a confirmed pause.
+     */
+    void emergencyStop() {
+        resetSampler();
+        if (runtime != null) runtime.stop();
+        publish();
+    }
+
+    /** Cancel old callbacks before starting a separately owned operator action. */
+    private void resetSampler() {
+        sampling = false;
+        handler.removeCallbacks(sampler);
+    }
+
+    /** Start bounded confirmations/cue polling on the main thread. */
     private void startSampling() {
-        if (sampling) {
+        if (sampling || runtime == null || runtime.state() == InterludeState.STOPPED) {
             return;
         }
         sampling = true;
         handler.postDelayed(sampler, SAMPLE_INTERVAL_MS);
     }
 
+    /** Deliver coarse diagnostics without exposing media text or token values. */
     private void publish() {
-        if (listener != null && machine != null) {
-            listener.onDiagnostics(machine.diagnostics(), machine.state(), accessGranted());
+        if (listener != null && runtime != null) {
+            listener.onDiagnostics(runtime.diagnostics(), runtime.state(), accessGranted());
         }
     }
 
     // --- Overlay video callbacks (delivered on the main thread) ----------------
 
+    /** Forward normal completion to the tested runtime for fresh guarded resume. */
     @Override
     public void onVideoCompleted() {
-        if (machine != null) {
-            machine.onVideoCompleted();
+        if (runtime != null) {
+            runtime.onVideoCompleted();
+            startSampling();
             publish();
         }
     }
 
+    /** Forward local video failure for conservative teardown without PLAY. */
     @Override
     public void onVideoError() {
-        if (machine != null) {
-            machine.onVideoError();
+        if (runtime != null) {
+            runtime.onVideoError();
             publish();
         }
     }
 
+    /** Cancel polling and release every local resource when the service is destroyed. */
     @Override
     public void onDestroy() {
         sampling = false;
         handler.removeCallbacks(sampler);
-        if (machine != null) {
-            machine.stop();
+        if (runtime != null) {
+            runtime.stop();
         }
         super.onDestroy();
     }
