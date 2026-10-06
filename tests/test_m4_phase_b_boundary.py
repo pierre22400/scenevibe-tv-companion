@@ -7,6 +7,8 @@ import subprocess
 import tempfile
 import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
+from m5_phase_b_provenance import calendar_model_files
+from m5_phase_c_provenance import phase_c_production_files
 
 """Pin Phase B to a JDK-only additive island and preserve the qualified runtime.
 
@@ -113,6 +115,7 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
             new_files.add(PHASE_E['installerFile'])
         if PHASE_F:
             new_files.add(PHASE_F['adapterFile'])
+        new_files.update(calendar_model_files() | phase_c_production_files())
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)

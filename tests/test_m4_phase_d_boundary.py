@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
+from m5_phase_b_provenance import calendar_model_files
+from m5_phase_c_provenance import phase_c_production_files
 
 """Keep Video semantic handlers outside the generic core and forbid an early installer cutover.
 
@@ -107,6 +109,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
             expected.add(PHASE_E['installerFile'])
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
+        expected.update(calendar_model_files() | phase_c_production_files())
         actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}
         self.assertEqual(expected, actual)
         implementations = []

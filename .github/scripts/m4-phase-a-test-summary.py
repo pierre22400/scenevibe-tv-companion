@@ -37,6 +37,9 @@ def summarize(root):
     phase_g = json.loads(phase_g_path.read_text(encoding='utf-8')) if phase_g_path.exists() else {'phaseGSuites': {}}
     sony_path = root / '.github/scripts/m4-phase-g-sony-corrective-baseline.json'
     sony = json.loads(sony_path.read_text(encoding='utf-8')) if sony_path.exists() else {'phaseGCorrectiveSuites': {}}
+    m5_phase_b = json.loads((root / '.github/scripts/m5-phase-b-baseline.json').read_text(encoding='utf-8'))
+    m5_phase_c = json.loads((root / '.github/scripts/m5-phase-c-baseline.json').read_text(encoding='utf-8'))
+    m5_phase_d = json.loads((root / '.github/scripts/m5-phase-d-baseline.json').read_text(encoding='utf-8'))
     counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}
     suites = {}
     skipped = []
@@ -55,7 +58,7 @@ def summarize(root):
                 skipped.append(name + '.' + case.attrib['name'])
             else:
                 counts['PASS'] += 1
-    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites']}
+    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites'], **m5_phase_d['m5PhaseDSuites']}
     if suites != expected:
         raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
@@ -63,6 +66,22 @@ def summarize(root):
     for path, digest in baseline['fixtureSha256'].items():
         if hashlib.sha256((root / path).read_bytes()).hexdigest() != digest:
             raise ValueError('A frozen characterization fixture changed')
+    for path, digest in m5_phase_b['fixtureSha256'].items():
+        if hashlib.sha256((root / path).read_bytes()).hexdigest() != digest:
+            raise ValueError('A frozen M5 Phase B fixture changed')
+    oracle_journal = json.loads((root / 'app/build/reports/m5-phase-b-oracle-traces.json').read_text(encoding='utf-8'))
+    raw_hashmap = {name: value['frames'] for name, value in oracle_journal['traces'].items() if value['environmentDependent']}
+    if len(oracle_journal['traces']) != 82 or len(raw_hashmap) != 4 or oracle_journal['candidateImplemented']:
+        raise ValueError('Missing raw executed M5 oracle evidence')
+    candidate_journal = json.loads((root / 'app/build/reports/m5-phase-c-differential.json').read_text(encoding='utf-8'))
+    c_hashmap = {name: value for name, value in candidate_journal['traces'].items() if value['environmentDependent']}
+    if candidate_journal['compared'] != 82 or candidate_journal['divergences'] != 0 or len(c_hashmap) != 4:
+        raise ValueError('Missing exact C differential evidence')
+    if set(candidate_journal['traces']) != set(oracle_journal['traces']):
+        raise ValueError('C differential inventory differs from B')
+    for trace in candidate_journal['traces'].values():
+        if trace['oracle'] != trace['candidate']:
+            raise ValueError('Raw C differential trace mismatch')
     counts['TOTAL'] = sum(counts.values())
     summary = {
         'referenceHead': baseline['referenceHead'],
@@ -76,6 +95,14 @@ def summarize(root):
         'phaseFCases': sum(phase_f['phaseFSuites'].values()),
         'phaseGCases': sum(phase_g['phaseGSuites'].values()),
         'phaseGCorrectiveCases': sum(sony['phaseGCorrectiveSuites'].values()),
+        'm5PhaseBCases': sum(m5_phase_b['m5PhaseBSuites'].values()),
+        'm5PhaseDCases': sum(m5_phase_d['m5PhaseDSuites'].values()),
+        'm5PhaseBFixtureSha256': m5_phase_b['fixtureSha256'],
+        'm5PhaseBHashMapEnvironment': oracle_journal['environment'],
+        'm5PhaseBHashMapRawFrames': raw_hashmap,
+        'm5PhaseCCases': sum(m5_phase_c['m5PhaseCSuites'].values()),
+        'm5PhaseCDifferential': candidate_journal,
+        'm5PhaseCHashMapRawPairs': c_hashmap,
         'suites': suites,
         'skippedCases': skipped,
         'fixtureSha256': baseline['fixtureSha256'],

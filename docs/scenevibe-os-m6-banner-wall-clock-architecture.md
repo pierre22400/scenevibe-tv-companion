@@ -1,23 +1,27 @@
-# SceneVibe OS — M6 Phase A : Banner, WALL et programmation horaire
+# SceneVibe OS — M6 : architecture Banner/WALL réconciliée après M5
 
-Statut : architecture documentaire arrêtée le 6 octobre 2026. Aucun chemin Banner/WALL n'est implémenté ou activé par ce document.
+Statut courant : réconciliation d'architecture et de provenance du 6 octobre 2026. M5 est CLOSED / MERGED / SONY PHYSICAL PASS / FINAL PR AUDIT PASS. Production : **SHADOW**. PR M6 #16 : **OPEN / DRAFT / unmerged**. Aucune Phase B ni implémentation Banner/WALL n'a commencé.
 
 ```text
-M6 PHASE A ARCHITECTURE COMPLETE
-IMPLEMENTATION BLOCKED PENDING M5 PHYSICAL CLOSURE / MERGE / RECONCILIATION
+M6 PHASE A ARCHITECTURE RECONCILED AGAINST MERGED M5
+M6 PHASE B NOT STARTED — SEPARATE WORK ORDER REQUIRED
 ```
 
 ## 0. Autorité, base et portée
 
 | Référence | Commit exact | Rôle |
 | --- | --- | --- |
-| TV `main`, M4 mergé | `67b81045258b1692073c6927b956db4899c6ad1a` | `BASE_TV_M6_PHASE_A`, parent Git réel de la documentation |
-| TV M5, PR #15 | `c9b0efd4acfaaae9ed7da13dcec505b2f653c548` | Référence de sources et tests en lecture seule ; OPEN / DRAFT / unmerged |
-| Cloud `main` | `5011c91aac61a0cc6dcc74c256a15b7dee03d785` | Référence Cloud en lecture seule ; composition de production SHADOW |
+| TV `main`, merge M5 / `BASE_TV_M6` | `17cbe36ae99ac7f48aaf861e0d1feac702a9e521` | Référence obligatoire des fichiers réellement mergés |
+| M5 software HEAD physiquement qualifié | `c9b0efd4acfaaae9ed7da13dcec505b2f653c548` | Identité du candidat Sony, conservée sans réécriture |
+| M5 final audited HEAD / PR #15 mergée | `45c97782479f278632d5d19ec0723eb50af59e87` | Corrections de provenance uniquement après le candidat Sony ; arbre identique au merge M5 |
+| Ancien HEAD M6 Phase A | `3f91d66ddfdcd95a4cd47a68ed0060e885ed716b` | Parent conservé ; documentation initialement basée sur M4 `67b81045258b1692073c6927b956db4899c6ad1a` |
+| Cloud `main` / `BASE_CLOUD_M6` | `5011c91aac61a0cc6dcc74c256a15b7dee03d785` | Composition live toujours SHADOW et Video-only |
 
-Branche documentaire : `work/scenevibe-os-m6-banner-wall-architecture-001`, nouvelle PR Draft vers `main`. Elle ne descend pas de M5. Les deux seuls ajouts autorisés sont ce fichier et `docs/m6-phase-a-architecture-report.md`. Les noms, routes et types M6 décrits ci-dessous sont des propositions de contrat pour un futur work order, pas des surfaces existantes.
+Branche : `work/scenevibe-os-m6-banner-wall-architecture-001`, PR #16 vers `main`. La réconciliation conserve l'ancien HEAD comme premier parent et intègre le merge M5 comme second parent, sans rebase ni force-push. Le HEAD publié, son arbre et les gates exécutés sont consignés dans le manifeste courant de PR et le rapport final externe : un commit ne peut contenir son propre SHA.
 
-M4 conserve installation, capabilities, durable courant, validate/prepare/commit/readback/restore/ARM, révision et autorisation d'ACK. M5 conserve exclusivement les observations et sémantiques MEDIA, pause, seek et replay. M6 ajoute le client Banner, un calendrier WALL distinct et la livraison minimale nécessaire. M7 possède acquisition et cycle de vie des assets distants. Éditeur avancé, API partenaires, SDK, Connect, Language et publication externe des capabilities restent M8+.
+Le delta contre `BASE_TV_M6` est limité aux deux documents M6, aux admissions littérales de ces deux chemins dans quatre inventaires et à leur inverse fini dans `tests/m5_phase_d_provenance.py`. Aucun baseline, oracle, corpus, fixture, workflow, input build/signing ou fichier de production n'est modifié. Le rapport Phase A initial reste explicitement historique dans le rapport compagnon et dans Git au HEAD initial.
+
+M4 conserve installation, capabilities, durable courant, validate/prepare/commit/readback/restore/ARM, révision et autorisation d'ACK. M5 conserve exclusivement les observations et sémantiques MEDIA, pause, seek et replay. M6 prévoit Banner et un calendrier WALL distinct. La trajectoire post-M6 reste : controlled-assets infrastructure prerequisite → Generic Multimedia Track Model → SceneVibe Public Track Platform → SceneVibe Studio → Creator / Identity / Publication Model. Aucun numéro post-M6 n'est figé. Les noms, routes et types M6 ci-dessous décrivent des travaux futurs ; aucune surface exécutable correspondante n'est créée ici.
 
 ## 1. WALL aujourd'hui : parser n'est pas exécuter — question 1
 
@@ -25,13 +29,13 @@ M4 conserve installation, capabilities, durable courant, validate/prepare/commit
 
 `installation/ExecutionRequirements` contient déjà MEDIA/WALL. En revanche, `installation/TvCapabilities.current()` annonce MEDIA uniquement et `supportsWallClockExecution()` renvoie `false`. Les deux codecs autorisés sont `scenevibe.runtime-track-overlay.v1` et `scenevibe.runtime-track.v1`. Le premier exige un manifest MEDIA/FREEZE ; le second préserve les variantes MEDIA historiques. Les handlers Video ne rendent donc pas WALL exécutable. Le renderer ne constitue pas davantage une autorité temporelle.
 
-Le contrôleur M4 reçoit encore des événements Video. Celui du HEAD M5 reçoit déjà un `eventId` opaque et une génération gardée ; il ne possède aucune horloge. C'est la référence prévue pour la présentation commune, sous réserve de réconciliation après merge réel de M5.
+Le contrôleur réellement mergé reçoit un `eventId` opaque et une génération gardée ; il ne possède aucune horloge. Ses méthodes sont compatibles avec la future remise Banner, sans constituer à elles seules un chemin WALL exécutable. La matrice de réconciliation du rapport compagnon identifie les extensions encore nécessaires.
 
 La capability locale WALL ne pourra devenir vraie qu'après assemblage et qualification automatique du chemin complet : codec accepté, handler statique, validation croisée, même store/installer, restore, driver Android, scheduler WALL, binding owner/contrôleur, arrêt et neutralisation des callbacks, livraison et ACK exacts. Un parser, un modèle pur ou un test isolé ne suffit pas. Une composition de qualification peut alors annoncer sa capacité réellement testée ; la clôture Banner live exige ensuite Sony. Aucun flip, annonce publique ou déclaration Banner OS live n'est permis ici.
 
 ## 2. Modèle et responsabilités — question 2
 
-Décision : calendrier WALL distinct. Au HEAD M5, `calendar/SceneEvent` borne `startMs` à douze heures, documente une position média et conserve une durée synthétique historique non positive ; sa durée positive est limitée à 60 000 ms. `MediaCalendar` porte `freezeOnPause`. Réutiliser ces valeurs pour un epoch ou allonger leurs bornes modifierait les garanties M5. Ni ces classes, ni `MediaObservation`, ni `MediaCalendarScheduler` ne changent pour faciliter Banner.
+Décision : calendrier WALL distinct. Au `BASE_TV_M6` mergé, `calendar/SceneEvent` borne `startMs` à douze heures, documente une position média et conserve une durée synthétique historique non positive ; sa durée positive est limitée à 60 000 ms. `MediaCalendar` porte `freezeOnPause`. Réutiliser ces valeurs pour un epoch ou allonger leurs bornes modifierait les garanties M5. Ni ces classes, ni `MediaObservation`, ni `MediaCalendarScheduler` ne changent pour faciliter Banner.
 
 | Élément M6 conceptuel | Données et responsabilité | Exclusions |
 | --- | --- | --- |
@@ -120,7 +124,7 @@ Le contrôleur M5 peut rester commun : il indexe le manifest par ID, ignore ID i
 
 Chemin futur : scheduler WALL pur → résultat ID sous token → owner Android commun → `onEventDue/onEventExpired(id, generation capturée)` → `SceneSink` existant → `SceneRenderer`. Les callbacks WALL asynchrones n'emploient jamais l'overload sans génération. L'éligibilité Banner est locale : activation courante, overlay disponible, état de présentation non suspendu ; elle ne dépend pas d'une identité MediaSession. Le bridge WALL ne transmet pas de playback ou de pause player.
 
-Au HEAD M5, `OverlayService.LiveVideoRuntimePorts` possède pending/active/retiring, un token frais et une génération capturée une fois après ARM du manifest. M6 doit extraire/réutiliser cette mécanique d'activation au point de composition, puis fournir des ports Video et Banner statiques sous le même owner. Il ne faut pas copier une deuxième autorité LiveBanner parallèle. La projection Video, l'adapter MediaSession et les politiques MEDIA restent propres à Video.
+Au `BASE_TV_M6` mergé, `OverlayService.LiveVideoRuntimePorts` possède pending/active/retiring, un token frais et une génération capturée une fois après ARM du manifest. M6 doit extraire/réutiliser cette mécanique d'activation au point de composition, puis fournir des ports Video et Banner statiques sous le même owner. Il ne faut pas copier une deuxième autorité LiveBanner parallèle. La projection Video, l'adapter MediaSession et les politiques MEDIA restent propres à Video.
 
 Video manifested utilise déjà `SceneRenderer` ; Video legacy garde son renderer/countdown qualifié. Ce legacy n'est pas supprimé au nom de la généralité. La retraite existante des deux surfaces natives reste une obligation avant tout changement de kind. Banner n'ajoute aucune fenêtre concurrente, aucun renderer alternatif ni fade différé : son profil minimal impose les animations `none`, y compris récursivement, et retrait immédiat à EXIT. Les animations Video conservent leur comportement.
 
@@ -130,7 +134,7 @@ Un refus de preflight/render à DUE produit le diagnostic borné et aucun affich
 
 Un device possède une installation durable courante, une révision monotone, un handler actif et un owner. Le choix Video/Banner est un choix de kind du même package courant. Banner N+1 peut remplacer Video N ; Video N+2 peut remplacer Banner N+1. Il n'existe aucun compteur Banner séparé, priorité inter-produit, mixeur graphique ou installation parallèle.
 
-Quand Banner est sélectionné, l'ancien calendrier MEDIA est vidé/inactif ; les nouvelles observations MEDIA ne peuvent pas rendre. Quand Video est sélectionné, le timer WALL est annulé et ses gardes invalidées avant chargement MEDIA. Des instances statiques peuvent exister à la composition, mais un seul chemin temporel possède le package actif. Le scheduler legacy `MediaSyncedTrackScheduler` est encore présent au HEAD M5 comme définition conservée, sans instanciation de production après cutover ; il n'est pas une façade actuellement utilisée. Ne pas le réactiver.
+Quand Banner est sélectionné, l'ancien calendrier MEDIA est vidé/inactif ; les nouvelles observations MEDIA ne peuvent pas rendre. Quand Video est sélectionné, le timer WALL est annulé et ses gardes invalidées avant chargement MEDIA. Des instances statiques peuvent exister à la composition, mais un seul chemin temporel possède le package actif. Le scheduler legacy `MediaSyncedTrackScheduler` est encore présent au `BASE_TV_M6` mergé comme définition conservée, sans instanciation de production après cutover ; il n'est pas une façade actuellement utilisée. Ne pas le réactiver.
 
 Les invariants M4 rendent cette alternative possible sans changer la forme du store. Toute demande de coexistence Video+Banner, de store multi-installation ou de second owner impose STOP et un autre chantier.
 
@@ -153,17 +157,17 @@ Le registry actuel est statique, limité à deux entrées et aux codecs de `TvCa
 | ARM | Retirer ancien owner ; charger le calendrier/manifest durable sous pending ; échantillon et driver prêts ; capturer génération ; sélectionner une seule activation |
 | ACK autorisable | Seulement résultat ARMED pour cette révision et ce client toujours courant |
 
-La première évaluation d'affichage est remise à l'owner après sélection ; pending ne rend jamais. L'installation du prochain réveil doit avoir réussi avant le résultat ARMED ; une erreur de clock/registration initiale fait échouer ARM. Une fenêtre déjà active peut donc être montrée dès cette première évaluation fraîche, mais pas pendant validate/prepare/commit.
+La première évaluation d'affichage est calculée fraîchement et remise à l'owner seulement après promotion pending → active. Un DUE calculé/émis pendant pending serait refusé par M5 ; il ne doit ni être consommé puis perdu, ni être rejoué avec une génération relue au moment de livrer. Le futur driver doit programmer son attente sans livrer d'effet avant promotion, puis réévaluer l'epoch sous les gardes actives ; pending ne rend jamais. L'installation du prochain réveil doit avoir réussi avant le résultat ARMED ; une erreur de clock/registration initiale fait échouer ARM. Une fenêtre déjà active peut donc être montrée dès cette première évaluation fraîche, mais pas pendant validate/prepare/commit.
 
 `InstallationStore`, `InstallationSnapshot`, `InstallationSnapshotCodec`, transport Android corrigé et `PackageInstaller` restent le chemin unique. Le format de snapshot sait déjà stocker un artifact opaque ; il ne nécessite pas de nouvelle version ni clé temporelle. Aucun second store, installer, journal d'occurrences ou persistance d'anchor.
 
 Les failures reprennent les résultats M4 : rejet de validation/préparation sans commit ; CACHE_FAILED/readback invalide sans ARM ; ARM_FAILED après commit conserve le nouveau durable pending et l'ancien ACK, sans rollback ni ACK de la nouvelle révision. Échec de rendu ultérieur ne réécrit pas le package. Des codes WALL bornés complètent le diagnostic, pas une sémantique d'installation plus faible.
 
-## 9. Banner démontrable sans M7 — question 9
+## 9. Banner démontrable sans assets distants — question 9
 
 Le sous-ensemble exécutable local retenu est texte, rectangle/couleurs, table et group/layout, avec les règles de dimension et de profondeur existantes et les polices système. `SceneRenderer` possède déjà ces chemins natifs. Leur utilisation Banner sera qualifiée par les gates futurs ; lire leur code ne constitue pas une clôture physique Banner.
 
-Le parser générique sait aussi représenter image, mais le profil Banner M6 refuse toute primitive image et toute référence d'asset, même présentée comme locale. Pas de URL, CDN, fetch, cache, police téléchargée, vidéo distante, WebView, ressource web ou data URI. Le résolveur de scène ne doit acquérir aucun contenu. Le digest de package décrit en section 10 est une intégrité de livraison héritée du Cloud OS, pas une gestion de hashes d'assets M7.
+Le parser générique sait aussi représenter image, mais le profil Banner M6 refuse toute primitive image et toute référence d'asset, même présentée comme locale. Pas de URL, CDN, fetch, cache, police téléchargée, vidéo distante, WebView, ressource web ou data URI. Le résolveur de scène ne doit acquérir aucun contenu. Le digest de package décrit en section 10 est une intégrité de livraison héritée du Cloud OS, pas une gestion de hashes d'assets du chantier controlled-assets.
 
 ## 10. Frontière minimale Cloud/TV — question 10
 
@@ -183,7 +187,7 @@ En production SHADOW, `services/video-assignment-service.ts` laisse `tv_assignme
 
 Le producteur Banner est statique. Une commande interne authentifiée par compte reçoit l'intention civile bornée ou les fenêtres absolues et le contenu inline. Elle valide/résout avant d'assigner, compile un candidat déterministe, prépare une publication sous la clé de dedup OS existante, scelle le RenderPackage, puis vérifie ready avant Send. Le `inputRef` opaque appartient à Banner ; il n'est ni un FinalTrack ni l'UUID interne de publication. Une nouvelle entrée/horizon/adapterVersion crée une nouvelle publication. Un Send même identique est une nouvelle révision, conformément au contrat OS ; une retry de transport doit pouvoir redeliver la révision existante sans se transformer en Send.
 
-Il n'est pas nécessaire de créer une table d'éditeur Banner pour ce sous-ensemble. La publication ready conserve le bundle résolu et la provenance nécessaires. Une panne entre prepare et seal peut laisser une publication prepared non assignée ; elle n'est pas livrable. Rejouer la même soumission complète permet dedup puis seal. Banner GET exige une publication ready et ne tente jamais une compilation à partir d'une source éditoriale manquante. L'engine actuel pouvant compiler Video à la demande doit donc composer cette politique Banner explicitement. Un éditeur modifiable et des sources éditoriales persistées avancées restent M8+.
+Il n'est pas nécessaire de créer une table d'éditeur Banner pour ce sous-ensemble. La publication ready conserve le bundle résolu et la provenance nécessaires. Une panne entre prepare et seal peut laisser une publication prepared non assignée ; elle n'est pas livrable. Rejouer la même soumission complète permet dedup puis seal. Banner GET exige une publication ready et ne tente jamais une compilation à partir d'une source éditoriale manquante. L'engine actuel compile via son producer à GET et son Send prépare puis assigne sans exiger ready : il ne fournit pas encore ces garanties Banner. La future composition Banner doit donc vérifier le sealed ready avant allocation, puis ne lire que ce sealed à GET, sans changer la branche Video. Un éditeur modifiable et des sources éditoriales persistées avancées appartiennent aux workstreams post-M6 non numérotés.
 
 Le port `OsRenderPackageCodec` est déjà injecté dans les repositories OS. Le futur point de composition injecte une politique statique finie Video+Banner : décodeurs connus, vérification du corps réel contre execution requirements et digests. La branche Video existante reste byte-identique ; unknown codec reste refusé. Le core OS n'importe pas Banner ou Video. Le registry d'input adapters reçoit un second adapter au point de composition, sans découverte dynamique. Les tables `display_publications` et `device_assignments` existantes suffisent pour le profil minimal ; aucun relâchement de FK FinalTrack n'est requis.
 
@@ -276,7 +280,7 @@ Champs admissibles : clock kind, révision, génération, count borné, raison e
 
 Registry et adapters statiques ; tailles avant parsing, clés/versions/types fermés, UTF-8 valide, entiers sûrs et additions sans overflow. Authentifier le compte/device avant lectures ou mutations liées à leurs publications ; aucun accès cross-account, token révoqué ou ACK forgé. Les digests d'intégrité ne remplacent pas l'authentification TLS/bearer. Refuser les codecs inconnus et toute incohérence profil/requirements sur le durable Cloud comme TV.
 
-Aucune commande player, injection dans une application Video, WebView, JavaScript distant, code dynamique, APK/plugin téléchargé, reflection de handler ou acquisition d'assets. Package Android, signer, installation identity, pairing, credentials, reset semantics, stockage après unlock et FGS `specialUse` restent ceux qualifiés. Permissions actuelles seulement : overlay, foreground service/specialUse, Internet, boot, et le service NotificationListener historique pour Video. Aucune permission alarm/clock/wake supplémentaire. Toute nécessité de permission, store multiple, assets M7, owner concurrent ou modification de M5 en cours impose STOP, diagnostic précis et nouveau périmètre.
+Aucune commande player, injection dans une application Video, WebView, JavaScript distant, code dynamique, APK/plugin téléchargé, reflection de handler ou acquisition d'assets. Package Android, signer, installation identity, pairing, credentials, reset semantics, stockage après unlock et FGS `specialUse` restent ceux qualifiés. Permissions actuelles seulement : overlay, foreground service/specialUse, Internet, boot, et le service NotificationListener historique pour Video. Aucune permission alarm/clock/wake supplémentaire. Toute nécessité de permission, store multiple, assets distants, owner concurrent ou modification de M5 en cours impose STOP, diagnostic précis et nouveau périmètre.
 
 ## 17. Futur découpage M6, après réconciliation seulement
 
@@ -303,8 +307,7 @@ Ce découpage garde le cutover séparé des primitives et prévoit un gate autom
 | Révisions / transactions | DB réelle, première attribution concurrente, Video/Banner interleavés, reverse-order ACK, même publication Send répété, rollback injecté, miroir Video atomique, old v1 bloqué pendant Banner, reprise/backfill sans régression |
 | Régression | Importer les gates effectivement fermés de M5 merged : projection, différentiels, pause/seek/replay, exact token/generation, durabilité M4 ; gate complet après cutover E |
 
-Le repo Phase A part du M4 exact, dont le test d'inventaire documentaire frozen échoue déjà sur le document de clôture Sony ajouté après le freeze. Cette anomalie n'est pas réparée par un skip, wildcard, nouveau hash ou test modifié ici. Après merge M5, les admissions d'inventaire nécessaires doivent être finies et explicites dans le work order approprié, avec tous les starting blobs protégés. Les résultats M5 lus dans un rapport ne remplacent pas une requalification sur `BASE_TV_M6`.
-
+La failure d'inventaire de la Phase A sur l'ancien socle M4 reste historique. M5 mergé contient ses admissions de clôture et leur inverse qualifié. La réconciliation ajoute exclusivement les deux chemins documentaires M6 dans les quatre inventaires finis ; les blobs avant/après complets et l'inverse unique sont vérifiés avant Sony → D → C → B → M4. Aucune protection historique n'est remplacée. Les résultats sur le nouveau HEAD exact sont rapportés séparément des preuves M5 historiques.
 ## 19. Futur protocole physique Sony minimum
 
 Exécuter avec Pierre, une action et une observation à la fois, uniquement après gates software, autorisation du control plane et APK de qualification traçable. Relever préalablement version, signer, installationId/deviceId, pairing, opt-in, permissions, codec/handler, installed/acknowledged revision et read failure. Vérifier SHA-256/APK/signer et faire un upgrade sans uninstall, clear, reset ou re-pairing. Signer attendu du socle : `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c`.
@@ -320,24 +323,28 @@ Exécuter avec Pierre, une action et une observation à la fois, uniquement apr�
 
 Une preuve instrumentée Android standard n'est pas une qualification Sony. Ce protocole n'est pas exécuté dans cette Phase A et n'ajoute aucune clôture à M5.
 
-## 20. Gate obligatoire après M5
+## 20. Réconciliation acquise et prochain périmètre
 
-Aucune Phase B ni modification d'implémentation ne commence avant les sept conditions cumulatives :
+La clôture physique M5 et le merge ne sont plus pending. Les fichiers réels de `17cbe36ae99ac7f48aaf861e0d1feac702a9e521` ont été relus, les seize points du work order ont une décision explicite dans le rapport compagnon et les primitives MEDIA/Video sont héritées sans modification. La présente branche doit être descendante de ce main exact et de l'ancien HEAD M6, avec un delta documentaire/provenance fini. Les quatre workflows hérités sont réexécutés sur le HEAD publié ; les succès historiques de M5 ne leur servent pas de substitut.
 
-1. Qualification physique Sony M5 réellement terminée avec rapport/provenance.
-2. PR M5 mergée dans `main` par le cycle autorisé de M5.
-3. Nouveau `main` exact figé comme `BASE_TV_M6` ; ne pas réutiliser automatiquement `BASE_TV_M6_PHASE_A` ou un HEAD de travail.
-4. Relecture de cette architecture contre ce commit réel.
-5. Vérification de chaque hypothèse issue de `c9b0efd4acfaaae9ed7da13dcec505b2f653c548` : modèles/bornes, scheduler actif, projection, ports owner, tokens/générations, restore/clear, controller et tests.
-6. Deltas explicitement réconciliés, décisions de contrat/authority revues et risques Sony non fermés conservés.
-7. Tests/gates M5 effectivement fermés intégrés à la baseline M6, incluant provenance/différentiels/native et admissions documentaires finies.
+Le prochain work order pourra autoriser **uniquement M6 Phase B** : valeurs immuables `WallEvent`/`WallCalendar`, validator JDK pur du domaine temporel, scheduler pur payload-free avec temps/éligibilité explicites, sélection half-open/latest-start/tie-ID, prochaine frontière, au plus EXIT+DUE, tests fake-clock/frontières/overlap/sauts/late-start et protection inchangée du MEDIA. Le profil Banner peut être spécifié et ses contraintes pures documentées ; aucun handler, codec enregistré, adapter Cloud/TV ou parsing branché au runtime n'appartient à B.
 
-Le rapport Phase A donne la matrice d'hypothèses à relire. Aucun cherry-pick, merge de M5 dans cette branche, rebase ou modification de #15 ne sert de raccourci. La documentation M6 reste Draft/open/unmerged pendant ce cycle.
+Owner partagé, token/anchor/ticket Android, autostart, renderer/composition et durable Banner appartiennent à C ; resolver/publication/transport/ACK et autorité OS Cloud à un ordre D distinct ; intégration live et Sony à E sous autorisation propre. WALL reste non annoncé par `TvCapabilities.current()` pendant B. Cette réconciliation n'autorise ni n'entame ce travail exécutable. PR #16 reste OPEN / DRAFT / unmerged.
 
 ## 21. Références de preuve et limites
 
 - [Architecture M4 au socle réel](https://github.com/pierre22400/scenevibe-tv-companion/blob/67b81045258b1692073c6927b956db4899c6ad1a/docs/scenevibe-os-m4-tv-installation-architecture.md), [clôture Sony M4](https://github.com/pierre22400/scenevibe-tv-companion/blob/67b81045258b1692073c6927b956db4899c6ad1a/docs/m4-final-sony-physical-closure.md), [correctif durabilité Sony](https://github.com/pierre22400/scenevibe-tv-companion/blob/67b81045258b1692073c6927b956db4899c6ad1a/docs/m4-phase-g-sony-hard-reboot-corrective-report.md).
-- [Architecture M5 au HEAD de référence](https://github.com/pierre22400/scenevibe-tv-companion/blob/c9b0efd4acfaaae9ed7da13dcec505b2f653c548/docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md), [SceneEvent réel](https://github.com/pierre22400/scenevibe-tv-companion/blob/c9b0efd4acfaaae9ed7da13dcec505b2f653c548/app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/SceneEvent.java), [owner Video réel](https://github.com/pierre22400/scenevibe-tv-companion/blob/c9b0efd4acfaaae9ed7da13dcec505b2f653c548/app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java), [rapport cutover M5 D](https://github.com/pierre22400/scenevibe-tv-companion/blob/c9b0efd4acfaaae9ed7da13dcec505b2f653c548/docs/m5-phase-d-video-cutover-report.md).
+- [Architecture M5 au merge exact](https://github.com/pierre22400/scenevibe-tv-companion/blob/17cbe36ae99ac7f48aaf861e0d1feac702a9e521/docs/scenevibe-os-m5-scene-event-media-calendar-architecture.md), [SceneEvent réel](https://github.com/pierre22400/scenevibe-tv-companion/blob/17cbe36ae99ac7f48aaf861e0d1feac702a9e521/app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/SceneEvent.java), [owner Video réel](https://github.com/pierre22400/scenevibe-tv-companion/blob/17cbe36ae99ac7f48aaf861e0d1feac702a9e521/app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java), [rapport cutover M5 D](https://github.com/pierre22400/scenevibe-tv-companion/blob/17cbe36ae99ac7f48aaf861e0d1feac702a9e521/docs/m5-phase-d-video-cutover-report.md).
 - [Cloud SHADOW réel](https://github.com/pierre22400/interface-scenevibe/blob/5011c91aac61a0cc6dcc74c256a15b7dee03d785/packages/cloud/src/http/cloud-service.ts), [service d'autorité Video](https://github.com/pierre22400/interface-scenevibe/blob/5011c91aac61a0cc6dcc74c256a15b7dee03d785/packages/cloud/src/services/video-assignment-service.ts), [repositories OS](https://github.com/pierre22400/interface-scenevibe/blob/5011c91aac61a0cc6dcc74c256a15b7dee03d785/packages/cloud/src/os/postgres-repositories.ts), [codec de persistance Video-only](https://github.com/pierre22400/interface-scenevibe/blob/5011c91aac61a0cc6dcc74c256a15b7dee03d785/packages/cloud/src/video/render-package-codec.ts).
 
-Les risques restants sont le HEAD M5 non fermé physiquement, la latence/suspension Sony, la confiance dans l'heure OS, l'horizon offline fini et la transition d'autorité Cloud à autoriser/qualifier. Ils sont des gates futurs explicites. La phase documentaire ne prétend démontrer ni Banner live, ni WALL runtime, ni qualification Sony nouvelle.
+Les risques restants sont la latence/suspension Sony pour Banner, la confiance dans l'heure OS, l'horizon offline fini et la transition d'autorité Cloud à autoriser/qualifier. Ils sont des gates futurs explicites. La réconciliation ne démontre ni Banner live, ni WALL runtime, ni qualification Sony nouvelle.
+
+
+## 22. Précisions issues des sources mergées
+
+- Le token M5 est distinct de la révision et refuse son overflow. La génération de présentation est capturée après `replaceRevision`, puis fixée pour toute activation. Le controller incrémente actuellement `generation` sans vérification d'overflow ; une garantie générale d'overflow fail-closed n'est donc pas acquise par M5. C devra qualifier pour WALL la disponibilité de gardes fraîches et le headroom nécessaire aux load/unload, sans réutilisation ni changement opportuniste des politiques MEDIA. `wallGeneration` et timer ticket restent deux gardes volatiles supplémentaires indépendantes.
+- Le controller conserve un flag `eligible` à travers les loads. M5 le rétablit au premier snapshot MEDIA éligible. Le futur chemin WALL doit donc initialiser explicitement l'éligibilité locale après promotion, masquer sur suspension/perte d'overlay et réévaluer le candidat courant au regain, même si son ID est identique. Un simple chargement de manifest ne suffit pas. Un refus de preflight n'est pas un succès visuel ; la sélection déjà tentée ne boucle pas en retries à chaque heartbeat.
+- `CloudControlClient.fetchAssignment` garde actuellement un transport Video v1 et construit `finalTrackId` depuis l'Assignment adapté. Il n'implémente pas encore la preuve ACK Banner issue du durable. Réutiliser le gate owner, ARMED, client courant et révision exacte ne dispense pas d'ajouter la liaison codec/version/digest du snapshot dans le futur transport commun, en gardant Video v1 compatible.
+- Les bornes WALL temporelles proposées ne sont pas des capacités existantes. Le corps 1 MiB, les artifacts 2,4 MB / package 3 MB et la taille HTTP/enveloppe s'appliquent cumulativement, échappements inclus ; le sous-ensemble effectivement livrable est leur intersection. Époque et horizon appartiennent au nouveau modèle, jamais au `startMs` MEDIA/manifest actuel.
+- La clôture physique M5 est immuable : `Last startup restore: -`, `Last assignment revision: 0`, `Last successful ACK: 0` après reboot. Le `-` ne signifie pas ARMED. La survie et l'exécution de révision 6 sans Send prouvent la restauration fonctionnelle ; le logcat ne fournit pas de preuve explicite RESTORE/MediaCalendar/DUE/revision. Les mentions OPEN/DRAFT/unmerged de cette clôture sont l'état historique avant l'audit et le merge #15.
+- Le POC Media Interlude au HEAD documentaire `96d1de5b555d52a88eda74fb45a6895d8599b316` établit uniquement VIDEO+PAUSE full interlude PASS et AUDIO+DUCK semantic FAIL sur Sony/Prime, malgré l'audio local fonctionnel en 0.1.4. Prime pause sur CAN_DUCK ; SceneVibe n'acquiert pas de pause ownership par cet effet de focus. Aucun fichier ni commit expérimental n'est importé. Banner/WALL reste indépendant ; aucune capacité universelle ni équation AUDIO=DUCK / VIDEO=PAUSE n'est déduite.

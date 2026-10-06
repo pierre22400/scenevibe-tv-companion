@@ -289,18 +289,47 @@ public final class M4SonyDurabilityInstrumentation extends Instrumentation {
             /** Owner abort/retirement invokes the same production controller without creating a window. */
             @Override public void hideAll() {}
         });
-        final MediaSyncedTrackScheduler scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
-            /** An ARM without a media due event must not display a legacy card. */
-            @Override public void onRender(ScheduledTrack.Event event) {shows++;}
-            /** No playback input is injected during offline restoration. */
-            @Override public void onPlayback(boolean playing,boolean freeze) {}
-            /** No media eligibility event is needed to restore the exact package. */
-            @Override public void onEligibility(boolean eligible) {}
-        });
-        final OverlayService.LiveVideoRuntimePorts ports=new OverlayService.LiveVideoRuntimePorts(
-                ()->android.os.Looper.myLooper()==android.os.Looper.getMainLooper(),()->scheduler,()->controller,
-                ()->{},()->{},revision->selected=revision);
+        final com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts ports;
+        /** Select the actual runtime constructor by API presence so this same fixture still compiles against pre-fix M4. */
+        private com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts runtimePorts() {
+            try {
+                java.util.function.BooleanSupplier owner=()->android.os.Looper.myLooper()==android.os.Looper.getMainLooper();
+                java.util.function.Supplier<SceneRuntimeController> regie=()->controller;
+                Runnable retire=()->{};
+                java.util.function.LongConsumer select=revision->selected=revision;
+                Class<?> port=OverlayService.LiveVideoRuntimePorts.class;
+                for(java.lang.reflect.Constructor<?> constructor:port.getDeclaredConstructors()) {
+                    constructor.setAccessible(true);
+                    if(constructor.getParameterTypes().length==6) {
+                        MediaSyncedTrackScheduler scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
+                            /** An ARM without a media due event must not display a legacy card. */
+                            @Override public void onRender(ScheduledTrack.Event event) {shows++;}
+                            /** No playback input is injected during offline restoration. */
+                            @Override public void onPlayback(boolean playing,boolean freeze) {}
+                            /** No media eligibility event is needed to restore the exact package. */
+                            @Override public void onEligibility(boolean eligible) {}
+                        });
+                        return (com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts)
+                                constructor.newInstance(owner,(java.util.function.Supplier<Object>)()->scheduler,regie,retire,retire,select);
+                    }
+                    if(constructor.getParameterTypes().length==8) {
+                        Class<?> core=Class.forName("com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler");
+                        Class<?> sink=Class.forName(core.getName()+"$Sink");
+                        Object listener=java.lang.reflect.Proxy.newProxyInstance(sink.getClassLoader(),new Class<?>[]{sink},
+                                (proxy,method,args)->{if(method.getName().equals("onDue"))shows++;return null;});
+                        Object scheduler=core.getConstructor(sink).newInstance(listener);
+                        Class<?> legacy=constructor.getParameterTypes()[6];
+                        Object visual=java.lang.reflect.Proxy.newProxyInstance(legacy.getClassLoader(),new Class<?>[]{legacy},
+                                (proxy,method,args)->{if(method.getName().equals("due"))shows++;return null;});
+                        return (com.scenevibe.tvcompanionpoc.installation.InstallationHandler.RuntimePorts)
+                                constructor.newInstance(owner,(java.util.function.Supplier<Object>)()->scheduler,regie,retire,retire,select,
+                                        visual,(java.util.function.Consumer<Boolean>)eligible->{});
+                    }
+                }
+                throw new IllegalStateException("Unknown actual runtime port API");
+            } catch(ReflectiveOperationException failed) {throw new IllegalStateException("Native runtime composition refused",failed);}
+        }
         /** Construct no native window, credential, Cloud client, socket or second handler registry. */
-        Runtime() {}
+        Runtime() {ports=runtimePorts();}
     }
 }

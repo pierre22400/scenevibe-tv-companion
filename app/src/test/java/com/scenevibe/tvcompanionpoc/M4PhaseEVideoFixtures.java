@@ -81,14 +81,14 @@ final class M4PhaseEVideoFixtures {
             scheduler=new MediaSyncedTrackScheduler(new MediaSyncedTrackScheduler.Listener() {
                 /** Route a due event through the actual controller or the isolated legacy visual. */
                 @Override public void onRender(ScheduledTrack.Event event) {
-                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onCommentDue(event);
+                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onEventDue(event.id);
                     else {legacyVisible=true;shows++;observe();}
                 }
                 /** Forward passive playback state without introducing a clock or player control. */
                 @Override public void onPlayback(boolean playing,boolean freeze) {controller.onPlayback(playing,freeze);}
                 /** Real media expiry reaches the same selected controller owner. */
                 @Override public void onExpire(ScheduledTrack.Event event) {
-                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onCommentExpired(event);
+                    if (controller.isSceneRendererActiveFor(activeRevision)) controller.onEventExpired(event.id);
                 }
                 /** Load/identity loss cannot cause a second visual owner. */
                 @Override public void onEligibility(boolean eligible) {
@@ -117,7 +117,7 @@ final class M4PhaseEVideoFixtures {
         /** Unload the actual controller and invalidate old-generation callbacks synchronously. */
         @Override public boolean retireManifestedVisualOwner() {return step("retire-manifested",()->{controller.unload();armed=null;});}
         /** The production handler supplies its rebuilt trusted track, rather than a copied parser result. */
-        @Override public boolean loadPreparedTrack(ScheduledTrack track) {return step("load",()->{loaded=track;loads++;scheduler.load(track);});}
+        @Override public boolean loadPreparedVideo(VideoPreparedState state) {return step("load",()->{loaded=state.track;loads++;scheduler.load(state.track);});}
         /** Arm the actual controller with the exact restored manifest/revision; do not show on ARM alone. */
         @Override public boolean armPreparedManifest(long revision,OverlayManifest manifest) {
             return step("manifest",()->{armed=manifest;controller.replaceRevision(revision,manifest);});

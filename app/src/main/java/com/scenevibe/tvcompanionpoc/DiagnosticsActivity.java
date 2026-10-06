@@ -145,6 +145,7 @@ public final class DiagnosticsActivity extends Activity {
     static String render(RuntimeDiagnostics d) {
         StringBuilder sb = new StringBuilder();
         line(sb, "App version", d.appVersion);
+        line(sb, "Temporal engine", "scenevibe.media-calendar.v1");
         line(sb, "Overlay service", d.serviceRunning ? "running" : "stopped");
         line(sb, "Autostart", d.autostartEnabled ? "enabled" : "disabled");
         line(sb, "Cloud", d.cloudState.name());

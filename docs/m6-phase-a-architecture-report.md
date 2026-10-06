@@ -1,3 +1,79 @@
+# SCENEVIBE OS — M6 POST-M5 RECONCILIATION REPORT
+
+État courant au 6 octobre 2026 : réconciliation d'architecture/provenance sur le M5 réellement mergé. **Production SHADOW ; PR #16 OPEN / DRAFT / unmerged ; Phase B non commencée.** Les résultats finaux CI et le SHA du commit publié sont consignés dans le manifeste courant de PR et le rapport utilisateur, afin d'éviter un SHA auto-référentiel.
+
+## Références et méthode Git
+
+| Référence | Identité vérifiée |
+| --- | --- |
+| `BASE_TV_M6` / main TV / merge #15 | `17cbe36ae99ac7f48aaf861e0d1feac702a9e521` |
+| M5 final audited HEAD | `45c97782479f278632d5d19ec0723eb50af59e87` ; même arbre `1bd87638937462296d3a32d207995149aaed7f53` que le merge |
+| M5 software HEAD physiquement qualifié | `c9b0efd4acfaaae9ed7da13dcec505b2f653c548` |
+| Ancien HEAD M6 conservé | `3f91d66ddfdcd95a4cd47a68ed0060e885ed716b` ; ancien parent M4 `67b81045258b1692073c6927b956db4899c6ad1a` |
+| `BASE_CLOUD_M6` / main Cloud | `5011c91aac61a0cc6dcc74c256a15b7dee03d785` ; SHADOW |
+| Roadmap Draft #24 relue | `d9eabae89377bd3cb72e1b51524fd989fbccc473`, `docs/project/scenevibe-os-roadmap.md` |
+| POC lu uniquement comme preuve future | `96d1de5b555d52a88eda74fb45a6895d8599b316`, `docs/experiments/media-interlude-poc-report.md` |
+
+GitHub est la source de vérité. Les refs et PR ont été vérifiées ; les fichiers TV sont relus depuis le merge réel, les contrats Cloud depuis le main exact. Méthode : merge à deux parents, ancien M6 en premier parent, main M5 en second parent ; publication en fast-forward avec `expected_sha` sur l'ancien M6, force=false. Aucun rebase, réécriture M5 ou import de branche expérimentale. La PR reste sur main ; elle n'est ni mergée ni convertie en Ready.
+
+Les deux documents Phase A ont été relus intégralement. La section historique ci-dessous conserve la caractérisation avant merge : ses mentions M5 pending/open/unmerged, chiffres M4 et numéros M7/M8/M9 ne décrivent pas l'état courant. Les anciens numéros sont des aliases historiques ; la trajectoire actuelle post-M6 reste organisée en workstreams non numérotés.
+
+## Matrice des seize points confrontés au code réel
+
+Préfixe TV : `app/src/main/java/com/scenevibe/tvcompanionpoc/`, au `BASE_TV_M6` ci-dessus. Les lectures des grands services ciblent leurs méthodes d'installation, d'activation, de rendu et d'ACK, ainsi que les tests correspondants ; elles ne prétendent pas être une lecture exhaustive de tout le repository.
+
+| # | Décision après confrontation | Sources/garanties réelles et conséquence |
+| --- | --- | --- |
+| 1 | CONFIRMÉ : WALL distinct de MEDIA | `calendar/SceneEvent`, `MediaCalendar`, `MediaObservation` portent positions/pause/éligibilité MEDIA. Le futur domaine UTC ne leur est pas ajouté. |
+| 2 | CONFIRMÉ : scheduler M5 inchangé | `MediaCalendarScheduler` passif : late 2000 ms, forward >5000, backward <−2000, une première DUE, callbacks synchrones et ordre HashMap historique. Une seule instanciation production dans `OverlayService`, aucune instanciation du legacy. Corpus/oracle/différentiels inchangés. |
+| 3 | CONFIRMÉ : WALL peut être payload-free | Les fenêtres/IDs/epoch explicites suffisent à la sélection. `VideoPreparedState` sépare déjà projection et payload index ; Banner aura sa projection distincte. Aucun texte/renderer/store dans le futur core WALL. |
+| 4 | CONFIRMÉ AVEC EXTENSION C : owner commun | `LiveVideoRuntimePorts` possède réellement pending/active/retiring, invalidation avant retraite et nettoyage complet. Il reste typé Video et dépend de `VideoPreparedState`/scheduler MEDIA. Extraire la mécanique commune sous un seul main owner, sans copier un LiveBanner concurrent ; la factorisation n'est pas réalisée ici. |
+| 5 | PRÉCISÉ : gardes M5 nécessaires, pas suffisantes pour timer WALL | `matching(token)` accepte active uniquement ; capture génération une fois après `replaceRevision`. Token neuf à chaque ARM, même same-revision, overflow token fermé. WALL ajoute `wallGeneration` et timer ticket ; la génération controller `++` n'a pas de garde overflow actuelle, à qualifier finitement en C pour WALL. |
+| 6 | CONFIRMÉ AVEC INITIALISATION C : controller sans clock | `onEventDue(id,gen)` ignore stale/inconnu/inéligible ; `onEventExpired` masque l'ID exact ; preflight/show/hide via sink. Le flag eligible survit aux loads : WALL devra le régler après promotion. Regain/suspension exigent une réévaluation fraîche du même candidat, sans horloge dans le controller. |
+| 7 | CONFIRMÉ : renderer commun possible | `SceneRenderer` possède texte/rectangle/table/group ; preflight local, retrait immédiat `dismissNow`, fade Video préservé. Banner refusera assets et animations différées récursivement ; legacy renderer/countdown Video reste intact et retrait des deux surfaces obligatoire. Aucune preuve Sony Banner n'est acquise. |
+| 8 | CONFIRMÉ AVEC ADAPTERS FUTURS : installation/restore/ARM/ACK | `PackageInstaller` stale avant handler ; same ignore l'entrée et restaure durable sans repersist ; new validate/prepare/commit/readback/restore/arm. Store courant autoritaire, corrupt fermé, markAcknowledged exact. Service restaure avant probe/Cloud. Registry est encore borné à deux codecs ; CloudControlClient ACK reste Video v1. Banner nécessite handler/ports statiques et preuve ACK durable, sans nouveau store/installer. |
+| 9 | CONFIRMÉ : deux kinds alternatifs | Un snapshot courant dans `InstallationStore`, un activeRevision sélectionné, un owner, un poller. DeviceAssignment Cloud une ligne/device. Alternance Video N → Banner N+1 → Video N+2 ; coexistence/compteur Banner séparé exclus. |
+| 10 | CONFIRMÉ AVEC EXTENSION D : autorité OS unique | `cloud-service.ts` fixe shadow ; `video-assignment-service.ts` alloue legacy en SHADOW. `cutover-coordinator.ts` attend finalTrackId et miroir Video ; FK tv_assignments non nullable. Banner ne peut utiliser ces writers sans extension OS contrôlée, ready avant Send et GET sealed-only. Mode/cutover non autorisé ici ; old v1 doit refuser le miroir Video stale quand Banner est courant. |
+| 11 | CONFIRMÉ SOUS INTERSECTION DES BORNES | Parser manifest start ≤12 h, durée 250..3 600 000 ms, 256 scènes, groupe 4, texte 2000 codepoints. MEDIA positif ≤60 s reste intact. WALL propose epoch ≤253402300799999, horizon ≤604800000 ms, 1..256, durées 250..1 h ; profil Cloud ≤1 MiB cumulatif avec artifact 2,4 MB/package 3 MB et HTTP enveloppe échappée. Epoch jamais dans startMs actuel. |
+| 12 | CONFIRMÉ AVEC GARDE C : anchor/générations orthogonaux | Activation token et présentation capturée ne changent pas sur correction clock. Epoch/elapsed volatile prépare une attente, chaque callback relit epoch ; wallGeneration invalide anchor et timer ticket invalide une attente annulée. Pending ne rend pas : première évaluation fraîche seulement après promotion, pas replay d'un DUE consommé avant ARM. |
+| 13 | CONFIRMÉ : aucune persistance temporelle WALL | Snapshot artifact opaque contient horizon/fenêtres/manifest ; reboot reconstruit handler puis anchor neuf sans cursor/ticket/génération durable. BootReceiver/AutostartPolicy exigent encore media grant : C doit ajouter une décision metadata-only pour Banner connu, opt-in/overlay/durable, Video et inconnus inchangés. |
+| 14 | CONFIRMÉ PAR PROVENANCE EXÉCUTÉE : admissions finies | Les quatre inventaires admettent exactement les deux docs. L'inverse M6 vérifie quatre blobs avant/après complets et contexte unique, restitue les blobs merged M5 avant l'inverse Sony et D→C→B→M4. Baselines JSON, starting blobs historiques, assertions, oracles/fixtures et skips inchangés. Gates et mutations négatives sont réexécutés, résultat final distinct de l'historique. |
+| 15 | CORRIGÉ : M5 closed/merged | Architecture et état courant PR mis à jour ; ancienne Phase A conservée sous historique. La clôture M5 immuable décrit son état pre-merge ; `Last startup restore: -` reste littéral et ne signifie pas ARMED. Révision 6 survivante/exécutée sans Send prouve le restore fonctionnel ; logcat sans preuve explicite RESTORE/MediaCalendar/DUE/revision. |
+| 16 | ARRÊTÉ : Phase B pure uniquement, non commencée | Modèles/validation temporelle/scheduler WALL JDK pur, fake clocks et frontières ; aucun driver Android, handler/codec enregistré, adapter Cloud/TV, changement MEDIA, capability flip, APK Banner ou Sony. C/D/E restent soumis à leurs work orders et gates propres. |
+
+## Hypothèses corrigées et risques conservés
+
+La base initiale M4 est remplacée par M5 merged, ses 118 gates Python et ses gates JVM/native réels. L'admission Sony et l'inverse de clôture M5 sont hérités, pas recréés. Le protocole/rapport Phase D pending est historique ; la clôture physique finale et le merge sont courants.
+
+Les signatures ID/génération du controller sont réutilisables, mais les ports live ne sont pas déjà génériques. L'éligibilité initiale Banner, le DUE après promotion, les gardes timer/anchor et leur overflow restent des obligations C. L'ACK Banner durable n'est pas déjà implémenté par le client Video ; le Cloud Send/GET actuel n'est pas ready-only. Ces écarts ne bloquent pas les primitives pures B, mais bloquent une revendication Banner live tant que C/D/E ne sont pas qualifiés.
+
+Risques futurs : heure OS erronée, lecture anchor/refus, latence/suspension/FGS/dalle Sony, horizon offline fini sans renouvellement automatique, retrait natif refusé, transition d'autorité Cloud et rollback dangereux après un Banner courant. Aucune permission, asset distant, nouvelle identité, multi-installation ou nouvelle autorité concurrente n'est introduite.
+
+Le POC distinct confirme VIDEO+PAUSE full interlude PASS Sony/Prime ; AUDIO+DUCK est semantic FAIL malgré le cue ADTS local fonctionnel en 0.1.4. Prime choisit une pause sur CAN_DUCK sans ownership SceneVibe. Ces preuves alimentent seulement la capability matrix post-M6 ; aucun code/branche expérimental n'est importé, et aucune politique media-type implicite n'est fixée.
+
+## Diff documentaire/provenance exact contre BASE_TV_M6
+
+```text
+ADD    docs/scenevibe-os-m6-banner-wall-clock-architecture.md
+ADD    docs/m6-phase-a-architecture-report.md
+MODIFY tests/test_m4_sony_corrective_boundary.py
+MODIFY tests/test_m5_phase_b_boundary.py
+MODIFY tests/test_m5_phase_c_boundary.py
+MODIFY tests/test_m5_phase_d_boundary.py
+MODIFY tests/m5_phase_d_provenance.py
+```
+
+Les quatre modifications de tests ne changent que leurs inventaires par les deux chemins exacts. Le helper ajoute uniquement la couche inverse M6 whole-blob avant le helper Sony existant ; les deux blobs antérieurs déjà admis (candidat Sony et clôture mergée) restent reconnus exactement. Une mutation inconnue échoue avant l'inverse. Aucun wildcard, skip, suppression d'assertion, seuil relâché ou baseline réécrit.
+
+Les gates courants portent sur le nouveau HEAD exact : Python complet, provenance positive et négative, diff/tree complet ; quatre workflows hérités debug APK, API35 smoke, M5 differential API31/35 et disk/process durability API31/35. Les résultats GitHub réellement terminés et leurs artifacts sont consignés au manifeste final externe. Les comptes M5 hérités attendus restent 118 Python PASS, JVM 1050 PASS / 0 FAIL / 1 historical SKIP / 1051 total ; B127/C103/D44 ; seul skip `M1CloudInteropTest.originalColumboProjectionIsInstallable`. Ils ne constituent pas une qualification du runtime Banner absent.
+
+Le canon de roadmap est relu : Banner distinct WALL, post-M6 workstreams non numérotés. Une correction exclusivement documentaire du statut M5/du gate de réconciliation dans la Draft #24 est justifiée par ses mentions courantes devenues fausses ; elle ne change ni Cloud main, ni code, ni mode, ni order post-M6. Le HEAD éventuel de cette correction est consigné dans le rapport final.
+
+La caractérisation initiale suivante est conservée comme histoire fermée de la Phase A avant merge. Elle ne remplace pas les conclusions actuelles ci-dessus.
+
+<details>
+<summary>Historique intégral de M6 Phase A au HEAD 3f91d66, avant merge M5</summary>
+
 # M6 Phase A — rapport de caractérisation et d'architecture
 
 Date : 6 octobre 2026. Auteur d'exécution : Alex. Périmètre : documentation uniquement, sur GitHub comme source de vérité. L'architecture arrêtée est [scenevibe-os-m6-banner-wall-clock-architecture.md](scenevibe-os-m6-banner-wall-clock-architecture.md).
@@ -210,3 +286,5 @@ Ces contrôles clôturent la publication documentaire uniquement. Le futur proto
 M6 PHASE A ARCHITECTURE COMPLETE
 IMPLEMENTATION BLOCKED PENDING M5 PHYSICAL CLOSURE / MERGE / RECONCILIATION
 ```
+
+</details>

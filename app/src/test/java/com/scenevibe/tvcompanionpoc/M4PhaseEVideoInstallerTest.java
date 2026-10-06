@@ -44,7 +44,7 @@ public final class M4PhaseEVideoInstallerTest {
         assertEquals(InstallationStore.COMPAT_TRACK_HANDLER_ID,test.store.read().snapshot().handlerId());
         assertNull(test.store.read().snapshot().canonical().artifact("manifest"));assertEquals(13,test.store.read().acknowledgedRevision());
         assertFalse(test.ports.manifestVisible);assertFalse(test.ports.controller.hasActiveManifest());test.ports.due();
-        test.ports.controller.onCommentDue(old,generation);test.ports.controller.onCommentExpired(old,generation);
+        test.ports.controller.onEventDue(old.id,generation);test.ports.controller.onEventExpired(old.id,generation);
         assertTrue(test.ports.legacyVisible);assertFalse(test.ports.manifestVisible);assertEquals(1,test.ports.maxVisible);
         assertEquals(1,test.backend.writes);assertEquals(0,test.backend.ackWrites);
     }
@@ -64,8 +64,8 @@ public final class M4PhaseEVideoInstallerTest {
         Harness test=new Harness();test.install(true,13);test.ports.due();
         ScheduledTrack.Event old=test.ports.loaded.comments.get(0);long generation=test.ports.controller.currentGeneration();
         test.resetObservation();assertEquals(InstallationStatus.ARMED,test.install(true,14));
-        int shows=test.ports.shows;test.ports.controller.onCommentDue(old,generation);assertEquals(shows,test.ports.shows);
-        test.ports.due();test.ports.controller.onCommentExpired(old,generation);assertTrue(test.ports.manifestVisible);
+        int shows=test.ports.shows;test.ports.controller.onEventDue(old.id,generation);assertEquals(shows,test.ports.shows);
+        test.ports.due();test.ports.controller.onEventExpired(old.id,generation);assertTrue(test.ports.manifestVisible);
         assertEquals(14,test.ports.controller.activeRevision());assertEquals(1,test.ports.maxVisible);assertEquals(1,test.backend.writes);
     }
 

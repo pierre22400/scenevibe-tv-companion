@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from m5_phase_b_provenance import phase_b_retained_bytes
 
 """Preserve every prior A–G whole-blob pin while admitting the localized Sony correction.
 
@@ -22,7 +23,7 @@ def blob_hash(content):
 def retained_bytes(path):
     """Undo only reviewed unique corrective edits before an older gate's full-file provenance check."""
     path = Path(path)
-    content = path.read_bytes()
+    content = phase_b_retained_bytes(path)
     inventory = json.loads(INVENTORY.read_text(encoding='utf-8'))
     relative = str(path.relative_to(ROOT))
     patches = inventory['correctivePatches'].get(relative)
