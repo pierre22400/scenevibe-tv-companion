@@ -314,7 +314,7 @@ session, not a record of a test already performed.**
 
 1. Install the delivered experimental APK beside SceneVibe, keeping production
    pairing/data. Grant overlay and notification access to the **experimental**
-   package only. Confirm version `0.1.1-media-interlude-poc-corrective`.
+   package only. Confirm version `0.1.2-media-interlude-poc-overlay-controls`.
 2. Start Prime native playback. Run **SCAN MEDIA SESSION** and verify the relevant
    package, PLAYING and advertised PAUSE support. If opening the diagnostic app
    has already paused Prime, record that limitation and restore native playback;
@@ -399,3 +399,49 @@ make them green. No physical Sony qualification result follows from this suite.
 Implementation policy about a competing/changed-priority owner is a conservative
 POC inference from the observable active-session list, not an Android guarantee
 of foreground-app identity.
+
+
+## J. Sony physical harness finding and overlay-controls corrective (2026-10-06)
+
+A first authorized Sony BRAVIA physical attempt exposed a **test-harness blocker**, not
+a MediaSession scanner failure:
+
+- Android `dumpsys media_session` showed Prime Video package
+  `com.amazon.amazonvideo.livingroom` in native `PLAYING` state.
+- SceneVibe's own sampler also observed the same Prime session as `PLAYING` with a
+  progressing position before the POC Activity took foreground.
+- The original `MediaExperimentActivity` was reported by the Sony system as
+  `isTranslucent=false`. Roughly one second after it became foreground, SceneVibe's
+  sampler changed to repeated `NO_ACTIVE_SESSIONS`.
+- Therefore the earlier on-screen `NO_SESSION` result cannot be used as evidence
+  against Prime MediaSession compatibility. The opaque diagnostic Activity itself
+  invalidated the physical test condition.
+
+Corrective harness change:
+
+- `MediaExperimentActivity` is now a **translucent, short-lived permission launcher**.
+- When both grants are present it starts `InterludeService`, requests the diagnostic
+  panel, and immediately finishes so the native streaming Activity remains underneath.
+- The five operator actions now live in `DiagnosticOverlayWindow`, a narrow,
+  translucent, focusable `TYPE_APPLICATION_OVERLAY` window driven by the TV D-pad.
+- The control overlay uses `FLAG_NOT_TOUCH_MODAL`; it does not enter the Activity
+  stack and does not alter pause ownership or safe-resume logic.
+- When the local fullscreen interlude video is first attached, the control panel is
+  re-layered above it once so **EMERGENCY RESTORE / STOP** remains reachable.
+- Production `:app` remains untouched by this corrective.
+
+Build qualification for the corrected physical candidate:
+
+- Code corrective commit: `13e4684c19d18711befb8d1f5999fb71469b76cc`.
+- GitHub Actions run: `37524232444` — **SUCCESS**.
+- Gate executed: `:mediaexperiment:testDebugUnitTest`, `:mediaexperiment:lintDebug`,
+  `:mediaexperiment:assembleDebug`.
+- Package: `com.scenevibe.tvcompanionpoc.mediaexperiment`.
+- versionCode: `3`.
+- versionName: `0.1.2-media-interlude-poc-overlay-controls`.
+- APK SHA-256:
+  `aab99a593e36b64f63123e485fdda8ba73dd13173b69c14dd176aa4e0cb17210`.
+
+This correction is **ready for renewed physical qualification**. It does not itself
+prove audible ducking, native PAUSE ownership, fullscreen interlude rendering or guarded
+resume; those remain physical observations to execute in the operator protocol.
