@@ -14,22 +14,21 @@ import java.io.InputStream;
 
 /**
  * Android implementation of {@link LocalAudioPort}: plays the SHORT bundled
- * SceneVibe test cue from {@code res/raw/scenevibe_cue.m4a} via {@link MediaPlayer}.
+ * SceneVibe test cue from {@code res/raw/scenevibe_cue.aac} via {@link MediaPlayer}.
  *
  * <p>The clip is a tiny local asset; there is NO network access. The state machine
  * only calls {@link #playShortClip()} after audio focus was GRANTED, and it never
  * changes stream volume. Playback uses the same spoken-assistant AudioAttributes as
  * the focus request so the platform treats it consistently.</p>
  *
- * <p>Some Android TV / MediaTek builds cannot reliably parse an MP4/M4A resource
- * when MediaPlayer receives the APK file descriptor plus a non-zero asset offset.
- * The cue is therefore copied byte-for-byte to the app cache and played from a
- * standalone file path. This changes only fixture transport, not audio-focus or
- * media-session behaviour.</p>
+ * <p>The Sony/MediaTek physical gate proved that the original AAC-LC payload was
+ * valid but its M4A/MP4 container was rejected by the OEM extractor. The same AAC
+ * access units are now bundled as ADTS, avoiding the MP4 chunk-table parser while
+ * preserving the spoken fixture itself.</p>
  */
 final class AndroidLocalAudioPort implements LocalAudioPort {
     private static final String TAG = "SceneVibeInterludePoc";
-    private static final String CUE_CACHE_NAME = "scenevibe_cue.m4a";
+    private static final String CUE_CACHE_NAME = "scenevibe_cue.aac";
 
     private final Context context;
     private MediaPlayer player;
@@ -61,7 +60,7 @@ final class AndroidLocalAudioPort implements LocalAudioPort {
             });
             created.prepare();
             created.start();
-            Log.i(TAG, "LOCAL_AUDIO_STARTED source=cache-file");
+            Log.i(TAG, "LOCAL_AUDIO_STARTED source=cache-file-adts");
         } catch (IOException | RuntimeException error) {
             Log.w(TAG, "LOCAL_AUDIO_START_FAILED", error);
             stop();
