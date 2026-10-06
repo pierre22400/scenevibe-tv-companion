@@ -1,8 +1,10 @@
 # M5 Phase B — modèles purs et oracle historique
 
-État de cette première publication : **qualification locale PASS ; CI finale en attente**.
-Ce rapport sera clos dans le même cycle après les workflows réels. Aucun cutover,
-aucun scheduler candidat et aucune qualification Sony Phase B ne sont revendiqués.
+Clôture du cycle logiciel B : modèles et oracle implémentés, nouveaux tests PASS.
+La qualification globale reste bloquée par un test M4 retenu, reproduit sur trois
+tentatives du même HEAD logiciel inchangé. Aucun cutover, scheduler candidat ou
+Sony physique B n'est revendiqué. Le manifeste de clôture de la PR donne le SHA
+documentaire final exact et l'état des workflows de ce SHA, après cette publication.
 Production reste **SHADOW** ; PR #15 OPEN / DRAFT / unmerged.
 
 ## Références et commits
@@ -13,6 +15,9 @@ Production reste **SHADOW** ; PR #15 OPEN / DRAFT / unmerged.
 | BASE_TV_M5 / M4 intégré | `67b81045258b1692073c6927b956db4899c6ad1a` |
 | BASE_CLOUD_M5 | `5011c91aac61a0cc6dcc74c256a15b7dee03d785` |
 | Branche | `work/scenevibe-os-m5-scene-event-calendar-001` |
+| Ajout initial modèles/oracle | `a5b29d93681d604d1009ad318d3f059a5b49b4a7` |
+| Correction harness JDK sous AGP | `f44907ec1ced9811de4e37386c877ada7c0b299e` |
+| HEAD logiciel final / packaging resources | `f563d5be3606ee1c5063958322f1e8f801788cf3` |
 
 La Phase A finale lève le blocage documentaire historique mentionné dans
 l'architecture. Ce blocage n'est pas rouvert. L'architecture et le rapport A restent
@@ -126,8 +131,10 @@ Les quatre cas d'environnement sont `multiple-active-windows`,
 `hashmap-unique-key-resize`. Ils exécutent deux fois le vrai oracle dans la même JVM
 et comparent exactement leurs traces brutes sans les trier. Le journal effectivement
 exécuté est écrit dans `app/build/reports/m5-phase-b-oracle-traces.json`. Les quatre
-traces brutes et l'environnement sont conservés dans l'artefact de summary CI
-existant, sans modifier le workflow. La comparaison oracle/candidat dans le **même**
+traces brutes et l'environnement seront inclus dans l'artefact de summary CI
+existant lorsqu'il sera exécuté, sans modifier le workflow. Dans les runs CI
+bloqués ci-dessous, ce summary/upload n'a pas été atteint : aucun artefact brut
+CI n'est revendiqué. Les références brutes figées et la sortie locale existent. La comparaison oracle/candidat dans le **même**
 environnement et sur Android API31/API35 appartient à C ; B ne revendique pas cette
 comparaison ni un ordre HashMap canonique.
 
@@ -241,8 +248,14 @@ Le baseline correctif Sony reste byte-identique. **229 blobs de départ** sont p
 | JVM M5 seuls | 127 PASS / 0 FAIL / 0 SKIP |
 | JDK-only core, classpath/sourcepath vides | PASS |
 | Anciens JVM | 776 PASS / 0 FAIL / 1 SKIP ; aucun source/cas modifié |
-| CI Gradle/lint/build/LAN/Cloud/signature | EN ATTENTE, aucun PASS inféré |
-| API35 smoke et native API31/API35 | EN ATTENTE, aucun PASS inféré |
+| CI Python au HEAD logiciel final (chaque tentative) | 98 PASS / 0 FAIL / 0 SKIP |
+| CI JVM au HEAD logiciel final (tentatives 1, 2, 3) | 902 PASS / 1 FAIL / 1 SKIP ; 904 total |
+| CI M5 seuls au HEAD logiciel final | 127 PASS / 0 FAIL / 0 SKIP |
+| assembleDebug | Exécuté sans erreur ; confirmé aussi par smoke/native SUCCESS |
+| lintDebug / groupe debug complet | Pas de PASS complet ; testDebugUnitTest bloque le groupe |
+| LAN DEV / Cloud qualification / stable signing au HEAD logiciel final | NOT RUN : étapes suivantes skipped après testDebugUnitTest FAIL |
+| API35 smoke | SUCCESS, run 37417939965 |
+| Native API31/API35 | SUCCESS, run 37417939904 |
 
 La compilation initiale du nouveau harness a révélé les déclarations checked
 JSONException du framework Android. Les nouvelles méthodes test ont été corrigées
@@ -278,7 +291,65 @@ tri stable, bornes, fidélité Unicode, véritable moteur oracle, blobs, ordre e
 absences du journal, négatifs du comparateur et absence de candidat. Les pins
 complets établissent Cloud/store/ACK/codec/handlers byte-identiques ; TvCapabilities,
 permissions, probe, matcher, scheduler, owner et rendu restent inchangés. Aucun WALL.
-Les nouvelles qualifications Android seront consignées ci-dessous à leur clôture.
+Les nouvelles qualifications réelles et le diagnostic sont consignés ci-dessous.
+Le seul SKIP historique est `M1CloudInteropTest.originalColumboProjectionIsInstallable`.
+
+## Gate global bloquant et diagnostic, sans correction hors périmètre
+
+Sur `f563d5be3606ee1c5063958322f1e8f801788cf3`, le run debug
+[37417939947](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/37417939947)
+a exécuté trois tentatives **sans aucun changement de code ni de HEAD** :
+
+| Tentative | Job exact | Résultat JVM réel | Seul FAIL |
+| ---: | ---: | --- | --- |
+| 1 | 112120637648 | 902 PASS / 1 FAIL / 1 SKIP | `interruptedWaitCancelsLateOwnerInstallation` |
+| 2 | 112121306910 | 902 PASS / 1 FAIL / 1 SKIP | même test |
+| 3 | 112122253850 | 902 PASS / 1 FAIL / 1 SKIP | même test |
+
+Aucune nouvelle source/test M5 n'échoue. Les assertions M4 restent effectives.
+La condition d'arrêt pour un échec CI persistant a donc été appliquée : aucun
+patch du test, aucun timeout augmenté, aucun skip, aucun changement Cloud.
+
+Pins exacts, identiques au départ B :
+- test M4 propriétaire : `68a94c47dc7f9ef6d75e858221acbec618202a0a` ;
+- CloudControlClient : `48fccfe62b2964f792fabd8d750106c424df4957`.
+
+Le test attend uniquement InterruptedException après stop et libération owner.
+Le log CI réel donne CloudControlClient.CloudException à la ligne 256
+(`Local installation refused`). Lecture du code retenu : le latch `dispatched`
+est relâché **avant** owner.execute ; le test arrête io puis libère owner. Le
+FutureTask peut terminer `ARM_FAILED` via la garde running=false avant que son
+get observe l'interruption. Le client refuse alors l'installation avant ACK ;
+le test n'accepte pas ce chemin d'exception. Il s'agit du diagnostic de la race
+historique, pas d'une modification ou d'une nouvelle preuve d'acceptation.
+L'ordre exact des threads n'a pas été instrumenté en CI ; cette explication est
+une inférence depuis le code figé et l'exception observée. Six exécutions isolées
+locales des six tests de cette classe ont chacune donné 6 PASS / 0 FAIL / 0 SKIP,
+et un rerun local complet a donné 903/0/1. Ces résultats **ne remplacent pas**
+les trois échecs du gate complet CI.
+
+La résolution de cette qualification retenue requiert une décision explicite
+sur ce test historique, hors autorisation B. Aucun mécanisme de contournement
+n'est introduit et aucune suite n'est affaiblie. Le verdict final reste déterminé
+par les gates réels du HEAD de clôture consignés dans la PR ; ces échecs historiques
+restent conservés si un HEAD documentaire ultérieur passe sans modification source.
+
+## Preuves Android et signature
+
+- [Smoke 37417939965](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/37417939965) :
+  SUCCESS sur le HEAD logiciel final ; image Android API35 standard, pas Sony/TV.
+- [Native 37417939904](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/37417939904) :
+  SUCCESS API31 + API35. Artefacts lus réellement : `11392068235` (31) et
+  `11391414286` (35). Onze scénarios corrigés PASS par API, PIDs seed/reload tous
+  distincts ; quatre contrôles négatifs historiques PASS supplémentaires en API31.
+  Trente invocations API31 et vingt-deux API35. Ces comptes restent séparés des JVM.
+- Les étapes de compilation LAN DEV, Cloud qualification et signature stable du
+  debug sont NOT RUN sur ce HEAD car le test retenu bloque leur exécution. Le signer
+  de la base Phase A est `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c` ;
+  config/signing byte-identiques, mais **aucun APK B signé n'est qualifié par héritage**.
+- Les workflows du commit documentaire de ce rapport sont déclenchés normalement.
+  Le SHA propre et leurs résultats finaux seront enregistrés dans le manifeste PR,
+  sans un nouveau cycle de correction du runtime ni démarrage C.
 
 ## Limites et suite autorisée
 
@@ -288,6 +359,6 @@ shadow scheduling production. Aucun M6/M7/M8+, nouveau codec, Cloud API, asset,
 permission ou player control. Pas de Sony physique B requis ni revendiqué.
 PR #15 reste OPEN / DRAFT / unmerged, sans Ready, rebase, force-push ni merge.
 
-Prochaine recommandation, après READY seulement : **M5 PHASE C — GENERIC MEDIA
+Prochaine recommandation, uniquement une fois le gate global effectivement clos : **M5 PHASE C — GENERIC MEDIA
 SCHEDULER + MEDIA OBSERVATION ADAPTERS + EXACT LEGACY/CANDIDATE DIFFERENTIAL**.
 C n'est pas commencé dans ce cycle.
