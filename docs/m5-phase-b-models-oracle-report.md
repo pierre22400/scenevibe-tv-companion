@@ -489,3 +489,54 @@ assembleDebug, lintDebug, testDebugUnitTest, LAN DEV, Cloud qualification, signe
 API35 smoke et native durability API31/API35 doivent encore passer. Le manifeste
 PR #15 enregistrera le SHA correctif et les résultats réels sur le HEAD final
 exact après qualification. Verdict actuel : **NOT READY FOR M5 PHASE C**.
+
+### Qualification complète réellement exécutée du correctif
+
+HEAD correctif exact : `890c14b48eeb4a3c4d032459da413e9b079f3550`.
+Son arbre Git `4b12e908438c18d26ededce465be6450a07e7e76` est exactement
+l'arbre compilé et testé localement ci-dessus. Publication en fast-forward normal,
+sans rebase, force-push, Ready ou merge. Les trois runs pull_request ont tous
+conclu SUCCESS à leur première tentative :
+
+| Gate | Résultat réel | Preuve |
+| --- | --- | --- |
+| Python complet | 99 PASS / 0 FAIL / 0 SKIP | debug 37425780909, job 112144982060 |
+| JDK-only core | PASS, classpath/sourcepath vides | gate Python exécuté |
+| JVM complet / map de suites | 903 PASS / 0 FAIL / 1 SKIP historique / 904 total | summary 11394783258 téléchargé et lu |
+| M5 B seuls | 127 PASS / 0 FAIL / 0 SKIP | summary m5PhaseBCases=127, exécution locale indépendante 127/0/0 |
+| assembleDebug / lintDebug / testDebugUnitTest | PASS | debug 37425780909 |
+| LAN DEV compile | PASS | même run, étape exécutée |
+| Cloud qualification compile | PASS | même run, étape exécutée |
+| Stable signing + apksigner verify | PASS | même run, artifact 11394997804 téléchargé |
+| API35 platform smoke | PASS | run 37425780928, job 112144982179 |
+| Native durability API31 | PASS | run 37425780960, artifact 11394878218 téléchargé |
+| Native durability API35 | PASS | même run, artifact 11395406284 téléchargé |
+
+Le certificat signer SHA-256 lu dans le log est exactement
+`f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c`.
+APK stable réellement téléchargé : 230202 bytes, SHA-256
+`42643cc851a8020df871eaa2064a3748d017325ff10ce64b13cc25bdefb80c59`, identique
+à l'APK historique B qualifié : le test-only corrective ne change aucun APK.
+Le summary confirme les six tests owner-gate, les 127 cas M5, le seul SKIP
+historique et les quatre traces HashMap brutes conservées.
+
+Les artefacts native ont été décompressés ; le script de validation inchangé a
+été réexécuté localement sur les traces brutes. Onze scénarios corrigés PASS par
+API, PIDs seed/reload distincts dans chaque cas ; quatre contrôles négatifs du
+baseline historique supplémentaires sur API31. Trente invocations API31,
+vingt-deux API35. Smoke API35 qualifie uniquement la plateforme standard Android,
+pas le runtime TV ni Sony. Aucun test Sony physique n'est requis ou revendiqué
+pour cette correction test-only/provenance/documentaire.
+
+L'auto-audit confirme six chemins exacts, les quatre inverses vers les blobs
+ce724e9, les baselines historiques M4/Sony et tout le manifeste B originel
+inchangés (seul nouveau champ qualificationCorrective), zéro Java production,
+modèles/oracle/corpus/resources/instrumentation/workflows byte-identiques et
+aucun timeout, skip ni exception supplémentaire admise. **ZERO PRODUCTION CHANGE**.
+
+Le correctif `890c14b48eeb4a3c4d032459da413e9b079f3550` est donc qualifié :
+**READY FOR M5 PHASE C** sur ce SHA précis. Le présent ajout final est strictement
+documentaire ; son HEAD propre doit également passer la qualification complète,
+et ses résultats exacts seront scellés dans le manifeste PR #15 sans modifier
+encore ce rapport ni extrapoler les PASS. **NO PHASE C STARTED**, SHADOW,
+PR #15 OPEN / DRAFT / unmerged. STOP après cette clôture.
