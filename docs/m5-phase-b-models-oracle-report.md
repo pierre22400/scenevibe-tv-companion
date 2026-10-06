@@ -1,10 +1,12 @@
 # M5 Phase B — modèles purs et oracle historique
 
-Clôture du cycle logiciel B : modèles et oracle implémentés, nouveaux tests PASS.
-La qualification globale reste bloquée par un test M4 retenu, reproduit sur trois
-tentatives du même HEAD logiciel inchangé. Aucun cutover, scheduler candidat ou
-Sony physique B n'est revendiqué. Le manifeste de clôture de la PR donne le SHA
-documentaire final exact et l'état des workflows de ce SHA, après cette publication.
+**Qualification B PASS sur `9978884f75698138d3eae16e3d053922419b514f`**, avec
+les mêmes sources que le HEAD logiciel `f563d5be3606ee1c5063958322f1e8f801788cf3`.
+Les échecs historiques restent intégralement consignés ci-dessous. Le test retenu
+a passé sans patch, skip ni changement de timeout. Le commit de ce rapport final
+est documentaire seulement ; son SHA propre et les gates réels de ce SHA sont
+scellés dans le manifeste de clôture PR #15. Aucun cutover, scheduler candidat ou
+Sony physique B n'est revendiqué.
 Production reste **SHADOW** ; PR #15 OPEN / DRAFT / unmerged.
 
 ## Références et commits
@@ -18,6 +20,7 @@ Production reste **SHADOW** ; PR #15 OPEN / DRAFT / unmerged.
 | Ajout initial modèles/oracle | `a5b29d93681d604d1009ad318d3f059a5b49b4a7` |
 | Correction harness JDK sous AGP | `f44907ec1ced9811de4e37386c877ada7c0b299e` |
 | HEAD logiciel final / packaging resources | `f563d5be3606ee1c5063958322f1e8f801788cf3` |
+| Qualification de clôture / mêmes sources, rapport diagnostic | `9978884f75698138d3eae16e3d053922419b514f` |
 
 La Phase A finale lève le blocage documentaire historique mentionné dans
 l'architecture. Ce blocage n'est pas rouvert. L'architecture et le rapport A restent
@@ -131,10 +134,11 @@ Les quatre cas d'environnement sont `multiple-active-windows`,
 `hashmap-unique-key-resize`. Ils exécutent deux fois le vrai oracle dans la même JVM
 et comparent exactement leurs traces brutes sans les trier. Le journal effectivement
 exécuté est écrit dans `app/build/reports/m5-phase-b-oracle-traces.json`. Les quatre
-traces brutes et l'environnement seront inclus dans l'artefact de summary CI
-existant lorsqu'il sera exécuté, sans modifier le workflow. Dans les runs CI
-bloqués ci-dessous, ce summary/upload n'a pas été atteint : aucun artefact brut
-CI n'est revendiqué. Les références brutes figées et la sortie locale existent. La comparaison oracle/candidat dans le **même**
+traces brutes et l'environnement sont conservés dans l'artefact de summary CI
+`11391114397` du run `37419229594`, réellement téléchargé et lu : OpenJDK 64-Bit
+Server VM 17.0.20.1, quatre cas bruts complets. Les précédents runs bloqués n'ont
+pas atteint cet upload ; ils ne sont pas présentés comme preuve d'artefact.
+Les références brutes figées et la sortie locale restent disponibles. La comparaison oracle/candidat dans le **même**
 environnement et sur Android API31/API35 appartient à C ; B ne revendique pas cette
 comparaison ni un ordre HashMap canonique.
 
@@ -294,7 +298,7 @@ permissions, probe, matcher, scheduler, owner et rendu restent inchangés. Aucun
 Les nouvelles qualifications réelles et le diagnostic sont consignés ci-dessous.
 Le seul SKIP historique est `M1CloudInteropTest.originalColumboProjectionIsInstallable`.
 
-## Gate global bloquant et diagnostic, sans correction hors périmètre
+## Gate historique : échecs préservés et diagnostic, sans correction hors périmètre
 
 Sur `f563d5be3606ee1c5063958322f1e8f801788cf3`, le run debug
 [37417939947](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/37417939947)
@@ -328,11 +332,17 @@ locales des six tests de cette classe ont chacune donné 6 PASS / 0 FAIL / 0 SKI
 et un rerun local complet a donné 903/0/1. Ces résultats **ne remplacent pas**
 les trois échecs du gate complet CI.
 
-La résolution de cette qualification retenue requiert une décision explicite
-sur ce test historique, hors autorisation B. Aucun mécanisme de contournement
-n'est introduit et aucune suite n'est affaiblie. Le verdict final reste déterminé
-par les gates réels du HEAD de clôture consignés dans la PR ; ces échecs historiques
-restent conservés si un HEAD documentaire ultérieur passe sans modification source.
+Un correctif de ce test historique exigerait une décision explicite hors B.
+Aucun mécanisme de contournement n'est introduit. Sur le HEAD documentaire
+`9978884f75698138d3eae16e3d053922419b514f`, avec **toutes les sources et tous les
+tests byte-identiques à f563d5b**, le debug complet `37419229594` a passé dès sa
+première tentative : 903 PASS / 0 FAIL / 1 SKIP. Le test retenu a bien été exécuté.
+Cette réussite ne supprime ni ne remplace les trois échecs précédents ; elle
+confirme la sensibilité historique au scheduling sans introduire de régression B.
+Le gate est clos pour la qualification enregistrée ci-dessous, selon la règle
+explicite autorisant le rerun inchangé du seul test historique.
+Le verdict final de cette publication documentaire dépend des gates réels de
+son propre HEAD consignés dans le manifeste PR, sans commencer C.
 
 ## Preuves Android et signature
 
@@ -351,6 +361,41 @@ restent conservés si un HEAD documentaire ultérieur passe sans modification so
   Le SHA propre et leurs résultats finaux seront enregistrés dans le manifeste PR,
   sans un nouveau cycle de correction du runtime ni démarrage C.
 
+## Qualification de clôture réellement PASS
+
+HEAD exact qualifié : `9978884f75698138d3eae16e3d053922419b514f`.
+Le diff depuis f563d5b ne change qu'un rapport Markdown ; aucun source, fixture,
+assertion, baseline, build/config ou workflow n'a changé pour cette réussite.
+Les trois runs ci-dessous portent exactement ce head_sha, event pull_request,
+et ont conclu SUCCESS à leur première tentative.
+
+| Gate de clôture | Résultat réel | Run / artefact |
+| --- | --- | --- |
+| Python complet | 98 PASS / 0 FAIL / 0 SKIP | debug 37419229594 |
+| JDK-only core | PASS, compilation avec classpath/sourcepath vides dans le gate Python | même run |
+| JVM complet, XML et map de suites validés | 903 PASS / 0 FAIL / 1 SKIP / 904 total | summary 11391114397 lu |
+| JVM M5 seuls | 127 PASS / 0 FAIL / 0 SKIP | six suites B, summary m5PhaseBCases=127 |
+| Anciens JVM | 776 PASS / 0 FAIL / 1 SKIP historique | mêmes suites/cas, aucun retrait |
+| assembleDebug / lintDebug / testDebugUnitTest | SUCCESS | debug 37419229594 |
+| LAN DEV compile | SUCCESS | étape réelle même run |
+| Cloud qualification APK compile | SUCCESS | étape réelle même run |
+| Stable signing / apksigner verify | SUCCESS | stable artifact 11391868938 |
+| API35 platform smoke | SUCCESS | 37419229547 |
+| Native disk/process API31 + API35 | SUCCESS | 37419229556 |
+
+Signer certificate SHA-256 réellement vérifié dans ce run :
+`f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c`.
+APK stable téléchargé : 230202 bytes, SHA-256
+`42643cc851a8020df871eaa2064a3748d017325ff10ce64b13cc25bdefb80c59`.
+Le summary conserve les quatre traces HashMap brutes avec leur environnement.
+Aucun nouveau SKIP, aucune qualification Sony B, aucune comparaison candidat
+implémentée et aucun ordre portable HashMap revendiqué.
+
+Le gate antérieur était effectivement bloqué à f563d5b ; cette dernière matrice
+est la qualification ultérieure des **mêmes bytes source/test**, qui clôt ce gate.
+Le manifeste PR complète le présent rapport avec son SHA documentaire propre,
+les commits B exhaustifs et les nouveaux runs réels sur ce SHA final.
+
 ## Limites et suite autorisée
 
 **NO PRODUCTION CUTOVER — NO WALL — NO CLOUD/DURABLE/ACK CHANGE.**
@@ -359,6 +404,6 @@ shadow scheduling production. Aucun M6/M7/M8+, nouveau codec, Cloud API, asset,
 permission ou player control. Pas de Sony physique B requis ni revendiqué.
 PR #15 reste OPEN / DRAFT / unmerged, sans Ready, rebase, force-push ni merge.
 
-Prochaine recommandation, uniquement une fois le gate global effectivement clos : **M5 PHASE C — GENERIC MEDIA
+Prochaine recommandation, après la vérification du HEAD documentaire final : **M5 PHASE C — GENERIC MEDIA
 SCHEDULER + MEDIA OBSERVATION ADAPTERS + EXACT LEGACY/CANDIDATE DIFFERENTIAL**.
 C n'est pas commencé dans ce cycle.
