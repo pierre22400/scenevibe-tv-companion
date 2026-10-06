@@ -20,8 +20,8 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc.mediaexperiment"
         minSdk 26
         targetSdk 35
-        versionCode 3
-        versionName "0.1.2-media-interlude-poc-overlay-controls"
+        versionCode 4
+        versionName "0.1.3-media-interlude-poc-audio-materialized"
     }
 
     buildTypes {
