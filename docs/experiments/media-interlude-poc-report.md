@@ -1,6 +1,6 @@
 # Media Interlude Capability Spike — Corrective Pass
 
-> **Post-qualification fixture update — 6 October 2026.** The isolated ducking cue was replaced at source commit `75dcefbfafe7b23c7cd16d48ae85ba676c8ff2d3` by a locally generated French spoken fixture saying **“Bienvenue sur SceneVibe Audio”**. The file remains `mediaexperiment/src/main/res/raw/scenevibe_cue.m4a`, AAC-LC mono, 22.05 kHz, ~1.81 s. The interlude video fixture is unchanged. This fixture-only change does not alter pause/session/guard logic. The APK SHA-256 recorded later in this report belongs to the pre-replacement APK and MUST NOT be used for the physical test; rebuild `:mediaexperiment:assembleDebug` from this branch before installation.
+> **Post-qualification fixture update — 6 October 2026.** The isolated ducking cue was replaced at source commit `75dcefbfafe7b23c7cd16d48ae85ba676c8ff2d3` by a locally generated French spoken fixture saying **“Bienvenue sur SceneVibe Audio”**. The file remains `mediaexperiment/src/main/res/raw/scenevibe_cue.m4a`, AAC-LC mono, 22.05 kHz, ~1.81 s. The interlude video fixture is unchanged. This fixture-only change does not alter pause/session/guard logic. The current overlay-controls physical candidate and its APK SHA-256 are recorded in section J.
 
 
 ## A. Status and scope
@@ -17,15 +17,19 @@ corrected. Automated decision, wiring, compilation, packaging and lint gates
 passed as described below. The frozen Python boundary suite retains its
 **14 expected experimental failures**, with no new failing test.
 
-**PHYSICAL SONY / PRIME: NOT TESTED.** No device or emulator was used and no APK
-was installed on the Sony. Audio-focus grants and JVM command counters are not
-physical evidence of ducking, Prime pause/play or fullscreen rendering.
+**PHYSICAL SONY / PRIME: PARTIAL — HARNESS BLOCKER OBSERVED AND CORRECTED.**
+An authorized Sony run proved that Prime exposes a healthy PLAYING MediaSession
+before the original opaque POC Activity takes foreground, then the POC sampler
+falls to repeated NO_ACTIVE_SESSIONS after that Activity becomes foreground.
+That finding is recorded in section J. Audible ducking, POC-owned PAUSE,
+fullscreen interlude rendering and guarded resume remain NOT YET QUALIFIED on
+the corrected overlay-controls candidate.
 
 - Repository: `pierre22400/scenevibe-tv-companion`.
 - Branch: `experiment/scenevibe-media-interlude-poc-001`.
 - Starting HEAD: `0d0f15dbd26732532f7f62e3897a88c72c61132c`.
 - Experimental base: `c9b0efd4acfaaae9ed7da13dcec505b2f653c548`.
-- Corrective code / APK source checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.
+- Earlier core corrective checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.\n- Overlay-controls physical-candidate code checkpoint: `13e4684c19d18711befb8d1f5999fb71469b76cc`.
 - This report is a documentation-only commit after that checkpoint; the final
   branch HEAD is supplied in the delivery. APK source bytes are unchanged by it.
 - No merge PR was opened and nothing was merged. Only this experimental branch
@@ -261,28 +265,30 @@ mean a physical TV behavior passed.**
 
 ## F. APK and exact changed-file list
 
-- Code checkpoint: `badc96e4d9bf840572cbb58dca4cc7d3d7634fb7`.
+Current corrected physical candidate:
+
 - Package: `com.scenevibe.tvcompanionpoc.mediaexperiment`.
-- versionName: `0.1.1-media-interlude-poc-corrective`.
-- versionCode: `2`.
-- Build APK path: `mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk`.
-- APK size: **80,457 bytes**.
-- APK SHA-256: `aed354daa66ada3c3cb97820a9e2904b4e5aaa359e7162ee54162064e4c15a35`.
-- APK signature: debug-signed; verified with `apksigner verify --verbose`.
+- versionName: `0.1.2-media-interlude-poc-overlay-controls`.
+- versionCode: `3`.
+- Build source code checkpoint: `13e4684c19d18711befb8d1f5999fb71469b76cc`.
+- GitHub Actions build run: `37524232444` — **SUCCESS**.
+- Gate: `:mediaexperiment:testDebugUnitTest :mediaexperiment:lintDebug :mediaexperiment:assembleDebug`.
+- APK: `mediaexperiment-debug.apk`, **78,125 bytes**.
+- APK SHA-256: `aab99a593e36b64f63123e485fdda8ba73dd13173b69c14dd176aa4e0cb17210`.
+- The temporary build workflow was removed after artifact capture; its create/delete
+  commits do not alter the final source tree or APK source bytes.
 
-This digest identifies this delivered APK. A different debug keystore or rebuild
-can produce a different APK digest; it is not a reproducible release-hash claim.
-The final documentation-only commit does not change APK source bytes.
-
-Exactly **26 files** change from the starting HEAD (25 code/build/test files
-and this existing report):
+Exactly **30 files** differ from the report's starting HEAD
+`0d0f15dbd26732532f7f62e3897a88c72c61132c`:
 
 ```text
 docs/experiments/media-interlude-poc-report.md
 mediaexperiment/build.gradle
+mediaexperiment/src/main/AndroidManifest.xml
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidLocalAudioPort.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidMediaControlPort.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/AndroidOverlayVideoPort.java
+mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/DiagnosticOverlayWindow.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeService.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/MediaExperimentActivity.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/MediaSessionScanner.java
@@ -299,6 +305,8 @@ mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionPort.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionRevalidation.java
 mediaexperiment/src/main/java/com/scenevibe/tvcompanionpoc/mediaexperiment/core/SessionTarget.java
+mediaexperiment/src/main/res/raw/scenevibe_cue.m4a
+mediaexperiment/src/main/res/values/styles.xml
 mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeRuntimeTest.java
 mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/InterludeStateMachineTest.java
 mediaexperiment/src/test/java/com/scenevibe/tvcompanionpoc/mediaexperiment/SafeResumeGuardTest.java
