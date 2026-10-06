@@ -715,5 +715,15 @@
     "settings.gradle",
     "tests/sony_corrective_provenance.py",
     "tests/test_poc_contract.py"
+  ],
+  "testsAdded": [
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5CandidateDifferentialTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5NegativeSensitivityTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SchedulerDirectTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5SinkFailureDifferentialTest.java",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M5VideoObservationAdapterTest.java",
+    "tests/m5_phase_c_provenance.py",
+    "tests/test_m5_phase_c_boundary.py"
   ]
 }

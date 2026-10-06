@@ -25,10 +25,27 @@ compiled source mutations rejected. These are not substitutes for final Android 
 Android test-only harness shares the exact journal/projection/recording sources,
 executes all 82 sequences against the byte-pinned unchanged legacy and real candidate
 inside each API31/API35 VM, and exports all raw pairs. M4 native durability remains
-separate. Test files are written exclusively in the disposable test package cache.
+separate. Test files are written exclusively in disposable target cache, outside preferences/installation state.
 
 Finite provenance: C inverse returns exact accepted final B blobs; existing B,
 pre-C corrective and Sony inverses then execute unchanged historical predicates.
 No production inverse, wildcard, fixture change or behavioral relaxation is admitted.
 
 Qualification pending. **NOT READY FOR M5 PHASE D** until the final HEAD passes all gates.
+
+## Initial CI attempt — preserved
+
+Commit `29cf388cd372833a2f6b43895cb24641cd2d5a03`:
+- debug run `37432516203`, job `112166457122`: Python108 PASS, then
+  compileDebugUnitTestJavaWithJavac FAIL in the newly added negative test only.
+  The AGP compilation image lacks Files.readString/writeString; use the existing
+  supported readAllBytes/write APIs with explicit UTF-8, no semantic test change.
+- new Android differential run `37432516268`: both API jobs FAIL at instrumentation.
+  API31 artifact `11397417304` contained only result=FAIL, no trace. No differential
+  acceptance is inferred. A bounded stage/exception diagnostic is added to the
+  test runner; export now uses the target process cache and matching run-as UID.
+- smoke run `37432516214`: SUCCESS.
+
+Only new C test/instrumentation files are adjusted. Existing production, legacy,
+matcher, probe, controller, goldens and historical test predicates stay unchanged.
+These failed results remain distinct from all subsequent qualification.

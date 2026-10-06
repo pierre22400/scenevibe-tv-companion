@@ -17,8 +17,8 @@ public final class M5NegativeSensitivityTest {
     private static URLClassLoader mutant(String before,String after) throws Exception {
         Path source=Path.of("src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendarScheduler.java");
         if(!Files.exists(source))source=Path.of("app").resolve(source);
-        String text=Files.readString(source);assertEquals(1,text.split(java.util.regex.Pattern.quote(before),-1).length-1);
-        Path temp=Files.createTempDirectory("m5c-mutant-");Path file=temp.resolve("MediaCalendarScheduler.java");Files.writeString(file,text.replace(before,after));
+        String text=new String(Files.readAllBytes(source),StandardCharsets.UTF_8);assertEquals(1,text.split(java.util.regex.Pattern.quote(before),-1).length-1);
+        Path temp=Files.createTempDirectory("m5c-mutant-");Path file=temp.resolve("MediaCalendarScheduler.java");Files.write(file,text.replace(before,after).getBytes(StandardCharsets.UTF_8));
         Path classes=Files.createDirectory(temp.resolve("classes"));
         String cp=Path.of(MediaCalendar.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
         Process process=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-m","jdk.compiler/com.sun.tools.javac.Main","-cp",cp,"-d",classes.toString(),file.toString()).redirectErrorStream(true).redirectOutput(temp.resolve("compile.log").toFile()).start();
