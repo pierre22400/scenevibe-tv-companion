@@ -123,6 +123,31 @@ class M6PhaseCBoundaryTest(unittest.TestCase):
             self.assertEqual(admission['beforeSha'], blob_hash(restored), relative)
             self.assertEqual(restored, provenance.m6_phase_c_retained_bytes(ROOT / relative), relative)
 
+    def test_inherited_jvm_test_admissions_reverse_to_the_exact_frozen_byte(self):
+        """The adapted frozen TvCapabilitiesTest reconstructs its exact frozen 2d2c22a byte via its inverse.
+
+        This is the admission that lets the frozen-test byte checks in every inherited gate
+        (m4 c/d/e/f/g and the chained m5/m6-b gates) still see the exact pre-Phase-C byte through
+        m6_phase_c_retained_bytes, so adapting the test to the new 3-codec / {MEDIA,WALL} descriptor
+        preserves provenance instead of weakening it.
+        """
+        jvm_tests = provenance.m6_phase_c_inherited_jvm_tests()
+        pinned = {relative for relative, admission in provenance.inventory()['admissions'].items()
+                  if admission['kind'] == 'inherited-jvm-test'}
+        self.assertEqual(jvm_tests, pinned)
+        for relative in jvm_tests:
+            admission = provenance.inventory()['admissions'][relative]
+            actual = (ROOT / relative).read_bytes()
+            self.assertEqual(admission['afterSha'], blob_hash(actual), relative)
+            restored = provenance.m6_phase_c_retained_bytes(ROOT / relative)
+            self.assertEqual(admission['beforeSha'], blob_hash(restored), relative)
+            # The adapted test must still prove the real invariants, never flip live WALL execution.
+            current = actual.decode('utf-8')
+            self.assertIn('assertFalse(caps.supportsWallClockExecution())', current)
+            self.assertNotIn('@Ignore', current)
+            self.assertNotIn('Assume.', current)
+            self.assertEqual(10, current.count('@Test'), relative)
+
     def test_unknown_whole_blob_mutations_are_rejected_before_inverse(self):
         """Reject mutations per admitted path, including a trailing character and an extra line."""
         for relative, admission in provenance.inventory()['admissions'].items():

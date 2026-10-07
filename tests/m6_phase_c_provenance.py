@@ -8,12 +8,14 @@ Phase C is the TV-local WALL runtime integration: a common runtime owner, the An
 WALL clock driver, the local Banner handler/codec, restore, Banner-aware autostart and
 the WALL diagnostics taxonomy. It adds new production Java, three JVM suites, this gate,
 the Phase C report and the planner task tree, and it legitimately edits eight existing
-production files plus the inherited whole-repository inventory gates so they admit the
-Phase C growth. This helper exposes the exact finite Phase C inventory, every whole-file
-admission and its unique inverse, chaining AFTER Phase B (M6 C -> M6 B -> reconciliation
--> Sony closure -> D -> C -> B(M5) -> M4). Each inverse restores the exact pre-Phase-C
-byte (frozen 2d2c22a for production, the Phase-B-era byte for the inherited gates); it
-never rewrites or weakens an older baseline, deletes a test, skips, or admits a wildcard.
+production files, one frozen inherited JVM test (TvCapabilitiesTest, adapted to the new
+3-codec / {MEDIA,WALL} capability descriptor), plus the inherited whole-repository inventory
+gates so they admit the Phase C growth. This helper exposes the exact finite Phase C inventory,
+every whole-file admission and its unique inverse, chaining AFTER Phase B (M6 C -> M6 B ->
+reconciliation -> Sony closure -> D -> C -> B(M5) -> M4). Each inverse restores the exact
+pre-Phase-C byte (frozen 2d2c22a for the production and inherited-jvm-test admissions, the
+Phase-B-era byte for the inherited gates); it never rewrites or weakens an older baseline,
+deletes a test, skips, or admits a wildcard.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +49,9 @@ PRODUCTION_ADDED = frozenset({
     JAVA + 'WallDriverDiagnostics.java',
     JAVA + 'WallWaitScheduler.java',
 })
+INHERITED_JVM_TESTS = frozenset({
+    'app/src/test/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilitiesTest.java',
+})
 INHERITED_GATES = frozenset({
     'tests/test_m4_phase_b_boundary.py',
     'tests/test_m4_phase_c_boundary.py',
@@ -75,10 +80,16 @@ def inventory():
         raise ValueError('Unknown M6 C starting head')
     production = {path for path, item in data['admissions'].items() if item['kind'] == 'production'}
     gates = {path for path, item in data['admissions'].items() if item['kind'] == 'inherited-gate'}
+    jvm_tests = {path for path, item in data['admissions'].items() if item['kind'] == 'inherited-jvm-test'}
+    known_kinds = {'production', 'inherited-gate', 'inherited-jvm-test'}
+    if any(item['kind'] not in known_kinds for item in data['admissions'].values()):
+        raise ValueError('Unknown M6 C admission kind')
     if production != set(AUTHORIZED_CHANGES):
         raise ValueError('Unknown M6 C production admissions')
     if gates != set(INHERITED_GATES):
         raise ValueError('Unknown M6 C inherited-gate admissions')
+    if jvm_tests != set(INHERITED_JVM_TESTS):
+        raise ValueError('Unknown M6 C inherited-jvm-test admissions')
     if set(data['productionAdded']) != set(PRODUCTION_ADDED):
         raise ValueError('Unknown M6 C production additions')
     return data
@@ -125,6 +136,21 @@ def m6_phase_c_production_files():
 def m6_phase_c_authorized_changes():
     """Return the eight existing production files Phase C legitimately edits, pinned with inverses."""
     return set(AUTHORIZED_CHANGES)
+
+
+def m6_phase_c_inherited_jvm_tests():
+    """Return the frozen inherited JVM test(s) Phase C adapts, each pinned with an exact inverse.
+
+    TvCapabilitiesTest is a frozen Phase B inventory test that pinned the pre-Phase-C Video-only
+    capability descriptor. Phase C legitimately broadens the single TvCapabilities descriptor to
+    also advertise the Banner WALL installation shape (architecture section 8: the static registry
+    is codec-gated on supportedCodecs(), so the Banner handler cannot be bound unless its codec is
+    advertised). This test is therefore adapted - never deleted, weakened or skipped - to assert the
+    new 3-codec / {MEDIA,WALL} contract while still proving supportsWallClockExecution() is false and
+    that NO Video codec accepts WALL. The edit is admitted with a before/after sha and an exact
+    whole-file inverse reconstructing the frozen 2d2c22a byte, exactly like the other admissions.
+    """
+    return set(INHERITED_JVM_TESTS)
 
 
 def restore_blob(relative, content):

@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from m5_phase_c_provenance import blob_hash, phase_c_retained_bytes, phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_added_paths, m6_phase_b_production_files
-from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_authorized_changes
+from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_authorized_changes, m6_phase_c_inherited_jvm_tests
 
 """Bind the non-live candidate to the accepted B tree and actual differential gates.
 
@@ -70,8 +70,11 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         for path, digest in BASE['startingBlobs'].items():
             if path in m6_phase_c_authorized_changes():
                 continue
+            # The reversing provenance chain must restore the exact frozen byte for every retained
+            # path, including the one frozen inherited JVM test M6 Phase C adapts (TvCapabilitiesTest):
+            # m6_phase_c_retained_bytes undoes the Phase C edit to the exact pre-Phase-C byte.
             self.assertEqual(digest, blob_hash(phase_c_retained_bytes(ROOT / path)), path)
-            if path not in CHANGED | phase_d_changed_paths():
+            if path not in CHANGED | phase_d_changed_paths() | m6_phase_c_inherited_jvm_tests():
                 self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
         self.assertFalse(any(path.startswith('app/') for path in CHANGED))
         old_b = json.loads((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_text())
