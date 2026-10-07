@@ -5,7 +5,7 @@
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-002.json": "d3a28186864a5b789ba34bd663ea6b63001e4c87",
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-003.json": "7f52dc5e51e87104d80da61d7cd874979b59048c",
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-004.json": "5bcd273ebeabd2f182d5acba6470b0b36a1722bc",
-    ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/task.json": "df63a216c2c12c1710c422b67c2e7d44a61b92ac",
+    ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/task.json": "fe1a72164e1d66e759b6115c928ba7c06839cd5a",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidWallClockSource.java": "011500e2e22b5485a1006bafad3deec4c17fa5d7",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidWallSignalReceiver.java": "d3616c9675d2366e32b897360dd7d07dab788de6",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidWallWaitScheduler.java": "9aca0ed25295e04ef535a5c710c22b47bceec8d6",
