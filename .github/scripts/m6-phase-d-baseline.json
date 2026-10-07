@@ -563,7 +563,7 @@
     "app/src/test/java/com/scenevibe/tvcompanionpoc/M6PackageFixtures.java": "b9b50285a78fcd902b00c0c2e5a298eab3e77562",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/M6PackageTransportTest.java": "cb57bdfaa08a66ee25f7b420f5824ae1182e95b9",
     "app/src/test/resources/m6/banner-package-assignment.json": "acde8f8d4b72a8ce392dda0a8a16fe1d6e362fd9",
-    "docs/m6-phase-d-package-transport-ack-report.md": "e600766c38cfb590bb414811236c393fc38e4111",
+    "docs/m6-phase-d-package-transport-ack-report.md": "9e947bd99d789379b5bd540f40e9994d86fc0357",
     "tests/m6_phase_d_provenance.py": "cdf7c0d0b7b6044528408a89eeb35942f0d44471",
     "tests/test_m6_phase_d_boundary.py": "63655d2ef07906fb8c584701ddba91e7badd9238"
   },
