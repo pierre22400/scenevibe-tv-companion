@@ -30,7 +30,7 @@ public final class M6PhaseEAssemblyTest {
     @Test public void actualCommonPortsAlternateVideoBannerVideoOnOneClient() throws Exception {
         try(M6PackageFixtures.Harness h=new M6PackageFixtures.Harness(M6PackageFixtures.video(true,16))) {
             common(h);h.fetch();assertEquals(16,h.store.read().acknowledgedRevision());
-            h.assignment=M6PackageFixtures.banner(17);h.fetch();
+            h.assignment=M6PackageFixtures.banner(17).put("deviceId",h.assignment.getString("deviceId"));h.fetch();
             assertNotNull(h.owner.submit(()->h.ports.banner.activeState()).get());
             assertEquals(17,h.store.read().acknowledgedRevision());
             h.assignment=M6PackageFixtures.video(true,18);h.fetch();
