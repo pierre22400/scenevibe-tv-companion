@@ -350,7 +350,14 @@ final class CloudControlClient {
                         throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,"Cloud response too large");
                     output.write(buffer,0,count);
                 }
-                return new Reply(status,new JSONObject(output.toString(StandardCharsets.UTF_8.name())));
+                String decoded;
+                if(transportMode==TransportMode.PACKAGE_V1) {
+                    try {decoded=StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(output.toByteArray())).toString();}
+                    catch(java.nio.charset.CharacterCodingException malformed) {
+                        throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,"Invalid package UTF-8");
+                    }
+                } else decoded=output.toString(StandardCharsets.UTF_8.name());
+                return new Reply(status,new JSONObject(decoded));
             }
         } finally {connection.disconnect();}
     }

@@ -32,16 +32,16 @@ public final class M6PackageTransportTest {
             assertTrue(h.backend.trace.indexOf("result:ARMED")<h.backend.trace.indexOf("ACK"));
             assertTrue(h.backend.trace.indexOf("ACK")<h.backend.trace.indexOf("ack-persist"));
             assertTrue(h.getPath.endsWith("/package-assignment?afterRevision=0"));
-            assertNotNull(h.ports.banner.activeState());assertFalse(h.ports.video.controller.hasVisibleScene());
+            assertNotNull(h.owner.submit(()->h.ports.banner.activeState()).get());assertFalse(h.ports.video.controller.hasVisibleScene());
         }
     }
-    /** Both existing Video shapes use the historical adapter/handler while retaining the exact v1 body durably. */
+    /** Both Video shapes preserve exact v1 bytes and the inherited one/two-artifact capability contract. */
     @Test public void genericVideoUsesExistingV1AdapterAndExactSingleArtifact() throws Exception {
         for(boolean manifested:new boolean[]{false,true}) {
             JSONObject wire=M6PackageFixtures.video(manifested,8);
             try(M6PackageFixtures.Harness h=new M6PackageFixtures.Harness(wire)) {
                 h.fetch();assertEquals(8,h.store.read().acknowledgedRevision());assertEquals(1,h.acks);
-                InstallRequest saved=h.store.read().snapshot().canonical();assertEquals(1,saved.artifactCount());
+                InstallRequest saved=h.store.read().snapshot().canonical();assertEquals(manifested?2:1,saved.artifactCount());
                 assertArrayEquals(wire.getString("body").getBytes(StandardCharsets.UTF_8),saved.artifact("cloud-video"));
                 assertEquals(manifested,h.ports.video.controller.hasActiveManifest());
                 assertEquals(wire.getString("deliveryDigest"),h.ackBody.getString("deliveryDigest"));
@@ -168,8 +168,8 @@ public final class M6PackageTransportTest {
         JSONObject first=M6PackageFixtures.video(true,5);String device=first.getString("deviceId");
         try(M6PackageFixtures.Harness h=new M6PackageFixtures.Harness(first)) {
             h.fetch();h.assignment=M6PackageFixtures.banner(6).put("deviceId",device);h.fetch();
-            assertNotNull(h.ports.banner.activeState());assertEquals(0,h.ports.video.active);
-            h.assignment=M6PackageFixtures.video(false,7);h.fetch();assertNull(h.ports.banner.activeState());
+            assertNotNull(h.owner.submit(()->h.ports.banner.activeState()).get());assertEquals(0,h.ports.video.active);
+            h.assignment=M6PackageFixtures.video(false,7);h.fetch();assertNull(h.owner.submit(()->h.ports.banner.activeState()).get());
             assertEquals(7,h.ports.video.active);assertEquals(7,h.store.read().acknowledgedRevision());assertEquals(3,h.backend.candidateWrites);
         }
     }

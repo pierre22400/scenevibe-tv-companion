@@ -10,7 +10,7 @@ from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
-from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files, m6_phase_d_retained_bytes
 
 """Qualify the live Cloud cutover without weakening the retained M4 evidence.
 
@@ -205,7 +205,9 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         """Retain exact qualified auth/HTTPS/disconnect behavior and leave historical helpers for Phase G."""
         for name, key in [('CloudControlClient.java', 'protectedClientMethods'),
                           ('OverlayService.java', 'protectedServiceMethods')]:
-            source = (ROOT / JAVA / name).read_text()
+            # M6 D's exact whole-blob inverse preserves the historical HTTPS/auth
+            # method pin while the new generic decoder is exercised by its JVM suite.
+            source = m6_phase_d_retained_bytes(ROOT / JAVA / name).decode('utf-8')
             historical = (ROOT / PHASE_G['historicalServiceFile']).read_text() if PHASE_G else source
             for signature, expected in BASELINE[key].items():
                 if name == 'OverlayService.java' and any(method in signature for method in PHASE_G.get('removedServiceHelpers', [])):

@@ -150,7 +150,9 @@ final class M6PackageFixtures {
                 @Override public InputStream getInputStream() throws IOException {
                     try {JSONObject body="GET".equals(getRequestMethod())?assignment:new JSONObject().put("deviceId",assignment.getString("deviceId"))
                             .put("revision",ackBody.getLong("revision")+(badAck?1:0)).put("status","acknowledged");
-                        return new ByteArrayInputStream(body.toString().getBytes(StandardCharsets.UTF_8));
+                        // A malformed logical surrogate must travel as a JSON escape, never be
+                        // replaced by the fixture's UTF-8 encoder before the real client sees it.
+                        return new ByteArrayInputStream(body.toString().replace("\ud800","\\ud800").getBytes(StandardCharsets.UTF_8));
                     } catch(Exception invalid) {throw new IOException("Invalid M6 fixture",invalid);}
                 }
                 /** The real client also parses bounded error responses through this byte seam. */

@@ -8,12 +8,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 import org.json.JSONObject;
 
 /**
  * Closed internal transport adapter. Only a newer revision may supply body/kind.
  * Same/stale revisions carry the durable codec/bytes to the sole PackageInstaller
- * authority. Exact logical UTF-8 is persisted as one artifact and never normalized.
+ * authority. Exact logical UTF-8 is persisted in the existing snapshot and never
+ * normalized. Manifested Video keeps its required second manifest artifact.
  */
 final class CloudPackageInstallationAdapter {
     static final String VERSION="scenevibe.cloud.package-assignment.v1";
@@ -42,7 +45,9 @@ final class CloudPackageInstallationAdapter {
             if("video".equals(kind)&&VIDEO_CODEC.equals(codec)) {
                 CloudV1InstallationAdapter.Assignment video=CloudV1InstallationAdapter.adapt(new JSONObject(body),deviceId);
                 if(video.request().revision()!=revision)throw invalid();
-                return new InstallRequest(revision,video.request().codecId(),Collections.singletonMap(VIDEO_ARTIFACT,bytes));
+                Map<String,byte[]> artifacts=new TreeMap<>();artifacts.put(VIDEO_ARTIFACT,bytes);
+                if(TvCapabilities.CODEC_TRACK_OVERLAY.equals(video.request().codecId()))artifacts.put("manifest",video.request().artifact("manifest"));
+                return new InstallRequest(revision,video.request().codecId(),artifacts);
             }
             throw invalid();
         } catch(Exception rejected) {throw invalid();}
@@ -59,7 +64,8 @@ final class CloudPackageInstallationAdapter {
                     ||(TvCapabilities.CODEC_TRACK_OVERLAY.equals(request.codecId())&&InstallationStore.COMPAT_OVERLAY_HANDLER_ID.equals(snapshot.handlerId()))) {
                 codec=VIDEO_CODEC;bytes=request.artifact(VIDEO_ARTIFACT);
             } else throw invalid();
-            if(request.artifactCount()!=1||bytes==null)throw invalid();
+            int count=TvCapabilities.CODEC_TRACK_OVERLAY.equals(request.codecId())?2:1;
+            if(request.artifactCount()!=count||bytes==null||count==2&&request.artifact("manifest")==null)throw invalid();
             bodyBytes(VideoRuntimePreparation.utf8(bytes,800_000));
             return new JSONObject().put("revision",expectedRevision).put("codecId",codec)
                     .put("codecVersion",CODEC_VERSION).put("deliveryDigest",digest(codec,CODEC_VERSION,bytes));

@@ -6,12 +6,14 @@ import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
 import com.scenevibe.tvcompanionpoc.installation.PreparedInstallation;
 import com.scenevibe.tvcompanionpoc.installation.TvCapabilities;
 import java.util.Collections;
+import java.util.Arrays;
 import org.json.JSONObject;
 
 /**
  * Static Video-side wrapper preserves the exact v1 transport body as one opaque
- * durable artifact. Only in memory does the historical adapter split it for the
- * unchanged Video handler. Historical runtime/manifest snapshots delegate directly.
+ * durable artifact. Manifested Video retains the capability-required second manifest
+ * artifact, checked against the existing adapter's output. Only in memory does that
+ * adapter split the body for the unchanged handler. Historical snapshots delegate directly.
  * No artifact-count increase, generic-core branch or second cache is introduced.
  */
 final class CloudPackageVideoInstallationHandler implements InstallationHandler {
@@ -39,11 +41,13 @@ final class CloudPackageVideoInstallationHandler implements InstallationHandler 
     @Override public PreparedInstallation prepare(InstallRequest request,TvCapabilities capabilities) {
         if(request==null||request.artifact(CloudPackageInstallationAdapter.VIDEO_ARTIFACT)==null)return delegate.prepare(request,capabilities);
         try {
-            if(request.artifactCount()!=1||!codec.equals(request.codecId())
+            int count=TvCapabilities.CODEC_TRACK_OVERLAY.equals(codec)?2:1;
+            if(request.artifactCount()!=count||!codec.equals(request.codecId())
                     ||request.artifact(CloudPackageInstallationAdapter.VIDEO_ARTIFACT).length>CloudPackageInstallationAdapter.MAX_BODY_BYTES)throw invalid();
             JSONObject envelope=new JSONObject(VideoRuntimePreparation.utf8(request.artifact(CloudPackageInstallationAdapter.VIDEO_ARTIFACT),800_000));
             InstallRequest adapted=CloudV1InstallationAdapter.adapt(envelope,envelope.getString("deviceId")).request();
             if(adapted.revision()!=request.revision()||!codec.equals(adapted.codecId()))throw invalid();
+            if(count==2&&!Arrays.equals(request.artifact("manifest"),adapted.artifact("manifest")))throw invalid();
             PreparedInstallation video=delegate.prepare(adapted,capabilities);
             return new PreparedInstallation(request,handlerId,Collections.emptyMap(),video.requirements(),capabilities,new State(this,video,request));
         } catch(VideoRuntimePreparation.Invalid refused) {throw refused;}

@@ -30,6 +30,8 @@ jobs:
       SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -46,6 +48,16 @@ jobs:
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
       - name: Verify Phase A/B/C/D/E/F/G executed test counts and frozen fixtures
         run: python3 .github/scripts/m4-phase-a-test-summary.py
+      - name: Preserve actual executed JVM XML and the M6 interop golden
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-m6-phase-d-jvm-evidence
+          path: |
+            app/build/test-results/testDebugUnitTest/TEST-*.xml
+            app/src/test/resources/m6/banner-package-assignment.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload bounded Phase A/B/C/D/E/F/G test summary
         uses: actions/upload-artifact@v4
         with:
