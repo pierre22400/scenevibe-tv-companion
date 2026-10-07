@@ -10,6 +10,7 @@ import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
+from m6_phase_b_provenance import m6_phase_b_production_files
 
 """Keep Phase E's single orchestrator isolated and all qualified production callers frozen.
 
@@ -153,7 +154,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         """No Cloud adapter, service port, restore coordinator or future milestone type can appear."""
         prior = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()) | calendar_model_files() | phase_c_production_files(), actual)
+        self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files(), actual)
         callers = []
         for path in actual:
             if re.search(r'\bPackageInstaller\b', code_only((ROOT / path).read_text())):

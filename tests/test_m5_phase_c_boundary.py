@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 from m5_phase_c_provenance import blob_hash, phase_c_retained_bytes, phase_c_production_files
+from m6_phase_b_provenance import m6_phase_b_added_paths, m6_phase_b_production_files
 
 """Bind the non-live candidate to the accepted B tree and actual differential gates.
 
@@ -75,7 +76,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_file_in_any_retained_scope(self):
         """A namespace wildcard, extra engine or hidden fixture cannot pass the finite inventory."""
-        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'}
+        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'} | m6_phase_b_added_paths()
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):

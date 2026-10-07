@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from m6_phase_b_provenance import m6_phase_b_retained_bytes
 
 """Reconstruct exact accepted C bytes before the existing C/B/M4 provenance chain.
 
@@ -99,7 +100,7 @@ def phase_d_changed_paths():
 def m6_reconciliation_retained_bytes(path):
     """Reverse exact M6 document admissions to merged M5, preserving both older accepted blobs."""
     path = Path(path)
-    content = path.read_bytes()
+    content = m6_phase_b_retained_bytes(path)
     relative = str(path.relative_to(ROOT))
     admission = M6_RECONCILIATION_ADMISSIONS.get(relative)
     if admission is None:
