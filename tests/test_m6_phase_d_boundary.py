@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import m6_phase_d_provenance as provenance
+from m6_phase_e_provenance import m6_phase_e_added_paths, m6_phase_e_retained_bytes
 
 """Qualify finite M6 D transport provenance without relaxing the inherited C/B/M5/M4 gates.
 
@@ -41,7 +42,7 @@ class M6PhaseDBoundaryTest(unittest.TestCase):
         result = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard'], cwd=ROOT,
                                 capture_output=True, timeout=10, check=True)
         actual = {p for p in result.stdout.decode('utf-8').splitlines() if '__pycache__' not in Path(p).parts}
-        self.assertEqual(set(provenance.inventory()['startingBlobs']) | provenance.ADDED, actual)
+        self.assertEqual(set(provenance.inventory()['startingBlobs']) | provenance.ADDED | m6_phase_e_added_paths(), actual)
 
     def test_all_retained_bytes_and_complete_inverses(self):
         """Every original source, test, permission, fixture and old baseline reconstructs exact 1f1aa52 bytes."""
@@ -61,7 +62,7 @@ class M6PhaseDBoundaryTest(unittest.TestCase):
         pins = provenance.inventory()['addedBlobs']
         self.assertEqual(provenance.ADDED - {'.github/scripts/m6-phase-d-baseline.json'}, set(pins))
         for relative, digest in pins.items():
-            self.assertEqual(digest, provenance.blob_hash((ROOT / relative).read_bytes()), relative)
+            self.assertEqual(digest, provenance.blob_hash(m6_phase_e_retained_bytes(ROOT / relative)), relative)
 
     def test_unknown_blob_mutations_and_retargeted_baseline_are_rejected(self):
         """A trailing character or baseline-only pin change cannot authorize unknown whole-file bytes."""

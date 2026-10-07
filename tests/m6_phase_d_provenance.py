@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from m6_phase_e_provenance import m6_phase_e_added_paths, m6_phase_e_retained_bytes
 
 """Admit only the finite M6 D transport changes before the frozen C→B→M5→M4 chain.
 
@@ -82,7 +83,7 @@ def inventory():
 
 def m6_phase_d_added_paths():
     """Return only nine literal additions, never a namespace or wildcard admission."""
-    return set(ADDED)
+    return set(ADDED) | m6_phase_e_added_paths()
 
 
 def m6_phase_d_production_files():
@@ -114,4 +115,4 @@ def restore_blob(relative, content):
 def m6_phase_d_retained_bytes(path):
     """Read actual current source and apply only the finite M6 D whole-blob inverses."""
     path = Path(path)
-    return restore_blob(str(path.relative_to(ROOT)), path.read_bytes())
+    return restore_blob(str(path.relative_to(ROOT)), m6_phase_e_retained_bytes(path))
