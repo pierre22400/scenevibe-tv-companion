@@ -14,7 +14,9 @@ gradle.projectsEvaluated {
             def destination = new File(app.buildDir, "reports/m6-phase-e-peer")
             destination.mkdirs()
             def jars = []
-            app.tasks.named("testDebugUnitTest").get().classpath.files.eachWithIndex { input, index ->
+            // Gradle retains absent optional Kotlin/resource directories in the
+            // JVM classpath. They contribute no classes and the JVM ignores them.
+            app.tasks.named("testDebugUnitTest").get().classpath.files.findAll { it.exists() }.eachWithIndex { input, index ->
                 def name = "classpath-${index}.jar"
                 def output = new File(destination, name)
                 if (input.isDirectory()) {
@@ -22,7 +24,7 @@ gradle.projectsEvaluated {
                 } else if (input.name.endsWith(".jar")) {
                     output.bytes = input.bytes
                 } else {
-                    throw new GradleException("Unexpected JVM peer classpath entry")
+                    throw new GradleException("Unexpected JVM peer classpath entry: " + input.name)
                 }
                 jars.add([name: name, sha256: MessageDigest.getInstance("SHA-256").digest(output.bytes).encodeHex().toString()])
             }
