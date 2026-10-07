@@ -185,7 +185,7 @@ class M6PhaseCBoundaryTest(unittest.TestCase):
 
     def test_executed_counts_are_additive_with_zero_new_skip(self):
         """The three Phase C JVM suites add only their individually executed cases and no new skip."""
-        self.assertEqual({'M6BannerOwnerTest': 15, 'M6WallDriverTest': 23, 'M6BannerHandlerTest': 23},
+        self.assertEqual({'M6BannerOwnerTest': 15, 'M6WallDriverTest': 25, 'M6BannerHandlerTest': 23},
                          provenance.inventory()['m6PhaseCSuites'])
         for relative in ('M6BannerOwnerTest', 'M6WallDriverTest', 'M6BannerHandlerTest'):
             source = (ROOT / ('app/src/test/java/com/scenevibe/tvcompanionpoc/' + relative + '.java')).read_text(encoding='utf-8')

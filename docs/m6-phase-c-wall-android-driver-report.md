@@ -122,7 +122,7 @@ content/token/credential/eventId/URL/payload: `NONE`, `WALL_CALENDAR_LOADED`,
 - Pure-JDK WALL contract: `M6WallContract` executes 68/68 (`PASS=68 FAIL=0 SKIP=0`) under the
   Phase B boundary suite, which compiles and runs it with an empty classpath/sourcepath.
 - Standalone JUnit (junit-4.13.2 + hamcrest-core-1.3 + org.json, android content/graphics
-  stubs for transitive classes): `M6BannerOwnerTest` 15/15, `M6WallDriverTest` 23/23,
+  stubs for transitive classes): `M6BannerOwnerTest` 15/15, `M6WallDriverTest` 25/25,
   `M6BannerHandlerTest` 23/23, all OK.
 
 ### Android Gradle gate (CI-only this session)
@@ -132,7 +132,7 @@ No Android SDK is available in this session (`ANDROID_HOME`/`ANDROID_SDK_ROOT` e
 were NOT run here and no post-Phase-C Android count is fabricated. The inherited CI figure is
 1119 total / 1118 PASS / 1 historical SKIP
 (`M1CloudInteropTest.originalColumboProjectionIsInstallable`) / 0 FAIL. WALL now adds its JVM
-suites (`M6BannerOwnerTest` 15, `M6WallDriverTest` 23, `M6BannerHandlerTest` 23), so the final
+suites (`M6BannerOwnerTest` 15, `M6WallDriverTest` 25, `M6BannerHandlerTest` 23), so the final
 CI `:app:testDebugUnitTest` total will exceed 1119; the exact post-Phase-C Android total is a
 CI gate and is deliberately not asserted here.
 

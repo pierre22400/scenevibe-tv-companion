@@ -2,10 +2,10 @@
   "addedBlobs": {
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/context.json": "4ed97347c1acf73867d6365d4926c7664b8e37cf",
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-001.json": "a65c03d6e8bd59089e589fb6ce7ae0fe655d9ba0",
-    ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-002.json": "f204f8bdd65d62769bc5c0b31d4f734c0fd73730",
+    ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-002.json": "d3a28186864a5b789ba34bd663ea6b63001e4c87",
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-003.json": "7f52dc5e51e87104d80da61d7cd874979b59048c",
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-004.json": "5bcd273ebeabd2f182d5acba6470b0b36a1722bc",
-    ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/task.json": "c29832a4795f7470c04d9ce9d356cec4d1cd44a8",
+    ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/task.json": "df63a216c2c12c1710c422b67c2e7d44a61b92ac",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidWallClockSource.java": "011500e2e22b5485a1006bafad3deec4c17fa5d7",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidWallSignalReceiver.java": "d3616c9675d2366e32b897360dd7d07dab788de6",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidWallWaitScheduler.java": "9aca0ed25295e04ef535a5c710c22b47bceec8d6",
@@ -14,7 +14,7 @@
     "app/src/main/java/com/scenevibe/tvcompanionpoc/BannerOverlayManifestBridge.java": "0e68fd25e8c30f81bda755237b4f65764bbb88ef",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/BannerPreparedState.java": "c83f1050c16259aeac1af015d967bd5403169048",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/BannerProfileParser.java": "cc4ea38843ea69ae21b07a7de087676b80bc2438",
-    "app/src/main/java/com/scenevibe/tvcompanionpoc/LiveBannerRuntimePorts.java": "5ee9e382e1fb432f2b3186d83bd820652c31f30d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/LiveBannerRuntimePorts.java": "9983e7f7c6a016325ba08d361f6db5d6adf3c59f",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayInstallationHandlers.java": "abd958fb20f2666a6b8cba7c413323c97de4df1f",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayRuntimePorts.java": "4a6610cc25e6d23077f89e78f0adc26fe9939c88",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/WallClockDriver.java": "0690c2ebf9c5af0aeb0f82c680b04f1c9a724dd3",
@@ -23,10 +23,10 @@
     "app/src/main/java/com/scenevibe/tvcompanionpoc/WallWaitScheduler.java": "bfc5e992799c32f0a5abecde352db3194f27626a",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/M6BannerHandlerTest.java": "53638e7e978b634985e74a9bf72f7bff83f96cb4",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/M6BannerOwnerTest.java": "d9b3eeef58d441e18faef13cedbed57773850019",
-    "app/src/test/java/com/scenevibe/tvcompanionpoc/M6WallDriverTest.java": "6026a448f2ccddd64e15433435319e765ff327b2",
-    "docs/m6-phase-c-wall-android-driver-report.md": "1c82b96842d7acc545cd311bcf9cdd424d194501",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/M6WallDriverTest.java": "074145a0492e8e716ab5366ab62a9b6b740c9329",
+    "docs/m6-phase-c-wall-android-driver-report.md": "c1051e7172b83662af28419e583187daab7d8a0e",
     "tests/m6_phase_c_provenance.py": "02d540f01e77a9c3c099fadd3bcabb52d8a06add",
-    "tests/test_m6_phase_c_boundary.py": "826bbbd210682e8d4f00d361faf4fd14760c28c0"
+    "tests/test_m6_phase_c_boundary.py": "9d3b333684958fa4beb78047fe3f0d3626d81db5"
   },
   "additiveFiles": [
     ".agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/context.json",
@@ -308,7 +308,7 @@
   "m6PhaseCSuites": {
     "M6BannerHandlerTest": 23,
     "M6BannerOwnerTest": 15,
-    "M6WallDriverTest": 23
+    "M6WallDriverTest": 25
   },
   "phase": "M6-C",
   "phaseCStopCondition": {

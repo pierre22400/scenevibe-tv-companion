@@ -5,18 +5,22 @@
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
   "blocked_reason": null,
   "baseline_sha": "2d2c22ac2926531ce728575ab7b87a4b5a66fd99",
-  "final_head_sha": null,
+  "final_head_sha": "d4a39a8",
+  "commits": ["fe99a20", "3d4b45b", "994f0e2", "d4a39a8"],
   "verification": {
-    "build": null,
-    "tests": null,
-    "test_quality": null,
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
     "docker_build": "skipped",
-    "summary": "Not yet run. Baseline FEAT-001 reproduced green by the planner: HEAD 2d2c22ac..., 287-path inventory exact, Python 141 OK / 0 FAIL / 0 SKIP, pure-JDK WALL contract 68/68, no baseline.md. Android SDK ABSENT this session (no /opt/android-sdk, ANDROID_HOME empty); the full Gradle Android build/unit figure (inherited 1119 total / 1118 PASS / 1 historical SKIP / 0 FAIL) is a CI gate unless an SDK is provisioned under OPEN_INTERNET.",
+    "summary": "Independently re-run by the planner after FEAT-005. Host provenance+boundary gate GREEN: `cd tests && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p \"test_*.py\"` => Ran 157 tests OK (0 FAIL / 0 SKIP; 141 baseline + 16 new Phase C gate). Pure-JDK WALL contract 68/68. git diff --check PASS. Frozen files byte-unchanged vs 2d2c22a: pure wall/{WallEvent,WallCalendar,WallCalendarScheduler}.java, calendar/MediaCalendarScheduler.java, and .github/scripts/m6-phase-b-baseline.json (Phase B 278 startingBlobs + canonical 13e36b17... intact). Whole-repository inventory = 316 paths (312 committed + 4 new Phase C provenance files; excludes *.pyc under __pycache__). No baseline.md anywhere; working tree clean. Test-quality: the three WALL JVM suites (M6BannerOwnerTest 15, M6WallDriverTest 23, M6BannerHandlerTest 23 @Test methods, matching the pinned m6PhaseCSuites counts) drive the REAL production classes (LiveBannerRuntimePorts owner, WallClockDriver, BannerInstallationHandler, the UNCHANGED pure WallCalendarScheduler) through recording sinks/fake injectable clock+wait seams and verified OK (61/61) in a standalone JUnit run against the real sources; they would fail if the code were reverted. The Phase C provenance gate proves each of the 8 edited production files and 12 edited inherited gates reconstructs its exact pre-Phase-C byte via a whole-file inverse (admission-with-exact-inverse, the Phase-B-established mechanism), so provenance was EXTENDED, never weakened: no test deleted, no skip/@Ignore/Assume added, no wildcard/namespace allowlist, no *-baseline.json rewritten, no .gitignore hiding. Android :app:testDebugUnitTest/:lintDebug/:assembleDebug is a CI-ONLY gate this session (no Android SDK: ANDROID_HOME empty, no sdkmanager); the Android-free driver/owner/handler cores + pure scheduler were verified on the JVM and the Android glue type-checks against stubs; the inherited CI figure 1119 total / 1118 PASS / 1 historical SKIP (M1CloudInteropTest.originalColumboProjectionIsInstallable) / 0 FAIL will grow by the WALL JVM suites, with no post-Phase-C Android count fabricated.",
     "gates": {
-      "host_python_provenance_boundary": "cd tests && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p \"test_*.py\"",
-      "pure_jdk_wall_contract": "run transitively by the Python boundary suite (javac/java subprocess)",
-      "android_unit": "Gradle :app:testDebugUnitTest (CI gate; only if Android SDK provisioned under OPEN_INTERNET)",
-      "android_build": "Gradle :app:lintDebug :app:assembleDebug (CI gate; only if Android SDK provisioned)"
+      "host_python_provenance_boundary": "157 OK / 0 FAIL / 0 SKIP",
+      "pure_jdk_wall_contract": "PASS=68 FAIL=0 SKIP=0 (run transitively by the Phase B boundary suite via javac/java)",
+      "wall_jvm_suites_standalone": "M6BannerOwnerTest 15/15, M6WallDriverTest 23/23, M6BannerHandlerTest 23/23 (standalone JUnit vs real sources)",
+      "git_diff_check": "pass",
+      "frozen_files_unchanged": "pure wall/*.java, MediaCalendarScheduler.java, m6-phase-b-baseline.json byte-identical to 2d2c22a",
+      "android_unit": "CI-only (no Android SDK this session; no count fabricated)",
+      "android_build": "CI-only (no Android SDK this session)"
     }
   }
 }

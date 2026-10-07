@@ -151,9 +151,16 @@ final class LiveBannerRuntimePorts implements BannerInstallationRuntimePorts {
                 || !runtime.isSceneRendererActiveFor(revision)) {
             return false;
         }
-        selection.accept(revision);
+        // Establish the active binding BEFORE invoking the selection sink. The sink arms the
+        // Android WALL driver, whose first fresh evaluation emits synchronously back through
+        // onWallResult under this activation's token; matching(token) must already see the active
+        // binding or that first DUE is dropped as a NO-OP (the idempotent <=1s heartbeat would then
+        // never re-emit a window already live at promotion). Promotion has fully succeeded by this
+        // point - every prior ARM step passed its guard - so active is correct here, and pending
+        // still never renders: no callback was honored before this assignment.
         active = pending;
         pending = null;
+        selection.accept(revision);
         // Banner local eligibility is initialized AFTER promotion; nothing is forced visible, a
         // subsequent DUE drives the first show (first WALL evaluation only after safe promotion).
         diagnostics.accept(true);

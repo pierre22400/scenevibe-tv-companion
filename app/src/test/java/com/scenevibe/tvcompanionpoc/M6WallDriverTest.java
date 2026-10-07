@@ -510,4 +510,104 @@ public final class M6WallDriverTest {
         assertFalse(f.driver.arm("banner-activation-1", null));
         assertFalse(f.driver.isArmed());
     }
+
+    // ---- composition seam: arm INSIDE the selection sink (the real OverlayService wiring) ----
+
+    /**
+     * The real {@code OverlayService} composition arms the WALL driver <em>inside</em> the Banner
+     * selection sink ({@code revision -> { activeRevision = revision; armWallDriver(); }}), so the
+     * driver's synchronous first {@code emit} runs back through {@link LiveBannerRuntimePorts#onWallResult}
+     * while the owner is still mid-{@code selectActiveBanner}. {@code armWallDriver} reads the owner's
+     * {@code activeToken()} / {@code activeState()} and arms the driver under that exact token. This
+     * fixture reproduces that wiring faithfully (the owner, driver and pure scheduler are the REAL
+     * production classes); neither {@link M6WallDriverTest} nor {@link M6BannerOwnerTest} otherwise
+     * promotes and arms in a single synchronous step.
+     *
+     * <p>Regression guard: before the owner established the active binding ahead of invoking the
+     * selection sink, {@code matching(token)} saw {@code active == null} when the driver's first DUE
+     * landed, so a Banner whose window was already live at promotion was dropped and the idempotent
+     * {@code <=1s} heartbeat never re-emitted it. This test fails in that regressed ordering and
+     * passes once promotion sets the active binding before the sink runs.</p>
+     */
+    private static final class ComposedFixture {
+        boolean owner = true;
+        boolean videoVisible;
+        long selected = -1;
+        final List<String> eligibility = new ArrayList<>();
+        final List<WallDriverDiagnostics.Code> diag = new ArrayList<>();
+        final RecordingSink sink = new RecordingSink();
+        final SceneRuntimeController controller = new SceneRuntimeController(sink);
+        final WallCalendarScheduler scheduler = new WallCalendarScheduler();
+        final FakeClock clock;
+        final FakeWaits waits = new FakeWaits();
+        final LiveBannerRuntimePorts ports;
+        final WallClockDriver driver;
+        int armWallDriverCalls;
+        ComposedFixture(long epoch, long elapsed) {
+            clock = new FakeClock(epoch, elapsed);
+            // The selection sink wires armWallDriver() EXACTLY as OverlayService does: it reads the
+            // owner's active token + prepared calendar and arms the real driver synchronously.
+            ports = new LiveBannerRuntimePorts(() -> owner, () -> controller,
+                    () -> videoVisible = false,
+                    () -> {},
+                    () -> {},
+                    revision -> { selected = revision; armWallDriver(); },
+                    eligible -> eligibility.add(Boolean.toString(eligible)));
+            driver = new WallClockDriver(clock, waits, scheduler, ports, diag::add);
+        }
+        /** Faithful copy of OverlayService.armWallDriver(): arm under the owner's active binding. */
+        private void armWallDriver() {
+            armWallDriverCalls++;
+            String token = ports.activeToken();
+            BannerPreparedState state = ports.activeState();
+            if (token == null || state == null) { driver.disarm(); return; }
+            driver.arm(token, state.calendar);
+        }
+        String visibleId() { return controller.visibleSceneId(); }
+        boolean visible() { return controller.hasVisibleScene() || videoVisible; }
+    }
+
+    /**
+     * Promote a Banner through the REAL owner whose selection sink arms the driver synchronously
+     * (the exact OverlayService ordering); a window already live at promotion must render exactly
+     * one scene immediately after promotion, driven by the driver's synchronous first emit.
+     */
+    @Test public void armInsideSelectionSinkRendersWindowLiveAtPromotion() {
+        ComposedFixture f = new ComposedFixture(BASE, 10_000);
+        WallCalendar cal = calendarOf(window("evt-a", BASE, 6_000));
+        BannerPreparedState state = new BannerPreparedState(cal, bannerManifest("src-live", "evt-a"));
+        // The ordered ARM promotes and (inside the sink) arms the driver in one synchronous call.
+        assertEquals(InstallationStatus.ARMED, BannerPreparedState.arm(state, f.ports, 7));
+        assertEquals(1, f.armWallDriverCalls);
+        assertTrue("driver armed inside the selection sink", f.driver.isArmed());
+        // The first fresh evaluation's DUE lands while the owner is mid-promotion; the active
+        // binding must already be set so matching(token) honors it and the window renders.
+        assertTrue("a window live at promotion must render immediately", f.visible());
+        assertEquals("evt-a", f.visibleId());
+        assertEquals(1, f.sink.visibleCount);
+        assertEquals(7, f.selected);
+        // Exactly one bounded wait was armed, relative and <= 1000 ms, from the fresh epoch.
+        assertEquals(1, f.waits.scheduleCount);
+        assertTrue(f.waits.lastDelay >= 0 && f.waits.lastDelay <= WallClockDriver.WALL_MAX_WAIT_MS);
+    }
+
+    /**
+     * Pending still never renders through the composition seam: a window whose start is in the
+     * future is armed inside the selection sink but shows nothing until a later fresh fire, proving
+     * the fix did not promote a pending binding into an early render.
+     */
+    @Test public void armInsideSelectionSinkBeforeStartShowsNothing() {
+        ComposedFixture f = new ComposedFixture(BASE, 10_000);
+        WallCalendar cal = calendarOf(window("evt-a", BASE + 10_000, 6_000));
+        BannerPreparedState state = new BannerPreparedState(cal, bannerManifest("src-future", "evt-a"));
+        assertEquals(InstallationStatus.ARMED, BannerPreparedState.arm(state, f.ports, 8));
+        assertTrue(f.driver.isArmed());
+        // Promotion happened and the driver armed, but the window is not yet open: nothing renders.
+        assertFalse(f.visible());
+        // Advancing into the window and firing the single bounded wait then shows exactly one scene.
+        f.clock.advance(10_000);
+        f.waits.fire();
+        assertEquals("evt-a", f.visibleId());
+        assertEquals(1, f.sink.visibleCount);
+    }
 }
