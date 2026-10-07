@@ -1,0 +1,10 @@
+{
+  "version": "scenevibe.cloud.package-assignment.v1",
+  "deviceId": "33333333-3333-4333-8333-333333333333",
+  "revision": 7,
+  "kind": "banner",
+  "codecId": "scenevibe.banner-wall-overlay.v1",
+  "codecVersion": "1.0.0",
+  "body": "{\"horizon\":{\"endEpochMs\":1791331210000,\"startEpochMs\":1791331200000},\"manifest\":{\"canvas\":{\"height\":1080,\"width\":1920},\"clock\":{\"mode\":\"wall\",\"pauseBehavior\":\"continue\"},\"manifestId\":\"banner.41ccaad979d8be68ec505fd0d0c7bfca030f5c63bdcc4d99024d331f4f4c256b\",\"scenes\":[{\"durationMs\":1000,\"elements\":[{\"children\":[{\"frame\":{\"height\":120,\"width\":640,\"x\":0,\"y\":0},\"id\":\"background\",\"opacity\":1,\"style\":{\"cornerRadius\":0,\"fillColor\":\"#000000\"},\"type\":\"rectangle\",\"zIndex\":0},{\"frame\":{\"height\":120,\"width\":640,\"x\":0,\"y\":0},\"id\":\"label\",\"opacity\":1,\"style\":{\"backgroundColor\":\"#000000\",\"color\":\"#FFFFFF\",\"cornerRadius\":0,\"fontSize\":24,\"fontWeight\":\"normal\",\"padding\":0,\"textAlign\":\"start\"},\"text\":\"ASCII | café | café | 😀\",\"type\":\"text\",\"zIndex\":1},{\"frame\":{\"height\":120,\"width\":640,\"x\":0,\"y\":120},\"id\":\"table\",\"opacity\":1,\"rows\":[[\"ASCII | café | café | 😀\"]],\"style\":{\"backgroundColor\":\"#000000\",\"color\":\"#FFFFFF\",\"fontSize\":20,\"gridColor\":\"#FFFFFF\",\"padding\":0},\"type\":\"table\",\"zIndex\":2}],\"frame\":{\"height\":240,\"width\":640,\"x\":0,\"y\":0},\"id\":\"group\",\"opacity\":1,\"type\":\"group\",\"zIndex\":0}],\"id\":\"unicode\",\"startMs\":0}],\"schemaVersion\":\"1.0.0\",\"source\":{\"product\":\"banner\",\"sourceId\":\"m6-unicode-001\"},\"type\":\"scenevibe.overlay-manifest.v1\"},\"provenance\":{\"source\":\"m6d-absolute-v1\"},\"schemaVersion\":\"1.0.0\",\"type\":\"scenevibe.banner.wall-package.v1\",\"windows\":[{\"endEpochMs\":1791331201000,\"eventId\":\"unicode\",\"startEpochMs\":1791331200000}]}",
+  "deliveryDigest": "ebae3544f6c4a49a5e118600d0c4c928501add5765c565f0ea964b637cd1cb62"
+}

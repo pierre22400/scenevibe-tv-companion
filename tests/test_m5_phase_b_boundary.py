@@ -12,6 +12,7 @@ from m5_phase_b_provenance import blob_hash, calendar_model_files, phase_b_retai
 from m5_phase_c_provenance import phase_c_production_files, phase_c_added_paths
 from m6_phase_b_provenance import m6_phase_b_added_paths, m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_production_files, m6_phase_c_authorized_changes, m6_phase_c_retained_bytes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Qualify the additive temporal values and the byte-exact test-only legacy oracle.
 
@@ -106,7 +107,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_production_test_config_or_document_file(self):
         """A finite path inventory rejects another engine, feature, gate exception or unreviewed fixture."""
-        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'} | m6_phase_b_added_paths() | m6_phase_c_added_paths()
+        expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'} | m6_phase_b_added_paths() | (m6_phase_c_added_paths() | m6_phase_d_added_paths())
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):
@@ -114,7 +115,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
                     actual.add(str(path.relative_to(ROOT)))
         self.assertEqual({path for path in expected if path.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}, actual)
         old_java = {path for path in BASELINE['startingBlobs'] if path.startswith('app/src/main/') and path.endswith('.java')}
-        self.assertEqual(old_java | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | m6_phase_c_production_files(), {p for p in actual if p.startswith('app/src/main/') and p.endswith('.java')})
+        self.assertEqual(old_java | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | (m6_phase_c_production_files() | m6_phase_d_production_files()), {p for p in actual if p.startswith('app/src/main/') and p.endswith('.java')})
 
     def test_core_compiles_with_jdk_only_empty_classpath_and_sourcepath(self):
         """Execute the JDK compiler against only the three values and verify exactly their three classfiles."""

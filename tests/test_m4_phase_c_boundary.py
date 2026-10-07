@@ -11,6 +11,7 @@ from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Permit only the Phase C persistence extraction while keeping qualified behavior pinned.
 
@@ -129,12 +130,12 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
         expected.update(calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files())
-        expected.update(m6_phase_c_production_files())
+        expected.update((m6_phase_c_production_files() | m6_phase_d_production_files()))
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
         self.assertEqual(expected, actual)
         for path in actual:
             source = code_only((ROOT / path).read_text(encoding='utf-8'))
-            if path not in PHASE_D.get('videoHandlerFiles', []) and path not in m6_phase_c_production_files():
+            if path not in PHASE_D.get('videoHandlerFiles', []) and path not in (m6_phase_c_production_files() | m6_phase_d_production_files()):
                 self.assertIsNone(re.search(r'\bimplements\s+InstallationHandler\b', source), path)
             if path != PHASE_E.get('installerFile') and path not in PHASE_F.get('authorizedLiveCallers', []):
                 self.assertNotIn('PackageInstaller', source, path)

@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import m6_phase_c_provenance as provenance
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_retained_bytes
 
 """Admit the finite M6 Phase C WALL runtime integration and reject any provenance weakening.
 
@@ -82,7 +83,7 @@ class M6PhaseCBoundaryTest(unittest.TestCase):
         # so the gate stays identically strict in a shallow CI checkout. `actual` still comes from
         # `git ls-files` over the working tree, which a shallow checkout fully supports.
         start = provenance.m6_phase_c_frozen_start_inventory()
-        expected = start | provenance.m6_phase_c_added_paths()
+        expected = start | provenance.m6_phase_c_added_paths() | m6_phase_d_added_paths()
         self.assertEqual(expected, actual)
         for path in provenance.m6_phase_c_added_paths() | provenance.m6_phase_c_authorized_changes():
             self.assertNotIn('*', path)
@@ -95,14 +96,14 @@ class M6PhaseCBoundaryTest(unittest.TestCase):
                    '.agents/tasks/task-m6-phase-c-wall-android-driver-common-owner/features/FEAT-005.json'}
         self.assertEqual(provenance.m6_phase_c_added_paths() - exclude, set(pins))
         for relative, digest in pins.items():
-            self.assertEqual(digest, blob_hash((ROOT / relative).read_bytes()), relative)
+            self.assertEqual(digest, blob_hash(m6_phase_d_retained_bytes(ROOT / relative)), relative)
 
     def test_production_admissions_reverse_to_the_exact_frozen_byte(self):
         """Each of the eight edited production files reconstructs its exact frozen 2d2c22a byte."""
         for relative, admission in provenance.inventory()['admissions'].items():
             if admission['kind'] != 'production':
                 continue
-            actual = (ROOT / relative).read_bytes()
+            actual = m6_phase_d_retained_bytes(ROOT / relative)
             self.assertEqual(admission['afterSha'], blob_hash(actual), relative)
             # The pinned beforeSha IS the frozen 2d2c22a git blob identity of this file. The inverse
             # reconstructs the exact pre-Phase-C byte from the pinned whole-file inverse, and
@@ -117,7 +118,7 @@ class M6PhaseCBoundaryTest(unittest.TestCase):
         for relative, admission in provenance.inventory()['admissions'].items():
             if admission['kind'] != 'inherited-gate':
                 continue
-            actual = (ROOT / relative).read_bytes()
+            actual = m6_phase_d_retained_bytes(ROOT / relative)
             self.assertEqual(admission['afterSha'], blob_hash(actual), relative)
             restored = provenance.m6_phase_c_retained_bytes(ROOT / relative)
             self.assertEqual(admission['beforeSha'], blob_hash(restored), relative)
@@ -137,7 +138,7 @@ class M6PhaseCBoundaryTest(unittest.TestCase):
         self.assertEqual(jvm_tests, pinned)
         for relative in jvm_tests:
             admission = provenance.inventory()['admissions'][relative]
-            actual = (ROOT / relative).read_bytes()
+            actual = m6_phase_d_retained_bytes(ROOT / relative)
             self.assertEqual(admission['afterSha'], blob_hash(actual), relative)
             restored = provenance.m6_phase_c_retained_bytes(ROOT / relative)
             self.assertEqual(admission['beforeSha'], blob_hash(restored), relative)

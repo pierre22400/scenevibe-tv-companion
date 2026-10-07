@@ -26,6 +26,8 @@ import javax.net.ssl.HttpsURLConnection;
  * window owner, so scheduler callbacks cannot race an incomplete renderer handoff.
  */
 final class CloudControlClient {
+    /** One client/poller selects one transport; production remains on the historical Video route. */
+    enum TransportMode { VIDEO_V1, PACKAGE_V1 }
     /** Generic local call seam; production binds the one service-owned PackageInstaller. */
     interface InstallationOperation {
         /** Complete one local installation; this operation neither sends nor persists an ACK. */
@@ -52,6 +54,7 @@ final class CloudControlClient {
     private final java.util.function.BooleanSupplier currentClient;
     private final String installationId;
     private final String origin;
+    private final TransportMode transportMode;
     private volatile boolean running;
     private int failures;
 
@@ -72,6 +75,7 @@ final class CloudControlClient {
         },()->Looper.myLooper()==Looper.getMainLooper());
         this.installationId=new InstallationIdentity(context).installationId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
+        this.transportMode=TransportMode.VIDEO_V1;
     }
 
     /** Android-free local seam drives the actual client without starting network polling. */
@@ -88,14 +92,25 @@ final class CloudControlClient {
             InstallationHandler.RuntimePorts runtimePorts,Runnable resetRuntime,
             java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity,
             AssignmentMutationGate mutations,java.util.function.BooleanSupplier currentClient) {
+        this(io,identity,store,installation,runtimePorts,resetRuntime,resetFallback,
+                resetInstallationIdentity,mutations,currentClient,TransportMode.VIDEO_V1);
+    }
+    /** Explicit local qualification selects generic transport on this same client, without changing live wiring. */
+    CloudControlClient(ScheduledExecutorService io,CloudDeviceCredentials identity,
+            InstallationStore store,InstallationOperation installation,
+            InstallationHandler.RuntimePorts runtimePorts,Runnable resetRuntime,
+            java.util.concurrent.Executor resetFallback,Runnable resetInstallationIdentity,
+            AssignmentMutationGate mutations,java.util.function.BooleanSupplier currentClient,
+            TransportMode transportMode) {
         if(io==null||identity==null||store==null||installation==null||runtimePorts==null
                 ||resetRuntime==null||resetFallback==null||resetInstallationIdentity==null
-                ||mutations==null||currentClient==null)throw new IllegalArgumentException("Missing Cloud dependency");
+                ||mutations==null||currentClient==null||transportMode==null)throw new IllegalArgumentException("Missing Cloud dependency");
         this.io=io;this.identity=identity;this.store=store;this.installation=installation;
         this.runtimePorts=runtimePorts;this.resetRuntime=resetRuntime;
         this.resetFallback=resetFallback;this.resetInstallationIdentity=resetInstallationIdentity;
         this.mutations=mutations;this.currentClient=currentClient;
         this.installationId="test-installation";this.origin="";
+        this.transportMode=transportMode;
     }
     /** Restores cached media in OverlayService before starting the first network fetch. */
     void start() {
@@ -232,6 +247,9 @@ final class CloudControlClient {
         InstallationStore.ReadResult durable=store.read();
         if(durable.state()==InstallationStore.ReadState.CORRUPT)
             throw new CloudException(RuntimeDiagnostics.CloudErrorCode.NETWORK,"Local installation cache unavailable");
+        if(transportMode==TransportMode.PACKAGE_V1) {
+            fetchPackageAssignment(token,cloudDeviceId,durable);return;
+        }
         Reply reply=http("GET","devices/"+cloudDeviceId+"/assignment?afterRevision="+durable.acknowledgedRevision(),token,null);
         // 204 and authenticated 404 remain normal empty polling responses.
         if(reply.status==204||reply.status==404)return;
@@ -264,6 +282,40 @@ final class CloudControlClient {
         DiagnosticsStore.INSTANCE.setLastSuccessfulAckRevision(revision);
         DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NONE);
         Log.i(TAG,"Cloud track loaded; revision="+revision);
+    }
+    /** Fetch the exact generic body on the same io poller; proof is rebuilt from readback after owner ARM. */
+    private void fetchPackageAssignment(String token,String deviceId,InstallationStore.ReadResult durable) throws Exception {
+        Reply reply=http("GET","devices/"+deviceId+"/package-assignment?afterRevision="+durable.acknowledgedRevision(),token,null);
+        if(reply.status==204||reply.status==404)return;
+        if(reply.status==401) {
+            DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.UNAUTHORIZED);return;
+        }
+        InstallRequest request;
+        try {
+            if(reply.status!=200)throw new IllegalArgumentException("Invalid package status");
+            request=CloudPackageInstallationAdapter.adapt(reply.body,deviceId,durable);
+        } catch(RuntimeException malformed) {throw new CloudException(RuntimeDiagnostics.CloudErrorCode.PROTOCOL,"Invalid package response");}
+        long revision=request.revision();DiagnosticsStore.INSTANCE.setLastAssignmentRevisionReceived(revision);
+        JSONObject proof=mutations.call(()->{
+            if(!running||!currentClient.getAsBoolean())return null;
+            InstallationStatus installed=applyAssignment(mutations,()->running&&currentClient.getAsBoolean(),
+                    request,runtimePorts,installation);
+            if(installed!=InstallationStatus.ARMED)
+                throw new CloudException(RuntimeDiagnostics.CloudErrorCode.NETWORK,"Local package installation refused");
+            if(!running||!currentClient.getAsBoolean())return null;
+            InstallationStore.ReadResult readback=store.read();
+            if(readback.state()!=InstallationStore.ReadState.SNAPSHOT)
+                throw new CloudException(RuntimeDiagnostics.CloudErrorCode.NETWORK,"Local package readback refused");
+            return CloudPackageInstallationAdapter.proof(readback.snapshot(),revision);
+        });
+        if(proof==null||!running||!currentClient.getAsBoolean())return;
+        Reply confirmed=http("POST","devices/"+deviceId+"/package-ack",token,proof);
+        if(confirmed.status!=200||!CloudPackageInstallationAdapter.validAck(confirmed.body,deviceId,revision))
+            throw new IllegalStateException("Cloud package ACK rejected");
+        boolean acknowledged=mutations.call(()->running&&currentClient.getAsBoolean()&&store.markAcknowledged(revision));
+        if(!acknowledged)throw new IllegalStateException("Cloud package ACK persistence refused");
+        DiagnosticsStore.INSTANCE.setLastSuccessfulAckRevision(revision);
+        DiagnosticsStore.INSTANCE.setLastCloudErrorCode(RuntimeDiagnostics.CloudErrorCode.NONE);
     }
     /** Reads at most three megabytes from an explicitly configured HTTPS endpoint. */
     private Reply http(String method,String path,String token,JSONObject body) throws Exception {

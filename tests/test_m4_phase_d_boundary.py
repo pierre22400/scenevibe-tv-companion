@@ -8,6 +8,7 @@ from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Keep Video semantic handlers outside the generic core and forbid an early installer cutover.
 
@@ -112,7 +113,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
         expected.update(calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files())
-        expected.update(m6_phase_c_production_files())
+        expected.update((m6_phase_c_production_files() | m6_phase_d_production_files()))
         actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}
         self.assertEqual(expected, actual)
         implementations = []
@@ -122,7 +123,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
                 self.assertNotIn('PackageInstaller', source, relative)
             if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)', source):
                 implementations.append(Path(relative).name)
-        phase_c_handlers = sorted(Path(p).name for p in m6_phase_c_production_files()
+        phase_c_handlers = sorted(Path(p).name for p in (m6_phase_c_production_files() | m6_phase_d_production_files())
                                   if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)',
                                                code_only((ROOT / p).read_text(encoding='utf-8'))))
         self.assertEqual(sorted(['VideoLegacyInstallationHandler.java', 'VideoManifestInstallationHandler.java']

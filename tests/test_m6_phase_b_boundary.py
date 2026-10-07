@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import patch
 import m6_phase_b_provenance as provenance
 from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_authorized_changes, m6_phase_c_retained_bytes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Execute pure WALL contracts and reject temporal or provenance weakening.
 
@@ -123,7 +124,7 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
                                 cwd=ROOT, capture_output=True, timeout=10, check=True)
         actual = {name for name in result.stdout.decode('utf-8').splitlines()
                   if not ('__pycache__' in Path(name).parts and name.endswith('.pyc'))}
-        expected = set(provenance.inventory()['startingBlobs']) | ADDED | m6_phase_c_added_paths()
+        expected = set(provenance.inventory()['startingBlobs']) | ADDED | (m6_phase_c_added_paths() | m6_phase_d_added_paths())
         self.assertEqual(expected, actual)
         self.assertFalse(any('*' in path or '?' in path for path in ADDED | CHANGED))
 

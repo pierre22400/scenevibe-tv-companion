@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from m6_phase_d_provenance import m6_phase_d_retained_bytes
 
 """Admit the finite M6 Phase C WALL integration while reconstructing the frozen 2d2c22a tree.
 
@@ -184,4 +185,4 @@ def m6_phase_c_retained_bytes(path):
     """
     path = Path(path)
     relative = str(path.relative_to(ROOT))
-    return restore_blob(relative, path.read_bytes())
+    return restore_blob(relative, m6_phase_d_retained_bytes(path))

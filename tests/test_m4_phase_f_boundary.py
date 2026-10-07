@@ -10,6 +10,7 @@ from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Qualify the live Cloud cutover without weakening the retained M4 evidence.
 
@@ -242,7 +243,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
     def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):
         """Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned."""
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | m6_phase_c_production_files(), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | (m6_phase_c_production_files() | m6_phase_d_production_files()), actual)
         bridges, ports = [], []
         for relative in actual:
             source = code_only((ROOT / relative).read_text())
@@ -250,7 +251,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
                 bridges.append(Path(relative).name)
             if re.search(r'\bimplements\s+VideoInstallationRuntimePorts\b', source):
                 ports.append(Path(relative).name)
-        phase_c_ports = sorted(Path(p).name for p in m6_phase_c_production_files()
+        phase_c_ports = sorted(Path(p).name for p in (m6_phase_c_production_files() | m6_phase_d_production_files())
                                if re.search(r'\bimplements\s+VideoInstallationRuntimePorts\b',
                                             code_only((ROOT / p).read_text(encoding='utf-8'))))
         self.assertEqual(['VideoManifestInstallationHandler.java'], bridges)

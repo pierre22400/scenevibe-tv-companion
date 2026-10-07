@@ -9,6 +9,7 @@ from m5_phase_b_provenance import calendar_model_files, phase_b_added_paths, qua
 from m5_phase_c_provenance import phase_c_production_files, phase_c_added_paths
 from m6_phase_b_provenance import m6_phase_b_added_paths, m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_production_files, m6_phase_c_authorized_changes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Qualify the localized hard-reboot correction without weakening a single retained A–G gate.
 
@@ -49,7 +50,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
                          'installation/InstallationStore.java','RuntimeDiagnostics.java','DiagnosticsActivity.java')},
                          set(BASELINE['authorizedProductionChanges']))
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | m6_phase_c_production_files(), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | (m6_phase_c_production_files() | m6_phase_d_production_files()), actual)
 
     def test_every_retained_blob_and_corrective_inverse_is_exact(self):
         """Every starting production/config/test/evidence file is preserved or reconstructed with unique finite edits."""
@@ -72,7 +73,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         allowed.add('docs/m4-phase-g-sony-hard-reboot-corrective-report.md')
         allowed.update(POST_CORRECTIVE_DOCUMENTS)
         allowed.update(m6_phase_b_added_paths())
-        allowed.update(m6_phase_c_added_paths())
+        allowed.update((m6_phase_c_added_paths() | m6_phase_d_added_paths()))
         allowed.update(phase_b_added_paths())
         allowed.update(phase_c_added_paths())
         allowed.update(phase_d_added_paths())

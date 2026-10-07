@@ -11,6 +11,7 @@ from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
 from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Pin Phase B to a JDK-only additive island and preserve the qualified runtime.
 
@@ -120,7 +121,7 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         if PHASE_F:
             new_files.add(PHASE_F['adapterFile'])
         new_files.update(calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files())
-        new_files.update(m6_phase_c_production_files())
+        new_files.update((m6_phase_c_production_files() | m6_phase_d_production_files()))
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)

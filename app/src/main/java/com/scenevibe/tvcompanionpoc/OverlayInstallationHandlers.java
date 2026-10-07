@@ -20,9 +20,11 @@ final class OverlayInstallationHandlers {
     private static final BannerInstallationHandler BANNER = new BannerInstallationHandler();
     private static final InstallationHandlerRegistry REGISTRY = new InstallationHandlerRegistry(
             new InstallationHandlerRegistry.Entry(InstallationStore.COMPAT_OVERLAY_HANDLER_ID,
-                    TvCapabilities.CODEC_TRACK_OVERLAY, VideoInstallationHandlers.manifested()),
+                    TvCapabilities.CODEC_TRACK_OVERLAY, new CloudPackageVideoInstallationHandler(
+                            VideoInstallationHandlers.manifested(),TvCapabilities.CODEC_TRACK_OVERLAY,InstallationStore.COMPAT_OVERLAY_HANDLER_ID)),
             new InstallationHandlerRegistry.Entry(InstallationStore.COMPAT_TRACK_HANDLER_ID,
-                    TvCapabilities.CODEC_TRACK, VideoInstallationHandlers.legacy()),
+                    TvCapabilities.CODEC_TRACK, new CloudPackageVideoInstallationHandler(
+                            VideoInstallationHandlers.legacy(),TvCapabilities.CODEC_TRACK,InstallationStore.COMPAT_TRACK_HANDLER_ID)),
             new InstallationHandlerRegistry.Entry(BannerInstallationHandler.HANDLER_ID,
                     TvCapabilities.CODEC_BANNER_WALL_OVERLAY, BANNER));
 
