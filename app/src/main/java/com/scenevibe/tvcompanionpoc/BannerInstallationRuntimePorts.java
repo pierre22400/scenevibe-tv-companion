@@ -1,5 +1,6 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
 import com.scenevibe.tvcompanionpoc.wall.WallCalendarScheduler;
 
 /**
@@ -15,7 +16,7 @@ import com.scenevibe.tvcompanionpoc.wall.WallCalendarScheduler;
  * visual owner and neutralizes the MEDIA path; there is exactly one current installation, one
  * principal owner and one active temporal path, never a concurrent Video+Banner installation.</p>
  */
-interface BannerInstallationRuntimePorts {
+interface BannerInstallationRuntimePorts extends InstallationHandler.RuntimePorts {
     /** Verify the calling thread is allowed to mutate this runtime; false permits no mutation. */
     boolean isOwnerThread();
     /** Synchronously retire the opposite Video visual owner(s) before any Banner promotion. */

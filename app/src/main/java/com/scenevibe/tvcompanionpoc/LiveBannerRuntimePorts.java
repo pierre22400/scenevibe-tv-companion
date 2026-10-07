@@ -167,6 +167,26 @@ final class LiveBannerRuntimePorts implements BannerInstallationRuntimePorts {
     }
 
     /**
+     * The active (or, during the selection callback before promotion completes, the pending) opaque
+     * activation token, so the owning service can arm the Android WALL driver (FEAT-003) under the
+     * exact token this core will route results for. Null when there is no activation. This exposes
+     * no credential or content: the token is a bounded local {@code "banner-activation-N"} string.
+     */
+    String activeToken() {
+        if (!isOwnerThread()) return null;
+        if (active != null) return active.token;
+        return pending != null ? pending.token : null;
+    }
+
+    /** The prepared Banner state backing the active/pending activation, so the service can arm the
+     *  driver with its pure calendar. Memory-only, holds no clock/renderer/store. Null when none. */
+    BannerPreparedState activeState() {
+        if (!isOwnerThread()) return null;
+        if (active != null) return active.state;
+        return pending != null ? pending.state : null;
+    }
+
+    /**
      * Route one already-selected pure scheduler result under the active token only. Each EXIT then
      * each DUE is delivered to the reused controller with the generation captured at ARM, so a late
      * EXIT after a new ARM at the same eventId cannot hide the new scene (section 13 race table).

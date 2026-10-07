@@ -1,0 +1,22 @@
+{
+  "task_id": "task-m6-phase-c-wall-android-driver-common-owner",
+  "task_description": "M6 PHASE C — WALL ANDROID DRIVER + COMMON RUNTIME OWNER + RESTORE QUALIFICATION. Resume Phase C after a frozen session. Phase C owns ONLY the TV-local WALL runtime integration (16 responsibilities: common runtime owner; WALL Android driver; epoch/elapsed anchor; wallGeneration; timer ticket; fresh clock evaluation; clock drift/reanchor; promotion and eligibility; controller generation guarded delivery; local Banner handler/codec; installer/store reuse; restore; Banner-aware autostart; local diagnostics; Video/MEDIA non-regression; Phase C provenance and qualification). Phase C does NOT own Cloud resolver/publication/transport/ACK/DB-migration/control-plane cutover/remote assets (Phase D) or Sony physical qualification (Phase E). All runtime invariants preserved: WALL distinct from MEDIA; M5 MediaCalendarScheduler unchanged; Phase B WALL scheduler payload-free; one installation; one principal owner; no competing LiveBanner owner; Video and Banner alternating not concurrent; pending Banner cannot render; first WALL evaluation only after safe promotion; stale callback/wallGeneration/timer-ticket/activation-token/controller-generation = NO-OP; every timer callback rereads fresh civil time; no anchor/wallGeneration/ticket/cursor durable; restore creates a fresh temporal context; controller/renderer never a clock; Cloud remains Phase D. FEAT-002..FEAT-005 are REGENERATED from the authoritative Phase C work order (the lost originals were never committed and are genuinely gone; this is not a verbatim recovery). PR #16 stays OPEN/DRAFT/unmerged; production stays SHADOW; the orchestrator owns push/PR.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null,
+  "baseline_sha": "2d2c22ac2926531ce728575ab7b87a4b5a66fd99",
+  "final_head_sha": null,
+  "verification": {
+    "build": null,
+    "tests": null,
+    "test_quality": null,
+    "docker_build": "skipped",
+    "summary": "Not yet run. Baseline FEAT-001 reproduced green by the planner: HEAD 2d2c22ac..., 287-path inventory exact, Python 141 OK / 0 FAIL / 0 SKIP, pure-JDK WALL contract 68/68, no baseline.md. Android SDK ABSENT this session (no /opt/android-sdk, ANDROID_HOME empty); the full Gradle Android build/unit figure (inherited 1119 total / 1118 PASS / 1 historical SKIP / 0 FAIL) is a CI gate unless an SDK is provisioned under OPEN_INTERNET.",
+    "gates": {
+      "host_python_provenance_boundary": "cd tests && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p \"test_*.py\"",
+      "pure_jdk_wall_contract": "run transitively by the Python boundary suite (javac/java subprocess)",
+      "android_unit": "Gradle :app:testDebugUnitTest (CI gate; only if Android SDK provisioned under OPEN_INTERNET)",
+      "android_build": "Gradle :app:lintDebug :app:assembleDebug (CI gate; only if Android SDK provisioned)"
+    }
+  }
+}

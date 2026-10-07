@@ -1,6 +1,10 @@
 package com.scenevibe.tvcompanionpoc;
 
+import com.scenevibe.tvcompanionpoc.installation.ExecutionRequirements;
+import com.scenevibe.tvcompanionpoc.installation.InstallRequest;
+import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
+import com.scenevibe.tvcompanionpoc.installation.PreparedInstallation;
 import com.scenevibe.tvcompanionpoc.wall.WallCalendar;
 
 /**
@@ -15,9 +19,12 @@ import com.scenevibe.tvcompanionpoc.wall.WallCalendar;
  * the WALL analogue of {@link VideoPreparedState}, deliberately parallel so a single principal
  * owner can host STATIC Video and Banner ports without a competing LiveBanner authority.</p>
  */
-final class BannerPreparedState {
+final class BannerPreparedState implements InstallationHandler.PreparedState {
     final WallCalendar calendar;
     final OverlayManifest manifest;
+    private final InstallRequest canonical;
+    private final String handlerId;
+    private final ExecutionRequirements requirements;
 
     /** Retain the exact qualified calendar/manifest pair; construction loads/renders nothing. */
     BannerPreparedState(WallCalendar calendar, OverlayManifest manifest) {
@@ -26,6 +33,35 @@ final class BannerPreparedState {
         }
         this.calendar = calendar;
         this.manifest = manifest;
+        this.canonical = null;
+        this.handlerId = null;
+        this.requirements = null;
+    }
+
+    /** Bind the already-validated calendar/manifest to their exact immutable candidate/profile. */
+    private BannerPreparedState(BannerPreparedState state, InstallRequest request, String id,
+            ExecutionRequirements needs) {
+        this.calendar = state.calendar;
+        this.manifest = state.manifest;
+        this.canonical = request;
+        this.handlerId = id;
+        this.requirements = needs;
+    }
+
+    /** Bind already validated values to their exact immutable generic candidate/profile. */
+    BannerPreparedState bind(InstallRequest request, String id, ExecutionRequirements needs) {
+        return new BannerPreparedState(this, request, id, needs);
+    }
+
+    /** Check ownership and exact canonical/profile identity without reinterpreting untrusted bytes. */
+    static BannerPreparedState owned(PreparedInstallation prepared, String id, String codec) {
+        if (prepared == null || !id.equals(prepared.handlerId()) || !codec.equals(prepared.codecId())
+                || !(prepared.preparedState() instanceof BannerPreparedState)) {
+            return null;
+        }
+        BannerPreparedState state = (BannerPreparedState) prepared.preparedState();
+        return state.canonical == prepared.canonical() && state.requirements == prepared.requirements()
+                && id.equals(state.handlerId) ? state : null;
     }
 
     /**
@@ -36,6 +72,20 @@ final class BannerPreparedState {
      * with no silent partial activation. The handler (FEAT-004) and installer wiring that reach this
      * entry point are a later feature; this method pins the owner-side activation contract now.
      */
+    /**
+     * Activate a durable-restored Banner through the generic installer contract: resolve the exact
+     * owned state and codec/handler binding, require Banner owner ports, then run the ordered ARM.
+     * Any foreign metadata or wrong port type fails closed to {@link InstallationStatus#ARM_FAILED}.
+     */
+    static InstallationStatus arm(PreparedInstallation prepared, InstallationHandler.RuntimePorts ports,
+            String id, String codec) {
+        BannerPreparedState state = owned(prepared, id, codec);
+        if (state == null || !(ports instanceof BannerInstallationRuntimePorts)) {
+            return InstallationStatus.ARM_FAILED;
+        }
+        return arm(state, (BannerInstallationRuntimePorts) ports, prepared.revision());
+    }
+
     static InstallationStatus arm(BannerPreparedState state, BannerInstallationRuntimePorts ports,
             long revision) {
         if (state == null || ports == null || revision < 1) return InstallationStatus.ARM_FAILED;
