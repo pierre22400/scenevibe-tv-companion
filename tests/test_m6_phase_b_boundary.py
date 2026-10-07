@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import m6_phase_b_provenance as provenance
+from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_authorized_changes, m6_phase_c_retained_bytes
 
 """Execute pure WALL contracts and reject temporal or provenance weakening.
 
@@ -108,9 +109,12 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
     def test_every_retained_blob_and_inverse_matches_reconciled_head(self):
         """All MEDIA, Android, Cloud transport, fixtures, baselines, signing and workflow bytes stay exact."""
         for relative, digest in provenance.inventory()['startingBlobs'].items():
-            self.assertEqual(digest, provenance.blob_hash(provenance.m6_phase_b_retained_bytes(ROOT / relative)), relative)
+            if relative in m6_phase_c_authorized_changes():
+                continue
+            reconstructed = provenance.restore_blob(relative, m6_phase_c_retained_bytes(ROOT / relative))
+            self.assertEqual(digest, provenance.blob_hash(reconstructed), relative)
             if relative not in CHANGED:
-                self.assertEqual(digest, provenance.blob_hash((ROOT / relative).read_bytes()), relative)
+                self.assertEqual(digest, provenance.blob_hash(m6_phase_c_retained_bytes(ROOT / relative)), relative)
         self.assertFalse(any(path.startswith('app/') for path in CHANGED))
 
     def test_exact_whole_repository_inventory_has_no_namespace_admission(self):
@@ -119,7 +123,7 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
                                 cwd=ROOT, capture_output=True, timeout=10, check=True)
         actual = {name for name in result.stdout.decode('utf-8').splitlines()
                   if not ('__pycache__' in Path(name).parts and name.endswith('.pyc'))}
-        expected = set(provenance.inventory()['startingBlobs']) | ADDED
+        expected = set(provenance.inventory()['startingBlobs']) | ADDED | m6_phase_c_added_paths()
         self.assertEqual(expected, actual)
         self.assertFalse(any('*' in path or '?' in path for path in ADDED | CHANGED))
 
@@ -128,7 +132,7 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
         pins = provenance.inventory()['addedBlobs']
         self.assertEqual(ADDED - {'.github/scripts/m6-phase-b-baseline.json'}, set(pins))
         for relative, digest in pins.items():
-            self.assertEqual(digest, provenance.blob_hash((ROOT / relative).read_bytes()), relative)
+            self.assertEqual(digest, provenance.blob_hash(m6_phase_c_retained_bytes(ROOT / relative)), relative)
 
     def test_pure_core_has_no_clock_platform_payload_or_io_dependency(self):
         """Inspect actual imports and qualified references independently of successful JDK compilation."""
@@ -149,10 +153,12 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
         """A pure addition does not register WALL, change capabilities or wire a live Banner path."""
         for relative in provenance.inventory()['startingBlobs']:
             if relative.startswith('app/src/main/') and relative.endswith('.java'):
-                source = executable(relative)
+                raw = m6_phase_c_retained_bytes(ROOT / relative).decode('utf-8')
+                source = re.sub(r'/\*.*?\*/|//[^\n]*', '', raw, flags=re.S)
                 self.assertNotIn('com.scenevibe.tvcompanionpoc.wall', source, relative)
                 self.assertIsNone(re.search(r'\b(?:WallEvent|WallCalendar|WallCalendarScheduler)\b', source), relative)
-        capabilities = executable('app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java')
+        capabilities = re.sub(r'/\*.*?\*/|//[^\n]*', '',
+                              m6_phase_c_retained_bytes(ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java').decode('utf-8'), flags=re.S)
         self.assertIn('supportsWallClockExecution()', capabilities)
 
     def test_models_have_only_exact_immutable_identity_and_temporal_fields(self):
@@ -208,7 +214,7 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
     def test_before_after_blobs_and_complete_inverses_are_recognized(self):
         """Require every current whole blob and reconstructed starting blob to roundtrip exactly."""
         for relative, admission in provenance.inventory()['admissions'].items():
-            actual = (ROOT / relative).read_bytes()
+            actual = m6_phase_c_retained_bytes(ROOT / relative)
             self.assertEqual(admission['afterSha'], provenance.blob_hash(actual), relative)
             previous = provenance.restore_blob(relative, actual)
             self.assertEqual(admission['beforeSha'], provenance.blob_hash(previous), relative)
@@ -217,7 +223,7 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
     def test_unknown_whole_blob_mutations_are_rejected_before_inverse(self):
         """Reject five mutations per admitted path, including duplicate contexts and an extra character."""
         for relative, admission in provenance.inventory()['admissions'].items():
-            actual = (ROOT / relative).read_bytes()
+            actual = m6_phase_c_retained_bytes(ROOT / relative)
             mutants = [actual + b' ', actual + b'\n# unknown\n', actual[:-1], b'# unknown\n' + actual,
                        actual + admission['patches'][0]['after'].encode('utf-8')]
             for mutated in mutants:
@@ -239,7 +245,7 @@ class M6PhaseBBoundaryTest(unittest.TestCase):
                         inverse['after'] = replacement
                     inventory_path.write_text(json.dumps(mutated), encoding='utf-8')
                     with patch.object(provenance, 'INVENTORY', inventory_path), self.assertRaises(ValueError):
-                        provenance.restore_blob(relative, (ROOT / relative).read_bytes())
+                        provenance.restore_blob(relative, m6_phase_c_retained_bytes(ROOT / relative))
 
     def test_new_inventory_cannot_retarget_independent_after_blob_pins(self):
         """A new baseline alone cannot replace any of the twelve independently pinned accepted blobs."""

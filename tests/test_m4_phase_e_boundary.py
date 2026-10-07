@@ -11,6 +11,7 @@ from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
+from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
 
 """Keep Phase E's single orchestrator isolated and all qualified production callers frozen.
 
@@ -136,6 +137,8 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):
             source = code_only((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).read_text())
@@ -148,13 +151,15 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         for path, expected in frozen.items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_production_inventory_admits_exactly_one_unwired_orchestration_type(self):
         """No Cloud adapter, service port, restore coordinator or future milestone type can appear."""
         prior = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files(), actual)
+        self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | m6_phase_c_production_files(), actual)
         callers = []
         for path in actual:
             if re.search(r'\bPackageInstaller\b', code_only((ROOT / path).read_text())):

@@ -10,6 +10,7 @@ from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
+from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
 
 """Pin Phase B to a JDK-only additive island and preserve the qualified runtime.
 
@@ -103,6 +104,8 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
                 continue
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(expected, git_blob_digest(retained_bytes(ROOT / path)), path)
 
     def test_no_current_caller_or_future_phase_production_component_is_added(self):
@@ -117,6 +120,7 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         if PHASE_F:
             new_files.add(PHASE_F['adapterFile'])
         new_files.update(calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files())
+        new_files.update(m6_phase_c_production_files())
         actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)

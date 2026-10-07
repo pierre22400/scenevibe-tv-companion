@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from m5_phase_c_provenance import blob_hash, phase_c_retained_bytes, phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_added_paths, m6_phase_b_production_files
+from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_authorized_changes
 
 """Bind the non-live candidate to the accepted B tree and actual differential gates.
 
@@ -67,6 +68,8 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
     def test_every_retained_blob_including_models_oracle_owner_and_workflows(self):
         """No inverse exists for production or fixtures; complete final-B bytes are independently restored."""
         for path, digest in BASE['startingBlobs'].items():
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(digest, blob_hash(phase_c_retained_bytes(ROOT / path)), path)
             if path not in CHANGED | phase_d_changed_paths():
                 self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
@@ -76,7 +79,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
 
     def test_no_unlisted_file_in_any_retained_scope(self):
         """A namespace wildcard, extra engine or hidden fixture cannot pass the finite inventory."""
-        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'} | m6_phase_b_added_paths()
+        expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'} | m6_phase_b_added_paths() | m6_phase_c_added_paths()
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
             for path in (ROOT / directory).rglob('*'):
@@ -120,8 +123,11 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
             self.assertIn(token, adapter)
         self.assertNotIn('MediaCalendarScheduler', adapter)
         for path in BASE['startingBlobs']:
+            if path in m6_phase_c_authorized_changes():
+                continue
             if path.startswith('app/src/main/') and path.endswith('.java'):
-                source = re.sub(r'/\*.*?\*/|//[^\n]*', '', phase_d_retained_bytes(ROOT / path).decode('utf-8'), flags=re.S)
+                raw = phase_d_retained_bytes(ROOT / path).decode('utf-8')
+                source = re.sub(r'/\*.*?\*/|//[^\n]*', '', raw, flags=re.S)
                 self.assertNotIn('MediaCalendarScheduler', source, path)
                 self.assertNotIn('VideoMediaObservationAdapter', source, path)
 

@@ -7,6 +7,7 @@ from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
 from m6_phase_b_provenance import m6_phase_b_production_files
+from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
 
 """Keep Video semantic handlers outside the generic core and forbid an early installer cutover.
 
@@ -111,6 +112,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
         expected.update(calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files())
+        expected.update(m6_phase_c_production_files())
         actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}
         self.assertEqual(expected, actual)
         implementations = []
@@ -120,7 +122,11 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
                 self.assertNotIn('PackageInstaller', source, relative)
             if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)', source):
                 implementations.append(Path(relative).name)
-        self.assertEqual(['VideoLegacyInstallationHandler.java', 'VideoManifestInstallationHandler.java'], sorted(implementations))
+        phase_c_handlers = sorted(Path(p).name for p in m6_phase_c_production_files()
+                                  if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)',
+                                               code_only((ROOT / p).read_text(encoding='utf-8'))))
+        self.assertEqual(sorted(['VideoLegacyInstallationHandler.java', 'VideoManifestInstallationHandler.java']
+                                + phase_c_handlers), sorted(implementations))
         client = code_only((PRODUCTION / 'CloudControlClient.java').read_text(encoding='utf-8'))
         for token in ('InstallRequest', 'InstallationHandlerRegistry', 'VideoInstallationHandlers', 'VideoInstallationRuntimePorts'):
             if token != 'InstallRequest' or not PHASE_F:
@@ -134,6 +140,8 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         """No protected scheduler/renderer/identity/store/transport/manifest/signing input can drift."""
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
+                continue
+            if path in m6_phase_c_authorized_changes():
                 continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')
@@ -152,6 +160,8 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         self.assertEqual(BASELINE['historicalRepositoryCodeSha256'], hashlib.sha256(normalized.encode()).hexdigest())
         for path, expected in BASELINE['frozenTestSources'].items():
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
+                continue
+            if path in m6_phase_c_authorized_changes():
                 continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
