@@ -89,6 +89,34 @@ def m6_phase_c_added_paths():
     return set(inventory()['additiveFiles'])
 
 
+def m6_phase_c_frozen_start_inventory():
+    """Derive the frozen 2d2c22a 287-path starting inventory from pinned data, never a git object.
+
+    The frozen tree equals the immutable Phase B 278-file starting inventory UNION the nine
+    literal Phase B additions. That union was proven byte-for-byte identical to
+    `git ls-tree -r --name-only 2d2c22a` (287 paths, zero difference), so this content-addressed
+    derivation stands in for the live git call and works in a shallow CI checkout where the
+    frozen object is absent. The nine Phase B additions are the exact ADDED set the Phase B gate
+    itself admits: the three pure wall/ production files, its two wall/ test files, the Phase B
+    provenance helper and boundary gate, the Phase B baseline and the Phase B report.
+    """
+    phase_b = json.loads((ROOT / '.github/scripts/m6-phase-b-baseline.json').read_text(encoding='utf-8'))
+    wall_production = JAVA + 'wall/'
+    wall_test = 'app/src/test/java/com/scenevibe/tvcompanionpoc/wall/'
+    phase_b_additions = {
+        wall_production + 'WallEvent.java',
+        wall_production + 'WallCalendar.java',
+        wall_production + 'WallCalendarScheduler.java',
+        wall_test + 'M6WallContract.java',
+        wall_test + 'M6WallCoreTest.java',
+        'tests/m6_phase_b_provenance.py',
+        'tests/test_m6_phase_b_boundary.py',
+        '.github/scripts/m6-phase-b-baseline.json',
+        'docs/m6-phase-b-wall-models-scheduler-report.md',
+    }
+    return set(phase_b['startingBlobs']) | phase_b_additions
+
+
 def m6_phase_c_production_files():
     """Return only the newly added Phase C production Java paths, never a package wildcard."""
     return set(PRODUCTION_ADDED)
