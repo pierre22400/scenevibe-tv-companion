@@ -15,7 +15,7 @@ also checks the actual service composition; inherited tests retain their old ass
 """
 
 ROOT = Path(__file__).resolve().parents[1]
-HELPER_BLOB = '25d3e4c83d5cbf390ae60943ab63135e7ce266fd'
+HELPER_BLOB = '7913dabfea315b6ead346b11d4f77ebfd8359fd1'
 
 
 class M6PhaseEAssemblyBoundaryTest(unittest.TestCase):
