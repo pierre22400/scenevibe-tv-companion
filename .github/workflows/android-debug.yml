@@ -46,8 +46,23 @@ jobs:
         run: python3 -m unittest discover -s tests
       - name: Build and lint debug APK (Cloud not configured)
         run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
+      - name: Compile and test named M6 package assembly (software only)
+        env:
+          SCENEVIBE_M6_QUALIFICATION: m6-qualification
+          SCENEVIBE_CLOUD_ORIGIN: https://qualification.invalid
+          SCENEVIBE_ENABLE_LAN_DEV: "false"
+        run: gradle :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
       - name: Verify Phase A/B/C/D/E/F/G executed test counts and frozen fixtures
         run: python3 .github/scripts/m4-phase-a-test-summary.py
+      - name: Export actual Phase E JVM peer classpath
+        run: gradle -I .github/scripts/m6-phase-e-peer.init.gradle :app:m6PackagePeerArtifact --stacktrace
+      - name: Preserve cross-repository Phase E HTTP peer
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-m6-phase-e-http-peer
+          path: app/build/reports/m6-phase-e-peer
+          if-no-files-found: error
+          retention-days: 30
       - name: Preserve actual executed JVM XML and the M6 interop golden
         if: always()
         uses: actions/upload-artifact@v4

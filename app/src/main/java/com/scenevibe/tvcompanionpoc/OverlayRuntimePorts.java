@@ -44,6 +44,8 @@ final class OverlayRuntimePorts
     // ---- Video-only entry points: latch VIDEO and delegate ------------------------------
 
     @Override public boolean retireLegacyVisualOwner() {
+        if (!isOwnerThread()) return false;
+        banner.abortActivation();
         arming = Kind.VIDEO;
         return video.retireLegacyVisualOwner();
     }
@@ -60,6 +62,8 @@ final class OverlayRuntimePorts
     // ---- Banner-only entry points: latch BANNER and delegate ----------------------------
 
     @Override public boolean retireVideoVisualOwner() {
+        if (!isOwnerThread()) return false;
+        video.abortActivation();
         arming = Kind.BANNER;
         return banner.retireVideoVisualOwner();
     }

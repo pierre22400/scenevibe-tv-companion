@@ -10,6 +10,16 @@ if (cloudOrigin && !(cloudOrigin ==~ /https:\/\/[^\/:?#]+/)) {
 def enableLanDev = providers.environmentVariable("SCENEVIBE_ENABLE_LAN_DEV").orElse("false").get()
 def enableLanDevLiteral = enableLanDev.equalsIgnoreCase("true") ? "true" : "false"
 
+// A named qualification build is opt-in and must never share the LAN writer.
+def m6Qualification = providers.environmentVariable("SCENEVIBE_M6_QUALIFICATION").orElse("").get()
+if (m6Qualification && m6Qualification != "m6-qualification") {
+    throw new GradleException("SCENEVIBE_M6_QUALIFICATION must be exactly m6-qualification")
+}
+def m6QualificationLiteral = m6Qualification == "m6-qualification" ? "true" : "false"
+if (m6Qualification && (!cloudOrigin || enableLanDevLiteral == "true")) {
+    throw new GradleException("M6 qualification requires an explicit Cloud origin and LAN DEV disabled")
+}
+
 android {
     buildFeatures { buildConfig true }
     namespace "com.scenevibe.tvcompanionpoc"
@@ -23,6 +33,7 @@ android {
         versionName "0.8.2-tv-release-hardening"
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
+        buildConfigField "boolean", "M6_QUALIFICATION", "${m6QualificationLiteral}"
     }
 
     buildTypes {

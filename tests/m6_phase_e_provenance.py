@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from m6_phase_e_assembly_provenance import m6_assembly_added_paths, m6_assembly_retained_bytes
 
 """Retain the exact M6 D software while admitting only the finite E blocked report.
 
@@ -40,7 +41,7 @@ def inventory():
 
 def m6_phase_e_added_paths():
     """Return four literal documentary/provenance additions, never a namespace admission."""
-    return set(ADDED)
+    return set(ADDED) | m6_assembly_added_paths()
 
 
 def restore_blob(relative, content):
@@ -67,4 +68,4 @@ def restore_blob(relative, content):
 def m6_phase_e_retained_bytes(path):
     """Read current bytes and remove only the closed E documentary/provenance overlay."""
     path = Path(path)
-    return restore_blob(str(path.relative_to(ROOT)), path.read_bytes())
+    return restore_blob(str(path.relative_to(ROOT)), m6_assembly_retained_bytes(path))

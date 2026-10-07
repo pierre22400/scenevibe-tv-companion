@@ -75,7 +75,7 @@ final class CloudControlClient {
         },()->Looper.myLooper()==Looper.getMainLooper());
         this.installationId=new InstallationIdentity(context).installationId();
         this.origin=BuildConfig.CLOUD_ORIGIN;
-        this.transportMode=TransportMode.VIDEO_V1;
+        this.transportMode=BuildConfig.M6_QUALIFICATION?TransportMode.PACKAGE_V1:TransportMode.VIDEO_V1;
     }
 
     /** Android-free local seam drives the actual client without starting network polling. */

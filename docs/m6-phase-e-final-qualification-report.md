@@ -1,3 +1,45 @@
+# M6 Phase E — real initial parity and final software assembly
+
+**INITIAL PARITY: PASS, blocker cleared by real operator evidence.** Phase E software and Sony verdicts are recorded on the final immutable pair in the PR attestation after its exact-head gates. No overall Phase E PASS is implied by initial parity.
+
+The operator used Cloud `a2f1dfde55ddb17cc795963fe0fffc54112effee`, tree `5f28b12b837abe00b852000d48fb84ad281e238f`, isolated Neon `m6-qualification`, Sony `a5e45f36-95af-41ab-841b-da596482436d`. These observations are supplied by the operator; WORK did not independently query the real Sony rows.
+
+| Actual operation | Verdict | Writes | Reviewed evidence digest |
+| --- | --- | --- | --- |
+| Prepared Video inspect | eligible-to-seal; transactionReadOnly=true | 0 | `547564ef30a56379ac24809938e8cba3f6631ae76852db6ff552b80a81ceedd4` |
+| Existing prepared publication seal | sealed; transactionReadOnly=false | 1 | same prepared digest |
+| New strict post-seal ACK inspect | eligible | 0 | `6213edbc17c5687da7ec32b9f66116e023920827d38f9ebf9080489f3730f97e` |
+| Historical OS ACK reconciliation | reconciled | 1 | same post-seal digest |
+| Final read-only strict inspect | already-parity | 0 | same post-seal digest |
+
+Publication `692b49d9-73b9-4b03-95d4-911f57b6521e`, revision `15`, assigned_at `2026-10-05 10:36:03.103+00`, legacy acknowledged_at `2026-10-05 10:36:16.059+00` remain exact. Actual seal time is `2026-10-07 20:26:26.36194+00`; storage codec digest is `891bcea1b0d9059b8d48454bc6dd6f7623d7c6d33cbd4c5b0b6286329a21125f`. The final validator checks active owner/TV, binding, timestamps, source/adapter, byte-exact deterministic READY package and all mirrored historical ACK fields before returning already-parity. The unchanged ACK evidence digest is correct: the digest excludes the OS ACK fields it reconciles, permitting a zero-write no-op on the same reviewed history.
+
+No new Send, ACK, publication, revision, credential, pairing, identity, FinalTrack or binding was created. The two authorized writes are complete and **must not be repeated**. Historical ACK parity does not prove PACKAGE_V1 delivery or physical Sony behavior. Exact attribution of the historical ACK request remains unproven; it is not a requirement for the strictly observed final parity.
+
+The complete sanitized operator sequence is retained in Cloud `docs/m6-phase-e-real-qualification-state.json`.
+
+## Final runtime assembly
+
+The named TV build `SCENEVIBE_M6_QUALIFICATION=m6-qualification` requires an explicit HTTPS origin and LAN DEV off. It selects PACKAGE_V1 on the existing Cloud client, the composite Video/Banner runtime ports, one store and one installer. The installer is created after the WALL driver and common ports exist. Only that qualification descriptor advertises executable WALL; `TvCapabilities.current()` remains false. The actual common ports now explicitly invalidate the opposing activation during Video/Banner replacement. Historical MEDIA models/scheduler, WALL models/scheduler, permissions and signing inputs remain unchanged.
+
+The Cloud runtime opt-in requires the exact mode `package-v1`, scope `m6-qualification`, platform `VERCEL_ENV=preview`, the reviewed M6 branch and its existing branch-scoped DATABASE_URL. Every assignment writer route uses the same runtime selector, including historical Video Send/ACK/status and generic package Send/GET/ACK. No missing/malformed/partial variable activates M6; production keeps the unchanged SHADOW factory. Production-grade pepper, HTTPS-origin, disabled unsafe-principal and pool TLS checks remain required. The qualification pool has no migration or automatic bootstrap.
+
+Read-only Vercel metadata confirms DATABASE_URL entry `LFj7DYrs6ABojHsJ` is scoped only to the M6 Preview branch, created/updated `1791386551113`. The seven observed branch deployments after that override all derive from M6-aware source. Older deployments retain their own immutable environment snapshots. The operator's isolated Neon branch assertion is accepted; metadata alone does not map a hidden endpoint to a Neon branch. No database secret was retrieved or changed.
+
+## Software gates and remaining proof
+
+The automatic gates retain the complete provenance chain E assembly → historical E preflight → D → C → B → M5 → M4. A new finite assembly inventory carries exact before/after whole-file inverses and independent pins; no historical JSON baseline is rewritten. Current behavior is exercised by new common-port/upgrade tests, and the historical assertions operate on exactly reconstructed older bytes.
+
+The TV HTTP peer exports the actual executed JVM classpath. It can run the real client/adapter/installer/common ports against real Cloud HTTP handlers and disposable PostgreSQL for Video N → Banner N+1 → Video N+2, with proof generated from durable readback after ARM. Its loopback bridge establishes HTTP byte/authority behavior; it does not assert Android TLS, real Sony lifecycle or visible rendering. The final cross-repository gate must consume this actual peer artifact, never replace the final server with a fixture.
+
+Software PASS requires complete exact-head Cloud contracts/typecheck/build, TV provenance/JVM/lint/native API31/API35/MEDIA differential/API35 smoke, the actual cross-repository HTTP proof and usable deployed qualification HTTPS. APK production is deferred until these are all PASS. The final PR attestation records actual run/job/artifact IDs, counts, pair HEAD/tree and any remaining blocker; green earlier HEADs cannot substitute.
+
+Production stays SHADOW. PR #28/#16 stay OPEN/DRAFT/unmerged. WORK has performed no real Sony database write or M6 Send. Sony observations, upgrade and physical A→J remain NOT EXECUTED.
+
+---
+
+## Historical preflight reports — superseded state, retained for audit
+
 # M6 Phase E — final qualification report
 
 Date: 2026-10-07. Verdict: **M6 PHASE E: BLOCKED**.

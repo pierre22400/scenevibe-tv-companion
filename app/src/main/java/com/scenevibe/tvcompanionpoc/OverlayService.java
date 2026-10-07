@@ -188,8 +188,6 @@ public final class OverlayService extends Service {
                 installationStore = new InstallationStore(new AndroidInstallationBackend(this));
                 // Common Video+Banner composition replaces the exclusively-Video registry so the
                 // installer can restore/arm either kind through the single durable path.
-                packageInstaller = new PackageInstaller(installationStore,
-                        OverlayInstallationHandlers.registry(), TvCapabilities.current());
                 videoRuntimePorts = new LiveVideoRuntimePorts(
                         () -> Looper.myLooper() == Looper.getMainLooper(),
                         () -> trackScheduler, () -> sceneController,
@@ -243,6 +241,11 @@ public final class OverlayService extends Service {
                         new AndroidWallWaitScheduler(), wallScheduler, bannerRuntimePorts,
                         new DiagnosticsStoreWallSink());
                 wallSignalReceiver = new AndroidWallSignalReceiver(wallClockDriver);
+                // Advertise the named qualification descriptor only after every local runtime
+                // dependency exists; the same installer/store then serves restore and polling.
+                packageInstaller = new PackageInstaller(installationStore,
+                        OverlayInstallationHandlers.registry(), BuildConfig.M6_QUALIFICATION
+                                ? TvCapabilities.packageQualification() : TvCapabilities.current());
                 // Complete durable restoration on main before either probe events or Cloud polling.
                 // Only the installer's same-revision path resolves/validates the durable handler.
                 // The composite ports route a Video durable to the Video core and a Banner durable
@@ -303,7 +306,9 @@ public final class OverlayService extends Service {
                 // field: a reset client's io executor is shut down and cannot be reused, so the
                 // only correct way to re-arm the cloud is a brand-new CloudControlClient here.
                 cloudClient = new CloudControlClient(this, installationStore, packageInstaller,
-                        videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient);
+                        BuildConfig.M6_QUALIFICATION ? overlayRuntimePorts : videoRuntimePorts,
+                        BuildConfig.M6_QUALIFICATION ? overlayRuntimePorts::abortActivation
+                                : videoRuntimePorts::abortActivation, () -> cloudClient);
                 cloudClient.start();
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();

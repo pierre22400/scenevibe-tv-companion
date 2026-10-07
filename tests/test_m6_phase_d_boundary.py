@@ -51,7 +51,7 @@ class M6PhaseDBoundaryTest(unittest.TestCase):
             retained = provenance.m6_phase_d_retained_bytes(ROOT / relative)
             self.assertEqual(digest, provenance.blob_hash(retained), relative)
         for relative, admission in data['admissions'].items():
-            actual = (ROOT / relative).read_bytes()
+            actual = m6_phase_e_retained_bytes(ROOT / relative)
             self.assertEqual(admission['afterSha'], provenance.blob_hash(actual), relative)
             self.assertEqual(data['startingBlobs'][relative], admission['beforeSha'], relative)
             self.assertEqual(provenance.restore_blob(relative, actual), provenance.restore_blob(relative, retained := provenance.restore_blob(relative, actual)))
@@ -70,7 +70,7 @@ class M6PhaseDBoundaryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='m6d-pins-') as temporary:
             path = Path(temporary) / 'inventory.json'
             for relative in data['admissions']:
-                actual = (ROOT / relative).read_bytes()
+                actual = m6_phase_e_retained_bytes(ROOT / relative)
                 for mutant in (actual + b' ', actual[:-1], b'unknown\n' + actual):
                     with self.assertRaises(ValueError):
                         provenance.restore_blob(relative, mutant)
@@ -109,7 +109,7 @@ class M6PhaseDBoundaryTest(unittest.TestCase):
         summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text(encoding='utf-8')
         for token in ("expected.update(m6_phase_d['m6PhaseDSuites'])", 'if suites != expected:', "baseline['allowedOptInSkips']"):
             self.assertIn(token, summary)
-        capabilities = (ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java').read_text(encoding='utf-8')
+        capabilities = m6_phase_e_retained_bytes(ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilities.java').decode('utf-8')
         self.assertIn('supportsWallClockExecution() {return false;}', capabilities)
 
     def test_changed_python_has_teaching_banners_and_every_function_docstring(self):

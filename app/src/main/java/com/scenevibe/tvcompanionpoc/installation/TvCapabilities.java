@@ -27,12 +27,19 @@ public final class TvCapabilities {
     public static final String OVERLAY_CONTRACT="scenevibe.overlay-manifest.v1";
     public static final String LEGACY_CONTRACT="scenevibe.track.v1";
     private static final TvCapabilities CURRENT=new TvCapabilities();
+    private static final TvCapabilities PACKAGE_QUALIFICATION=new TvCapabilities(true);
+    private final boolean wallExecutable;
     private final SortedSet<String> codecs,renderingContracts;
     private final Set<ExecutionRequirements.ClockMode> clocks;
     private final Set<ExecutionRequirements.PauseBehavior> pauses;
 
     /** Pin the current APK truth with sorted immutable identifiers and closed enums. */
     private TvCapabilities() {
+        this(false);
+    }
+    /** Describe WALL only for the separately assembled PACKAGE_V1 qualification runtime. */
+    private TvCapabilities(boolean wallExecutable) {
+        this.wallExecutable=wallExecutable;
         codecs=Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(CODEC_TRACK_OVERLAY,CODEC_TRACK,CODEC_BANNER_WALL_OVERLAY)));
         renderingContracts=Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(OVERLAY_CONTRACT,LEGACY_CONTRACT)));
         // MEDIA remains the only clock the existing Video paths execute. WALL is additionally
@@ -44,6 +51,8 @@ public final class TvCapabilities {
     }
     /** Return the same deterministic build-local descriptor without consulting device or network state. */
     public static TvCapabilities current() {return CURRENT;}
+    /** Return the explicit descriptor after the common owner/driver/transport assembly is complete. */
+    public static TvCapabilities packageQualification() {return PACKAGE_QUALIFICATION;}
     /** Return recognized inert installation-shape ids; this is not a generic-handler availability claim. */
     public SortedSet<String> supportedCodecs() {return codecs;}
     /** Return rendering contracts implemented by existing compatibility paths. */
@@ -53,7 +62,7 @@ public final class TvCapabilities {
     /** Return the union of pause behaviors; supports() checks their contract-specific combinations. */
     public Set<ExecutionRequirements.PauseBehavior> supportedPauseBehaviors() {return pauses;}
     /** No executable wall-clock handler exists in the qualified APK. */
-    public boolean supportsWallClockExecution() {return false;}
+    public boolean supportsWallClockExecution() {return wallExecutable;}
     /** Renderer-local references never imply an asset downloader. */
     public boolean supportsRemoteAssetAcquisition() {return false;}
     /** The deferred asset cache is not advertised or constructed. */

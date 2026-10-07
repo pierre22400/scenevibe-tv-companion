@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import m6_phase_e_provenance as provenance
+from m6_phase_e_assembly_provenance import m6_assembly_added_paths, m6_assembly_retained_bytes
 
 """Qualify the finite E blocked-report overlay without claiming any Phase E software PASS.
 
@@ -31,7 +32,7 @@ class M6PhaseEBoundaryTest(unittest.TestCase):
                                 cwd=ROOT, capture_output=True, timeout=10, check=True)
         actual = {name for name in result.stdout.decode('utf-8').splitlines()
                   if '__pycache__' not in Path(name).parts}
-        self.assertEqual(set(data['startingBlobs']) | provenance.ADDED, actual)
+        self.assertEqual(set(data['startingBlobs']) | provenance.ADDED | m6_assembly_added_paths(), actual)
         self.assertEqual(325, len(data['startingBlobs']))
         for relative in set(data['admissions']) | provenance.ADDED:
             self.assertNotIn('*', relative)
@@ -52,7 +53,7 @@ class M6PhaseEBoundaryTest(unittest.TestCase):
         self.assertEqual(provenance.ADDED - {'.github/scripts/m6-phase-e-baseline.json'}, set(pins))
         self.assertEqual(HELPER_BLOB, pins['tests/m6_phase_e_provenance.py'])
         for relative, digest in pins.items():
-            self.assertEqual(digest, provenance.blob_hash((ROOT / relative).read_bytes()), relative)
+            self.assertEqual(digest, provenance.blob_hash(m6_assembly_retained_bytes(ROOT / relative)), relative)
 
     def test_unknown_mutations_retargeting_and_broken_inverse_are_rejected(self):
         """No baseline-only edit or arbitrary source/inverse mutation can admit other current bytes."""
