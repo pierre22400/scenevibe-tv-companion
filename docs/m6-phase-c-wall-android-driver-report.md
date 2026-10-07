@@ -127,18 +127,125 @@ content/token/credential/eventId/URL/payload: `NONE`, `WALL_CALENDAR_LOADED`,
 
 ### Android Gradle gate (CI-only this session)
 
-No Android SDK is available in this session (`ANDROID_HOME`/`ANDROID_SDK_ROOT` empty, no
-`sdkmanager`), so the full `:app:testDebugUnitTest` / `:app:lintDebug` / `:app:assembleDebug`
-were NOT run here and no post-Phase-C Android count is fabricated. The inherited CI figure is
-1119 total / 1118 PASS / 1 historical SKIP
-(`M1CloudInteropTest.originalColumboProjectionIsInstallable`) / 0 FAIL. WALL now adds its JVM
-suites (`M6BannerOwnerTest` 15, `M6WallDriverTest` 25, `M6BannerHandlerTest` 23), so the final
-CI `:app:testDebugUnitTest` total will exceed 1119; the exact post-Phase-C Android total is a
-CI gate and is deliberately not asserted here.
+No Android SDK is available in this authoring session (`ANDROID_HOME`/`ANDROID_SDK_ROOT`
+empty, no `sdkmanager`), so the full `:app:testDebugUnitTest` / `:app:lintDebug` /
+`:app:assembleDebug` were NOT run on the host and no post-Phase-C Android count was
+fabricated locally. The authoritative Android gate runs in CI. On the final HEAD
+`f2dacd8` that gate converged: `:app:testDebugUnitTest` reports
+`JVM: PASS=1181 FAIL=0 SKIP=1 TOTAL=1182` (sole skip
+`M1CloudInteropTest.originalColumboProjectionIsInstallable`), which includes the three new
+WALL JVM suites (`M6BannerOwnerTest` 15, `M6WallDriverTest` 25, `M6BannerHandlerTest` 23 =
+63 cases). The confirmed final numbers are recorded in the "Final CI closure" section below.
+
+## Final CI closure — 4/4 workflows SUCCESS
+
+This section records the confirmed closure of M6 Phase C after the CI gate converged.
+
+### Final qualified state
+
+- Final HEAD: `f2dacd8a75ba9897fb71082fcbc70a429c1acc72`.
+- Final tree: `b6515a9329dd7f91bb27cf6c92e5ba5fb57fc872`.
+- Branch: `work/scenevibe-os-m6-banner-wall-architecture-001`.
+- Starting qualified Phase B HEAD: `2d2c22ac2926531ce728575ab7b87a4b5a66fd99`,
+  startingTree `6c84cabcadfe4ea8ab2338276ae6806e03f938d0`.
+
+### Phase C commit lineage on the branch
+
+`95f83cf` (prior Phase C completion) → `eb8dba0` (round-1 shallow-checkout gate fix)
+→ `194175f` (round-2 `TvCapabilitiesTest` adaptation) → `f2dacd8` (round-3 summary-count fix).
+
+### Three successive CI failures and their exact fixes
+
+1. **`95f83cf` failed — shallow-checkout gate.** `tests/test_m6_phase_c_boundary.py`
+   called live git against the frozen commit (`git rev-parse FROZEN^{tree}`,
+   `git ls-tree -r FROZEN`, `git show FROZEN:path`), which is absent in GitHub Actions'
+   shallow checkout → `exit 128` → the gate ERRORed and the negative control saw
+   `errors=1` instead of a clean `failures=6` → FAILED(failures=1, errors=4).
+   **Fix (`eb8dba0`):** replaced the four live git-object calls with content-addressed
+   checks — the pinned `startingTree` literal; the frozen 287-path start derived from
+   Phase B `startingBlobs` (278) ∪ the 9 literal Phase B additions; the production inverse
+   proving `blob_hash(restored) == beforeSha`; and `AndroidManifest` byte-identity against
+   a new `frozenUnchangedBlobs` pin. Equal-or-stronger proof, shallow-safe.
+2. **`eb8dba0` failed — frozen `TvCapabilitiesTest` conflict.** `:app:testDebugUnitTest`
+   ran the frozen inherited JVM test `TvCapabilitiesTest`, which asserted the pre-Phase-C
+   Video-only descriptor (`supportedCodecs() == 2`, `supportedClocks() == singleton(MEDIA)`,
+   every codec rejects WALL), but Phase C's `TvCapabilities` legitimately advertises the
+   Banner WALL codec (`supportedCodecs() == 3`, `supportedClocks() == {MEDIA, WALL}`, the
+   Banner codec accepts WALL). 1182 tests, 2 failed.
+   **Fix (`194175f`):** resolution (B) — adapted `TvCapabilitiesTest` to the new
+   3-codec / `{MEDIA, WALL}` contract while still asserting `supportsWallClockExecution() == false`
+   and that NO Video codec accepts WALL (WALL confined to the Banner codec). Admitted as a
+   new `inherited-jvm-test` admission with before/after sha and an exact whole-file inverse
+   back to the frozen byte; `TvCapabilities.java` production byte stays UNCHANGED.
+   Resolution (A) was impossible because `InstallationHandlerRegistry` throws if a bound
+   handler's codec is not in `supportedCodecs()`, so the Banner codec must be advertised.
+3. **`194175f` failed — Phase C suite count omitted.** The step "Verify Phase A/B/C/D/E/F/G
+   executed test counts and frozen fixtures" running `.github/scripts/m4-phase-a-test-summary.py`
+   merged per-phase executed-count baselines only through M6 Phase B and never loaded
+   `m6-phase-c-baseline.json`'s `m6PhaseCSuites`, so the 3 new Phase C WALL suites
+   (63 cases) were in the executed map but not in expected → `suites != expected` → muted
+   `ValueError`.
+   **Fix (`f2dacd8`):** extended the script to load `m6-phase-c-baseline.json` and merge
+   `m6PhaseCSuites` into expected (and `m6PhaseCCases` into the summary); admitted the
+   script as a new `inherited-gate` admission (beforeSha = frozen byte, afterSha, exact
+   4-hunk whole-file inverse), added it to `m6_phase_c_provenance.INHERITED_GATES`, and
+   updated the `tests/m6_phase_c_provenance.py` `addedBlobs` pin. No baseline was rewritten.
+
+### Final CI result on `f2dacd8` — all four workflows SUCCESS
+
+1. **Android debug APK:** SUCCESS. Every step green: Check POC boundary, Build and lint
+   debug APK, Verify Phase A/B/C/D/E/F/G executed test counts and frozen fixtures, Upload
+   test summary, Build LAN DEV APK, Build Cloud qualification APK, upload-artifact, sign
+   Cloud qualification APK (APK build + signing complete).
+2. **Android 15 (API 35) platform smoke** (NOT Android TV): SUCCESS.
+3. **Android M5 media scheduler differential:** SUCCESS.
+4. **Android installation disk and process durability:** SUCCESS.
+
+### JVM result (artifact of the final HEAD)
+
+`JVM: PASS=1181 FAIL=0 SKIP=1 TOTAL=1182`. The sole skip is
+`M1CloudInteropTest.originalColumboProjectionIsInstallable` (allowed historical skip).
+
+Executed buckets: Retained baseline 179; Phase A 30; Phase B 39; Phase C(M4) 43;
+Phase D 83; Phase E 115; Phase F 138; Phase G 131; Sony corrective 19; plus the M5/M6
+suites including the 3 M6 Phase C WALL suites
+(`M6BannerOwnerTest` 15 + `M6WallDriverTest` 25 + `M6BannerHandlerTest` 23 = 63).
+
+### Python provenance / boundary suite
+
+`cd tests && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p "test_*.py"`
+runs **158 OK** (0 FAIL / 0 ERROR / 0 SKIP), verified both on a full clone and on a shallow
+clone where the frozen object `2d2c22ac…` is absent (content-addressed checks, no live git
+object required).
+
+### Provenance NOT weakened
+
+- No historical baseline was rewritten: `m6-phase-b-baseline.json` canonical
+  `startingBlobs` sha256 `13e36b17…` is intact; the M4 and M5 baselines are untouched.
+- Every Phase C `production`, `inherited-gate` and `inherited-jvm-test` admission reverses
+  through its own exact whole-file inverse to the exact pre-Phase-C / frozen byte
+  (before/after shas recorded; `restore_blob` re-verifies `blob_hash(previous) == beforeSha`
+  and raises `ValueError` otherwise).
+- Unknown-blob mutations are rejected (`ValueError`); there is no wildcard or namespace
+  admission; no test is deleted; no new skip is introduced.
+- The provenance chain M6 C → M6 B → reconciliation → M5 Sony → M5 D/C/B → M4 remains
+  demonstrable.
+
+### Invariants preserved
+
+- Lint/build: debug APK built and lint passed in CI; LAN DEV and Cloud qualification APKs
+  built and the Cloud qualification APK signed.
+- Media scheduler differential: SUCCESS. Installation disk/process durability: SUCCESS.
+  Android 15 (API 35) platform smoke: SUCCESS.
+- `MediaCalendarScheduler.java` and the pure `wall/{WallEvent,WallCalendar,WallCalendarScheduler}.java`
+  remain byte-unchanged; `TvCapabilities.java` production byte is unchanged and
+  `supportsWallClockExecution()` still advertises `false`; no new Android permission added.
+- Semantic review: v2 APPROVED (the round-1 shallow fix was v1 APPROVED).
+- No Cloud Banner, no Sony physical qualification; production remains SHADOW.
 
 ## Phase C stop condition
 
 - PR #16 remains OPEN / DRAFT / unmerged.
 - Production remains SHADOW.
 - No Phase D work has started; no Cloud Banner cutover; no Sony physical qualification.
-- Authorized verdict: `M6 PHASE C: PASS` / `READY FOR M6 PHASE D` (pending the CI Android gate).
+- Authorized verdict: `M6 PHASE C: PASS` / `READY FOR M6 PHASE D`.
