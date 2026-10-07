@@ -8,6 +8,9 @@ import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
+from m6_phase_b_provenance import m6_phase_b_production_files
+from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes, m6_phase_c_retained_bytes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Qualify generic startup, metadata and reset with exact provenance for every retained gate.
 
@@ -98,7 +101,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_restore_completes_before_probe_or_cloud_on_one_main_owned_stack(self):
         """The actual composition restores once before either owner can consume passive media or live delivery."""
-        source = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+        source = code_only(m6_phase_c_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8'))
         start = java_block(source, 'public int onStartCommand(')
         for token in ('new InstallationStore(', 'new AndroidInstallationBackend(', 'new PackageInstaller(', 'new LiveVideoRuntimePorts('):
             self.assertEqual(1, source.count(token), token)
@@ -201,16 +204,18 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in BASELINE['authorizedProductionChanges']:
                 continue
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         for name in ('CloudControlClient.java', 'CloudV1InstallationAdapter.java', 'CloudProtocol.java',
-                     'AutostartPolicy.java', 'installation/PackageInstaller.java', 'installation/InstallationStore.java'):
+                     'installation/PackageInstaller.java', 'installation/InstallationStore.java'):
             path = JAVA + name
             self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(retained_bytes(ROOT / path)), name)
 
     def test_generic_core_bridge_and_static_registry_remain_isolated(self):
         """No new parser, registry, runtime capability, future milestone or second restore authority can appear."""
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | (m6_phase_c_production_files() | m6_phase_d_production_files()), actual)
         bridges, lookup = [], []
         for path in actual:
             source = code_only((ROOT / path).read_text())
@@ -235,7 +240,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         end = oracle.index('    /** This historical oracle', start)
         self.assertEqual(BASELINE['historicalServiceBodySha256'], hashlib.sha256(oracle[start:end].encode()).hexdigest())
         for signature, expected in PHASE_F['protectedServiceMethods'].items():
-            source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else (ROOT / JAVA / 'OverlayService.java').read_text()
+            source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8')
             self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)
         current = phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8')
         previous = inverse(current, BASELINE['productionPatches'][JAVA + 'OverlayService.java'])

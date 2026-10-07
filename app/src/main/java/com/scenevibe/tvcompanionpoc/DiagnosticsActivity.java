@@ -174,6 +174,12 @@ public final class DiagnosticsActivity extends Activity {
         line(sb, "Last cloud error", d.lastCloudErrorCode.name());
         line(sb, "Last manifest outcome", d.lastManifestCode.name());
         line(sb, "Last scene outcome", d.lastSceneCode.name());
+        line(sb, "Last WALL outcome", d.lastWallCode.name());
+        line(sb, "WALL clock kind", d.wallClockKind == null ? "-" : d.wallClockKind);
+        line(sb, "WALL generation", String.valueOf(d.wallGeneration));
+        line(sb, "WALL window count", String.valueOf(d.wallWindowCount));
+        line(sb, "WALL anchored", d.wallAnchored ? "yes" : "no");
+        line(sb, "WALL wait armed", d.wallWaitArmed ? "yes" : "no");
         return sb.toString().trim();
     }
 

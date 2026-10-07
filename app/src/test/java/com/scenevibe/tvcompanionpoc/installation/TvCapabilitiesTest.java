@@ -6,9 +6,15 @@ import java.util.Collections;
 import static org.junit.Assert.*;
 
 /**
- * Locks executable local truth independently of parser acceptance. Wall, asset acquisition
- * and shared asset cache remain unsupported; pause semantics are checked per rendering
- * contract, so the legacy countdown does not become a native wall-clock feature.
+ * Locks executable local truth independently of parser acceptance. The descriptor now also
+ * advertises the local Banner WALL installation shape (M6 Phase C, architecture section 8):
+ * the static registry is codec-gated on {@link TvCapabilities#supportedCodecs()}, so the
+ * Banner handler can only be bound once its codec is advertised. WALL is therefore recognized
+ * as the Banner installation shape only. The real non-regression invariants stay exact: asset
+ * acquisition and shared asset cache remain unsupported, {@code supportsWallClockExecution()}
+ * stays false (no live WALL execution is flipped on), and NO Video codec ever accepts a WALL
+ * requirement: WALL is confined to the Banner codec, so the legacy countdown and the native
+ * overlay never become native wall-clock features. Pause semantics stay checked per contract.
  */
 public final class TvCapabilitiesTest {
     /** Build pure needs without invoking a compatibility parser. */
@@ -19,21 +25,27 @@ public final class TvCapabilitiesTest {
     /** The same immutable descriptor is returned with deterministically ordered identifiers. */
     @Test public void canonicalDescriptorIsDeterministicAndCollectionsImmutable() {
         TvCapabilities caps=TvCapabilities.current();assertSame(caps,TvCapabilities.current());
-        assertEquals(Arrays.asList(TvCapabilities.CODEC_TRACK_OVERLAY,TvCapabilities.CODEC_TRACK),
+        assertEquals(Arrays.asList(TvCapabilities.CODEC_BANNER_WALL_OVERLAY,TvCapabilities.CODEC_TRACK_OVERLAY,TvCapabilities.CODEC_TRACK),
                 new java.util.ArrayList<>(caps.supportedCodecs()));
         assertThrows(UnsupportedOperationException.class,()->caps.supportedCodecs().clear());
         assertThrows(UnsupportedOperationException.class,()->caps.supportedRenderingContracts().clear());
         assertThrows(UnsupportedOperationException.class,()->caps.supportedClocks().clear());
         assertThrows(UnsupportedOperationException.class,()->caps.supportedPauseBehaviors().clear());
     }
-    /** Only the media clock is advertised or supported by native requirements. */
-    @Test public void mediaClockSupportedAndWallClockExplicitlyRejected() {
-        TvCapabilities caps=TvCapabilities.current();assertEquals(Collections.singleton(ExecutionRequirements.ClockMode.MEDIA),caps.supportedClocks());
+    /** Media drives the Video codecs; WALL is advertised only as the Banner installation shape and no Video codec accepts it. */
+    @Test public void mediaClockSupportedAndWallClockConfinedToBannerShape() {
+        TvCapabilities caps=TvCapabilities.current();
+        assertEquals(new java.util.HashSet<>(Arrays.asList(ExecutionRequirements.ClockMode.MEDIA,ExecutionRequirements.ClockMode.WALL)),new java.util.HashSet<>(caps.supportedClocks()));
         assertTrue(caps.supports(TvCapabilities.CODEC_TRACK_OVERLAY,needs(TvCapabilities.OVERLAY_CONTRACT,ExecutionRequirements.ClockMode.MEDIA,ExecutionRequirements.PauseBehavior.FREEZE,false,false)));
+        // The capability flag stays false: advertising the Banner shape does NOT flip live WALL execution.
         assertFalse(caps.supportsWallClockExecution());
-        for (String codec:caps.supportedCodecs())
+        // No Video codec ever accepts a WALL requirement; WALL stays confined to the Banner codec.
+        for (String codec:Arrays.asList(TvCapabilities.CODEC_TRACK_OVERLAY,TvCapabilities.CODEC_TRACK))
             assertFalse(caps.supports(codec,needs(codec.equals(TvCapabilities.CODEC_TRACK)?TvCapabilities.LEGACY_CONTRACT:TvCapabilities.OVERLAY_CONTRACT,
                     ExecutionRequirements.ClockMode.WALL,ExecutionRequirements.PauseBehavior.FREEZE,false,false)));
+        // The Banner codec is the sole WALL acceptor (overlay contract + CONTINUE) and never accepts MEDIA.
+        assertTrue(caps.supports(TvCapabilities.CODEC_BANNER_WALL_OVERLAY,needs(TvCapabilities.OVERLAY_CONTRACT,ExecutionRequirements.ClockMode.WALL,ExecutionRequirements.PauseBehavior.CONTINUE,false,false)));
+        assertFalse(caps.supports(TvCapabilities.CODEC_BANNER_WALL_OVERLAY,needs(TvCapabilities.OVERLAY_CONTRACT,ExecutionRequirements.ClockMode.MEDIA,ExecutionRequirements.PauseBehavior.FREEZE,false,false)));
     }
     /** Native rendering and legacy compatibility are present without implying generic installation is wired. */
     @Test public void renderingContractsDescribeBothQualifiedPaths() {

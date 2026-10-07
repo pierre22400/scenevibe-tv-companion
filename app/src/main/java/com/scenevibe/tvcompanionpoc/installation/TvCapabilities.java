@@ -16,22 +16,43 @@ import java.util.TreeSet;
 public final class TvCapabilities {
     public static final String CODEC_TRACK_OVERLAY="scenevibe.runtime-track-overlay.v1";
     public static final String CODEC_TRACK="scenevibe.runtime-track.v1";
+    /**
+     * Reserved local TV codec for the Banner WALL overlay installation shape (section 8). It is a
+     * recognized inert installation-shape id so the common static registry can hold one Banner
+     * handler beside the two Video handlers; it is NOT a Cloud/public capability announcement and
+     * flipping {@link #supportsWallClockExecution()} is deliberately deferred to the assembled,
+     * test-covered local path, so this constant alone advertises no live WALL execution.
+     */
+    public static final String CODEC_BANNER_WALL_OVERLAY="scenevibe.banner-wall-overlay.v1";
     public static final String OVERLAY_CONTRACT="scenevibe.overlay-manifest.v1";
     public static final String LEGACY_CONTRACT="scenevibe.track.v1";
     private static final TvCapabilities CURRENT=new TvCapabilities();
+    private static final TvCapabilities PACKAGE_QUALIFICATION=new TvCapabilities(true);
+    private final boolean wallExecutable;
     private final SortedSet<String> codecs,renderingContracts;
     private final Set<ExecutionRequirements.ClockMode> clocks;
     private final Set<ExecutionRequirements.PauseBehavior> pauses;
 
     /** Pin the current APK truth with sorted immutable identifiers and closed enums. */
     private TvCapabilities() {
-        codecs=Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(CODEC_TRACK_OVERLAY,CODEC_TRACK)));
+        this(false);
+    }
+    /** Describe WALL only for the separately assembled PACKAGE_V1 qualification runtime. */
+    private TvCapabilities(boolean wallExecutable) {
+        this.wallExecutable=wallExecutable;
+        codecs=Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(CODEC_TRACK_OVERLAY,CODEC_TRACK,CODEC_BANNER_WALL_OVERLAY)));
         renderingContracts=Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(OVERLAY_CONTRACT,LEGACY_CONTRACT)));
-        clocks=Collections.unmodifiableSet(EnumSet.of(ExecutionRequirements.ClockMode.MEDIA));
+        // MEDIA remains the only clock the existing Video paths execute. WALL is additionally
+        // recognized here ONLY as the Banner installation shape the common static registry may
+        // hold; supportsWallClockExecution() stays false and the per-codec supports() gate below
+        // confines WALL to the Banner codec, so no Video path ever accepts a WALL requirement.
+        clocks=Collections.unmodifiableSet(EnumSet.of(ExecutionRequirements.ClockMode.MEDIA,ExecutionRequirements.ClockMode.WALL));
         pauses=Collections.unmodifiableSet(EnumSet.allOf(ExecutionRequirements.PauseBehavior.class));
     }
     /** Return the same deterministic build-local descriptor without consulting device or network state. */
     public static TvCapabilities current() {return CURRENT;}
+    /** Return the explicit descriptor after the common owner/driver/transport assembly is complete. */
+    public static TvCapabilities packageQualification() {return PACKAGE_QUALIFICATION;}
     /** Return recognized inert installation-shape ids; this is not a generic-handler availability claim. */
     public SortedSet<String> supportedCodecs() {return codecs;}
     /** Return rendering contracts implemented by existing compatibility paths. */
@@ -41,7 +62,7 @@ public final class TvCapabilities {
     /** Return the union of pause behaviors; supports() checks their contract-specific combinations. */
     public Set<ExecutionRequirements.PauseBehavior> supportedPauseBehaviors() {return pauses;}
     /** No executable wall-clock handler exists in the qualified APK. */
-    public boolean supportsWallClockExecution() {return false;}
+    public boolean supportsWallClockExecution() {return wallExecutable;}
     /** Renderer-local references never imply an asset downloader. */
     public boolean supportsRemoteAssetAcquisition() {return false;}
     /** The deferred asset cache is not advertised or constructed. */
@@ -79,14 +100,25 @@ public final class TvCapabilities {
                 ||requirements.requiresRemoteAssetAcquisition()||requirements.requiresSharedAssetCache()) return false;
         if (CODEC_TRACK_OVERLAY.equals(codec))
             return OVERLAY_CONTRACT.equals(requirements.renderingContract())
+                    &&requirements.clock()==ExecutionRequirements.ClockMode.MEDIA
                     &&requirements.pauseBehavior()==ExecutionRequirements.PauseBehavior.FREEZE;
-        return LEGACY_CONTRACT.equals(requirements.renderingContract())&&pauses.contains(requirements.pauseBehavior());
+        if (CODEC_BANNER_WALL_OVERLAY.equals(codec))
+            // The Banner shape renders through the overlay contract on the WALL clock with a
+            // continuing pause behavior; no Video codec accepts WALL and this codec accepts no MEDIA.
+            return OVERLAY_CONTRACT.equals(requirements.renderingContract())
+                    &&requirements.clock()==ExecutionRequirements.ClockMode.WALL
+                    &&requirements.pauseBehavior()==ExecutionRequirements.PauseBehavior.CONTINUE;
+        return CODEC_TRACK.equals(codec)
+                &&requirements.clock()==ExecutionRequirements.ClockMode.MEDIA
+                &&LEGACY_CONTRACT.equals(requirements.renderingContract())&&pauses.contains(requirements.pauseBehavior());
     }
 
     /** Pure shape/capability check; semantic parsing remains the future static handler's responsibility. */
     public InstallationStatus validate(InstallRequest request,ExecutionRequirements requirements) {
         if (request==null||requirements==null) return InstallationStatus.INVALID_PACKAGE;
         if (!supports(request.codecId(),requirements)) return InstallationStatus.UNSUPPORTED_CAPABILITY;
+        // The manifested Video codec carries two artifacts (runtime + manifest); the legacy Video
+        // codec and the single-body Banner codec each carry exactly one.
         int expectedArtifacts=CODEC_TRACK_OVERLAY.equals(request.codecId())?2:1;
         return request.artifactCount()==expectedArtifacts?InstallationStatus.VALIDATED:InstallationStatus.INVALID_PACKAGE;
     }

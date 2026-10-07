@@ -17,6 +17,8 @@ Phase E adds executed orchestration, readback, real-Video and historical-cache b
 Phase F adds actual Cloud/owner/runtime/reset compatibility execution without dropping old cases.
 Phase G adds startup/boot/metadata/reset and post-restore Cloud execution without changing prior buckets.
 The Sony corrective cycle adds its own executed bucket; native disk/process evidence is separate.
+M6 B adds only its separately inventoried pure WALL contracts; all M5 counts remain required.
+M6 C adds only its separately inventoried WALL runtime suites; all earlier counts remain required.
 """
 
 
@@ -40,6 +42,9 @@ def summarize(root):
     m5_phase_b = json.loads((root / '.github/scripts/m5-phase-b-baseline.json').read_text(encoding='utf-8'))
     m5_phase_c = json.loads((root / '.github/scripts/m5-phase-c-baseline.json').read_text(encoding='utf-8'))
     m5_phase_d = json.loads((root / '.github/scripts/m5-phase-d-baseline.json').read_text(encoding='utf-8'))
+    m6_phase_b = json.loads((root / '.github/scripts/m6-phase-b-baseline.json').read_text(encoding='utf-8'))
+    m6_phase_c = json.loads((root / '.github/scripts/m6-phase-c-baseline.json').read_text(encoding='utf-8'))
+    m6_phase_d = json.loads((root / '.github/scripts/m6-phase-d-baseline.json').read_text(encoding='utf-8'))
     counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}
     suites = {}
     skipped = []
@@ -58,7 +63,10 @@ def summarize(root):
                 skipped.append(name + '.' + case.attrib['name'])
             else:
                 counts['PASS'] += 1
-    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites'], **m5_phase_d['m5PhaseDSuites']}
+    expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites'], **m5_phase_d['m5PhaseDSuites'], **m6_phase_b['m6PhaseBSuites'], **m6_phase_c['m6PhaseCSuites']}
+    expected.update(m6_phase_d['m6PhaseDSuites'])
+    m6_phase_e_assembly = json.loads((root / '.github/scripts/m6-phase-e-assembly-baseline.json').read_text(encoding='utf-8'))
+    expected.update(m6_phase_e_assembly['m6PhaseESuites'])
     if suites != expected:
         raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
@@ -97,6 +105,9 @@ def summarize(root):
         'phaseGCorrectiveCases': sum(sony['phaseGCorrectiveSuites'].values()),
         'm5PhaseBCases': sum(m5_phase_b['m5PhaseBSuites'].values()),
         'm5PhaseDCases': sum(m5_phase_d['m5PhaseDSuites'].values()),
+        'm6PhaseBCases': sum(m6_phase_b['m6PhaseBSuites'].values()),
+        'm6PhaseCCases': sum(m6_phase_c['m6PhaseCSuites'].values()),
+        'm6PhaseDCases': sum(m6_phase_d['m6PhaseDSuites'].values()),
         'm5PhaseBFixtureSha256': m5_phase_b['fixtureSha256'],
         'm5PhaseBHashMapEnvironment': oracle_journal['environment'],
         'm5PhaseBHashMapRawFrames': raw_hashmap,

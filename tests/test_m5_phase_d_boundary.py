@@ -4,6 +4,10 @@ from pathlib import Path
 import re
 import unittest
 from m5_phase_d_provenance import blob_hash, phase_d_retained_bytes
+from m6_phase_b_provenance import m6_phase_b_added_paths
+import m6_phase_b_provenance
+from m6_phase_c_provenance import m6_phase_c_added_paths, m6_phase_c_authorized_changes, m6_phase_c_retained_bytes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files
 
 """Qualify the unique actual Video temporal owner and preserve exact C→B→M4 provenance.
 
@@ -69,9 +73,12 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
         """Unknown or ambiguous hunks cannot pass even if an older inverse would ignore them."""
         self.assertEqual(269, len(BASE['startingBlobs']))
         for path, digest in BASE['startingBlobs'].items():
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(digest, blob_hash(phase_d_retained_bytes(ROOT / path)), path)
             if path not in CHANGED:
-                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+                pure_b = m6_phase_b_provenance.restore_blob(path, m6_phase_c_retained_bytes(ROOT / path))
+                self.assertEqual(digest, blob_hash(pure_b), path)
         for path, digest in {**BASE['qualifiedCoreBlobs'], **BASE['oracleAndFixtureBlobs']}.items():
             self.assertNotIn(path, CHANGED)
             self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
@@ -82,7 +89,7 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
         for directory in ('app/src', 'tests', '.github', 'docs'):
             actual.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob('*')
                           if p.is_file() and '__pycache__' not in p.parts)
-        expected = {p for p in set(BASE['startingBlobs']) | ADDED | {'docs/m5-final-sony-physical-closure.md'} if p.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}
+        expected = {p for p in set(BASE['startingBlobs']) | ADDED | {'docs/m5-final-sony-physical-closure.md'} | {'docs/scenevibe-os-m6-banner-wall-clock-architecture.md', 'docs/m6-phase-a-architecture-report.md'} | m6_phase_b_added_paths() | (m6_phase_c_added_paths() | m6_phase_d_added_paths()) if p.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}
         self.assertEqual(expected, actual)
         self.assertFalse(any('*' in p for p in ADDED | CHANGED))
 
