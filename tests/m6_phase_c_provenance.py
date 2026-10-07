@@ -53,6 +53,7 @@ INHERITED_JVM_TESTS = frozenset({
     'app/src/test/java/com/scenevibe/tvcompanionpoc/installation/TvCapabilitiesTest.java',
 })
 INHERITED_GATES = frozenset({
+    '.github/scripts/m4-phase-a-test-summary.py',
     'tests/test_m4_phase_b_boundary.py',
     'tests/test_m4_phase_c_boundary.py',
     'tests/test_m4_phase_d_boundary.py',

@@ -25,7 +25,7 @@
     "app/src/test/java/com/scenevibe/tvcompanionpoc/M6BannerOwnerTest.java": "d9b3eeef58d441e18faef13cedbed57773850019",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/M6WallDriverTest.java": "074145a0492e8e716ab5366ab62a9b6b740c9329",
     "docs/m6-phase-c-wall-android-driver-report.md": "c1051e7172b83662af28419e583187daab7d8a0e",
-    "tests/m6_phase_c_provenance.py": "89b65dfe22c5227a1d2842310a93ded7ee907400",
+    "tests/m6_phase_c_provenance.py": "b159aeeb373612cc07705e9515b11f007273806d",
     "tests/test_m6_phase_c_boundary.py": "05432b90effca5965cf66cc6d0ac1a2e9cf9176b"
   },
   "additiveFiles": [
@@ -60,6 +60,29 @@
     "tests/test_m6_phase_c_boundary.py"
   ],
   "admissions": {
+    ".github/scripts/m4-phase-a-test-summary.py": {
+      "afterSha": "3315c920951f3d63c401f32e20b4ebec5cc10988",
+      "beforeSha": "203f3fc1b35eb04850c84b74c265a3130a3c5fcf",
+      "kind": "inherited-gate",
+      "patches": [
+        {
+          "after": "M6 B adds only its separately inventoried pure WALL contracts; all M5 counts remain required.\nM6 C adds only its separately inventoried WALL runtime suites; all earlier counts remain required.\n\"\"\"",
+          "before": "M6 B adds only its separately inventoried pure WALL contracts; all M5 counts remain required.\n\"\"\""
+        },
+        {
+          "after": "    m6_phase_b = json.loads((root / '.github/scripts/m6-phase-b-baseline.json').read_text(encoding='utf-8'))\n    m6_phase_c = json.loads((root / '.github/scripts/m6-phase-c-baseline.json').read_text(encoding='utf-8'))\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}",
+          "before": "    m6_phase_b = json.loads((root / '.github/scripts/m6-phase-b-baseline.json').read_text(encoding='utf-8'))\n    counts = {'PASS': 0, 'FAIL': 0, 'SKIP': 0}"
+        },
+        {
+          "after": "**m6_phase_b['m6PhaseBSuites'], **m6_phase_c['m6PhaseCSuites']}",
+          "before": "**m6_phase_b['m6PhaseBSuites']}"
+        },
+        {
+          "after": "        'm6PhaseBCases': sum(m6_phase_b['m6PhaseBSuites'].values()),\n        'm6PhaseCCases': sum(m6_phase_c['m6PhaseCSuites'].values()),\n        'm5PhaseBFixtureSha256': m5_phase_b['fixtureSha256'],",
+          "before": "        'm6PhaseBCases': sum(m6_phase_b['m6PhaseBSuites'].values()),\n        'm5PhaseBFixtureSha256': m5_phase_b['fixtureSha256'],"
+        }
+      ]
+    },
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AutostartPolicy.java": {
       "afterSha": "82ab7129f3a31e673a61ed1a909072a8c3dbfe63",
       "beforeSha": "086a89cff2fa4701be427d4f9b029db264e48fa1",
