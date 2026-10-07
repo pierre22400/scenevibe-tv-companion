@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   debug:
@@ -151,3 +152,145 @@ jobs:
         env:
           KEYSTORE_PATH: ${{ steps.stable_keystore.outputs.keystore_path }}
         run: rm -f "$KEYSTORE_PATH" "$RUNNER_TEMP/scenevibe-tv-companion-cloud-qualification-stable.apk"
+
+  # Build the Sony candidate only AFTER the debug job and all native software
+  # workflows pass on this exact HEAD. The reviewed Cloud gate is immutable.
+  m6-sony-candidate:
+    needs: debug
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'work/scenevibe-os-m6-banner-wall-architecture-001'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require exact-head software gates before producing any Sony candidate
+        id: software
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const crypto = require('node:crypto');
+            const https = require('node:https');
+            const gate = JSON.parse(fs.readFileSync('docs/m6-phase-e-software-gate.json', 'utf8'));
+            if (gate.cloud.verdict !== 'PASS' || gate.initialParity !== 'PASS' || gate.production !== 'SHADOW' || gate.physicalQualified !== false) throw new Error('Upstream software qualification is not PASS');
+            const names = [];
+            function inventory(directory) {
+              for (const entry of fs.readdirSync(directory, {withFileTypes:true})) {
+                const path = directory + '/' + entry.name;
+                if (entry.isDirectory()) inventory(path); else names.push(path);
+              }
+            }
+            inventory('app/src');
+            const expected = Object.keys(gate.tv.appSourceSha256).sort();
+            if (JSON.stringify(names.sort()) !== JSON.stringify(expected)) throw new Error('Peer/candidate source inventory differs');
+            for (const path of expected) {
+              const hash = crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex');
+              if (hash !== gate.tv.appSourceSha256[path]) throw new Error('Peer/candidate source bytes differ: ' + path);
+            }
+            const head = context.payload.pull_request.head.sha;
+            const required = [
+              'Android installation disk and process durability',
+              'Android M5 media scheduler differential',
+              'Android 15 (API 35) platform smoke (NOT Android TV)'
+            ];
+            let runs;
+            for (let attempt=0; attempt<90; attempt++) {
+              const result = await github.rest.actions.listWorkflowRunsForRepo({...context.repo, head_sha:head, event:'pull_request', per_page:100});
+              runs = required.map(name => result.data.workflow_runs.filter(run=>run.name===name && run.head_sha===head).sort((a,b)=>b.id-a.id)[0]);
+              if (runs.some(run=>run && run.status==='completed' && run.conclusion!=='success')) throw new Error('A required exact-head software workflow failed');
+              if (runs.every(run=>run && run.status==='completed' && run.conclusion==='success')) break;
+              if (attempt===89) throw new Error('Exact-head software workflows did not complete');
+              await new Promise(resolve=>setTimeout(resolve,20000));
+            }
+            const pr = (await github.rest.pulls.get({...context.repo, pull_number:16})).data;
+            if (pr.head.sha!==head || !pr.draft || pr.state!=='open' || pr.merged) throw new Error('Sony candidate requires current OPEN/DRAFT/unmerged PR16');
+            const origin = new URL(gate.cloud.previewOrigin);
+            if (origin.protocol!=='https:' || origin.origin!==gate.cloud.previewOrigin || origin.port) throw new Error('Exact HTTPS Preview origin required');
+            // No device token, POST, Send, ACK or DB write is involved in this probe.
+            const reply = await new Promise((resolve,reject)=>{
+              const request=https.get(origin.origin+'/api/v1/devices/a5e45f36-95af-41ab-841b-da596482436d/package-assignment?afterRevision=15',response=>{
+                let body=''; response.on('data',chunk=>{body+=chunk; if(body.length>4096) request.destroy(new Error('Unexpected Preview response'));});
+                response.on('end',()=>resolve({status:response.statusCode,body}));
+              });
+              request.setTimeout(15000,()=>request.destroy(new Error('Preview HTTPS deadline'))); request.on('error',reject);
+            });
+            if (reply.status!==401 || JSON.parse(reply.body).code!=='UNAUTHORIZED') throw new Error('Actual M6 Preview route/TLS/auth gate failed');
+            const evidence={version:'scenevibe.m6.phase-e.candidate-software-gate.v1',tvHead:head,cloudHead:gate.cloud.head,cloudTree:gate.cloud.tree,peerHead:gate.tv.peerHead,appSourceIdentity:true,debugJob:'PASS via needs:debug',nativeRuns:runs.map(run=>({id:run.id,head:run.head_sha,conclusion:run.conclusion})),httpsM6Route:401,sonyWrites:0,firstM6Send:false};
+            fs.writeFileSync('m6-candidate-software-gate.json',JSON.stringify(evidence,null,2)+'\n');
+            core.setOutput('origin',origin.origin);
+            core.info('SOFTWARE GATE PASS on exact TV HEAD; Sony candidate may now be built.');
+      - name: Require stable signer
+        run: test "$SIGNING_ENABLED" = "true"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Install Android SDK 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Build named PACKAGE_V1 non-debuggable Sony candidate
+        env:
+          SCENEVIBE_M6_QUALIFICATION: m6-qualification
+          SCENEVIBE_ENABLE_LAN_DEV: "false"
+          SCENEVIBE_CLOUD_ORIGIN: ${{ steps.software.outputs.origin }}
+        run: gradle :app:assembleRelease :app:lintRelease --stacktrace
+      - name: Decode stable signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/m6-stable.jks"
+      - name: Align, sign and verify exact candidate
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+          PREVIEW_ORIGIN: ${{ steps.software.outputs.origin }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/35.0.0"
+          STAGE="$RUNNER_TEMP/m6-sony-candidate"
+          mkdir -p "$STAGE"
+          SHORT_HEAD="$(git rev-parse --short=7 HEAD)"
+          APK_NAME="SceneVibe_OS_M6_PhaseE_Sony_${SHORT_HEAD}_stable.apk"
+          "$BUILD_TOOLS_DIR/zipalign" -f -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/m6-aligned.apk"
+          "$BUILD_TOOLS_DIR/apksigner" sign --ks "$RUNNER_TEMP/m6-stable.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD --out "$STAGE/$APK_NAME" "$RUNNER_TEMP/m6-aligned.apk"
+          "$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "$STAGE/$APK_NAME" > "$STAGE/apksigner.txt"
+          CERT_SHA256="$(sed -n 's/.*certificate SHA-256 digest: //p' "$STAGE/apksigner.txt" | head -n1 | tr -d '[:space:]')"
+          test "$CERT_SHA256" = f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c
+          "$BUILD_TOOLS_DIR/zipalign" -c -P 16 4 "$STAGE/$APK_NAME"
+          "$BUILD_TOOLS_DIR/aapt" dump badging "$STAGE/$APK_NAME" > "$STAGE/badging.txt"
+          test -s "$STAGE/badging.txt"
+          if rg -q application-debuggable "$STAGE/badging.txt"; then exit 1; fi
+          export STAGE APK_NAME CERT_SHA256
+          python3 - <<'PY'
+          import os,pathlib,json,hashlib,subprocess,re
+          stage=pathlib.Path(os.environ['STAGE']);gate=json.loads(pathlib.Path('docs/m6-phase-e-software-gate.json').read_text())
+          source=pathlib.Path('app/build/generated/source/buildConfig/release/com/scenevibe/tvcompanionpoc/BuildConfig.java').read_text()
+          assert re.search(r'M6_QUALIFICATION\s*=\s*true',source) and re.search(r'ENABLE_LAN_DEV\s*=\s*false',source)
+          assert os.environ['PREVIEW_ORIGIN'] in source
+          badging=(stage/'badging.txt').read_text();assert "name='com.scenevibe.tvcompanionpoc'" in badging
+          assert "versionCode='13'" in badging and "versionName='0.8.3-m6-phase-e'" in badging
+          apk=stage/os.environ['APK_NAME'];sha=hashlib.sha256(apk.read_bytes()).hexdigest()
+          metadata={'version':'scenevibe.m6.phase-e.sony-candidate.v1','tvHead':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'tvTree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'cloudHead':gate['cloud']['head'],'cloudTree':gate['cloud']['tree'],'origin':os.environ['PREVIEW_ORIGIN'],'package':'com.scenevibe.tvcompanionpoc','versionCode':13,'versionName':'0.8.3-m6-phase-e','file':apk.name,'sha256':sha,'certificateSha256':os.environ['CERT_SHA256'],'softwareGate':'PASS','physicalQualified':False,'transport':'PACKAGE_V1','wallCapability':True,'lanDev':False,'debuggable':False,'production':'SHADOW','sonySend':0,'sonyNewAck':0,'historicalRevision':15}
+          (stage/'candidate.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (stage/'apk-sha256.txt').write_text(sha+'  '+apk.name+'\n')
+          PY
+          cp m6-candidate-software-gate.json "$STAGE/software-gate.json"
+      - name: Preserve gated Sony candidate and verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-os-m6-phase-e-sony
+          path: ${{ runner.temp }}/m6-sony-candidate
+          if-no-files-found: error
+          retention-days: 30
+      - name: Discard private signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/m6-stable.jks" "$RUNNER_TEMP/m6-aligned.apk"

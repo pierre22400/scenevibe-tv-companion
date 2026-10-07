@@ -29,8 +29,8 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc"
         minSdk 26
         targetSdk 35
-        versionCode 12
-        versionName "0.8.2-tv-release-hardening"
+        versionCode m6QualificationLiteral == "true" ? 13 : 12
+        versionName m6QualificationLiteral == "true" ? "0.8.3-m6-phase-e" : "0.8.2-tv-release-hardening"
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
         buildConfigField "boolean", "M6_QUALIFICATION", "${m6QualificationLiteral}"

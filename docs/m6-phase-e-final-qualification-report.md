@@ -38,7 +38,19 @@ Production stays SHADOW. PR #28/#16 stay OPEN/DRAFT/unmerged. WORK has performed
 
 ---
 
-## Historical preflight reports — superseded state, retained for audit
+### Software closure and gated candidate
+
+The immutable Cloud `8a57dbdd2487eb4373af6f3cb50950347ed07181` / TV peer `96286b3980a34240159e8b95e1acacede11ec212` code pair passes: Cloud 1,529 tests, zero failures, four inherited opt-in skips, typecheck and all builds; TV all four workflows, full JVM/lint and native gates. The actual downloaded peer ZIP and Cloud JUnit/transcript ZIP were SHA-256 checked. Real TCP HTTP exercised Video 1 → Banner 2 → Video 3 through the actual TV client/adapter/common ports/store/ARM/proof and actual Cloud handlers/PostgreSQL, with exact ACKs and final Video mirror parity. These revisions belong only to disposable test fixtures, never the Sony.
+
+The actual Preview at `https://interface-scenevibe-3wxg-ny22b1hcp-archc-ode.vercel.app` is READY on the exact Cloud HEAD above. A direct verified HTTPS GET of the M6 route without a device token returns `401 UNAUTHORIZED`, no authentication wall and no Send. This proves route/TLS/auth construction, not a new authenticated Sony read or physical observation.
+
+[Software input gate](m6-phase-e-software-gate.json) pins the Cloud runs, downloaded artifacts and every app/src byte from the actual peer. The final TV candidate job refuses source drift and waits for debug/JVM/lint plus API31/API35 differential/durability and API35 smoke PASS on its own exact HEAD before building any Sony candidate. It also rechecks the immutable HTTPS route and OPEN/DRAFT/unmerged PR16. The named build alone uses version `0.8.3-m6-phase-e` / code 13; the historical build identity stays unchanged.
+
+The candidate is non-debuggable, PACKAGE_V1, WALL true, LAN DEV false, exact Preview origin, stable signer `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c`. Its actual HEAD/tree, APK hash, software gate and signer are emitted by the gated job in `scenevibe-os-m6-phase-e-sony`, not guessed in this source report. The final exact pair/run attestation is recorded on both PRs after that job completes.
+
+**Physical Sony: NOT EXECUTED. STOP at the physical boundary.** The sole next operator action is to record the current Sony Diagnostics baseline before upgrading. [Strict later A–J protocol](m6-phase-e-sony-operator-protocol.md). No first M6 Send, new Sony ACK or revision is performed by WORK; the historical revision remains 15 on the operator-qualified DB.
+
+# Historical preflight reports — superseded state, retained for audit
 
 # M6 Phase E — final qualification report
 
