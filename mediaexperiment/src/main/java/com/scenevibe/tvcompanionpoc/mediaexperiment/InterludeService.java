@@ -276,6 +276,7 @@ public final class InterludeService extends Service
      */
     void testFullInterlude() {
         resetSampler();
+        runtime.stop();
         overlayVideo.selectTenSecondFixture(false);
         runtime.testFullInterlude();
         startSampling();

@@ -42,7 +42,8 @@ Prepare via mediaexperiment/fixtures/prepare-spike-2-fixtures.ps1:
   adb into app-specific external files for this experimental package.
 - The app has NO INTERNET permission, cloud client or shared production cache.
 
-Windows preparation (from repository root, with ffmpeg/ffprobe/adb on PATH):
+Install the experimental APK first and launch it once to initialize its
+app-specific external-files directory. Then, from Windows with FFmpeg and ADB:
     powershell.exe -ExecutionPolicy Bypass -File .\mediaexperiment\fixtures\prepare-spike-2-fixtures.ps1 -PushToTv
 
 If adb push fails due to OEM scoped storage, STOP and diagnose; never use
