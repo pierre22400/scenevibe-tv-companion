@@ -5,9 +5,7 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.provider.Settings;
 import android.view.Gravity;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -17,198 +15,148 @@ import com.scenevibe.tvcompanionpoc.mediaexperiment.core.Diagnostics;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeState;
 
 /**
- * Focusable TV remote control panel hosted as TYPE_APPLICATION_OVERLAY.
+ * READ-ONLY diagnostic overlay. Neither the window nor any descendant accepts
+ * Sony remote focus, DPAD events or touch events.
  *
- * <p>This is the physical-test harness. It deliberately stays outside the Android
- * Activity stack so Prime/Netflix remains the underlying native media Activity and
- * can keep exposing its MediaSession while the operator drives POC actions.</p>
- *
- * <p>The panel is narrow and translucent. It is focusable for D-pad input and uses
- * FLAG_NOT_TOUCH_MODAL so it does not claim the whole display. When the local
- * fullscreen interlude overlay is first attached, this panel is removed/re-added
- * once to keep EMERGENCY STOP reachable above that video surface.</p>
+ * <p>The previous focusable action panel plausibly captured keys on the Sony,
+ * and the 2026-10-08 incident required a reboot to restore nominal behaviour.
+ * All operator actions now arrive through the short-lived translucent launcher
+ * using an explicitly named ADB command. There are NO interactive controls in
+ * this TYPE_APPLICATION_OVERLAY window.</p>
  */
 final class DiagnosticOverlayWindow {
-    interface Actions {
-        void scan();
-        void duck();
-        void voiceMix();
-        void video10s();
-        void pause();
-        void fullInterlude();
-        void emergencyStop();
-    }
-
     private final Context context;
     private final WindowManager windows;
-    private final Actions actions;
 
     private ScrollView root;
     private TextView diagnosticsView;
     private TextView voiceView;
     private TextView fixtureView;
-    private Button firstButton;
     private WindowManager.LayoutParams params;
     private boolean lastInterludeOverlayAttached;
 
-    DiagnosticOverlayWindow(Context context, Actions actions) {
+    DiagnosticOverlayWindow(Context context) {
         this.context = context.getApplicationContext();
-        this.actions = actions;
         this.windows = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
     }
 
-    /** Attach the focusable translucent control panel without launching an Activity. */
+    /** Attach a nonfocusable, nontouchable read-only panel over native media. */
     void show() {
         if (root != null) return;
-        if (windows == null) {
-            throw new IllegalStateException("WindowManager unavailable");
-        }
+        if (windows == null) throw new IllegalStateException("WindowManager unavailable");
         if (!Settings.canDrawOverlays(context)) {
             throw new IllegalStateException("Overlay permission not granted");
         }
 
-        LinearLayout controls = new LinearLayout(context);
-        controls.setOrientation(LinearLayout.VERTICAL);
-        controls.setPadding(dp(20), dp(18), dp(20), dp(18));
-        controls.setBackgroundColor(0xDC101418);
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(18), dp(14), dp(18), dp(14));
+        content.setBackgroundColor(0xDC101418);
 
         TextView title = new TextView(context);
-        title.setText("SceneVibe Media POC");
+        title.setText("SceneVibe Media Spike 2.0.2");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(20);
-        controls.addView(title);
+        title.setTextSize(18);
+        content.addView(title);
 
         TextView hint = new TextView(context);
-        hint.setText("Overlay controls — native video remains underneath");
+        hint.setText("READ ONLY — remote stays with Prime. Trigger tests via ADB. "
+                + "Emergency: adb shell am force-stop "
+                + "com.scenevibe.tvcompanionpoc.mediaexperiment");
         hint.setTextColor(0xFFB9C2CC);
         hint.setTextSize(12);
-        hint.setPadding(0, dp(4), 0, dp(8));
-        controls.addView(hint);
-
-        firstButton = addButton(controls, "SCAN MEDIA SESSION", actions::scan);
-        addButton(controls, "TEST AUDIO DUCK", actions::duck);
-        addButton(controls, "TEST VOICE MP3 10S / NO FOCUS", actions::voiceMix);
-        addButton(controls, "TEST VIDEO INTERLUDE MP4 10S", actions::video10s);
-        addButton(controls, "TEST PAUSE", actions::pause);
-        addButton(controls, "TEST FULL INTERLUDE", actions::fullInterlude);
-        addButton(controls, "EMERGENCY RESTORE / STOP", actions::emergencyStop);
+        content.addView(hint);
 
         voiceView = new TextView(context);
         voiceView.setTextColor(0xFFCFE8FF);
         voiceView.setTextSize(12);
         voiceView.setText("voice coexistence: IDLE");
-        controls.addView(voiceView);
+        content.addView(voiceView);
 
         fixtureView = new TextView(context);
         fixtureView.setTextColor(0xFFCFE8FF);
         fixtureView.setTextSize(12);
         fixtureView.setText("video fixture: not checked");
-        controls.addView(fixtureView);
-
-        TextView diagnosticsTitle = new TextView(context);
-        diagnosticsTitle.setText("Diagnostics");
-        diagnosticsTitle.setTextColor(Color.WHITE);
-        diagnosticsTitle.setTextSize(16);
-        diagnosticsTitle.setPadding(0, dp(12), 0, dp(5));
-        controls.addView(diagnosticsTitle);
+        content.addView(fixtureView);
 
         diagnosticsView = new TextView(context);
         diagnosticsView.setTextColor(0xFFCFE8FF);
         diagnosticsView.setTextSize(12);
         diagnosticsView.setText(renderDiagnostics(null, InterludeState.IDLE, false));
-        controls.addView(diagnosticsView);
+        content.addView(diagnosticsView);
 
         ScrollView scroll = new ScrollView(context);
         scroll.setFillViewport(true);
+        scroll.setFocusable(false);
+        scroll.setFocusableInTouchMode(false);
         scroll.setBackgroundColor(Color.TRANSPARENT);
-        scroll.addView(controls);
+        scroll.addView(content);
 
         params = new WindowManager.LayoutParams(
                 dp(540),
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.END | Gravity.TOP;
-        params.setTitle("SceneVibe Media POC controls");
-
+        params.setTitle("SceneVibe Media POC read-only diagnostics");
         windows.addView(scroll, params);
         root = scroll;
         lastInterludeOverlayAttached = false;
-
-        // The overlay window itself is focusable; request D-pad focus on the first action.
-        firstButton.post(firstButton::requestFocus);
     }
 
-    /** Update bounded diagnostics and keep STOP reachable above the local video overlay. */
+    /** Refresh diagnostics, optionally re-layer this passive window over the video. */
     void update(Diagnostics diagnostics, InterludeState state, boolean accessGranted) {
         if (root == null || diagnosticsView == null) return;
         diagnosticsView.setText(renderDiagnostics(diagnostics, state, accessGranted));
-
-        boolean interludeAttached = diagnostics != null && diagnostics.overlayAttached;
-        if (interludeAttached && !lastInterludeOverlayAttached) {
-            raiseAboveInterlude();
-        }
-        lastInterludeOverlayAttached = interludeAttached;
+        boolean attached = diagnostics != null && diagnostics.overlayAttached;
+        if (attached && !lastInterludeOverlayAttached) raiseAboveInterlude();
+        lastInterludeOverlayAttached = attached;
     }
 
-    /** Display a bounded voice test outcome, without calling it proven audible mixing. */
     void setVoiceStatus(String status) {
         if (voiceView != null) voiceView.setText("voice coexistence: " + status);
     }
 
-    /** Report absent/invalid fixture without touching native playback. */
     void setFixtureStatus(String status) {
         if (fixtureView != null) fixtureView.setText("video fixture: " + status);
     }
 
-    /** Remove and re-add the same panel once so it is above a newly added video window. */
+    /** Re-layer without ever making this window focusable or touchable. */
     private void raiseAboveInterlude() {
-        if (root == null || params == null || windows == null) return;
+        if (root == null || windows == null || params == null) return;
         ScrollView existing = root;
         try {
             windows.removeViewImmediate(existing);
             windows.addView(existing, params);
-            if (firstButton != null) firstButton.post(firstButton::requestFocus);
-        } catch (RuntimeException ignored) {
-            // Diagnostic visibility must never mutate or resume native media state.
+        } catch (RuntimeException error) {
+            root = null;
+            diagnosticsView = null;
+            voiceView = null;
+            fixtureView = null;
+            params = null;
         }
     }
 
-    /** Remove the diagnostic panel idempotently. */
+    /** Release the passive window without changing any native transport. */
     void remove() {
-        ScrollView existing = root;
+        ScrollView old = root;
         root = null;
         diagnosticsView = null;
         voiceView = null;
         fixtureView = null;
-        firstButton = null;
         params = null;
         lastInterludeOverlayAttached = false;
-        if (existing != null && windows != null) {
+        if (old != null && windows != null) {
             try {
-                windows.removeViewImmediate(existing);
+                windows.removeViewImmediate(old);
             } catch (IllegalArgumentException ignored) {
-                // Already detached.
+                // Idempotent removal.
             }
         }
-    }
-
-    /** Create a D-pad button that dispatches only its explicit isolated action. */
-    private Button addButton(LinearLayout parent, String label, Runnable action) {
-        Button button = new Button(context);
-        button.setText(label);
-        button.setTextSize(14);
-        button.setAllCaps(false);
-        button.setFocusable(true);
-        button.setOnClickListener(view -> action.run());
-        LinearLayout.LayoutParams layout =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(48));
-        layout.topMargin = dp(5);
-        parent.addView(button, layout);
-        return button;
     }
 
     /** Render only bounded mechanism facts; never token/title/subtitle/credentials. */

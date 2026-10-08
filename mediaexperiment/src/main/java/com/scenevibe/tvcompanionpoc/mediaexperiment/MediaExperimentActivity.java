@@ -3,6 +3,7 @@ package com.scenevibe.tvcompanionpoc.mediaexperiment;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -11,6 +12,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.scenevibe.tvcompanionpoc.mediaexperiment.core.OperatorAction;
 
 /**
  * Translucent launcher/onboarding Activity for the isolated media-interlude POC.
@@ -47,8 +50,9 @@ public final class MediaExperimentActivity extends Activity {
         controls.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Permission launcher only. Once ready, the diagnostic controls "
-                + "open as a transparent overlay above the native video app.");
+        subtitle.setText("Permission launcher only. Once ready, read-only diagnostics "
+                + "appear over native video. The remote stays with Prime; "
+                + "operator tests are launched explicitly through ADB.");
         subtitle.setTextColor(0xFFB9C2CC);
         subtitle.setTextSize(14);
         subtitle.setGravity(Gravity.CENTER);
@@ -60,7 +64,7 @@ public final class MediaExperimentActivity extends Activity {
 
         addButton(controls, "Display over other apps settings", this::openOverlaySettings);
         addButton(controls, "Media access settings", this::openNotificationAccessSettings);
-        addButton(controls, "OPEN CONTROL OVERLAY", this::launchPanelIfReady);
+        addButton(controls, "OPEN READ-ONLY DIAGNOSTICS", this::launchPanelIfReady);
 
         setContentView(controls);
     }
@@ -88,14 +92,21 @@ public final class MediaExperimentActivity extends Activity {
     }
 
     /**
-     * Show controls outside the Activity stack, then finish this translucent launcher.
+     * Show read-only observations outside the Activity stack, then immediately finish.
      * The underlying Prime/Netflix Activity becomes visible again immediately.
      */
     private void launchPanelAndFinish() {
         if (panelLaunchIssued) return;
         panelLaunchIssued = true;
         try {
-            InterludeService.startWithPanel(this);
+            // Only explicit commands on a debuggable experimental APK may run
+            // media tests. A plain launcher tap displays diagnostics only.
+            OperatorAction action = OperatorAction.NONE;
+            if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                action = OperatorAction.parse(
+                        getIntent().getStringExtra(InterludeService.EXTRA_OPERATOR_ACTION));
+            }
+            InterludeService.startWithPanel(this, action);
             finish();
         } catch (RuntimeException error) {
             panelLaunchIssued = false;

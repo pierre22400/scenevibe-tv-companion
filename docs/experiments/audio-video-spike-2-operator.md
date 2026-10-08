@@ -1,6 +1,6 @@
 # SceneVibe OS — Audio/Video capability Spike 2.0
 
-STATUS: SPIKE 2.0.1 SOFTWARE CANDIDATE / PHYSICAL SONY QUALIFICATION PENDING.
+STATUS: SPIKE 2.0.2 REMOTE-FOCUS CORRECTIVE / CI AND SONY PHYSICAL QUALIFICATION PENDING.
 ISOLATED: only experimental mediaexperiment module. NOT PRODUCTION / NOT M6.
 
 ## Physical baseline
@@ -62,7 +62,7 @@ If adb push fails due to OEM scoped storage, STOP and diagnose; never use
 shared SceneVibe production directories or broaden permissions as a workaround.
 
 ## Qualification protocol (only operator can perform on Sony)
-Install the isolated 0.2.0 experimental APK beside production, grant its own
+Install the isolated 0.2.2 experimental APK beside production, grant its own
 overlay and notification access, launch native Prime PLAYING, SCAN first.
 Run VOICE: verify real native picture progression, BOTH native Prime audio and
 spoken fixture audibility, absence of Prime PAUSE and unchanged original session.
@@ -89,10 +89,89 @@ before the separate physical qualification report is completed.
 The branch-scoped CI workflow generates the two asset files BEFORE Gradle,
 then checks real MP3/H.264/AAC streams, ten-second duration, validates the
 actual APK includes both assets, and uploads artifact
-`SceneVibe_Media_Spike2_0.2.1_media_bundled` with an APK and fixture-sha256.txt.
+`SceneVibe_Media_Spike2_0.2.2_remote_focus_safety` with an APK and fixture-sha256.txt.
 A green CI indicates reproducible execution of fixture generation and software
 gates on that particular run; it is NOT evidence that Sony mixed the sound.
 Read the actual SHA-256 in the workflow log and retained artifact.
 Upstream fixture files are not immutable or cryptographically pinned yet;
 a future hardening pass may archive/pin audited source bytes.
 
+
+## Remote-control focus corrective — incident of 8 October 2026
+
+**Physical observation (0.2.1):** several Sony BRAVIA remote-control keys
+stopped responding after launching the experimental app. A force-stop was
+attempted, but only an ADB reboot restored nominal remote behavior. This is
+a **PHYSICAL BLOCKER** on 0.2.1. The exact OEM cause has NOT been proven.
+
+**Code finding:** `DiagnosticOverlayWindow` had a focusable
+`TYPE_APPLICATION_OVERLAY`, focusable TV buttons, and an explicit
+`requestFocus()`. An overlay focus conflict is therefore plausible but
+remains a hypothesis pending the next physical test.
+
+**0.2.2 corrective contract:**
+- Diagnostic `TYPE_APPLICATION_OVERLAY` must set BOTH
+  `FLAG_NOT_FOCUSABLE` and `FLAG_NOT_TOUCHABLE`, contain no clickable
+  buttons, not call `requestFocus()`, and remain read-only even when re-layered
+  above interlude video. Native Prime/Android TV retains D-pad focus.
+- Only a short-lived, translucent, already-existing experimental launcher
+  accepts explicitly requested debug-only commands. Its private service
+  is `android:exported="false"` and receives a strict action allowlist.
+- An ordinary launcher open has **NO MEDIA ACTION**. For explicit
+  non-emergency actions, the service waits 1500ms for the launcher to finish
+  before re-reading the original native session. Unrecognized actions are
+  ignored rather than executing an accidental test.
+- STOP and HIDE are immediate, cancel any pending experiment and release
+  all local resources; both send **NO NATIVE PLAY**. HIDE removes the
+  diagnostic overlay and stops the experimental service.
+- The control method is deliberately ADB-only for this physical spike.
+  This experimental exported launcher must never be carried to production.
+
+**Operator command syntax — from platform-tools in PowerShell:**
+
+```powershell
+# Read-only panel, no media action
+.\adb.exe shell am start -n com.scenevibe.tvcompanionpoc.mediaexperiment/.MediaExperimentActivity
+
+# Explicit observational scan
+.\adb.exe shell am start -n com.scenevibe.tvcompanionpoc.mediaexperiment/.MediaExperimentActivity --es sv_poc_action scan
+
+# Later (only after the focus gate passes): native Prime PLAYING + MP3 voice
+.\adb.exe shell am start -n com.scenevibe.tvcompanionpoc.mediaexperiment/.MediaExperimentActivity --es sv_poc_action voice
+
+# Later: 10-second video interlude using existing guarded PAUSE/PLAY
+.\adb.exe shell am start -n com.scenevibe.tvcompanionpoc.mediaexperiment/.MediaExperimentActivity --es sv_poc_action video10
+
+# Emergency STOP: no automatic native PLAY
+.\adb.exe shell am start -n com.scenevibe.tvcompanionpoc.mediaexperiment/.MediaExperimentActivity --es sv_poc_action stop
+
+# Emergency HIDE: stop local media, remove window, stop service
+.\adb.exe shell am start -n com.scenevibe.tvcompanionpoc.mediaexperiment/.MediaExperimentActivity --es sv_poc_action hide
+
+# Last-resort experiment-only stop
+.\adb.exe shell am force-stop com.scenevibe.tvcompanionpoc.mediaexperiment
+```
+
+Other explicit allowlisted commands, reserved until the remote-control gate
+has passed: `pause`, `interlude`, `duck`. `duck` is historically
+semantically FAIL on Sony/Prime and is not part of the first recovery gate.
+
+**Physical acceptance GATE R0 (before any media tests):**
+1. From a freshly nominal Sony, record baseline Home, Back, DPAD Up/Down/
+   Left/Right/OK, and volume keys. Leave production M6 untouched.
+2. Install candidate 0.2.2. A debug signing-key mismatch can require
+   uninstalling only `com.scenevibe.tvcompanionpoc.mediaexperiment`.
+   DO NOT uninstall `com.scenevibe.tvcompanionpoc` or reset Sony/M6.
+3. Open the read-only diagnostic panel WITHOUT any `--es` command.
+   Confirm TV remote Home, Back, DPAD and volume still work. There must be
+   no focusable diagnostic buttons and no remote-key interception.
+4. Reopen Prime, start playback, run `scan`, and re-check native keys.
+   Do not start voice or interlude if any key misbehaves.
+5. Run `hide`. Confirm overlay is gone and remote still works **without
+   reboot**. If not, immediately force-stop only the experimental package,
+   document the remaining failure, and abort further testing.
+6. Only if GATE R0 is PASS proceed to the voice coexistence and video
+   interlude tests, each independently with no implicit resume.
+
+**CI PASS does not establish R0. The 0.2.1 Sony incident remains BLOCKED
+until the 0.2.2 physical remote-focus gate passes.**

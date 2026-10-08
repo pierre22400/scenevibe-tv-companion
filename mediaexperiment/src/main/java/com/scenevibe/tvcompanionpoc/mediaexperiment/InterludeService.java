@@ -19,6 +19,7 @@ import android.util.Log;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.Diagnostics;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeState;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeRuntime;
+import com.scenevibe.tvcompanionpoc.mediaexperiment.core.OperatorAction;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.VoiceCoexistenceProbe;
 
 /**
@@ -42,6 +43,9 @@ public final class InterludeService extends Service
     private static final long SAMPLE_INTERVAL_MS = 1000L;
     private static final String ACTION_SHOW_PANEL =
             "com.scenevibe.tvcompanionpoc.mediaexperiment.action.SHOW_PANEL";
+    static final String EXTRA_OPERATOR_ACTION = "sv_poc_action";
+    // Give the translucent Activity time to finish before reading Prime's session.
+    private static final long OPERATOR_SETTLE_MS = 1500L;
 
     /** Optional in-process listener retained for bounded diagnostics. */
     interface DiagnosticsListener {
@@ -74,6 +78,7 @@ public final class InterludeService extends Service
     private boolean sampling;
     private boolean foregroundReady;
     private DiagnosticsListener listener;
+    private Runnable pendingOperator;
 
     private final Runnable sampler = new Runnable() {
         @Override
@@ -123,16 +128,8 @@ public final class InterludeService extends Service
                 });
         voiceProbe = new VoiceCoexistenceProbe(scanner, voiceFixture, clock);
 
-        diagnosticOverlay = new DiagnosticOverlayWindow(this,
-                new DiagnosticOverlayWindow.Actions() {
-                    @Override public void scan() { scanMediaSession(); }
-                    @Override public void duck() { testAudioDuck(); }
-                    @Override public void voiceMix() { testVoiceMix(); }
-                    @Override public void video10s() { testVideo10s(); }
-                    @Override public void pause() { testPause(); }
-                    @Override public void fullInterlude() { testFullInterlude(); }
-                    @Override public void emergencyStop() { emergencyStop(); }
-                });
+        // READ-ONLY: never focusable or touchable and never owns remote keys.
+        diagnosticOverlay = new DiagnosticOverlayWindow(this);
 
         try {
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -170,23 +167,92 @@ public final class InterludeService extends Service
         if (!foregroundReady) {
             return START_NOT_STICKY;
         }
-        if (!Settings.canDrawOverlays(this)) {
-            Log.w(TAG, "Overlay permission absent; stopping service");
-            stopSelf();
-            return START_NOT_STICKY;
-        }
         if (intent != null && ACTION_SHOW_PANEL.equals(intent.getAction())) {
+            // A delayed command from an earlier launcher must never survive a new
+            // STOP/HIDE request. The service is private; the only command ingress
+            // is the short-lived, explicitly invoked experimental launcher.
+            cancelPendingOperator();
+            OperatorAction action = OperatorAction.parse(
+                    intent.getStringExtra(EXTRA_OPERATOR_ACTION));
+            if (action.isEmergency()) {
+                emergencyStop();
+                if (action == OperatorAction.HIDE) {
+                    diagnosticOverlay.remove();
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
+                // STOP does not dispatch any native PLAY.
+                return START_STICKY;
+            }
+            if (!Settings.canDrawOverlays(this)) {
+                emergencyStop();
+                stopSelf();
+                return START_NOT_STICKY;
+            }
             try {
                 diagnosticOverlay.show();
                 publish();
-                Log.i(TAG, "DIAGNOSTIC_OVERLAY_SHOWN");
+                if (action != OperatorAction.NONE) {
+                    final OperatorAction requested = action;
+                    pendingOperator = () -> {
+                        pendingOperator = null;
+                        try {
+                            dispatchOperator(requested);
+                        } catch (RuntimeException failure) {
+                            Log.e(TAG, "ADB diagnostic action failed closed", failure);
+                            emergencyStop();
+                        }
+                    };
+                    handler.postDelayed(pendingOperator, OPERATOR_SETTLE_MS);
+                }
+                Log.i(TAG, "DIAGNOSTIC_OVERLAY_SHOWN remote_focus=false command="
+                        + action.name());
             } catch (RuntimeException error) {
-                Log.e(TAG, "Diagnostic overlay attach failed", error);
+                Log.e(TAG, "Read-only diagnostic overlay failed", error);
+                emergencyStop();
                 stopSelf();
                 return START_NOT_STICKY;
             }
         }
         return START_STICKY;
+    }
+
+    /** Execute only an exact ADB-requested action, never an implicit launcher default. */
+    private void dispatchOperator(OperatorAction action) {
+        switch (action) {
+            case SCAN:
+                scanMediaSession();
+                break;
+            case VOICE:
+                testVoiceMix();
+                break;
+            case VIDEO_10S:
+                testVideo10s();
+                break;
+            case PAUSE_ONLY:
+                testPause();
+                break;
+            case LEGACY_INTERLUDE:
+                testFullInterlude();
+                break;
+            case DUCK:
+                testAudioDuck();
+                break;
+            case STOP:
+            case HIDE:
+            case NONE:
+            default:
+                // Emergency actions are handled synchronously above.
+                break;
+        }
+    }
+
+    /** Prevent late diagnostic commands from restarting media after STOP. */
+    private void cancelPendingOperator() {
+        if (pendingOperator != null) {
+            handler.removeCallbacks(pendingOperator);
+            pendingOperator = null;
+        }
     }
 
     /** Return the local binder without initiating media actions. */
@@ -289,6 +355,7 @@ public final class InterludeService extends Service
      * available so the operator can inspect the terminal state or start a new test.
      */
     void emergencyStop() {
+        cancelPendingOperator();
         resetSampler();
         if (runtime != null) runtime.stop();
         publish();
@@ -354,6 +421,7 @@ public final class InterludeService extends Service
     @Override
     public void onDestroy() {
         sampling = false;
+        cancelPendingOperator();
         handler.removeCallbacks(sampler);
         if (diagnosticOverlay != null) {
             diagnosticOverlay.remove();
@@ -367,8 +435,15 @@ public final class InterludeService extends Service
 
     /** Start this service and explicitly request the diagnostic overlay panel. */
     static void startWithPanel(Context context) {
+        startWithPanel(context, OperatorAction.NONE);
+    }
+
+    /** Only a short-lived experimental Activity may forward an explicit action. */
+    static void startWithPanel(Context context, OperatorAction action) {
         Intent intent = new Intent(context, InterludeService.class);
         intent.setAction(ACTION_SHOW_PANEL);
+        intent.putExtra(EXTRA_OPERATOR_ACTION,
+                action == null ? "" : action.wireName());
         context.startForegroundService(intent);
     }
 

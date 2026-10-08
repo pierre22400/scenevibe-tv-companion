@@ -30,6 +30,8 @@ jobs:
           sudo apt-get install --yes --no-install-recommends ffmpeg
           ffmpeg -hide_banner -version | head -1
           ffprobe -hide_banner -version | head -1
+      - name: Guard remote focus and ADB-only diagnostic surface
+        run: python3 mediaexperiment/fixtures/check-remote-focus-safety.py
       - name: Materialize and verify authentic ten-second fixtures
         run: bash mediaexperiment/fixtures/prepare-spike-2-fixtures.sh
       - name: Build, test and lint experiment only
@@ -43,7 +45,7 @@ jobs:
       - name: Upload experimental APK
         uses: actions/upload-artifact@v4
         with:
-          name: SceneVibe_Media_Spike2_0.2.1_media_bundled
+          name: SceneVibe_Media_Spike2_0.2.2_remote_focus_safety
           path: |
             mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk
             mediaexperiment/fixtures/out/fixture-sha256.txt
