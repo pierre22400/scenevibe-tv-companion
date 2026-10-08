@@ -19,6 +19,7 @@ import android.util.Log;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.Diagnostics;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeState;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.InterludeRuntime;
+import com.scenevibe.tvcompanionpoc.mediaexperiment.core.VoiceCoexistenceProbe;
 
 /**
  * User-started mediaPlayback foreground service that owns the interlude runtime for
@@ -63,6 +64,9 @@ public final class InterludeService extends Service
     private AndroidMediaControlPort mediaControl;
     private AndroidOverlayVideoPort overlayVideo;
     private AndroidLocalAudioPort localAudio;
+    private AndroidSpeechFixturePort voiceFixture;
+    private VoiceCoexistenceProbe voiceProbe;
+    private boolean voiceSampling;
     private DiagnosticOverlayWindow diagnosticOverlay;
     private final ElapsedRealtimeClock clock = new ElapsedRealtimeClock();
 
@@ -74,7 +78,19 @@ public final class InterludeService extends Service
     private final Runnable sampler = new Runnable() {
         @Override
         public void run() {
-            if (!sampling || runtime == null) return;
+            if (!sampling) return;
+            if (voiceSampling) {
+                if (voiceProbe != null) voiceProbe.poll();
+                publish();
+                if (voiceProbe != null && voiceProbe.running()) {
+                    handler.postDelayed(this, SAMPLE_INTERVAL_MS);
+                } else {
+                    voiceSampling = false;
+                    sampling = false;
+                }
+                return;
+            }
+            if (runtime == null) return;
             runtime.poll();
             publish();
             if (runtime.state() == InterludeState.STOPPED) {
@@ -96,11 +112,23 @@ public final class InterludeService extends Service
         localAudio = new AndroidLocalAudioPort(this);
         runtime = new InterludeRuntime(scanner, audioFocus, mediaControl,
                 overlayVideo, localAudio, clock);
+        voiceFixture = new AndroidSpeechFixturePort(this,
+                () -> {
+                    if (voiceProbe != null) voiceProbe.onCompleted();
+                    publish();
+                },
+                () -> {
+                    if (voiceProbe != null) voiceProbe.onError();
+                    publish();
+                });
+        voiceProbe = new VoiceCoexistenceProbe(scanner, voiceFixture, clock);
 
         diagnosticOverlay = new DiagnosticOverlayWindow(this,
                 new DiagnosticOverlayWindow.Actions() {
                     @Override public void scan() { scanMediaSession(); }
                     @Override public void duck() { testAudioDuck(); }
+                    @Override public void voiceMix() { testVoiceMix(); }
+                    @Override public void video10s() { testVideo10s(); }
                     @Override public void pause() { testPause(); }
                     @Override public void fullInterlude() { testFullInterlude(); }
                     @Override public void emergencyStop() { emergencyStop(); }
@@ -195,6 +223,43 @@ public final class InterludeService extends Service
     }
 
     /**
+     * TEST VOICE MIX: deliberately no AudioFocus and no MediaControlPort.
+     * Experimental only; native Prime must stay independently PLAYING.
+     */
+    void testVoiceMix() {
+        resetSampler();
+        runtime.stop();
+        overlayVideo.selectTenSecondFixture(false);
+        voiceProbe.begin();
+        voiceSampling = voiceProbe.running();
+        if (voiceSampling) {
+            sampling = true;
+            handler.postDelayed(sampler, SAMPLE_INTERVAL_MS);
+        }
+        publish();
+    }
+
+    /**
+     * TEST 10S VIDEO: retain the Spike 1.0 confirmed pause/guarded resume,
+     * but require an operator-provisioned MP4 with video and audio before PAUSE.
+     */
+    void testVideo10s() {
+        resetSampler();
+        runtime.stop();
+        if (!overlayVideo.isTenSecondFixtureReady()) {
+            if (diagnosticOverlay != null) {
+                diagnosticOverlay.setFixtureStatus("10S_MP4_MISSING_OR_INVALID");
+            }
+            publish();
+            return;
+        }
+        overlayVideo.selectTenSecondFixture(true);
+        runtime.testFullInterlude();
+        startSampling();
+        publish();
+    }
+
+    /**
      * TEST PAUSE: require live PLAYING, dispatch PAUSE, await bounded PAUSED.
      * Success ends this attempt without any cue, overlay, local video or PLAY.
      */
@@ -211,6 +276,7 @@ public final class InterludeService extends Service
      */
     void testFullInterlude() {
         resetSampler();
+        overlayVideo.selectTenSecondFixture(false);
         runtime.testFullInterlude();
         startSampling();
         publish();
@@ -230,7 +296,9 @@ public final class InterludeService extends Service
     /** Cancel old callbacks before starting a separately owned operator action. */
     private void resetSampler() {
         sampling = false;
+        voiceSampling = false;
         handler.removeCallbacks(sampler);
+        if (voiceProbe != null) voiceProbe.stop();
     }
 
     /** Start bounded confirmations/cue polling on the main thread. */
@@ -251,6 +319,9 @@ public final class InterludeService extends Service
 
         if (diagnosticOverlay != null) {
             diagnosticOverlay.update(diagnostics, state, granted);
+            if (voiceProbe != null) {
+                diagnosticOverlay.setVoiceStatus(voiceProbe.state().name());
+            }
         }
         if (listener != null) {
             listener.onDiagnostics(diagnostics, state, granted);
@@ -289,6 +360,7 @@ public final class InterludeService extends Service
         if (runtime != null) {
             runtime.stop();
         }
+        if (voiceProbe != null) voiceProbe.stop();
         super.onDestroy();
     }
 

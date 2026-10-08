@@ -1,0 +1,39 @@
+name: Isolated Media Spike 2
+on:
+  push:
+    branches:
+      - experiment/scenevibe-audio-video-spike-002
+permissions:
+  contents: read
+jobs:
+  experimental-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Assert production bytes unchanged
+        run: test -z "$(git diff --name-only 96d1de5b555d52a88eda74fb45a6895d8599b316 HEAD -- app/ tests/ settings.gradle)"
+      - name: Build, test and lint experiment only
+        run: gradle --no-daemon --console=plain :mediaexperiment:testDebugUnitTest :mediaexperiment:lintDebug :mediaexperiment:assembleDebug --stacktrace
+      - name: Verify experimental APK checksum and package
+        run: |
+          sha256sum mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk | head -6
+      - name: Upload experimental APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SceneVibe_Media_Spike2_0.2.0_debug
+          path: mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk
+          if-no-files-found: error
+          retention-days: 14

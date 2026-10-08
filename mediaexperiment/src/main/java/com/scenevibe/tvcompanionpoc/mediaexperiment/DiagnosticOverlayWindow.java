@@ -32,6 +32,8 @@ final class DiagnosticOverlayWindow {
     interface Actions {
         void scan();
         void duck();
+        void voiceMix();
+        void video10s();
         void pause();
         void fullInterlude();
         void emergencyStop();
@@ -43,6 +45,8 @@ final class DiagnosticOverlayWindow {
 
     private ScrollView root;
     private TextView diagnosticsView;
+    private TextView voiceView;
+    private TextView fixtureView;
     private Button firstButton;
     private WindowManager.LayoutParams params;
     private boolean lastInterludeOverlayAttached;
@@ -83,9 +87,23 @@ final class DiagnosticOverlayWindow {
 
         firstButton = addButton(controls, "SCAN MEDIA SESSION", actions::scan);
         addButton(controls, "TEST AUDIO DUCK", actions::duck);
+        addButton(controls, "TEST VOICE MP3 10S / NO FOCUS", actions::voiceMix);
+        addButton(controls, "TEST VIDEO INTERLUDE MP4 10S", actions::video10s);
         addButton(controls, "TEST PAUSE", actions::pause);
         addButton(controls, "TEST FULL INTERLUDE", actions::fullInterlude);
         addButton(controls, "EMERGENCY RESTORE / STOP", actions::emergencyStop);
+
+        voiceView = new TextView(context);
+        voiceView.setTextColor(0xFFCFE8FF);
+        voiceView.setTextSize(12);
+        voiceView.setText("voice coexistence: IDLE");
+        controls.addView(voiceView);
+
+        fixtureView = new TextView(context);
+        fixtureView.setTextColor(0xFFCFE8FF);
+        fixtureView.setTextSize(12);
+        fixtureView.setText("video fixture: not checked");
+        controls.addView(fixtureView);
 
         TextView diagnosticsTitle = new TextView(context);
         diagnosticsTitle.setText("Diagnostics");
@@ -135,6 +153,16 @@ final class DiagnosticOverlayWindow {
         lastInterludeOverlayAttached = interludeAttached;
     }
 
+    /** Display a bounded voice test outcome, without calling it proven audible mixing. */
+    void setVoiceStatus(String status) {
+        if (voiceView != null) voiceView.setText("voice coexistence: " + status);
+    }
+
+    /** Report absent/invalid fixture without touching native playback. */
+    void setFixtureStatus(String status) {
+        if (fixtureView != null) fixtureView.setText("video fixture: " + status);
+    }
+
     /** Remove and re-add the same panel once so it is above a newly added video window. */
     private void raiseAboveInterlude() {
         if (root == null || params == null || windows == null) return;
@@ -153,6 +181,8 @@ final class DiagnosticOverlayWindow {
         ScrollView existing = root;
         root = null;
         diagnosticsView = null;
+        voiceView = null;
+        fixtureView = null;
         firstButton = null;
         params = null;
         lastInterludeOverlayAttached = false;
