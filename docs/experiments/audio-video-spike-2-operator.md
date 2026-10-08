@@ -1,6 +1,13 @@
 # SceneVibe OS — Audio/Video capability Spike 2.0
 
-STATUS: SPIKE 2.0.2 REMOTE-FOCUS CORRECTIVE / CI AND SONY PHYSICAL QUALIFICATION PENDING.
+STATUS: SPIKE 2.0.2 SOFTWARE PASS / SONY-PRIME PHYSICAL CAPABILITY PASS.
+Final physical closure (operator observations, repeated A2):
+[media-spike-2-sony-physical-closure-2026-10-08.md](media-spike-2-sony-physical-closure-2026-10-08.md).
+Integration work order (proposal only):
+[media-spike-2-post-m6-integration-work-order.md](media-spike-2-post-m6-integration-work-order.md).
+Qualified **executable APK** HEAD: 27e09d529c1a55ab2ef5f861e63060943b634e35.
+Any subsequent documentation-only HEAD is NOT the Sony-tested binary.
+
 ISOLATED: only experimental mediaexperiment module. NOT PRODUCTION / NOT M6.
 
 ## Physical baseline
@@ -173,5 +180,9 @@ semantically FAIL on Sony/Prime and is not part of the first recovery gate.
 6. Only if GATE R0 is PASS proceed to the voice coexistence and video
    interlude tests, each independently with no implicit resume.
 
-**CI PASS does not establish R0. The 0.2.1 Sony incident remains BLOCKED
-until the 0.2.2 physical remote-focus gate passes.**
+**Historical gate interpretation:** CI alone cannot establish R0. The
+0.2.1 focus incident was BLOCKED and required a reboot; subsequent 0.2.2
+Sony physical R0 was explicitly reported PASS (including hide without reboot),
+as documented in the closure report. A1/A2 also physically PASS on Sony/Prime.
+This does NOT qualify other devices, providers, the old explicit DUCK test,
+or an integration into SceneVibe OS production.
