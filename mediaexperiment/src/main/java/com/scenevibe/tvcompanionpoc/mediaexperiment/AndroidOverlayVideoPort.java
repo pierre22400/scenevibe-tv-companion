@@ -8,7 +8,6 @@ import android.graphics.SurfaceTexture;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.MediaMetadataRetriever;
-import java.io.File;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -18,6 +17,11 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.OverlayVideoPort;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Android implementation of {@link OverlayVideoPort}: a FULLSCREEN
@@ -76,13 +80,12 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
         useTenSecondFixture = selected;
     }
 
-    /** Check external MP4 video+audio presence and 10s duration BEFORE pausing Prime. */
+    /** Check an external override or bundled MP4 for audio, video and duration BEFORE pausing. */
     boolean isTenSecondFixtureReady() {
-        File directory = context.getExternalFilesDir(null);
-        File fixture = directory == null ? null : new File(directory, TEN_SECOND_VIDEO);
-        if (fixture == null || !fixture.isFile() || fixture.length() < 10000L) return false;
         MediaMetadataRetriever metadata = new MediaMetadataRetriever();
         try {
+            File fixture = tenSecondFixtureFile();
+            if (!fixture.isFile() || fixture.length() < 10000L) return false;
             metadata.setDataSource(fixture.getAbsolutePath());
             String duration = metadata.extractMetadata(
                     MediaMetadataRetriever.METADATA_KEY_DURATION);
@@ -94,7 +97,8 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
             return millis >= 9500L && millis <= 10500L
                     && "yes".equalsIgnoreCase(video)
                     && "yes".equalsIgnoreCase(audio);
-        } catch (RuntimeException failure) {
+        } catch (IOException | RuntimeException failure) {
+            Log.w(TAG, "TEN_SECOND_VIDEO_PREFLIGHT_FAILED", failure);
             return false;
         } finally {
             try {
@@ -103,6 +107,26 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
                 Log.w(TAG, "METADATA_RELEASE_FAILED", releaseFailure);
             }
         }
+    }
+
+    /**
+     * Prefer an experiment-only external MP4 override, otherwise materialize
+     * the CI-bundled H.264/AAC MP4 into private cache for Sony playback.
+     * The same path is used for preflight and actual decoder preparation.
+     */
+    private File tenSecondFixtureFile() throws IOException {
+        File directory = context.getExternalFilesDir(null);
+        File override = directory == null ? null : new File(directory, TEN_SECOND_VIDEO);
+        if (override != null && override.exists()) return override;
+        File fixture = new File(context.getCacheDir(), TEN_SECOND_VIDEO);
+        try (InputStream input = context.getAssets().open(TEN_SECOND_VIDEO);
+             FileOutputStream output = new FileOutputStream(fixture, false)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+            output.flush();
+        }
+        return fixture;
     }
 
     /** Attach a fullscreen local surface only when overlay permission is available. */
@@ -196,9 +220,7 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
                     .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
                     .build());
             if (useTenSecondFixture) {
-                File directory = context.getExternalFilesDir(null);
-                if (directory == null) throw new IllegalStateException("VIDEO_FIXTURE_STORAGE_MISSING");
-                created.setDataSource(new File(directory, TEN_SECOND_VIDEO).getAbsolutePath());
+                created.setDataSource(tenSecondFixtureFile().getAbsolutePath());
             } else {
                 try (AssetFileDescriptor afd = context.getAssets().openFd(LOCAL_VIDEO_ASSET)) {
                     created.setDataSource(

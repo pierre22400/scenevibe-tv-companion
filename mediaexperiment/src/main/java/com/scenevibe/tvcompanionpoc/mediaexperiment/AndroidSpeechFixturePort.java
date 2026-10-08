@@ -9,6 +9,9 @@ import android.util.Log;
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.SpeechFixturePort;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Spike 2.0 MP3 player using an explicitly provisioned app-specific external file.
@@ -18,9 +21,11 @@ import java.io.File;
  * isolated diagnostic of Android's mixing ability. It neither captures Prime
  * audio nor changes global volume or the native playback transport.</p>
  *
- * <p>The asset must be installed as `scenevibe_voice_10s.mp3` under this
- * experimental package's getExternalFilesDir(null), e.g. via adb push. No
- * network, broad storage or package permissions are needed.</p>
+ * <p>CI bundles a reproducibly encoded MP3 as a fallback. An optional file
+ * in this experimental package's external-files directory takes precedence.
+ * The bundled fallback is copied into this package's private cache before
+ * use, avoiding OEM extractors interpreting APK resource offsets. Neither
+ * path needs network, broad storage, cloud identity or production data.</p>
  */
 final class AndroidSpeechFixturePort implements SpeechFixturePort {
     private static final String TAG = "SceneVibeVoiceSpike2";
@@ -41,9 +46,13 @@ final class AndroidSpeechFixturePort implements SpeechFixturePort {
     @Override
     public void start() {
         stop();
-        File directory = context.getExternalFilesDir(null);
-        File fixture = directory == null ? null : new File(directory, FILENAME);
-        if (fixture == null || !fixture.isFile() || fixture.length() < 1000L) {
+        File fixture;
+        try {
+            fixture = fixtureFile();
+        } catch (IOException failure) {
+            throw new IllegalStateException("VOICE_FIXTURE_MISSING", failure);
+        }
+        if (!fixture.isFile() || fixture.length() < 1000L) {
             throw new IllegalStateException("VOICE_FIXTURE_MISSING");
         }
         MediaMetadataRetriever metadata = new MediaMetadataRetriever();
@@ -84,6 +93,26 @@ final class AndroidSpeechFixturePort implements SpeechFixturePort {
             stop();
             throw new IllegalStateException("VOICE_MP3_START_FAILED", error);
         }
+    }
+
+    /**
+     * Prefer an explicit experiment-only external override, otherwise copy the
+     * packaged sample to the private app cache for OEM-friendly decoding.
+     * No production state is consulted or modified.
+     */
+    private File fixtureFile() throws IOException {
+        File directory = context.getExternalFilesDir(null);
+        File override = directory == null ? null : new File(directory, FILENAME);
+        if (override != null && override.exists()) return override;
+        File fixture = new File(context.getCacheDir(), FILENAME);
+        try (InputStream input = context.getAssets().open(FILENAME);
+             FileOutputStream output = new FileOutputStream(fixture, false)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+            output.flush();
+        }
+        return fixture;
     }
 
     /** Release local playback without touching Prime or any global audio stream. */

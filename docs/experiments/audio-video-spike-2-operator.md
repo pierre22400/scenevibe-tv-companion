@@ -1,6 +1,6 @@
 # SceneVibe OS — Audio/Video capability Spike 2.0
 
-STATUS: SOFTWARE IMPLEMENTATION / BUILD AND PHYSICAL SONY QUALIFICATION PENDING.
+STATUS: SPIKE 2.0.1 SOFTWARE CANDIDATE / PHYSICAL SONY QUALIFICATION PENDING.
 ISOLATED: only experimental mediaexperiment module. NOT PRODUCTION / NOT M6.
 
 ## Physical baseline
@@ -36,14 +36,26 @@ Prepare via mediaexperiment/fixtures/prepare-spike-2-fixtures.ps1:
   English speech (samplelib.com/sample-mp3.html). Samplelib advertises its
   downloads as without licence restrictions.
 - Genuine moving Big Buck Bunny H.264 MP4 10s 720p from test-videos.co.uk,
-  retaining video and adding an AAC 440Hz diagnostic tone. Attribution:
+  transcoded to compatible 720p30 H.264 Main Level 3.1 and including an
+  AAC 440Hz diagnostic tone (the tone is not a human voice). Attribution:
   Big Buck Bunny © Blender Foundation / CC BY.
-- Assets are NOT bundled in GitHub: record the SHA256 output and transfer via
-  adb into app-specific external files for this experimental package.
+- **The CI generates and packages both real media files into the debug APK.**
+  Git itself does not contain these binaries: the build uses the two external
+  sources, FFmpeg and ffprobe, verifies codecs/duration and uploads SHA-256.
+- The Android implementation materializes the bundled MP3/MP4 into the
+  isolated app-private cache to avoid OEM APK-offset decoder problems.
+- The PowerShell script and ADB push remain optional ways to install
+  custom, app-specific external-file overrides without rebuilding the APK.
+  An invalid override must fail visibly, not silently use a different file.
 - The app has NO INTERNET permission, cloud client or shared production cache.
 
-Install the experimental APK first and launch it once to initialize its
-app-specific external-files directory. Then, from Windows with FFmpeg and ADB:
+**Normal Sony procedure:** install the GitHub Actions APK and launch it.
+The two standardized 10-second fixtures are already inside the APK. No PC
+transcoding or ADB transfer is needed to run the default experiment.
+
+**Optional override:** to try another speech/film clip, install the
+experimental APK first and launch it once to create app-specific directories.
+Then run (with FFmpeg, ffprobe and ADB on PATH):
     powershell.exe -ExecutionPolicy Bypass -File .\mediaexperiment\fixtures\prepare-spike-2-fixtures.ps1 -PushToTv
 
 If adb push fails due to OEM scoped storage, STOP and diagnose; never use
@@ -71,3 +83,16 @@ Expected experimental branch's older frozen Python boundary inventory has
 any app/, tests/, settings.gradle or frozen historical assertions for this spike.
 CI green is software-only. Do NOT merge, enable production or claim Sony PASS
 before the separate physical qualification report is completed.
+
+## CI build / fixture evidence acceptance
+
+The branch-scoped CI workflow generates the two asset files BEFORE Gradle,
+then checks real MP3/H.264/AAC streams, ten-second duration, validates the
+actual APK includes both assets, and uploads artifact
+`SceneVibe_Media_Spike2_0.2.1_media_bundled` with an APK and fixture-sha256.txt.
+A green CI indicates reproducible execution of fixture generation and software
+gates on that particular run; it is NOT evidence that Sony mixed the sound.
+Read the actual SHA-256 in the workflow log and retained artifact.
+Upstream fixture files are not immutable or cryptographically pinned yet;
+a future hardening pass may archive/pin audited source bytes.
+

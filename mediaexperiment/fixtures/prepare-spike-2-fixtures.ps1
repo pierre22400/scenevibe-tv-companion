@@ -14,8 +14,8 @@ Invoke-WebRequest "https://samplelib.com/mp3/sample-speech-1m.mp3" -OutFile $mp3
 Invoke-WebRequest "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4" -OutFile $mp4Source
 & ffmpeg -hide_banner -loglevel error -y -i $mp3Source -t 10 -ar 44100 -ac 1 -c:a libmp3lame -b:a 128k $mp3
 if ($LASTEXITCODE -ne 0) { throw "MP3 preparation failed" }
-# The online MP4 is video-only; attach diagnostic AAC audio without re-encoding H.264.
-& ffmpeg -hide_banner -loglevel error -y -i $mp4Source -f lavfi -i "sine=frequency=440:sample_rate=48000" -map 0:v:0 -map 1:a:0 -t 10 -c:v copy -c:a aac -b:a 128k -movflags +faststart $mp4
+# The online MP4 is video-only: normalize moving H.264 720p30 and add AAC tone.
+& ffmpeg -hide_banner -loglevel error -y -i $mp4Source -f lavfi -i "sine=frequency=440:sample_rate=48000" -map 0:v:0 -map 1:a:0 -t 10 -c:v libx264 -preset veryfast -crf 23 -r 30 -pix_fmt yuv420p -profile:v main -level:v 3.1 -vf "scale=1280:720" -c:a aac -b:a 128k -ac 1 -movflags +faststart $mp4
 if ($LASTEXITCODE -ne 0) { throw "MP4 preparation failed" }
 foreach ($file in @($mp3, $mp4)) {
     $durationText = & ffprobe -v error -show_entries format=duration -of "default=noprint_wrappers=1:nokey=1" $file

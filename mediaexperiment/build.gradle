@@ -20,8 +20,8 @@ android {
         applicationId "com.scenevibe.tvcompanionpoc.mediaexperiment"
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName "0.2.0-audio-video-capability-spike"
+        versionCode 7
+        versionName "0.2.1-audio-video-bundled-fixtures"
     }
 
     buildTypes {
