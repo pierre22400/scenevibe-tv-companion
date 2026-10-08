@@ -56,7 +56,11 @@ final class AndroidSpeechFixturePort implements SpeechFixturePort {
                 throw new IllegalStateException("VOICE_FIXTURE_DURATION_NOT_10S");
             }
         } finally {
-            metadata.release();
+            try {
+                metadata.release();
+            } catch (java.io.IOException releaseFailure) {
+                Log.w(TAG, "METADATA_RELEASE_FAILED", releaseFailure);
+            }
         }
         try {
             MediaPlayer prepared = new MediaPlayer();

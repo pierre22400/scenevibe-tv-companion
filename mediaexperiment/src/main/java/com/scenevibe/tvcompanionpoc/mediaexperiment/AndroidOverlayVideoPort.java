@@ -97,7 +97,11 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
         } catch (RuntimeException failure) {
             return false;
         } finally {
-            metadata.release();
+            try {
+                metadata.release();
+            } catch (java.io.IOException releaseFailure) {
+                Log.w(TAG, "METADATA_RELEASE_FAILED", releaseFailure);
+            }
         }
     }
 
