@@ -1,0 +1,53 @@
+name: Isolated Media Spike 2
+on:
+  push:
+    branches:
+      - experiment/scenevibe-audio-video-spike-002
+permissions:
+  contents: read
+jobs:
+  experimental-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Assert production bytes unchanged
+        run: test -z "$(git diff --name-only 96d1de5b555d52a88eda74fb45a6895d8599b316 HEAD -- app/ tests/ settings.gradle)"
+      - name: Install FFmpeg and ffprobe
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+          ffmpeg -hide_banner -version | head -1
+          ffprobe -hide_banner -version | head -1
+      - name: Guard remote focus and ADB-only diagnostic surface
+        run: python3 mediaexperiment/fixtures/check-remote-focus-safety.py
+      - name: Materialize and verify authentic ten-second fixtures
+        run: bash mediaexperiment/fixtures/prepare-spike-2-fixtures.sh
+      - name: Build, test and lint experiment only
+        run: gradle --no-daemon --console=plain :mediaexperiment:testDebugUnitTest :mediaexperiment:lintDebug :mediaexperiment:assembleDebug --stacktrace
+      - name: Verify APK package, embedded media and SHA
+        run: |
+          sha256sum mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk | head -6
+          unzip -l mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk | grep 'assets/scenevibe_voice_10s.mp3'
+          unzip -l mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk | grep 'assets/scenevibe_interlude_10s.mp4'
+      - name: Upload experimental APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SceneVibe_Media_Spike2_0.2.2_remote_focus_safety
+          path: |
+            mediaexperiment/build/outputs/apk/debug/mediaexperiment-debug.apk
+            mediaexperiment/fixtures/out/fixture-sha256.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -7,6 +7,7 @@ import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
+import android.media.MediaMetadataRetriever;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -16,6 +17,11 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import com.scenevibe.tvcompanionpoc.mediaexperiment.core.OverlayVideoPort;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Android implementation of {@link OverlayVideoPort}: a FULLSCREEN
@@ -41,6 +47,7 @@ import com.scenevibe.tvcompanionpoc.mediaexperiment.core.OverlayVideoPort;
 final class AndroidOverlayVideoPort implements OverlayVideoPort {
     private static final String TAG = "SceneVibeInterludePoc";
     private static final String LOCAL_VIDEO_ASSET = "interlude.mp4";
+    private static final String TEN_SECOND_VIDEO = "scenevibe_interlude_10s.mp4";
 
     /** Delivered back to the state machine on the main thread. */
     interface Callbacks {
@@ -58,12 +65,68 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
     private TextureView textureView;
     private MediaPlayer player;
     private Surface surface;
+    private boolean useTenSecondFixture;
 
     /** Keep the overlay lifecycle isolated from the production companion. */
     AndroidOverlayVideoPort(Context context, Callbacks callbacks) {
         this.context = context.getApplicationContext();
         this.callbacks = callbacks;
         this.windows = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+    }
+
+    /** Select an independently supplied MP4 for the next run, never the legacy default. */
+    void selectTenSecondFixture(boolean selected) {
+        if (root != null) throw new IllegalStateException("VIDEO_OVERLAY_ALREADY_ACTIVE");
+        useTenSecondFixture = selected;
+    }
+
+    /** Check an external override or bundled MP4 for audio, video and duration BEFORE pausing. */
+    boolean isTenSecondFixtureReady() {
+        MediaMetadataRetriever metadata = new MediaMetadataRetriever();
+        try {
+            File fixture = tenSecondFixtureFile();
+            if (!fixture.isFile() || fixture.length() < 10000L) return false;
+            metadata.setDataSource(fixture.getAbsolutePath());
+            String duration = metadata.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_DURATION);
+            String video = metadata.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO);
+            String audio = metadata.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO);
+            long millis = duration == null ? -1L : Long.parseLong(duration);
+            return millis >= 9500L && millis <= 10500L
+                    && "yes".equalsIgnoreCase(video)
+                    && "yes".equalsIgnoreCase(audio);
+        } catch (IOException | RuntimeException failure) {
+            Log.w(TAG, "TEN_SECOND_VIDEO_PREFLIGHT_FAILED", failure);
+            return false;
+        } finally {
+            try {
+                metadata.release();
+            } catch (java.io.IOException releaseFailure) {
+                Log.w(TAG, "METADATA_RELEASE_FAILED", releaseFailure);
+            }
+        }
+    }
+
+    /**
+     * Prefer an experiment-only external MP4 override, otherwise materialize
+     * the CI-bundled H.264/AAC MP4 into private cache for Sony playback.
+     * The same path is used for preflight and actual decoder preparation.
+     */
+    private File tenSecondFixtureFile() throws IOException {
+        File directory = context.getExternalFilesDir(null);
+        File override = directory == null ? null : new File(directory, TEN_SECOND_VIDEO);
+        if (override != null && override.exists()) return override;
+        File fixture = new File(context.getCacheDir(), TEN_SECOND_VIDEO);
+        try (InputStream input = context.getAssets().open(TEN_SECOND_VIDEO);
+             FileOutputStream output = new FileOutputStream(fixture, false)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+            output.flush();
+        }
+        return fixture;
     }
 
     /** Attach a fullscreen local surface only when overlay permission is available. */
@@ -156,9 +219,13 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
                     .build());
-            try (AssetFileDescriptor afd = context.getAssets().openFd(LOCAL_VIDEO_ASSET)) {
-                created.setDataSource(
-                        afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+            if (useTenSecondFixture) {
+                created.setDataSource(tenSecondFixtureFile().getAbsolutePath());
+            } else {
+                try (AssetFileDescriptor afd = context.getAssets().openFd(LOCAL_VIDEO_ASSET)) {
+                    created.setDataSource(
+                            afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                }
             }
             created.setSurface(surface);
             created.setOnCompletionListener(mp -> {
@@ -176,7 +243,7 @@ final class AndroidOverlayVideoPort implements OverlayVideoPort {
                 if (player == mp && root != null) mp.start();
             });
             created.prepareAsync();
-            Log.i(TAG, "LOCAL_VIDEO_PREPARING asset=" + LOCAL_VIDEO_ASSET);
+            Log.i(TAG, "LOCAL_VIDEO_PREPARING fixture10s=" + useTenSecondFixture);
         } catch (Exception error) {
             Log.w(TAG, "LOCAL_VIDEO_SETUP_FAILED");
             callbacks.onVideoError();
