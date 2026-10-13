@@ -17,6 +17,7 @@ permissions:
 jobs:
   software:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,6 +71,7 @@ jobs:
   platform:
     needs: software
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

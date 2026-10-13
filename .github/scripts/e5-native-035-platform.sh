@@ -13,12 +13,18 @@ adb -s "$SCENEVIBE_EMULATOR_SERIAL" install -r app/build/outputs/apk/debug/app-d
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW allow
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" logcat -c
-adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell am instrument -w \
+instrument_status=0
+timeout 180s adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell am instrument -w \
   com.scenevibe.tvcompanionpoc.test/com.scenevibe.tvcompanionpoc.E5NativeInstrumentation \
-  | tee e5-platform-results/instrumentation.txt
+  | tee e5-platform-results/instrumentation.txt || instrument_status=$?
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" logcat -d -s E5_PLATFORM SceneVibeE5 AndroidRuntime \
   > e5-platform-results/logcat.txt
-if ! grep -q 'INSTRUMENTATION_RESULT: failed=0' e5-platform-results/instrumentation.txt; then
+if [[ "$instrument_status" != 0 ]]; then
+  echo "Instrumentation failed or exceeded its finite budget: $instrument_status"
+  exit "$instrument_status"
+fi
+if ! grep -q 'INSTRUMENTATION_RESULT: failed=0' e5-platform-results/instrumentation.txt \
+  || ! grep -q 'INSTRUMENTATION_RESULT: passed=5' e5-platform-results/instrumentation.txt; then
   echo "Platform assertions failed or missing: no synthetic PASS"
   exit 1
 fi

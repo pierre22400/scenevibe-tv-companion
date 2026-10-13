@@ -22,6 +22,12 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class E5NativeInstrumentation extends Instrumentation {
     private int passed;
 
+    /** Start the explicit test worker; the framework does not invoke onStart by itself. */
+    @Override public void onCreate(Bundle arguments) {
+        super.onCreate(arguments);
+        start();
+    }
+
     /** Run the bounded platform cases and report real performed assertions, not physical claims. */
     @Override public void onStart() {
         Bundle result = new Bundle();

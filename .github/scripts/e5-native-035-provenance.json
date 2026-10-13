@@ -844,7 +844,7 @@
   },
   "additions": {
     "app/src/e5Qualification/AndroidManifest.xml": "7398cbc48d478dd0444c61adf759567447f7142c",
-    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5NativeInstrumentation.java": "77617f85b7e1cfe49c69ba0d84c78a204abb6e97",
+    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5NativeInstrumentation.java": "c460c3df62922569ba0e6f98b5ef213f6858d1c2",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSessionPort.java": "4f0c72e183f1d8fc9f0f7338c00f252a380b2a1b",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeQualificationPolicy.java": "10e017e87f3df3ac13993fa1b40559c12a40192f",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalInterludePlan.java": "f773f6dab1c614d5c9bbbef7b6a155a030826c71",
@@ -865,9 +865,9 @@
     "app/src/e5Qualification/assets/NOTICE-E5-035.txt": "ded6eee43d1160c2926af49964e2f071622ee762",
     "tests/e5_native_provenance.py": "08f9672aff3df8e4a83105e708f76f72c1d49c09",
     "tests/test_e5_native_boundary.py": "2a3725adeb577d62e215ca4e1c33fdb484a760d0",
-    ".github/workflows/e5-native-035-software.yml": "67fe4b04bd3633aa90c13e6ad61a0ed59bf0a347",
+    ".github/workflows/e5-native-035-software.yml": "60d7e70f30647837fd5288d8e11a0f18a17a94e6",
     ".github/scripts/e5-native-035.init.gradle": "eb43cd7a77ad42483778e343cec49e6746a37eac",
-    ".github/scripts/e5-native-035-platform.sh": "a97f579e844acf337b5fc8a0ff48cc8bcaf57a6a"
+    ".github/scripts/e5-native-035-platform.sh": "42725d6693ce315f86e9bab8eb55a9f91b755fde"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
   "scope": "Historical byte/inventory assertions only; actual JVM/Android/E5 gates use candidate"
