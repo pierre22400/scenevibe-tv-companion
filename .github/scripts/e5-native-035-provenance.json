@@ -851,7 +851,7 @@
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeTransportOwner.java": "4a4bdbc398f3b3017e2bdc0b90cfce9cb2b810d2",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeForegroundProof.java": "91eeb789ac89b5adad87e345cbe32aa24b2b2cb7",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalVideoPort.java": "062276bb515f50db0026e090436b9f63dcc8ac35",
-    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java": "d97511de5ff79ab80cddcbaeb2ef844e674a9745",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java": "ef2d6dd6d9d085a77b9a79c626493a210b9be37c",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java": "f4d220d4cd41c69596b05322eb664475725208f6",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeDiagnostics.java": "85607d52d4d01ac2e20de88d3b0a1b6e5c5a6083",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalMediaResource.java": "5eb26895c8c396607ad5c85d16541ecae0fbdda8",

@@ -47,7 +47,8 @@ final class AndroidNativeSessionPort implements NativeSessionPort {
         if (selected == null || !expected.sameTarget(selected.snapshot)
                 || !policy.fresh(selected.snapshot, SystemClock.elapsedRealtime())
                 || selected.snapshot.state != NativeSessionSnapshot.PLAYING
-                || !selected.snapshot.canPause) return false;
+                || selected.snapshot.speed != 1f
+                || !selected.snapshot.canPause || !selected.snapshot.canPlay) return false;
         try {
             selected.controller.getTransportControls().pause();
             return true;
