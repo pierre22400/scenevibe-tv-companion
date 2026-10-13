@@ -70,6 +70,9 @@ android {
         defaultConfig.versionCode = 14
         sourceSets.debug.manifest.srcFile "src/e5Qualification/AndroidManifest.xml"
         sourceSets.debug.assets.srcDirs += ["src/e5Qualification/assets"]
+        // Keep E5 platform probes out of historical M4/M5 reconstruction builds.
+        // They are compiled and executed explicitly by the qualification workflow.
+        sourceSets.androidTest.java.srcDirs += ["src/e5QualificationAndroidTest/java"]
     }
 }
 
