@@ -17,7 +17,7 @@ instrument_status=0
 timeout 180s adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell am instrument -w \
   com.scenevibe.tvcompanionpoc.test/com.scenevibe.tvcompanionpoc.E5NativeInstrumentation \
   | tee e5-platform-results/instrumentation.txt || instrument_status=$?
-adb -s "$SCENEVIBE_EMULATOR_SERIAL" logcat -d -s E5_PLATFORM SceneVibeE5 AndroidRuntime \
+adb -s "$SCENEVIBE_EMULATOR_SERIAL" logcat -d -s E5_PLATFORM SceneVibeE5 AndroidRuntime MediaPlayer MediaExtractor \
   > e5-platform-results/logcat.txt
 if [[ "$instrument_status" != 0 ]]; then
   echo "Instrumentation failed or exceeded its finite budget: $instrument_status"

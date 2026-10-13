@@ -57,10 +57,14 @@ final class AndroidLocalVideoPort implements LocalVideoPort {
         state = State.PREPARING;
         prepared = false;
         frames = 0;
+        String stage = "FIXTURE_COPY";
         try {
             fixture = materialize();
+            stage = "FIXTURE_DESCRIPTOR";
             descriptor = ParcelFileDescriptor.open(fixture, ParcelFileDescriptor.MODE_READ_ONLY);
+            stage = "STREAM_PREFLIGHT";
             validateStreams();
+            stage = "HOST_ATTACH";
             host = renderer.attachLocalVideo(plan, this::beforeDetach);
             final long captured = attempt;
             host.view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -81,11 +85,13 @@ final class AndroidLocalVideoPort implements LocalVideoPort {
                     if (current(captured) && state == State.PLAYING) frames++;
                 }
             });
+            stage = "PLAYER_CREATE";
             MediaPlayer created = new MediaPlayer();
             player = created;
             created.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build());
+            stage = "PLAYER_SOURCE";
             created.setDataSource(descriptor.getFileDescriptor());
             created.setOnPreparedListener(mp -> {
                 if (!current(captured) || player != mp) return;
@@ -107,9 +113,10 @@ final class AndroidLocalVideoPort implements LocalVideoPort {
                 return true;
             });
             if (host.view.isAvailable()) bindSurface(host.view.getSurfaceTexture(), captured);
+            stage = "PLAYER_ASYNC";
             created.prepareAsync();
         } catch (Exception failed) {
-            fail(attempt, "FIXTURE_OR_PREPARATION_FAILED");
+            fail(attempt, preparationFailure(stage, failed));
         }
     }
 
@@ -270,6 +277,20 @@ final class AndroidLocalVideoPort implements LocalVideoPort {
     /** Confine player/Surface/view operations to the same serialized Android owner as the regie. */
     private static void assertOwner() {
         if (Looper.myLooper() != Looper.getMainLooper()) throw new IllegalStateException("OWNER_THREAD");
+    }
+
+    /** Diagnose fixed preparation steps without logging file paths, media or arbitrary messages. */
+    private static String preparationFailure(String stage, Exception failed) {
+        String message = failed.getMessage();
+        if ("FIXTURE_DIGEST_MISMATCH".equals(message)
+                || "FIXTURE_TRACKS".equals(message) || "FIXTURE_MIME".equals(message)
+                || "FIXTURE_DECODER_UNAVAILABLE".equals(message)
+                || "FIXTURE_STREAMS".equals(message)) return message;
+        String type = failed instanceof SecurityException ? "PERMISSION"
+                : failed instanceof java.io.FileNotFoundException ? "MISSING"
+                : failed instanceof java.io.IOException ? "IO"
+                : failed instanceof IllegalStateException ? "STATE" : "SETUP";
+        return stage + "_" + type;
     }
 
     /** Encode the digest without any source path or token entering diagnostics. */

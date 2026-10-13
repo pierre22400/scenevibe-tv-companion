@@ -56,7 +56,7 @@ public final class E5NativeInstrumentation extends Instrumentation {
         Harness h = create(getTargetContext(), true);
         start(h);
         waitTerminal(h, 30000);
-        runOnMainSync(() -> {
+        onOwner(() -> {
             require(h.controller.localPhase() == SceneRuntimeController.LocalPhase.SUCCESS, "NOMINAL_PHASE");
             require(h.nativePort.pauses == 1 && h.nativePort.plays == 1, "SIMULATED_CONFIRMATIONS");
             require(h.player.renderedFramesForTest() > 0, "REAL_TEXTURE_UPDATES");
@@ -70,12 +70,12 @@ public final class E5NativeInstrumentation extends Instrumentation {
     /** Release while prepare is pending; late readiness must not pause or start anything. */
     private void cancelledPreparation() throws Exception {
         Harness h = create(getTargetContext(), true);
-        runOnMainSync(() -> {
+        onOwner(() -> {
             require(h.controller.requestLocal(LocalInterludePlan.qualification(true)), "REQUEST_PREPARE");
             h.controller.cancelLocal("STOP_DURING_PREPARE");
         });
         SystemClock.sleep(1200);
-        runOnMainSync(() -> {
+        onOwner(() -> {
             h.controller.tickLocal();
             require(h.nativePort.pauses == 0 && h.nativePort.plays == 0, "NO_LATE_TRANSPORT");
             require(h.player.resourcesReleasedForTest(), "PREPARATION_RELEASE");
@@ -95,7 +95,7 @@ public final class E5NativeInstrumentation extends Instrumentation {
             if (h.controller.localPhase() == SceneRuntimeController.LocalPhase.PLAYER_PLAYING) break;
             SystemClock.sleep(50);
         }
-        runOnMainSync(() -> {
+        onOwner(() -> {
             require(h.controller.localPhase() == SceneRuntimeController.LocalPhase.PLAYER_PLAYING, "REAL_STARTED");
             require(h.renderer.localHostInRendererRoot(), "ONE_SHARED_ROOT");
             int flags = h.renderer.windowFlagsForTest();
@@ -104,7 +104,7 @@ public final class E5NativeInstrumentation extends Instrumentation {
             h.renderer.dismissNow();
         });
         waitTerminal(h, 5000);
-        runOnMainSync(() -> {
+        onOwner(() -> {
             require(h.nativePort.plays == 0, "NO_PLAY_ON_SURFACE_LOSS");
             require(h.player.resourcesReleasedForTest(), "SURFACE_RELEASE");
             require(h.controller.localPhase() == SceneRuntimeController.LocalPhase.RECOVERY_REQUIRED,
@@ -126,7 +126,7 @@ public final class E5NativeInstrumentation extends Instrumentation {
         Harness h = create(wrapper, true);
         start(h);
         waitTerminal(h, 7000);
-        runOnMainSync(() -> {
+        onOwner(() -> {
             require(h.nativePort.pauses == 0 && h.nativePort.plays == 0, "MISSING_BEFORE_PAUSE");
             require(h.player.resourcesReleasedForTest(), "MISSING_CLEANUP");
             require(h.controller.localPhase() == SceneRuntimeController.LocalPhase.REFUSED, "MISSING_REFUSED");
@@ -138,7 +138,7 @@ public final class E5NativeInstrumentation extends Instrumentation {
     /** An OFF regie prepares no decoder, host or native command. */
     private void flagOff() {
         Harness h = create(getTargetContext(), false);
-        runOnMainSync(() -> {
+        onOwner(() -> {
             require(!h.controller.requestLocal(LocalInterludePlan.qualification(true)), "OFF_REFUSAL");
             require(h.player.state() == LocalVideoPort.State.DETACHED, "OFF_NO_PLAYER");
             require(!h.renderer.localHostInRendererRoot(), "OFF_NO_WINDOW");
@@ -151,19 +151,19 @@ public final class E5NativeInstrumentation extends Instrumentation {
     /** Construct real Android player/renderer with only the native session port simulated. */
     private Harness create(Context playerContext, boolean enabled) {
         AtomicReference<Harness> reference = new AtomicReference<>();
-        runOnMainSync(() -> reference.set(new Harness(playerContext, enabled)));
+        onOwner(() -> reference.set(new Harness(playerContext, enabled)));
         return reference.get();
     }
 
     /** Admit the explicit local plan; it is never loaded into an editorial calendar. */
     private void start(Harness h) {
-        runOnMainSync(() -> require(h.controller.requestLocal(LocalInterludePlan.qualification(true)),
+        onOwner(() -> require(h.controller.requestLocal(LocalInterludePlan.qualification(true)),
                 "LOCAL_REQUEST"));
     }
 
     /** Poll only execution/transport confirmation; this does not create MEDIA/WALL events. */
     private void tick(Harness h) {
-        runOnMainSync(h.controller::tickLocal);
+        onOwner(h.controller::tickLocal);
     }
 
     /** Await a finite real lifecycle while leaving the main thread free for player callbacks. */
@@ -174,8 +174,17 @@ public final class E5NativeInstrumentation extends Instrumentation {
             if (!h.controller.isLocalPresentationActive()) return;
             SystemClock.sleep(50);
         }
-        runOnMainSync(() -> h.controller.cancelLocal("INSTRUMENTATION_TIMEOUT"));
+        onOwner(() -> h.controller.cancelLocal("INSTRUMENTATION_TIMEOUT"));
         throw new AssertionError("PLATFORM_WAIT_TIMEOUT");
+    }
+
+    /** Return assertion failures to the worker so they are reported instead of crashing the app main loop. */
+    private void onOwner(Runnable action) {
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        super.runOnMainSync(() -> {
+            try { action.run(); } catch (Throwable error) { failure.set(error); }
+        });
+        if (failure.get() != null) throw new AssertionError("ANDROID_OWNER_ASSERTION", failure.get());
     }
 
     /** Fail on an actually observed condition, without converting missing proof to a skip/pass. */

@@ -844,7 +844,7 @@
   },
   "additions": {
     "app/src/e5Qualification/AndroidManifest.xml": "7398cbc48d478dd0444c61adf759567447f7142c",
-    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5NativeInstrumentation.java": "c460c3df62922569ba0e6f98b5ef213f6858d1c2",
+    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5NativeInstrumentation.java": "f9576c50c5ffef1ec656c11a8cd31e4fc2214270",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSessionPort.java": "4f0c72e183f1d8fc9f0f7338c00f252a380b2a1b",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeQualificationPolicy.java": "10e017e87f3df3ac13993fa1b40559c12a40192f",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalInterludePlan.java": "f773f6dab1c614d5c9bbbef7b6a155a030826c71",
@@ -855,7 +855,7 @@
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java": "f4d220d4cd41c69596b05322eb664475725208f6",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeDiagnostics.java": "85607d52d4d01ac2e20de88d3b0a1b6e5c5a6083",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalMediaResource.java": "5eb26895c8c396607ad5c85d16541ecae0fbdda8",
-    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidLocalVideoPort.java": "d11832d549f39af49018edf750d2a655280c2ff9",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidLocalVideoPort.java": "66e19aaa85e5b5af1f558aa93505c17bec8ea0f8",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSessionSnapshot.java": "c6d0b69a6b7b853ddd54eab8ec297eb0b8faf253",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/E5TestHarness.java": "19e21dfa407b0751a5e7c9e520e007310ee263d0",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/NativeTransportOwnerTest.java": "42eeb82caa6558279be7a5bf735bcc1ff9b2bd26",
@@ -867,7 +867,7 @@
     "tests/test_e5_native_boundary.py": "2a3725adeb577d62e215ca4e1c33fdb484a760d0",
     ".github/workflows/e5-native-035-software.yml": "60d7e70f30647837fd5288d8e11a0f18a17a94e6",
     ".github/scripts/e5-native-035.init.gradle": "eb43cd7a77ad42483778e343cec49e6746a37eac",
-    ".github/scripts/e5-native-035-platform.sh": "42725d6693ce315f86e9bab8eb55a9f91b755fde"
+    ".github/scripts/e5-native-035-platform.sh": "eed2a42488ac0bdab28a8ad62516c2a865ed373e"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
   "scope": "Historical byte/inventory assertions only; actual JVM/Android/E5 gates use candidate"
