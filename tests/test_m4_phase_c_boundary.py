@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 import hashlib
 import json
 from pathlib import Path
@@ -30,8 +31,8 @@ PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
 PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-c-baseline.json').read_text(encoding='utf-8'))
-PHASE_B = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-c-baseline.json'))
+PHASE_B = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-b-baseline.json'))
 PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
 PHASE_D = json.loads(PHASE_D_PATH.read_text(encoding='utf-8')) if PHASE_D_PATH.exists() else {}
 PHASE_E_PATH = ROOT / '.github/scripts/m4-phase-e-baseline.json'
@@ -75,7 +76,7 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         forbidden += r'CloudControlClient|CloudProtocol|VideoOverlayManifestBridge|TrackParser|OverlayManifestParser|'
         forbidden += r'FinalTrack|Prime|Pass0|Pass1|Pass2|Banner|Language|PackageInstaller|Thread)\b'
         for path in BASELINE['genericStoreFiles']:
-            source = code_only((ROOT / path).read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(ROOT / path))
             self.assertIsNone(re.search(forbidden, source), path)
             for token in ('java.net.', 'java.io.', 'java.nio.file.', 'org.json.', 'java.lang.reflect.',
                           'Class.forName', 'ServiceLoader', 'DexClassLoader', 'WebView', 'HttpURLConnection'):
@@ -91,7 +92,7 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
     def test_repository_behavior_and_injectable_seam_remain_byte_exact(self):
         """Only the Android constructor/imports/banner may change; all Video/ACK/restore methods stay frozen."""
         path = ROOT / BASELINE['authorizedPersistenceExtraction']
-        source = path.read_text(encoding='utf-8')
+        source = e5_retained_text(path)
         for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(
                 'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):
             source = source.replace(patch['after'], patch['before'])
@@ -99,7 +100,7 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         start = source.index('final class CloudTrackRepository')
         end = source.index('    /** Wraps SharedPreferences.commit')
         if PHASE_D:
-            reference = (ROOT / PHASE_D['historicalReferenceFile']).read_text(encoding='utf-8')
+            reference = e5_retained_text(ROOT / PHASE_D['historicalReferenceFile'])
             reference = code_only(reference.replace('M4PhaseDHistoricalRepository', 'CloudTrackRepository'))
             reference = '\n'.join(line for line in reference.splitlines() if line.strip())
             self.assertEqual(PHASE_D['historicalRepositoryCodeSha256'], hashlib.sha256(reference.encode()).hexdigest())
@@ -127,10 +128,10 @@ class M4PhaseCBoundaryTest(unittest.TestCase):
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
         expected.update(calendar_model_files() | phase_c_production_files())
-        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java')}
         self.assertEqual(expected, actual)
         for path in actual:
-            source = code_only((ROOT / path).read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(ROOT / path))
             if path not in PHASE_D.get('videoHandlerFiles', []):
                 self.assertIsNone(re.search(r'\bimplements\s+InstallationHandler\b', source), path)
             if path != PHASE_E.get('installerFile') and path not in PHASE_F.get('authorizedLiveCallers', []):

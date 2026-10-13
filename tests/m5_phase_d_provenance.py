@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes
 import hashlib
 import json
 from pathlib import Path
@@ -68,7 +69,7 @@ def physical_closure_retained_bytes(path):
     still read and execute the current source, with no rewritten baseline.
     """
     path = Path(path)
-    content = path.read_bytes()
+    content = e5_retained_bytes(path)
     admission = PHYSICAL_CLOSURE_ADMISSIONS.get(str(path.relative_to(ROOT)))
     if admission is None:
         return content

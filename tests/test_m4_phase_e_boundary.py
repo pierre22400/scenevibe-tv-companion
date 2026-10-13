@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 import ast
 import hashlib
 import json
@@ -28,7 +29,7 @@ PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
 PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-e-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-e-baseline.json'))
 INSTALLER = 'app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java'
 
 
@@ -79,7 +80,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
     def test_installer_api_is_local_small_and_in_generic_package(self):
         """One final type may expose only its explicit constructor and synchronous install entry point."""
         self.assertEqual(INSTALLER, BASELINE['installerFile'])
-        source = code_only((ROOT / INSTALLER).read_text(encoding='utf-8'))
+        source = code_only(e5_retained_text(ROOT / INSTALLER))
         self.assertIn('package com.scenevibe.tvcompanionpoc.installation;', source)
         self.assertIn('public final class PackageInstaller', source)
         self.assertEqual(['PackageInstaller', 'install'], re.findall(
@@ -93,7 +94,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         javac, java = shutil.which('javac'), shutil.which('java')
         self.assertTrue(javac or java, 'JDK compiler required for Phase E isolation')
         compiler = [javac] if javac else [java, '-m', 'jdk.compiler/com.sun.tools.javac.Main']
-        paths = sorted((ROOT / INSTALLER).parent.glob('*.java'))
+        paths = sorted(e5_scope_files((ROOT / INSTALLER).parent, '*.java', recursive=False))
         paths = [str(path) for path in paths if path.name != 'AndroidInstallationBackend.java']
         with tempfile.TemporaryDirectory(prefix='scenevibe-m4e-') as directory:
             work = Path(directory)
@@ -108,7 +109,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
 
     def test_installer_has_no_product_platform_network_or_dynamic_dependency(self):
         """Reject domain/platform references and both imported and qualified side-effect APIs."""
-        source = code_only((ROOT / INSTALLER).read_text(encoding='utf-8'))
+        source = code_only(e5_retained_text(ROOT / INSTALLER))
         forbidden = r'\b(Video\w*|Prime\w*|FinalTrack\w*|Cloud\w*|Overlay\w*|SceneRenderer|SceneRuntimeController|'
         forbidden += r'MediaSyncedTrackScheduler|TrackParser|ScheduledTrack|Context|Service|Handler|Looper|View|'
         forbidden += r'WindowManager|Banner|Language|DiagnosticsStore|Thread|ClassLoader|DexClassLoader|WebView)\b'
@@ -121,7 +122,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
 
     def test_ack_and_vm_fatal_errors_stay_outside_installer(self):
         """No confirmation API/callback/flag exists, and ordinary runtime rejection never swallows VM errors."""
-        source = code_only((ROOT / INSTALLER).read_text(encoding='utf-8'))
+        source = code_only(e5_retained_text(ROOT / INSTALLER))
         self.assertNotRegex(source, r'(?i)\b(markAcknowledged|ackEligible|ackEligibility|ackCallback|ackRevision|finalTrackId)\b')
         caught = re.findall(r'\bcatch\s*\(\s*(\w+)\s+\w+\s*\)', source)
         self.assertTrue(caught)
@@ -137,7 +138,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
                 continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         for name in ('CloudControlClient', 'CloudTrackRepository', 'OverlayService', 'BootReceiver'):
-            source = code_only((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).read_text())
+            source = code_only(e5_retained_text(ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')))
             if str((ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc' / (name + '.java')).relative_to(ROOT)) not in PHASE_F.get('authorizedLiveCallers', []):
                 self.assertNotIn('PackageInstaller', source, name)
 
@@ -152,11 +153,11 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
     def test_production_inventory_admits_exactly_one_unwired_orchestration_type(self):
         """No Cloud adapter, service port, restore coordinator or future milestone type can appear."""
         prior = {path for path in BASELINE['qualifiedRuntimeBlobs'] if path.endswith('.java')}
-        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java')}
         self.assertEqual(prior | {INSTALLER} | ({PHASE_F['adapterFile']} if PHASE_F else set()) | calendar_model_files() | phase_c_production_files(), actual)
         callers = []
         for path in actual:
-            if re.search(r'\bPackageInstaller\b', code_only((ROOT / path).read_text())):
+            if re.search(r'\bPackageInstaller\b', code_only(e5_retained_text(ROOT / path))):
                 callers.append(path)
         self.assertEqual(sorted([INSTALLER] + PHASE_F.get('authorizedLiveCallers', [])), sorted(callers))
 
@@ -177,7 +178,7 @@ class M4PhaseEBoundaryTest(unittest.TestCase):
         paths = [path for path in BASELINE['frozenAccountingBoundaryBlobs'] if path.endswith('.py')]
         paths.append('tests/test_m4_phase_e_boundary.py')
         for relative in paths:
-            tree = ast.parse((ROOT / relative).read_text(encoding='utf-8'))
+            tree = ast.parse(e5_retained_text(ROOT / relative))
             last_import = max(index for index, node in enumerate(tree.body) if isinstance(node, (ast.Import, ast.ImportFrom)))
             self.assertTrue(any(isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
                                 and isinstance(node.value.value, str) for node in tree.body[last_import + 1:]), relative)

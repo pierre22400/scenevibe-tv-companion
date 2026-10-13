@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 import hashlib
 import json
 from pathlib import Path
@@ -32,7 +33,7 @@ PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
 PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-b-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-b-baseline.json'))
 PHASE_C_PATH = ROOT / '.github/scripts/m4-phase-c-baseline.json'
 PHASE_C = json.loads(PHASE_C_PATH.read_text(encoding='utf-8')) if PHASE_C_PATH.exists() else {}
 PHASE_D_PATH = ROOT / '.github/scripts/m4-phase-d-baseline.json'
@@ -85,7 +86,7 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         domain += r'CloudDeviceCredentials|OverlayService|OverlayRenderer|SceneRenderer|SceneRuntimeController|'
         domain += r'MediaSyncedTrackScheduler|DiagnosticsStore|Thread|Banner|Language|PackageInstaller|InstallationStore)\b'
         for path in BASELINE['genericModelFiles']:
-            source = code_only((ROOT / path).read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(ROOT / path))
             imports = re.findall(r'\bimport\s+([\w.]+)\s*;', source)
             for imported in imports:
                 self.assertTrue(imported.startswith('java.util.') or imported == 'java.nio.charset.StandardCharsets', path)
@@ -116,14 +117,14 @@ class M4PhaseBBoundaryTest(unittest.TestCase):
         if PHASE_F:
             new_files.add(PHASE_F['adapterFile'])
         new_files.update(calendar_model_files() | phase_c_production_files())
-        actual = {str(path.relative_to(ROOT)) for path in production.rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(production, '*.java')}
         self.assertEqual(old_files | new_files, actual, 'Unexpected production component outside Phase B')
         names = '|'.join(Path(path).stem for path in new_files)
         for path in old_files:
             # Only the persistence facade may import the explicitly permitted store/backend.
             if path == PHASE_C.get('authorizedPersistenceExtraction') or path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
-            source = code_only((ROOT / path).read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(ROOT / path))
             self.assertNotIn('com.scenevibe.tvcompanionpoc.installation', source, path)
             self.assertIsNone(re.search(r'\b(' + names + r')\b', source), path)
 

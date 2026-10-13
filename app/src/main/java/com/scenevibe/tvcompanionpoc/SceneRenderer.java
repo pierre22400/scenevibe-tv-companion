@@ -10,6 +10,7 @@ import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -31,6 +32,98 @@ import java.util.List;
  * local asset cache supplied through {@link AssetResolver}.</p>
  */
 final class SceneRenderer {
+    /**
+     * One TextureView owned by the existing renderer root. It owns no player, clock or native
+     * transport; beforeDetach synchronously releases the port before Android destroys texture.
+     */
+    static final class LocalVideoHost {
+        final TextureView view;
+        final LocalInterludePlan plan;
+        private final Runnable beforeDetach;
+        private boolean attached = true;
+
+        /** Bind one renderer-owned host and its resource-retirement callback. */
+        LocalVideoHost(TextureView view, LocalInterludePlan plan, Runnable beforeDetach) {
+            this.view = view;
+            this.plan = plan;
+            this.beforeDetach = beforeDetach;
+        }
+
+        /** Observe lifecycle without exposing a separate WindowManager owner. */
+        boolean attached() { return attached; }
+
+        /** Invalidate before release/detach; repeated retirement is harmless. */
+        void retire() {
+            if (!attached) return;
+            attached = false;
+            beforeDetach.run();
+            view.setSurfaceTextureListener(null);
+        }
+    }
+
+    private LocalVideoHost localVideoHost;
+
+    /**
+     * Attach a transparent, noninteractive host for preparation inside this renderer's root.
+     * No clip frame/audio is started and no second WindowManager window is created.
+     */
+    LocalVideoHost attachLocalVideo(LocalInterludePlan plan, Runnable beforeDetach) {
+        if (localVideoHost != null) throw new IllegalStateException("LOCAL_HOST_BUSY");
+        if (!Settings.canDrawOverlays(context)) throw new IllegalStateException("OVERLAY_PERMISSION");
+        if (root != null && !root.isHardwareAccelerated()) removeNow();
+        ensureWindow(true);
+        root.animate().cancel();
+        root.setAlpha(1f);
+        root.removeAllViews();
+        TextureView texture = new TextureView(context);
+        texture.setOpaque(false);
+        texture.setAlpha(0f);
+        texture.setFocusable(false);
+        texture.setClickable(false);
+        applyFrame(texture, plan.videoFrame);
+        localVideoHost = new LocalVideoHost(texture, plan, beforeDetach);
+        root.addView(texture);
+        return localVideoHost;
+    }
+
+    /** Render graphical primitives around the prepared host, preserving z-order and texture. */
+    void showLocalScene(LocalInterludePlan plan) {
+        LocalVideoHost host = localVideoHost;
+        if (host == null || !host.attached() || host.plan != plan
+                || !Settings.canDrawOverlays(context) || !preflight(plan.scene)) {
+            throw new IllegalStateException("LOCAL_HOST_UNAVAILABLE");
+        }
+        root.animate().cancel();
+        root.setAlpha(1f);
+        int beforeHost = 0;
+        for (OverlayManifest.Element element : ordered(plan.scene.elements)) {
+            View view = build(element);
+            if (element.zIndex < plan.videoZ || element.zIndex == plan.videoZ
+                    && element.id.compareTo("e5-local-video-slot") < 0) {
+                root.addView(view, beforeHost++);
+            } else {
+                root.addView(view);
+            }
+        }
+        host.view.setAlpha(1f);
+    }
+
+    /** Observe that the player view belongs to the same root; used by Android lifecycle tests. */
+    boolean localHostInRendererRoot() {
+        return localVideoHost != null && localVideoHost.attached()
+                && localVideoHost.view.getParent() == root;
+    }
+
+    /** Expose actual passive window flags to instrumentation without mutating the window. */
+    int windowFlagsForTest() { return windowParams == null ? 0 : windowParams.flags; }
+
+    /** Release the player/Surface synchronously before view/window removal. */
+    private void retireLocalVideo() {
+        LocalVideoHost retired = localVideoHost;
+        localVideoHost = null;
+        if (retired != null) retired.retire();
+    }
+
     /** Local-only asset seam. Implementations must never fetch a network URL here. */
     interface AssetResolver {
         Bitmap resolve(String assetRef);
@@ -128,6 +221,7 @@ final class SceneRenderer {
         // new scene and then have the OLD fade remove its window a few milliseconds later.
         root.animate().cancel();
         root.setAlpha(1f);
+        retireLocalVideo();
         root.removeAllViews();
         for(OverlayManifest.Element element:ordered(scene.elements)) {
             root.addView(build(element));
@@ -153,6 +247,11 @@ final class SceneRenderer {
 
     /** Create a transparent full-screen overlay and scale logical 1920x1080 scene units. */
     private void ensureWindow() {
+        ensureWindow(false);
+    }
+
+    /** Add hardware acceleration only for the explicit TextureView qualification host. */
+    private void ensureWindow(boolean localVideo) {
         if(root!=null)return;
         DisplayMetrics metrics=context.getResources().getDisplayMetrics();
         scaleX=metrics.widthPixels/(float)OverlayManifest.CANVAS_WIDTH;
@@ -169,7 +268,8 @@ final class SceneRenderer {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         |WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                        |WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                        |WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                        |(localVideo ? WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED : 0),
                 PixelFormat.TRANSLUCENT);
         windowParams.gravity=Gravity.TOP|Gravity.START;
         windowParams.setTitle("SceneVibe SceneRenderer");
@@ -337,6 +437,7 @@ final class SceneRenderer {
 
     /** Remove the full-screen overlay safely. */
     private void removeNow() {
+        retireLocalVideo();
         if(root==null)return;
         try {
             root.animate().cancel();

@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 from m5_phase_d_provenance import phase_d_added_paths, phase_d_retained_bytes
 import ast
 import hashlib
@@ -20,7 +21,7 @@ the original M4 assertions and whole-blob pins still execute in their own suites
 """
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = json.loads((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m5-phase-b-baseline.json'))
 CORE = 'app/src/main/java/com/scenevibe/tvcompanionpoc/calendar/'
 TEST = 'app/src/test/java/com/scenevibe/tvcompanionpoc/'
 ORACLE_BLOBS = {
@@ -42,7 +43,7 @@ PROVENANCE_FILES = {
 
 def code(path):
     """Inspect executable source while leaving educational documentation unchanged."""
-    return re.sub(r'/\*.*?\*/|//[^\n]*', '', (ROOT / path).read_text(encoding='utf-8'), flags=re.S)
+    return re.sub(r'/\*.*?\*/|//[^\n]*', '', e5_retained_text(ROOT / path), flags=re.S)
 
 
 class M5PhaseBBoundaryTest(unittest.TestCase):
@@ -105,7 +106,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
         expected = set(BASELINE['startingBlobs']) | set(BASELINE['additiveFiles']) | set(BASELINE['documents']) | phase_c_added_paths() | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'}
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
-            for path in (ROOT / directory).rglob('*'):
+            for path in e5_scope_files(ROOT / directory, '*'):
                 if path.is_file() and '__pycache__' not in path.parts:
                     actual.add(str(path.relative_to(ROOT)))
         self.assertEqual({path for path in expected if path.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}, actual)
@@ -176,7 +177,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
         harness = code(TEST + 'M5FrozenLegacyOracle.java')
         for item in BASELINE['oracleSources']:
             self.assertTrue(item['resource'].endswith('.java.txt'))
-            self.assertEqual(item['blob'], blob_hash((ROOT / item['resource']).read_bytes()), item['resource'])
+            self.assertEqual(item['blob'], blob_hash(e5_retained_bytes(ROOT / item['resource'])), item['resource'])
             self.assertEqual(item['blob'], BASELINE['startingBlobs'][item['production']])
             self.assertIn(item['blob'], harness)
         self.assertEqual([], BASELINE['oracleAdaptations'])
@@ -189,7 +190,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
 
     def test_fixture_inventory_covers_all_48_families_and_preserves_raw_hashmap_cases(self):
         """Invalid-value fixtures are distinct; raw map-order evidence is never a portable expected order."""
-        corpus = json.loads((ROOT / 'app/src/test/resources/m5-phase-b/corpus.json').read_text(encoding='utf-8'))
+        corpus = json.loads(e5_retained_text(ROOT / 'app/src/test/resources/m5-phase-b/corpus.json'))
         cases = corpus['cases']
         self.assertEqual(BASELINE['corpusCases'], [case['id'] for case in cases])
         self.assertEqual(92, len(cases))
@@ -206,7 +207,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
             if case.get('environmentDependent'):
                 self.assertNotIn('expected', case)
         for path, digest in BASELINE['fixtureSha256'].items():
-            self.assertEqual(digest, hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), path)
+            self.assertEqual(digest, hashlib.sha256(e5_retained_bytes(ROOT / path)).hexdigest(), path)
 
     def test_journal_and_projection_cannot_replace_a_scheduler(self):
         """No sorting/dedupe/tolerance or legacy scheduling conditions hide a temporal divergence."""
@@ -227,7 +228,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
         self.assertEqual({'M5SceneEventTest': 7, 'M5MediaCalendarTest': 9, 'M5MediaObservationTest': 4,
                           'M5JournalComparatorTest': 11, 'M5VideoProjectionTest': 4,
                           'M5LegacyOracleCorpusTest': 92}, BASELINE['m5PhaseBSuites'])
-        summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text(encoding='utf-8')
+        summary = e5_retained_text(ROOT / '.github/scripts/m4-phase-a-test-summary.py')
         for token in ("**m5_phase_b['m5PhaseBSuites']", "**sony['phaseGCorrectiveSuites']",
                       'if suites != expected:', "baseline['allowedOptInSkips']", "baseline['fixtureSha256']",
                       "m5_phase_b['fixtureSha256']"):
@@ -236,7 +237,7 @@ class M5PhaseBBoundaryTest(unittest.TestCase):
     def test_new_python_keeps_teaching_banners_and_function_docstrings(self):
         """Every new Python helper explains its scope after imports and documents each function."""
         for path in ('tests/m5_phase_b_provenance.py', 'tests/test_m5_phase_b_boundary.py'):
-            tree = ast.parse((ROOT / path).read_text(encoding='utf-8'))
+            tree = ast.parse(e5_retained_text(ROOT / path))
             last_import = max(i for i, node in enumerate(tree.body) if isinstance(node, (ast.Import, ast.ImportFrom)))
             self.assertTrue(any(isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
                                 and isinstance(node.value.value, str) for node in tree.body[last_import + 1:]), path)

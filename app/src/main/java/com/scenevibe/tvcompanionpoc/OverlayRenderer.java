@@ -175,6 +175,9 @@ public final class OverlayRenderer {
         showCommentaryInternal(text, durationMs, mediaBitmap, true);
     }
 
+    /** Read-only admission evidence: qualification must not preempt a visible legacy comment. */
+    boolean hasVisibleCommentary() { return panel != null && commentaryText != null; }
+
     public void onPlayback(boolean playing, boolean pauseFreezesDisplay) {
         handler.post(() -> {
             playbackRunning = playing;

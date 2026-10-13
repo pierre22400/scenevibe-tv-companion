@@ -55,6 +55,11 @@ public final class DiagnosticsActivity extends Activity {
 
         addButton(controls, "Refresh diagnostics", this::refresh);
         addButton(controls, "Reset SceneVibe Cloud connection", this::resetCloud);
+        if (OverlayService.e5QualificationEnabled()) {
+            addButton(controls, "Grant Usage Access for local E5 qualification", this::openE5UsageAccess);
+            addButton(controls, "Run local Sony/Prime VOD interlude", this::requestE5Local);
+            addButton(controls, "Stop local E5 interlude", this::stopE5Local);
+        }
 
         TextView note = new TextView(this);
         note.setText("Reset deletes this TV's SceneVibe Cloud credential and installed SceneVibe content, "
@@ -81,7 +86,34 @@ public final class DiagnosticsActivity extends Activity {
     /** Rebuilds the read-only snapshot from the current stores and observational signals. */
     private void refresh() {
         RuntimeDiagnostics diagnostics = RuntimeDiagnostics.capture(this, DiagnosticsStore.INSTANCE);
-        report.setText(render(diagnostics));
+        report.setText(render(diagnostics) + (OverlayService.e5QualificationEnabled()
+                ? "\n" + NativeDiagnostics.lastSummary() : ""));
+    }
+
+    /** Open an explicit permission screen only in the debug opt-in profile; never auto-grant. */
+    private void openE5UsageAccess() {
+        startActivity(new Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS));
+    }
+
+    /** Confirm VOD locally, request the non-exported service, then return control to native TV. */
+    private void requestE5Local() {
+        if (!OverlayService.e5QualificationEnabled()) return;
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Local qualification — Sony Android 12 / Prime")
+                .setMessage("Confirm a VOD programme, not live. The native programme must be playing. "
+                        + "This is a local diagnostic clip; an incident requires manual native recovery.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Confirm VOD and request", (dialog, which) -> {
+                    startForegroundService(new Intent(this, OverlayService.class)
+                            .setAction(OverlayService.ACTION_E5_LOCAL).putExtra("e5VodConfirmed", true));
+                    moveTaskToBack(true);
+                }).show();
+    }
+
+    /** Request explicit local STOP; no native PLAY or durable reset occurs. */
+    private void stopE5Local() {
+        if (OverlayService.e5QualificationEnabled()) startService(new Intent(this, OverlayService.class)
+                .setAction(OverlayService.ACTION_E5_STOP));
     }
 
     /**

@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 import ast
 import json
 from pathlib import Path
@@ -14,7 +15,7 @@ The JVM bucket executes both Video shapes against the real service router and co
 """
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = json.loads((ROOT / '.github/scripts/m5-phase-d-baseline.json').read_text())
+BASE = json.loads(e5_retained_text(ROOT / '.github/scripts/m5-phase-d-baseline.json'))
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
 TEST = 'app/src/test/java/com/scenevibe/tvcompanionpoc/'
 PRODUCTION = {JAVA + n + '.java' for n in ('OverlayService', 'SceneRuntimeController', 'VideoPreparedState', 'VideoInstallationRuntimePorts', 'DiagnosticsActivity')}
@@ -33,7 +34,7 @@ CHANGED = PRODUCTION | {TEST + n + '.java' for n in ('AssignmentMutationGateTest
 
 def code(path):
     """Inspect actual executable Java while preserving all teaching comments in provenance."""
-    return re.sub(r'/\*.*?\*/|//[^\n]*', '', (ROOT / path).read_text(), flags=re.S)
+    return re.sub(r'/\*.*?\*/|//[^\n]*', '', e5_retained_text(ROOT / path), flags=re.S)
 
 
 def block(source, signature):
@@ -62,7 +63,7 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
         self.assertEqual(CHANGED, set(BASE['provenancePatches']))
         for phase in ('B', 'C'):
             path = '.github/scripts/m5-phase-' + phase.lower() + '-baseline.json'
-            self.assertEqual(BASE['phase' + phase + 'BaselineBlob'], blob_hash((ROOT / path).read_bytes()))
+            self.assertEqual(BASE['phase' + phase + 'BaselineBlob'], blob_hash(e5_retained_bytes(ROOT / path)))
         self.assertEqual(set(BASE['startingBlobs']) - CHANGED, set(BASE['forbiddenChanges']))
 
     def test_every_retained_blob_reconstructs_exact_c(self):
@@ -71,16 +72,16 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
         for path, digest in BASE['startingBlobs'].items():
             self.assertEqual(digest, blob_hash(phase_d_retained_bytes(ROOT / path)), path)
             if path not in CHANGED:
-                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+                self.assertEqual(digest, blob_hash(e5_retained_bytes(ROOT / path)), path)
         for path, digest in {**BASE['qualifiedCoreBlobs'], **BASE['oracleAndFixtureBlobs']}.items():
             self.assertNotIn(path, CHANGED)
-            self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+            self.assertEqual(digest, blob_hash(e5_retained_bytes(ROOT / path)), path)
 
     def test_exact_file_inventory(self):
         """No unlisted test, hidden engine, wildcard or alternate activation path can enter scope."""
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
-            actual.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob('*')
+            actual.update(str(p.relative_to(ROOT)) for p in e5_scope_files(ROOT / directory, '*')
                           if p.is_file() and '__pycache__' not in p.parts)
         expected = {p for p in set(BASE['startingBlobs']) | ADDED | {'docs/m5-final-sony-physical-closure.md'} if p.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}
         self.assertEqual(expected, actual)
@@ -88,7 +89,7 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
 
     def test_unique_live_engine_and_passive_probe_projection(self):
         """Exactly one candidate is service-owned; no production path constructs the historical engine."""
-        sources = {str(p.relative_to(ROOT)): code(str(p.relative_to(ROOT))) for p in (ROOT / 'app/src/main/java').rglob('*.java')}
+        sources = {str(p.relative_to(ROOT)): code(str(p.relative_to(ROOT))) for p in e5_scope_files(ROOT / 'app/src/main/java', '*.java')}
         self.assertEqual([JAVA + 'OverlayService.java'], [p for p, s in sources.items() if 'new MediaCalendarScheduler(' in s])
         self.assertEqual(1, sources[JAVA + 'OverlayService.java'].count('new MediaCalendarScheduler('))
         self.assertFalse(any(re.search(r'new\s+MediaSyncedTrackScheduler\s*\(', s) for s in sources.values()))
@@ -181,7 +182,7 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
     def test_exact_executed_bucket_and_preserved_native_fixture(self):
         """Count actual JUnit XML, keep both native APIs and retain all old storage assertions."""
         self.assertEqual({'M5VideoCutoverTest': 44}, BASE['m5PhaseDSuites'])
-        summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text()
+        summary = e5_retained_text(ROOT / '.github/scripts/m4-phase-a-test-summary.py')
         for token in ("**m5_phase_b['m5PhaseBSuites']", "**m5_phase_c['m5PhaseCSuites']", "**m5_phase_d['m5PhaseDSuites']", 'if suites != expected:'):
             self.assertIn(token, summary)
         native = code('app/src/androidTest/java/com/scenevibe/tvcompanionpoc/M4SonyDurabilityInstrumentation.java')
@@ -197,7 +198,7 @@ class M5PhaseDBoundaryTest(unittest.TestCase):
     def test_new_python_has_scope_banner_and_all_docstrings(self):
         """Finite provenance is readable and every new Python function documents its contract."""
         for path in ('tests/m5_phase_d_provenance.py', 'tests/test_m5_phase_d_boundary.py'):
-            tree = ast.parse((ROOT / path).read_text())
+            tree = ast.parse(e5_retained_text(ROOT / path))
             last_import = max(i for i, n in enumerate(tree.body) if isinstance(n, (ast.Import, ast.ImportFrom)))
             self.assertTrue(any(isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)
                                 and isinstance(n.value.value, str) for n in tree.body[last_import + 1:]))

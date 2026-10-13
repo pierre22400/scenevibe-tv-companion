@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 import hashlib
 import json
 from pathlib import Path
@@ -24,7 +25,7 @@ PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
 PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
 PHASE_F_PATH = ROOT / '.github/scripts/m4-phase-f-baseline.json'
 PHASE_F = json.loads(PHASE_F_PATH.read_text(encoding='utf-8')) if PHASE_F_PATH.exists() else {}
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-d-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-d-baseline.json'))
 PHASE_E_PATH = ROOT / '.github/scripts/m4-phase-e-baseline.json'
 PHASE_E = json.loads(PHASE_E_PATH.read_text(encoding='utf-8')) if PHASE_E_PATH.exists() else {}
 PRODUCTION = ROOT / 'app/src/main/java/com/scenevibe/tvcompanionpoc'
@@ -49,7 +50,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         forbidden += r'SceneRuntimeController|SceneRenderer|OverlayRenderer|OverlayService|CloudControlClient|'
         forbidden += r'CloudProtocol|CloudDeviceCredentials|FinalTrack|Banner|Language|PackageInstaller)\b'
         for path in (PRODUCTION / 'installation').glob('*.java'):
-            source = code_only(path.read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(path))
             pattern = forbidden.replace('|PackageInstaller', '') if str(path.relative_to(ROOT)) == PHASE_E.get('installerFile') else forbidden
             self.assertIsNone(re.search(pattern, source), path.name)
             for token in ('java.net.', 'org.json.', 'java.lang.reflect.', 'Class.forName', 'ServiceLoader'):
@@ -61,11 +62,11 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         """No production repository or generic class can independently repeat Video cross-contract rules."""
         callers = []
         for path in PRODUCTION.rglob('*.java'):
-            source = code_only(path.read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(path))
             if re.search(r'VideoOverlayManifestBridge\s*\.\s*validate\s*\(', source):
                 callers.append(path.name)
         self.assertEqual(['VideoManifestInstallationHandler.java'], callers)
-        source = code_only((ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8'))
+        source = code_only(e5_retained_text(ROOT / BASELINE['authorizedSemanticDelegation']))
         self.assertNotIn('TrackParser.parse', source)
         self.assertNotIn('OverlayManifestParser.parse', source)
 
@@ -84,7 +85,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         forbidden = r'\b(Context|Service|WindowManager|View|Handler|Looper|CloudControlClient|CloudProtocol|'
         forbidden += r'CloudDeviceCredentials|FinalTrack|Pass0|Pass1|Pass2|DexClassLoader|WebView|PackageInstaller)\b'
         for relative in BASELINE['videoHandlerFiles']:
-            source = code_only((ROOT / relative).read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(ROOT / relative))
             self.assertIsNone(re.search(forbidden, source), relative)
             for token in ('android.', 'java.net.', 'java.io.', 'java.nio.file.', 'java.lang.reflect.',
                           'Class.forName', 'ServiceLoader', 'Runtime.getRuntime', 'getSharedPreferences', '.commit('):
@@ -110,11 +111,11 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         if PHASE_F:
             expected.add(PHASE_F['adapterFile'])
         expected.update(calendar_model_files() | phase_c_production_files())
-        actual = {str(path.relative_to(ROOT)) for path in PRODUCTION.rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(PRODUCTION, '*.java')}
         self.assertEqual(expected, actual)
         implementations = []
         for relative in actual:
-            source = code_only((ROOT / relative).read_text(encoding='utf-8'))
+            source = code_only(e5_retained_text(ROOT / relative))
             if relative != PHASE_E.get('installerFile') and relative not in PHASE_F.get('authorizedLiveCallers', []):
                 self.assertNotIn('PackageInstaller', source, relative)
             if re.search(r'\bimplements\s+InstallationHandler(?=\s|,|\{)', source):
@@ -124,7 +125,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
         for token in ('InstallRequest', 'InstallationHandlerRegistry', 'VideoInstallationHandlers', 'VideoInstallationRuntimePorts'):
             if token != 'InstallRequest' or not PHASE_F:
                 self.assertNotIn(token, client)
-        repository = code_only((ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8'))
+        repository = code_only(e5_retained_text(ROOT / BASELINE['authorizedSemanticDelegation']))
         for token in ('.registry(', '.findCodec(', '.findHandler(', 'encodeForCache(', 'restoreFromCache(',
                       'new InstallRequest', 'new PreparedInstallation', 'store.read(', 'store.commit('):
             self.assertNotIn(token, repository)
@@ -135,7 +136,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
             if path in PHASE_F.get('authorizedProductionChanges', []) or path in PHASE_F.get('authorizedTestChanges', []) or path in PHASE_G.get('authorizedProductionChanges', []) or path in PHASE_G.get('authorizedTestChanges', []):
                 continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
-        source = (ROOT / BASELINE['authorizedSemanticDelegation']).read_text(encoding='utf-8')
+        source = e5_retained_text(ROOT / BASELINE['authorizedSemanticDelegation'])
         for patch in reversed(PHASE_F.get('microProductionPatches', {}).get(
                 'app/src/main/java/com/scenevibe/tvcompanionpoc/CloudTrackRepository.java', [])):
             source = source.replace(patch['after'], patch['before'])
@@ -145,7 +146,7 @@ class M4PhaseDBoundaryTest(unittest.TestCase):
 
     def test_differential_reference_is_the_qualified_starting_code(self):
         """The executable oracle retains every original code line; only its class name/docs differ."""
-        source = (ROOT / BASELINE['historicalReferenceFile']).read_text(encoding='utf-8')
+        source = e5_retained_text(ROOT / BASELINE['historicalReferenceFile'])
         normalized = code_only(source.replace('M4PhaseDHistoricalRepository', 'CloudTrackRepository'))
         normalized = '\n'.join(line for line in normalized.splitlines() if line.strip())
         self.assertEqual(BASELINE['historicalRepositoryCodeSha256'], hashlib.sha256(normalized.encode()).hexdigest())

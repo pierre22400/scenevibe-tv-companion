@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 from m5_phase_d_provenance import phase_d_added_paths, phase_d_changed_paths, phase_d_retained_bytes
 import ast
 import json
@@ -17,7 +18,7 @@ executes a real empty-classpath JDK compile of all four temporal core classes.
 """
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = json.loads((ROOT / '.github/scripts/m5-phase-c-baseline.json').read_text(encoding='utf-8'))
+BASE = json.loads(e5_retained_text(ROOT / '.github/scripts/m5-phase-c-baseline.json'))
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
 TEST = 'app/src/test/java/com/scenevibe/tvcompanionpoc/'
 ADDED = {
@@ -42,7 +43,7 @@ CHANGED = {
 
 def code(path):
     """Inspect actual executable Java references without rejecting educational comments."""
-    return re.sub(r'/\*.*?\*/|//[^\n]*', '', (ROOT / path).read_text(encoding='utf-8'), flags=re.S)
+    return re.sub(r'/\*.*?\*/|//[^\n]*', '', e5_retained_text(ROOT / path), flags=re.S)
 
 
 class M5PhaseCBoundaryTest(unittest.TestCase):
@@ -58,7 +59,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         self.assertEqual(CHANGED, set(BASE['provenancePatches']))
         self.assertEqual(phase_c_production_files(), set(BASE['productionAdded']))
         self.assertEqual(set(BASE['startingBlobs']) - CHANGED, set(BASE['forbiddenChanges']))
-        self.assertEqual(BASE['phaseBBaselineBlob'], blob_hash((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_bytes()))
+        self.assertEqual(BASE['phaseBBaselineBlob'], blob_hash(e5_retained_bytes(ROOT / '.github/scripts/m5-phase-b-baseline.json')))
         for path in ADDED | CHANGED:
             self.assertNotIn('*', path)
             self.assertTrue((ROOT / path).is_file(), path)
@@ -68,9 +69,9 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         for path, digest in BASE['startingBlobs'].items():
             self.assertEqual(digest, blob_hash(phase_c_retained_bytes(ROOT / path)), path)
             if path not in CHANGED | phase_d_changed_paths():
-                self.assertEqual(digest, blob_hash((ROOT / path).read_bytes()), path)
+                self.assertEqual(digest, blob_hash(e5_retained_bytes(ROOT / path)), path)
         self.assertFalse(any(path.startswith('app/') for path in CHANGED))
-        old_b = json.loads((ROOT / '.github/scripts/m5-phase-b-baseline.json').read_text())
+        old_b = json.loads(e5_retained_text(ROOT / '.github/scripts/m5-phase-b-baseline.json'))
         self.assertEqual(old_b['oracleSources'], BASE['oracleSources'])
 
     def test_no_unlisted_file_in_any_retained_scope(self):
@@ -78,7 +79,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         expected = set(BASE['startingBlobs']) | ADDED | phase_d_added_paths() | {'docs/m5-final-sony-physical-closure.md'}
         actual = set()
         for directory in ('app/src', 'tests', '.github', 'docs'):
-            for path in (ROOT / directory).rglob('*'):
+            for path in e5_scope_files(ROOT / directory, '*'):
                 if path.is_file() and '__pycache__' not in path.parts:
                     actual.add(str(path.relative_to(ROOT)))
         self.assertEqual({p for p in expected if p.startswith(('app/src/', 'tests/', '.github/', 'docs/'))}, actual)
@@ -144,13 +145,13 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
         self.assertEqual({'M5CandidateDifferentialTest': 82, 'M5SchedulerDirectTest': 11,
                           'M5VideoObservationAdapterTest': 4, 'M5SinkFailureDifferentialTest': 4,
                           'M5NegativeSensitivityTest': 2}, BASE['m5PhaseCSuites'])
-        summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text()
+        summary = e5_retained_text(ROOT / '.github/scripts/m4-phase-a-test-summary.py')
         self.assertIn("**m5_phase_c['m5PhaseCSuites']", summary)
         self.assertIn("trace['oracle'] != trace['candidate']", summary)
-        workflow = (ROOT / '.github/workflows/android-media-differential.yml').read_text()
+        workflow = e5_retained_text(ROOT / '.github/workflows/android-media-differential.yml')
         self.assertIn('api: [31, 35]', workflow)
         self.assertIn('m5-media-differential.sh', workflow)
-        init = (ROOT / '.github/scripts/m5-media-differential.init.gradle').read_text()
+        init = e5_retained_text(ROOT / '.github/scripts/m5-media-differential.init.gradle')
         for name in ('M5TemporalJournal', 'M5VideoTestProjection', 'M5CDifferentialHarness'):
             self.assertIn(name + '.java', init)
         self.assertNotIn('src/main/java', init)
@@ -158,7 +159,7 @@ class M5PhaseCBoundaryTest(unittest.TestCase):
     def test_new_python_documents_its_scope_and_every_function(self):
         """Keep teaching banners and docstrings rather than making provenance opaque."""
         for path in ('tests/m5_phase_c_provenance.py', 'tests/test_m5_phase_c_boundary.py', '.github/scripts/m5-media-differential-summary.py'):
-            tree = ast.parse((ROOT / path).read_text())
+            tree = ast.parse(e5_retained_text(ROOT / path))
             last_import = max(i for i, node in enumerate(tree.body) if isinstance(node, (ast.Import, ast.ImportFrom)))
             self.assertTrue(any(isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant) and isinstance(n.value.value, str) for n in tree.body[last_import + 1:]))
             for node in ast.walk(tree):

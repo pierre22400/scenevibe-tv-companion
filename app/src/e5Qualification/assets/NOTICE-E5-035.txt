@@ -1,0 +1,17 @@
+E5-NATIVE-035 local qualification fixture — not a published editorial asset.
+
+Video excerpt: Big Buck Bunny.
+(c) copyright 2008, Blender Foundation / www.bigbuckbunny.org
+License: Creative Commons Attribution 3.0 — https://creativecommons.org/licenses/by/3.0/
+Primary attribution/license source: https://peach.blender.org/about/
+
+The original Spike generator used the 10-second sample hosted by test-videos.co.uk,
+re-encoded it as 1280x720 H.264 Main L3.1 at 30 fps and replaced the audio with a
+synthetic 440 Hz AAC tone. No Prime image/audio is captured or included.
+
+This file was recovered unchanged from Spike run 37843069020 / APK SHA-256
+a2578a12d21bcec963f1120bae78ce7bd2859f6385dcf7f6cc2f939c8170d41b.
+MP4 SHA-256: c66ded0b6a2ea41ef34320a289f2c1ec37e2a87d34ef580d9ac45d08815682ec
+Size: 2146888 bytes. Duration: 10.000 s. H.264 Main 720p30 / AAC-LC 48kHz mono.
+
+The historical Spike physical result is not a Sony qualification of this integration.

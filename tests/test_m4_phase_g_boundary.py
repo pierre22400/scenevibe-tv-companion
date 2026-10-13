@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 from m5_phase_d_provenance import phase_d_retained_bytes
 import ast
 import hashlib
@@ -20,8 +21,8 @@ Sony corrective provenance reverses only pinned edits; semantic assertions inspe
 """
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-g-baseline.json').read_text(encoding='utf-8'))
-PHASE_F = json.loads((ROOT / '.github/scripts/m4-phase-f-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-g-baseline.json'))
+PHASE_F = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-f-baseline.json'))
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
 TEST = 'app/src/test/java/com/scenevibe/tvcompanionpoc/'
 
@@ -82,7 +83,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_service_startup_reuses_same_installer_with_no_write_parser_or_lookup(self):
         """Only the existing install entry point may restore a durable snapshot; no new coordinator or fallback exists."""
-        source = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'OverlayService.java'))
         restore = java_block(source, 'static InstallationStatus restoreInstalledPackage(')
         self.assertEqual(1, restore.count('store.read()'))
         self.assertEqual(1, restore.count('installer.install(durable.snapshot().canonical(), ports)'))
@@ -98,7 +99,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_restore_completes_before_probe_or_cloud_on_one_main_owned_stack(self):
         """The actual composition restores once before either owner can consume passive media or live delivery."""
-        source = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'OverlayService.java'))
         start = java_block(source, 'public int onStartCommand(')
         for token in ('new InstallationStore(', 'new AndroidInstallationBackend(', 'new PackageInstaller(', 'new LiveVideoRuntimePorts('):
             self.assertEqual(1, source.count(token), token)
@@ -113,18 +114,18 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
     def test_no_production_owner_can_use_historical_repository(self):
         """Retaining the isolated characterization type must not preserve any live/startup/diagnostic caller."""
         users = []
-        for path in (ROOT / 'app/src/main/java').rglob('*.java'):
-            source = code_only(path.read_text())
+        for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java'):
+            source = code_only(e5_retained_text(path))
             if re.search(r'\bCloudTrackRepository\b', source):
                 users.append(path.name)
         self.assertEqual(['CloudTrackRepository.java'], users)
         for name in BASELINE['removedServiceHelpers']:
-            for path in (ROOT / 'app/src/main/java').rglob('*.java'):
-                self.assertNotRegex(code_only(path.read_text()), r'\b' + name + r'\s*\(', path.name)
+            for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java'):
+                self.assertNotRegex(code_only(e5_retained_text(path)), r'\b' + name + r'\s*\(', path.name)
 
     def test_boot_receiver_reads_metadata_only_and_starts_only_boot_prepare(self):
         """Receiver permission/credential/opt-in logic delegates unchanged policy, without ARM, parsing or writes."""
-        source = code_only((ROOT / JAVA / 'BootReceiver.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'BootReceiver.java'))
         self.assertIn('new InstallationStore(new AndroidInstallationBackend(app)).read()', source)
         self.assertIn('durable.state() == InstallationStore.ReadState.SNAPSHOT', source)
         self.assertIn('AutostartPolicy.decide(enabled, overlay, media, credential,', source)
@@ -137,7 +138,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_diagnostics_reads_one_generic_projection_with_coherent_old_aliases(self):
         """No opaque content is parsed or retained to populate a Video compatibility id."""
-        source = code_only((ROOT / JAVA / 'RuntimeDiagnostics.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'RuntimeDiagnostics.java'))
         self.assertIn('enum InstallationState { EMPTY, READY, CORRUPT }', source)
         self.assertIn('new InstallationStore(new AndroidInstallationBackend(context))', source)
         self.assertIn('return installationSnapshot(store, observed)', source)
@@ -151,7 +152,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_capture_remains_read_only_and_does_not_mint_or_migrate_identity(self):
         """The existing peeks and bounded secret-unavailable mapping remain intact in actual capture."""
-        source = code_only(java_block((ROOT / JAVA / 'RuntimeDiagnostics.java').read_text(), 'static RuntimeDiagnostics capture('))
+        source = code_only(java_block(e5_retained_text(ROOT / JAVA / 'RuntimeDiagnostics.java'), 'static RuntimeDiagnostics capture('))
         self.assertIn('CloudDeviceCredentials.peek(context)', source)
         self.assertIn('new InstallationIdentity(context).peekInstallationId()', source)
         self.assertIn('CloudErrorCode.CREDENTIAL_UNAVAILABLE', source)
@@ -160,7 +161,7 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_diagnostics_screen_is_generic_first_with_labeled_compatibility(self):
         """The actual renderer exposes bounded metadata/outcomes only, keeping all older display fields."""
-        source = code_only(java_block((ROOT / JAVA / 'DiagnosticsActivity.java').read_text(), 'static String render('))
+        source = code_only(java_block(e5_retained_text(ROOT / JAVA / 'DiagnosticsActivity.java'), 'static String render('))
         labels = ['Installed package', 'Package codec', 'Package handler', 'Installed revision', 'Acknowledged revision']
         for label in labels + ['Last startup restore', 'Cached track (compatibility)', 'Cached track id (compatibility)',
                                'Cached revision (compatibility)', 'Last acknowledged revision (compatibility)']:
@@ -171,18 +172,18 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_normal_screen_uses_snapshot_presence_without_installation_metadata(self):
         """Consumer saved-content wording does not treat corruption as usable or expose codec/revision/content."""
-        source = code_only(java_block((ROOT / JAVA / 'MainActivity.java').read_text(), 'static String cloudStatus('))
+        source = code_only(java_block(e5_retained_text(ROOT / JAVA / 'MainActivity.java'), 'static String cloudStatus('))
         self.assertIn('durable.state() == InstallationStore.ReadState.SNAPSHOT', source)
         self.assertIn('Offline (using saved SceneVibe content)', source)
         for forbidden in ('.revision(', '.codecId(', '.handlerId(', '.canonical(', '.artifact(', 'getString(', 'new JSONObject'):
             self.assertNotIn(forbidden, source)
-        refresh = code_only(java_block((ROOT / JAVA / 'MainActivity.java').read_text(), 'private void refreshCloud()'))
+        refresh = code_only(java_block(e5_retained_text(ROOT / JAVA / 'MainActivity.java'), 'private void refreshCloud()'))
         self.assertIn('new InstallationStore(new AndroidInstallationBackend(this)).read()', refresh)
         self.assertIn('cloudStatus(identity.userCode()', refresh)
 
     def test_stopped_reset_is_explicit_whole_file_and_running_reset_stays_coordinated(self):
         """Only the explicit reset may clear installation state; identity and credentials stay separate owners."""
-        source = code_only((ROOT / JAVA / 'DiagnosticsActivity.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'DiagnosticsActivity.java'))
         reset = java_block(source, 'static boolean resetStoppedInstallation(')
         ordered = ['rotateIdentity.run()', 'resetCredentials.run()', 'store.clearAll()', 'observed.resetCloudObservations()']
         offsets = [reset.index(token) for token in ordered]
@@ -209,11 +210,11 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_generic_core_bridge_and_static_registry_remain_isolated(self):
         """No new parser, registry, runtime capability, future milestone or second restore authority can appear."""
-        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java')}
         self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
         bridges, lookup = [], []
         for path in actual:
-            source = code_only((ROOT / path).read_text())
+            source = code_only(e5_retained_text(ROOT / path))
             if re.search(r'VideoOverlayManifestBridge\s*\.\s*validate\s*\(', source):
                 bridges.append(Path(path).name)
             if re.search(r'\.findHandler\(', source):
@@ -229,18 +230,18 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
 
     def test_moved_historical_helpers_are_verbatim_and_actual_service_ports_are_unchanged(self):
         """Frozen characterization is test-only, while new G integration executes the real production ports."""
-        oracle = (ROOT / BASELINE['historicalServiceFile']).read_text()
+        oracle = e5_retained_text(ROOT / BASELINE['historicalServiceFile'])
         self.assertEqual(BASELINE['historicalServiceSha256'], hashlib.sha256(oracle.encode()).hexdigest())
         start = oracle.index('    /**\n     * Android-free, unit-testable core of the manifested-install ACK decision')
         end = oracle.index('    /** This historical oracle', start)
         self.assertEqual(BASELINE['historicalServiceBodySha256'], hashlib.sha256(oracle[start:end].encode()).hexdigest())
         for signature, expected in PHASE_F['protectedServiceMethods'].items():
-            source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else (ROOT / JAVA / 'OverlayService.java').read_text()
+            source = oracle if any(name in signature for name in BASELINE['removedServiceHelpers']) else e5_retained_text(ROOT / JAVA / 'OverlayService.java')
             self.assertEqual(expected, hashlib.sha256(java_block(source, signature).encode()).hexdigest(), signature)
         current = phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8')
         previous = inverse(current, BASELINE['productionPatches'][JAVA + 'OverlayService.java'])
         self.assertEqual(java_block(previous, 'static final class LiveVideoRuntimePorts'), java_block(current, 'static final class LiveVideoRuntimePorts'))
-        fixture = (ROOT / TEST / 'M4PhaseGFixtures.java').read_text()
+        fixture = e5_retained_text(ROOT / TEST / 'M4PhaseGFixtures.java')
         self.assertIn('new M4PhaseFFixtures.Runtime(', fixture)
         self.assertNotRegex(code_only(fixture), r'\b(CloudControlClient|CloudDeviceCredentials|CloudTrackRepository)\b')
 
@@ -267,11 +268,11 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         """G inventory is bound to actual execution; summary still compares the entire suite map and frozen fixtures."""
         self.assertEqual(9, len(BASELINE['phaseGSuites']))
         self.assertEqual(131, sum(BASELINE['phaseGSuites'].values()))
-        actual = {str(path.relative_to(ROOT)) for path in (ROOT / TEST).glob('M4PhaseG*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(ROOT / TEST, 'M4PhaseG*.java', recursive=False)}
         self.assertEqual(set(BASELINE['phaseGTestFiles']), actual)
         for suite in BASELINE['phaseGSuites']:
             self.assertTrue((ROOT / TEST / (suite + '.java')).is_file(), suite)
-        summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text()
+        summary = e5_retained_text(ROOT / '.github/scripts/m4-phase-a-test-summary.py')
         self.assertIn("**phase_g['phaseGSuites']", summary)
         self.assertIn('if suites != expected:', summary)
         self.assertIn("baseline['allowedOptInSkips']", summary)
@@ -281,14 +282,14 @@ class M4PhaseGBoundaryTest(unittest.TestCase):
         """Preserve teaching banners/docstrings and require the manual physical boundary rather than a CI claim."""
         paths = [path for path in BASELINE['boundaryPatches'] if path.endswith('.py')] + ['tests/test_m4_phase_g_boundary.py']
         for path in paths:
-            tree = ast.parse((ROOT / path).read_text())
+            tree = ast.parse(e5_retained_text(ROOT / path))
             last_import = max(index for index, node in enumerate(tree.body) if isinstance(node, (ast.Import, ast.ImportFrom)))
             self.assertTrue(any(isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
                                 and isinstance(node.value.value, str) for node in tree.body[last_import + 1:]), path)
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     self.assertTrue(ast.get_docstring(node), path + ':' + node.name)
-        protocol = (ROOT / 'docs/m4-sony-physical-qualification-protocol.md').read_text()
+        protocol = e5_retained_text(ROOT / 'docs/m4-sony-physical-qualification-protocol.md')
         self.assertIn('NOT PERFORMED', protocol)
         self.assertIn('adb install -r', protocol)
         self.assertIn('hard TV reboot', protocol)

@@ -54,6 +54,28 @@ public final class OverlayService extends Service {
     private static final int NOTIFICATION_ID = 1001;
     private OverlayRenderer renderer;
     private boolean foregroundReady;
+    /** E5 dependencies are created only for an explicit local opt-in request. */
+    private AndroidLocalVideoPort localVideoPort;
+    private NativeTransportOwner nativeTransportOwner;
+    private NativeDiagnostics nativeDiagnostics;
+    private Notification foregroundNotification;
+    private final android.os.Handler nativeHandler = new android.os.Handler(Looper.getMainLooper());
+    /** Bounded execution/lease observation, not an editorial MEDIA/WALL scheduler. */
+    private final Runnable nativeTick = new Runnable() {
+        /** Only the regie decides transitions; no callback can send transport independently. */
+        @Override public void run() {
+            if (sceneController == null) return;
+            sceneController.tickLocal();
+            if (sceneController.isLocalPresentationActive()) {
+                nativeHandler.postDelayed(this, NativeQualificationPolicy.local035().pollMs);
+            } else {
+                setNativeForeground(false);
+            }
+        }
+    };
+    /** Local, non-exported service actions; no network receiver or remote trigger is added. */
+    static final String ACTION_E5_LOCAL = "com.scenevibe.tvcompanionpoc.E5_LOCAL_QUALIFICATION";
+    static final String ACTION_E5_STOP = "com.scenevibe.tvcompanionpoc.E5_LOCAL_STOP";
     /** Last chosen overlay position, so a lazily created renderer honors the user's choice. */
     private boolean bottomPosition;
     private CommentaryServer commentaryServer;
@@ -98,7 +120,12 @@ public final class OverlayService extends Service {
                     .setContentIntent(openControls)
                     .setOngoing(true)
                     .build();
-            startForeground(NOTIFICATION_ID, notification);
+            foregroundNotification = notification;
+            if (e5QualificationEnabled()) {
+                setNativeForeground(false);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
             foregroundReady = true;
             // Observational only: record that the foreground service is up. Never gates logic.
             DiagnosticsStore.INSTANCE.setServiceRunning(true);
@@ -304,6 +331,11 @@ public final class OverlayService extends Service {
                         + "; mode=cloud-only"
                         + "; mediaSessionAccess=" + NotificationAccess.isGranted(this));
             }
+            if (e5QualificationEnabled() && ACTION_E5_LOCAL.equals(action)) {
+                requestE5Local(intent.getBooleanExtra("e5VodConfirmed", false));
+            } else if (e5QualificationEnabled() && ACTION_E5_STOP.equals(action)) {
+                stopE5Local();
+            }
             return START_STICKY;
         } catch (RuntimeException error) {
             Log.e(TAG, "WindowManager overlay failed", error);
@@ -322,6 +354,84 @@ public final class OverlayService extends Service {
             renderer = new OverlayRenderer(this, this::onPermissionLost, BuildConfig.ENABLE_LAN_DEV);
         }
         renderer.show(bottomPosition);
+    }
+
+    /** Compile-time opt-in is debug-only; no runtime restore/publication can enable this path. */
+    static boolean e5QualificationEnabled() {
+        return BuildConfig.DEBUG && BuildConfig.E5_NATIVE_QUALIFICATION;
+    }
+
+    /**
+     * Explicit local admission. The only extra permission is a debug-profile foreground proof;
+     * default/release manifests and all durable installation/Cloud state remain unchanged.
+     */
+    private void requestE5Local(boolean vodConfirmed) {
+        if (!e5QualificationEnabled()) return;
+        if (nativeDiagnostics == null) nativeDiagnostics = new NativeDiagnostics(
+                () -> sceneController == null ? "IDLE" : sceneController.localPhase().name());
+        if (!NativeQualificationPolicy.supportedTarget(android.os.Build.BRAND,
+                android.os.Build.VERSION.SDK_INT) || !vodConfirmed || sceneController == null) {
+            nativeDiagnostics.record("REFUSED_TARGET_OR_VOD", 0, null, NativeTransportOwner.Reason.TARGET);
+            return;
+        }
+        if (sceneController.isLocalPresentationActive()
+                || renderer != null && renderer.hasVisibleCommentary()) {
+            nativeDiagnostics.record("REFUSED_BUSY", sceneController.localAttempt(), null,
+                    NativeTransportOwner.Reason.BUSY);
+            return;
+        }
+        AndroidForegroundEvidence foreground = new AndroidForegroundEvidence(this);
+        if (!foreground.accessGranted()) {
+            nativeDiagnostics.record("REFUSED_FOREGROUND_ACCESS", 0, null, NativeTransportOwner.Reason.TARGET);
+            return;
+        }
+        try {
+            if (localVideoPort == null) {
+                localVideoPort = new AndroidLocalVideoPort(this, ensureSceneRenderer());
+                nativeTransportOwner = new NativeTransportOwner(
+                        new AndroidNativeSessionPort(this, foreground),
+                        NativeQualificationPolicy.local035(), nativeDiagnostics,
+                        android.os.SystemClock::elapsedRealtime);
+                sceneController.configureLocal(true, localVideoPort, nativeTransportOwner,
+                        android.os.SystemClock::elapsedRealtime, nativeDiagnostics);
+            }
+            setNativeForeground(true);
+            boolean accepted = sceneController.requestLocal(LocalInterludePlan.qualification(vodConfirmed));
+            if (accepted) {
+                nativeHandler.removeCallbacks(nativeTick);
+                nativeHandler.post(nativeTick);
+            } else {
+                setNativeForeground(false);
+            }
+        } catch (RuntimeException refused) {
+            if (sceneController != null) sceneController.cancelLocal("LOCAL_REQUEST_ERROR");
+            setNativeForeground(false);
+            nativeDiagnostics.record("REFUSED_LOCAL_SETUP", 0, null, NativeTransportOwner.Reason.TARGET);
+        }
+    }
+
+    /** STOP is local, bounded and never resumes the native player. */
+    private void stopE5Local() {
+        if (!e5QualificationEnabled()) return;
+        nativeHandler.removeCallbacks(nativeTick);
+        if (sceneController != null) sceneController.cancelLocal("STOP");
+        setNativeForeground(false);
+    }
+
+    /**
+     * Add mediaPlayback only for explicit qualification, never on boot/restart. On API31
+     * type NONE preserves the ordinary pre-34 overlay lifecycle; API34+ uses specialUse.
+     */
+    private void setNativeForeground(boolean playingLocal) {
+        if (!e5QualificationEnabled() || foregroundNotification == null) return;
+        if (android.os.Build.VERSION.SDK_INT < 29) {
+            startForeground(NOTIFICATION_ID, foregroundNotification);
+            return;
+        }
+        int type = android.os.Build.VERSION.SDK_INT >= 34
+                ? android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE : 0;
+        if (playingLocal) type |= android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK;
+        startForeground(NOTIFICATION_ID, foregroundNotification, type);
     }
 
     /**
@@ -384,6 +494,10 @@ public final class OverlayService extends Service {
         }
         @Override public void hideAll() {
             if (sceneRenderer != null) sceneRenderer.dismissNow();
+        }
+        /** Use the prepared TextureView within the same graphical root. */
+        @Override public void showLocal(LocalInterludePlan plan) {
+            ensureSceneRenderer().showLocalScene(plan);
         }
     };
 
@@ -505,6 +619,11 @@ public final class OverlayService extends Service {
         /** Route ID plus captured generation to the regie, or exact payload to the legacy renderer. */
         @Override public void onDue(String token,String eventId) {
             Activation binding=matching(token);if(binding==null)return;
+            SceneRuntimeController local = controller.get();
+            if (local != null && local.isLocalPresentationActive()) {
+                Log.i("SceneVibeE5", "CONCURRENT_MEDIA_PRESENTATION_REFUSED");
+                return;
+            }
             if(binding.state.manifest!=null) {
                 SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEventDue(eventId,binding.generation);
             } else {
@@ -534,7 +653,7 @@ public final class OverlayService extends Service {
             }
             diagnostics.accept(eligible);
             SceneRuntimeController runtime=controller.get();if(runtime!=null)runtime.onEligibility(eligible);
-            if(!eligible) {
+            if(!eligible && !(runtime != null && runtime.isLocalPresentationActive())) {
                 if(binding!=null&&binding.state.manifest!=null)retireScenes.run();
                 else legacy.eligibility(false);
             }
@@ -646,6 +765,8 @@ public final class OverlayService extends Service {
     /** Remove the window and notification on every normal destruction path. */
     @Override
     public void onDestroy() {
+        nativeHandler.removeCallbacks(nativeTick);
+        if (sceneController != null) sceneController.cancelLocal("SERVICE_DESTROY");
         if (cloudClient != null) {
             cloudClient.stop();
             cloudClient = null;

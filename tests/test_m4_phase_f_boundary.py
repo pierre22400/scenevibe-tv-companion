@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 from m5_phase_d_provenance import phase_d_retained_bytes
 import ast
 import hashlib
@@ -24,7 +25,7 @@ Sony corrective provenance reverses only pinned edits; semantic assertions inspe
 ROOT = Path(__file__).resolve().parents[1]
 PHASE_G_PATH = ROOT / '.github/scripts/m4-phase-g-baseline.json'
 PHASE_G = json.loads(PHASE_G_PATH.read_text(encoding='utf-8')) if PHASE_G_PATH.exists() else {}
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-f-baseline.json').read_text(encoding='utf-8'))
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-f-baseline.json'))
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
 TEST = 'app/src/test/java/com/scenevibe/tvcompanionpoc/'
 
@@ -78,7 +79,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
 
     def test_adapter_is_pure_outside_core_and_ack_binding_is_separate(self):
         """The immutable handoff contains only the inert request and historical finalTrackId, never credentials."""
-        source = code_only((ROOT / BASELINE['adapterFile']).read_text())
+        source = code_only(e5_retained_text(ROOT / BASELINE['adapterFile']))
         self.assertIn('package com.scenevibe.tvcompanionpoc;', source)
         self.assertNotRegex(source, r'\b(Context|Service|InstallationStore|PackageInstaller|CloudDeviceCredentials|'
                             r'MediaSyncedTrackScheduler|SceneRuntimeController|SceneRenderer|OverlayRenderer|'
@@ -89,14 +90,14 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         assignment = java_block(source, 'static final class Assignment')
         self.assertEqual([('InstallRequest', 'request'), ('String', 'finalTrackId')],
                          re.findall(r'private final (\w+) (\w+);', assignment))
-        self.assertNotIn('finalTrackId', code_only((ROOT / JAVA / 'installation/InstallRequest.java').read_text()))
+        self.assertNotIn('finalTrackId', code_only(e5_retained_text(ROOT / JAVA / 'installation/InstallRequest.java')))
         self.assertIn('CloudProtocol.validAssignment(envelope,cloudDeviceId,0)', source)
         self.assertIn('envelope.optString("finalTrackId","")', source)
         self.assertEqual(2, source.count('.toString().getBytes(StandardCharsets.UTF_8)'))
 
     def test_client_has_only_generic_install_dependencies_and_no_revision_branch(self):
         """Cloud transport cannot reacquire a product parser, old ManifestInstaller or independent revision authority."""
-        source = code_only((ROOT / JAVA / 'CloudControlClient.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'CloudControlClient.java'))
         self.assertNotRegex(source, r'\b(MediaSyncedTrackScheduler|CloudTrackRepository|ManifestInstaller|'
                             r'VideoOverlayManifestBridge|TrackParser|OverlayManifestParser|SceneRuntimeController|'
                             r'SceneRenderer|OverlayRenderer|VideoInstallationHandlers)\b')
@@ -109,7 +110,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
 
     def test_corruption_is_checked_before_fetch_and_only_exact_armed_precedes_ack(self):
         """The live ordering fails closed on corrupt durable state and persists ACK only after server confirmation."""
-        source = code_only((ROOT / JAVA / 'CloudControlClient.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'CloudControlClient.java'))
         fetch = java_block(source, 'private void fetchAssignment()')
         ordered = ['store.read()', 'ReadState.CORRUPT', 'durable.acknowledgedRevision()',
                    'CloudV1InstallationAdapter.adapt(', 'applyAssignment(',
@@ -125,7 +126,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
 
     def test_service_owns_one_generic_stack_and_real_main_thread_ports(self):
         """One service composition binds the existing core owners and proves the current Cloud client after dispatch."""
-        source = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'OverlayService.java'))
         for token in ('new AndroidInstallationBackend(', 'new InstallationStore(',
                       'new PackageInstaller(', 'new LiveVideoRuntimePorts('):
             self.assertEqual(1, source.count(token), token)
@@ -141,7 +142,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
 
     def test_actual_runtime_ports_are_owner_guarded_and_runtime_only(self):
         """Retirement is synchronous, prepared values remain exact and abort cannot touch disk or ACK."""
-        ports = code_only(java_block((ROOT / JAVA / 'OverlayService.java').read_text(),
+        ports = code_only(java_block(e5_retained_text(ROOT / JAVA / 'OverlayService.java'),
                                      'static final class LiveVideoRuntimePorts'))
         self.assertNotRegex(ports, r'\b(InstallationStore|PackageInstaller|CloudControlClient|CloudTrackRepository|'
                             r'TrackParser|OverlayManifestParser|VideoOverlayManifestBridge)\b')
@@ -153,12 +154,12 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
                       'selection.accept(revision)', 'runtime.clear()', 'selection.accept(0)'):
             self.assertIn(token, ports)
         self.assertIn('runtime.hasActiveManifest()', ports)
-        fixture = (ROOT / TEST / 'M4PhaseFFixtures.java').read_text()
+        fixture = e5_retained_text(ROOT / TEST / 'M4PhaseFFixtures.java')
         self.assertIn('new OverlayService.LiveVideoRuntimePorts(', fixture)
 
     def test_reset_reuses_owner_gate_and_preserves_asynchronous_lifetime(self):
         """Reset makes the client spent before queuing identity/credential/durable/runtime clear on their owners."""
-        source = code_only((ROOT / JAVA / 'CloudControlClient.java').read_text())
+        source = code_only(e5_retained_text(ROOT / JAVA / 'CloudControlClient.java'))
         reset = java_block(source, 'void reset(Runnable onComplete)')
         ordered = ['running=false', 'resetInstallationIdentity.run()', 'identity.reset()',
                    'mutations.call(', 'store.clearAll()', 'resetRuntime.run()', 'resetCloudObservations()']
@@ -168,7 +169,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         self.assertIn('io.shutdown()', reset)
         self.assertIn('resetFallback.execute(wipe)', reset)
         self.assertNotIn('awaitTermination', reset)
-        service = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+        service = code_only(e5_retained_text(ROOT / JAVA / 'OverlayService.java'))
         self.assertIn('cloudResetPending = true;', service)
         self.assertIn('spent.reset(', service)
 
@@ -179,7 +180,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         for path, patches in BASELINE['microProductionPatches'].items():
             previous = inverse(retained_text(ROOT / path), patches)
             self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][path], blob_hash(previous.encode()), path)
-        store = code_only((ROOT / JAVA / 'installation/InstallationStore.java').read_text())
+        store = code_only(e5_retained_text(ROOT / JAVA / 'installation/InstallationStore.java'))
         clear = java_block(store, 'public boolean clearAll()')
         self.assertIn('synchronized (backend.monitor())', clear)
         self.assertIn('backend.commit(Collections.emptyMap(),Collections.emptySet(),true)', clear)
@@ -200,15 +201,15 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         """Retain exact qualified auth/HTTPS/disconnect behavior and leave historical helpers for Phase G."""
         for name, key in [('CloudControlClient.java', 'protectedClientMethods'),
                           ('OverlayService.java', 'protectedServiceMethods')]:
-            source = (ROOT / JAVA / name).read_text()
-            historical = (ROOT / PHASE_G['historicalServiceFile']).read_text() if PHASE_G else source
+            source = e5_retained_text(ROOT / JAVA / name)
+            historical = e5_retained_text(ROOT / PHASE_G['historicalServiceFile']) if PHASE_G else source
             for signature, expected in BASELINE[key].items():
                 if name == 'OverlayService.java' and any(method in signature for method in PHASE_G.get('removedServiceHelpers', [])):
                     method_source = historical
                 else:
                     method_source = source
                 self.assertEqual(expected, hashlib.sha256(java_block(method_source, signature).encode()).hexdigest(), signature)
-        service = code_only((ROOT / (PHASE_G['historicalServiceFile'] if PHASE_G else JAVA + 'OverlayService.java')).read_text())
+        service = code_only(e5_retained_text(ROOT / (PHASE_G['historicalServiceFile'] if PHASE_G else JAVA + 'OverlayService.java')))
         for name in ('installManifestedRevision', 'confirmManifestedRevisionArmed', 'activateLegacyRevision'):
             self.assertEqual(1, len(re.findall(r'\b' + name + r'\s*\(', service)), name)
 
@@ -218,7 +219,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
                                                   'AssignmentMutationGateTest.java', 'ManifestInstallAckDecisionTest.java',
                                                   'CloudResetAsyncTest.java')}
         self.assertEqual(expected_paths, set(BASELINE['authorizedTestChanges']))
-        oracle = (ROOT / BASELINE['historicalClientFile']).read_text().replace('M4PhaseFHistoricalCloudClient', 'CloudControlClient')
+        oracle = e5_retained_text(ROOT / BASELINE['historicalClientFile']).replace('M4PhaseFHistoricalCloudClient', 'CloudControlClient')
         self.assertEqual(BASELINE['qualifiedRuntimeBlobs'][JAVA + 'CloudControlClient.java'], blob_hash(oracle.encode()))
         for path, patches in BASELINE['testPatches'].items():
             previous = inverse(inverse(retained_text(ROOT / path),
@@ -235,11 +236,11 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
 
     def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):
         """Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned."""
-        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java')}
         self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
         bridges, ports = [], []
         for relative in actual:
-            source = code_only((ROOT / relative).read_text())
+            source = code_only(e5_retained_text(ROOT / relative))
             if re.search(r'VideoOverlayManifestBridge\s*\.\s*validate\s*\(', source):
                 bridges.append(Path(relative).name)
             if re.search(r'\bimplements\s+VideoInstallationRuntimePorts\b', source):
@@ -263,7 +264,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         self.assertEqual(138, sum(BASELINE['phaseFSuites'].values()))
         self.assertTrue(all(name.startswith('M4PhaseF') and name.endswith('Test')
                             for name in BASELINE['phaseFSuites']))
-        summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text()
+        summary = e5_retained_text(ROOT / '.github/scripts/m4-phase-a-test-summary.py')
         self.assertIn("**phase_f['phaseFSuites']", summary)
         self.assertIn("baseline['allowedOptInSkips']", summary)
         self.assertIn('if suites != expected:', summary)
@@ -273,7 +274,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         paths = [path for path in BASELINE['boundaryPatches'] if path.endswith('.py')]
         paths.append('tests/test_m4_phase_f_boundary.py')
         for relative in paths:
-            tree = ast.parse((ROOT / relative).read_text())
+            tree = ast.parse(e5_retained_text(ROOT / relative))
             last_import = max(index for index, node in enumerate(tree.body)
                               if isinstance(node, (ast.Import, ast.ImportFrom)))
             self.assertTrue(any(isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
