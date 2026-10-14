@@ -37,7 +37,10 @@ public final class E5AdbSenderInstrumentation extends Instrumentation {
             Intent request = new Intent("com.scenevibe.tvcompanionpoc.E5_ADB_VOD_INTERLUDE")
                     .setComponent(new ComponentName("com.scenevibe.tvcompanionpoc",
                             "com.scenevibe.tvcompanionpoc.E5AdbTriggerReceiver"))
-                    .putExtra("e5VodConfirmed", true);
+                    .putExtra("e5VodConfirmed", true)
+                    // Do not confuse a stopped target or a congested background queue
+                    // with a permission denial; this is an emulator-only negative probe.
+                    .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES | Intent.FLAG_RECEIVER_FOREGROUND);
             sender.sendOrderedBroadcast(request, null, new BroadcastReceiver() {
                 /** Observe unchanged fallback data only after platform permission filtering. */
                 @Override public void onReceive(Context context, Intent intent) {
@@ -45,8 +48,11 @@ public final class E5AdbSenderInstrumentation extends Instrumentation {
                     done.countDown();
                 }
             }, new Handler(Looper.getMainLooper()), 0, "NOT_DELIVERED", null);
-            if (!done.await(15, TimeUnit.SECONDS) || !"NOT_DELIVERED".equals(received.get())) {
-                throw new AssertionError("UNAUTHORIZED_DELIVERY");
+            if (!done.await(30, TimeUnit.SECONDS)) {
+                throw new AssertionError("NEGATIVE_PROBE_RESULT_TIMEOUT");
+            }
+            if (!"NOT_DELIVERED".equals(received.get())) {
+                throw new AssertionError("UNAUTHORIZED_DELIVERY:" + received.get());
             }
             result.putInt("passed", 1);
             result.putInt("failed", 0);
