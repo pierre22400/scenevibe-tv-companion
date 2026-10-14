@@ -118,6 +118,10 @@ def inspect(mode, path, tools, output, source=None):
                 configs.extend(dex_config(z.read(name)))
         require(len(configs) == 1, 'CONFIG_UNIQUE')
         config = configs[0]
+        # DEBUG is initialized in <clinit>, not a compile-time static encoded Boolean.
+        # Read the actual debuggable manifest instead of reporting its DEX default false.
+        config.pop('DEBUG', None)
+        require('application-debuggable' in badging, 'QUALIFICATION_DEBUG_MANIFEST')
         require(config.get('E5_NATIVE_QUALIFICATION') == enabled, 'FLAG')
         require(config.get('CLOUD_ORIGIN') == '' and config.get('ENABLE_LAN_DEV') == False, 'LOCAL_ONLY')
         component = 'com.scenevibe.tvcompanionpoc.E5AdbTriggerReceiver'
@@ -144,7 +148,7 @@ def inspect(mode, path, tools, output, source=None):
         cert = CERT_SHA
         require(source is not None and payload(source) == payload(path), 'SIGNED_PAYLOAD_UNCHANGED')
     evidence = {'apk_sha256': sha(path.read_bytes()), 'package': match[1], 'versionCode': int(match[2]),
-                'versionName': match[3], 'compiledConfig': config, 'certificate_sha256': cert,
+                'versionName': match[3], 'debuggable': True, 'compiledConfig': config, 'certificate_sha256': cert,
                 'fixture_sha256': FIXTURE_SHA if enabled else None, 'mode': mode,
                 'git_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                 'sony_executed': False, 'installed': False}

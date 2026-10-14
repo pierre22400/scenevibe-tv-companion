@@ -1,0 +1,11 @@
+// E5-038 isolated endpoint probes; preserve the historical 035 runner and workflow.
+// AGP merges instrumentation by target package, so explicitly choose this runner
+// rather than declaring a second runner for the same target package.
+gradle.beforeProject { project ->
+    if (project.path == ":app") {
+        project.plugins.withId("com.android.application") {
+            project.android.defaultConfig.testInstrumentationRunner =
+                "com.scenevibe.tvcompanionpoc.E5AdbTriggerInstrumentation"
+        }
+    }
+}

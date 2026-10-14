@@ -35,7 +35,7 @@ jobs:
         env: {SCENEVIBE_E5_NATIVE_QUALIFICATION: e5-native-035}
         run: |
           gradle :app:clean --console=plain
-          gradle --init-script .github/scripts/e5-native-035.init.gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:testDebugUnitTest --console=plain
+          gradle --init-script .github/scripts/e5-adb-038.init.gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:testDebugUnitTest --console=plain
           python3 .github/scripts/e5-adb-038-verify.py on app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME/build-tools/35.0.0" e5-adb-038-on.json
       - uses: actions/upload-artifact@v4
         with:

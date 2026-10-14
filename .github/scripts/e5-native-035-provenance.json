@@ -899,9 +899,10 @@
     "app/src/main/java/com/scenevibe/tvcompanionpoc/E5LocalRequest.java": "0b83a13ffab19f23828e811cbd25a17e368aa425",
     "app/src/e5Qualification/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerReceiver.java": "d4041291213a69cea9b38eac39b13dc3f924d466",
     "tests/test_e5_adb_038.py": "4472ce138a11e8f424f7df7deebccf6844949fcb",
-    ".github/scripts/e5-adb-038-verify.py": "bd5cf8b362c2b33b6413385f92ab3c9a9c3f816a",
-    ".github/scripts/e5-adb-038-platform.sh": "dc5bc045aea99ff3db3bb71facdf5ff32d5d204d",
-    ".github/workflows/e5-adb-038.yml": "186d00479e881a385307ee7cb03f380114dbb993",
+    ".github/scripts/e5-adb-038.init.gradle": "b5f179b0f844bcc178e7de89977b995c68027e01",
+    ".github/scripts/e5-adb-038-verify.py": "9e3787c47bc3bd8619c2552d8da9fd9d19e51cbb",
+    ".github/scripts/e5-adb-038-platform.sh": "e6b45e03a2ca2862d6242ee10da649065e6df8c3",
+    ".github/workflows/e5-adb-038.yml": "e735884d888278c7df062fe60584d42b9e8678f1",
     "docs/e5-adb-038/investigation-and-handoff.md": "716987e4da192fb8ee0e18e1b341bab85992e21d"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
