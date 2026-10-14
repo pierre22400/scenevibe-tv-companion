@@ -104,8 +104,7 @@ public final class DiagnosticsActivity extends Activity {
                         + "This is a local diagnostic clip; an incident requires manual native recovery.")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Confirm VOD and request", (dialog, which) -> {
-                    startForegroundService(new Intent(this, OverlayService.class)
-                            .setAction(OverlayService.ACTION_E5_LOCAL).putExtra("e5VodConfirmed", true));
+                    startForegroundService(E5LocalRequest.confirmedVod(this));
                     moveTaskToBack(true);
                 }).show();
     }
