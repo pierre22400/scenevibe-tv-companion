@@ -279,6 +279,16 @@
     "tests/test_poc_contract.py": "1071b66cf6128674830e6dc5b13a2cae27de5027"
   },
   "changes": {
+    ".github/scripts/m4-phase-a-test-summary.py": {
+      "beforeSha": "6cfed896f2d87e525a8b45835a008e874e75337b",
+      "afterSha": "416e97e9daf0d7253141b8b405d83f33923a7be3",
+      "inverse": [
+        {
+          "before": "    if suites != expected:\n",
+          "after": "    # E5-NATIVE-035 adds precisely these three separate JVM suites (64 tests).\n    # Preserve every frozen M4/M5 suite and skip rule; never accept other additions.\n    if (root / '.github/scripts/e5-native-035-provenance.json').exists():\n        expected.update({\n            'E5LocalPlanAndForegroundTest': 10,\n            'NativeTransportOwnerTest': 30,\n            'SceneRuntimeLocalInterludeTest': 24,\n        })\n    if suites != expected:\n"
+        }
+      ]
+    },
     "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": {
       "beforeSha": "71665c90c8d39cdd692bb8b57592c76374fcda27",
       "afterSha": "2677bfaa7b9d7c2959fb87c7a1c1e555dc29f664",

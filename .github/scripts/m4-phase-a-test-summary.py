@@ -59,6 +59,14 @@ def summarize(root):
             else:
                 counts['PASS'] += 1
     expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites'], **m5_phase_d['m5PhaseDSuites']}
+    # E5-NATIVE-035 adds precisely these three separate JVM suites (64 tests).
+    # Preserve every frozen M4/M5 suite and skip rule; never accept other additions.
+    if (root / '.github/scripts/e5-native-035-provenance.json').exists():
+        expected.update({
+            'E5LocalPlanAndForegroundTest': 10,
+            'NativeTransportOwnerTest': 30,
+            'SceneRuntimeLocalInterludeTest': 24,
+        })
     if suites != expected:
         raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
