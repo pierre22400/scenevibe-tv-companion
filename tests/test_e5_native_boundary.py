@@ -3,7 +3,6 @@ from collections import Counter
 import hashlib
 from pathlib import Path
 import re
-import subprocess
 import unittest
 
 from e5_native_provenance import BASE_HEAD, ROOT, blob_hash, ledger, retained_from_bytes, e5_retained_bytes
@@ -84,7 +83,9 @@ class E5NativeBoundaryTest(unittest.TestCase):
         for name in data['startingBlobs']:
             if not name.startswith('tests/test_') or not name.endswith('.py'):
                 continue
-            original = subprocess.check_output(['git', 'show', BASE_HEAD + ':' + name], cwd=ROOT).decode()
+            original_bytes = e5_retained_bytes(ROOT / name)
+            self.assertEqual(data['startingBlobs'][name], blob_hash(original_bytes), name)
+            original = original_bytes.decode('utf-8')
             current = (ROOT / name).read_text()
             old_tree, new_tree = ast.parse(original), ast.parse(current)
             old_methods = {n.name: n for n in ast.walk(old_tree) if isinstance(n, ast.FunctionDef)}
