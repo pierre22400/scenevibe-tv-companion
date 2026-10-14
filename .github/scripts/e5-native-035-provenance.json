@@ -853,6 +853,13 @@
     }
   },
   "additions": {
+    "docs/e5-native-035/scenevibe-e5-native-035-architecture.md": "ece7e7318683dc5a8ad4dae09fbad3ffa95f1c85",
+    "docs/e5-native-035/scenevibe-e5-native-035-implementation-report.md": "822c1649334b015bfe403b2086c23d886063a498",
+    "docs/e5-native-035/scenevibe-e5-native-035-non-regression.md": "36abd42dc54b83c26f1f1c21b18a6425a0c7cc9b",
+    "docs/e5-native-035/scenevibe-e5-native-035-software-qualification.md": "8f6becb1b1af1c436a07b4e1987d0e71cda402f5",
+    "docs/e5-native-035/scenevibe-e5-native-035-transport-guard.md": "72ee87c639b21bc9b56cacff71629cac5d395aa5",
+    "docs/e5-native-035/scenevibe-e5-native-035-sony-protocol.md": "78a51561fc67e2040cdb36da30f3564f53d352ef",
+    "docs/e5-native-035/scenevibe-e5-native-035-handoff.md": "5721dca54f125dddd01fb8024814045f6503b220",
     "app/src/e5Qualification/AndroidManifest.xml": "7398cbc48d478dd0444c61adf759567447f7142c",
     "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5NativeInstrumentation.java": "f9576c50c5ffef1ec656c11a8cd31e4fc2214270",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSessionPort.java": "4f0c72e183f1d8fc9f0f7338c00f252a380b2a1b",
