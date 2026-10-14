@@ -903,7 +903,9 @@
     ".github/scripts/e5-adb-038-verify.py": "9e3787c47bc3bd8619c2552d8da9fd9d19e51cbb",
     ".github/scripts/e5-adb-038-platform.sh": "e6b45e03a2ca2862d6242ee10da649065e6df8c3",
     ".github/workflows/e5-adb-038.yml": "e735884d888278c7df062fe60584d42b9e8678f1",
-    "docs/e5-adb-038/investigation-and-handoff.md": "716987e4da192fb8ee0e18e1b341bab85992e21d"
+    "docs/e5-adb-038/investigation-and-handoff.md": "f8155e12981fc6f06cf7e4f1d7266364c3cc4229",
+    "docs/e5-adb-038/Procedure_PowerShell_E5_038.md": "3025a4c18c2e01859f3af5942a5649b83314a9e8",
+    "docs/e5-adb-038/Invoke-SceneVibeE5Interlude.ps1": "b6fe5cd333f07cba4dc9b8aa3d894ec9d2550166"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
   "scope": "Historical byte/inventory assertions only; actual JVM/Android/E5 gates use candidate"
