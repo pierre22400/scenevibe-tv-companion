@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- E5-NATIVE-035 debug opt-in only: explicit media playback and read-only foreground proof.
-     This overlay is absent from flag-OFF and release APKs. No new service/window is declared.
+     This overlay is absent from flag-OFF and release APKs. No new service/window is declared; only the protected E5 shell receiver is added.
      Usage Access is granted manually later; missing proof refuses native transport. -->
 <manifest
   xmlns:android="http://schemas.android.com/apk/res/android"
@@ -10,6 +10,12 @@
     android:name="android.permission.PACKAGE_USAGE_STATS"
     tools:ignore="ProtectedPermissions" />
   <application>
+    <!-- DUMP is a platform signature/privileged/development permission held by ADB shell.
+         No uses-permission DUMP is requested by Companion. No intent filter: explicit only. -->
+    <receiver
+      android:name=".E5AdbTriggerReceiver"
+      android:exported="true"
+      android:permission="android.permission.DUMP" />
     <service
       android:name=".OverlayService"
       android:foregroundServiceType="specialUse|mediaPlayback"

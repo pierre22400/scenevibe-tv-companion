@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Additional software-only runners. The negative sender runs under the TEST APK UID. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <instrumentation
+    android:name="com.scenevibe.tvcompanionpoc.E5AdbTriggerInstrumentation"
+    android:targetPackage="com.scenevibe.tvcompanionpoc" />
+  <instrumentation
+    android:name="com.scenevibe.tvcompanionpoc.E5AdbSenderInstrumentation"
+    android:targetPackage="com.scenevibe.tvcompanionpoc.test" />
+</manifest>
