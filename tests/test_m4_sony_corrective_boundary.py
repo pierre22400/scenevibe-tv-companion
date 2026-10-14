@@ -1,3 +1,4 @@
+from e5_native_provenance import e5_retained_bytes, e5_retained_text, e5_scope_files
 from m5_phase_d_provenance import phase_d_added_paths
 import ast
 import json
@@ -17,7 +18,7 @@ native negative-control/process gate. Software preparation never counts as Sony 
 """
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = json.loads((ROOT / '.github/scripts/m4-phase-g-sony-corrective-baseline.json').read_text())
+BASELINE = json.loads(e5_retained_text(ROOT / '.github/scripts/m4-phase-g-sony-corrective-baseline.json'))
 JAVA = 'app/src/main/java/com/scenevibe/tvcompanionpoc/'
 POST_CORRECTIVE_DOCUMENTS = {
     'docs/m4-final-sony-physical-closure.md',
@@ -29,7 +30,7 @@ POST_CORRECTIVE_DOCUMENTS = {
 
 def executable(path):
     """Inspect actual executable references, keeping explanatory comments out of dependency checks."""
-    return re.sub(r'/\*.*?\*/|//[^\n]*', '', (ROOT / path).read_text(), flags=re.S)
+    return re.sub(r'/\*.*?\*/|//[^\n]*', '', e5_retained_text(ROOT / path), flags=re.S)
 
 
 class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
@@ -44,7 +45,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         self.assertEqual({JAVA + path for path in ('installation/AndroidInstallationBackend.java',
                          'installation/InstallationStore.java','RuntimeDiagnostics.java','DiagnosticsActivity.java')},
                          set(BASELINE['authorizedProductionChanges']))
-        actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
+        actual = {str(path.relative_to(ROOT)) for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java')}
         self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
 
     def test_every_retained_blob_and_corrective_inverse_is_exact(self):
@@ -69,7 +70,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         allowed.update(phase_c_added_paths())
         allowed.update(phase_d_added_paths())
         for directory in ('app/src','tests','.github','docs'):
-            for path in (ROOT / directory).rglob('*'):
+            for path in e5_scope_files(ROOT / directory, '*'):
                 if not path.is_file() or '__pycache__' in path.parts:
                     continue
                 relative = str(path.relative_to(ROOT))
@@ -86,10 +87,10 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
                           'deviceToken', 'SharedPreferences.OnSharedPreferenceChangeListener'):
             self.assertNotIn(forbidden, source)
         codec = JAVA + 'installation/InstallationSnapshotCodec.java'
-        self.assertEqual(BASELINE['startingBlobs'][codec], blob_hash((ROOT / codec).read_bytes()))
+        self.assertEqual(BASELINE['startingBlobs'][codec], blob_hash(e5_retained_bytes(ROOT / codec)))
         for name in ('PackageInstaller.java','InstallRequest.java','InstallationSnapshot.java'):
             path = JAVA + 'installation/' + name
-            self.assertEqual(BASELINE['startingBlobs'][path], blob_hash((ROOT / path).read_bytes()))
+            self.assertEqual(BASELINE['startingBlobs'][path], blob_hash(e5_retained_bytes(ROOT / path)))
 
     def test_bounded_read_failure_is_observation_only_with_unchanged_closed_result(self):
         """Read-stage enums contain no payload/cause and cannot authorize a fallback, ACK, ARM or recovery."""
@@ -100,7 +101,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         for token in ('catch (Throwable', 'catch (Error', '.getMessage()', 'printStackTrace', 'initCause('):
             self.assertNotIn(token, store)
         users = []
-        for path in (ROOT / 'app/src/main/java').rglob('*.java'):
+        for path in e5_scope_files(ROOT / 'app/src/main/java', '*.java'):
             if 'ReadFailure' in executable(str(path.relative_to(ROOT))):
                 users.append(path.name)
         self.assertEqual(['DiagnosticsActivity.java','InstallationStore.java','RuntimeDiagnostics.java'], sorted(users))
@@ -109,7 +110,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
 
     def test_native_gate_requires_real_disk_and_distinct_target_processes(self):
         """A new store on the same process cannot satisfy the gate; native XML bytes and zero restore writes are required."""
-        script = (ROOT / '.github/scripts/m4-sony-durability.sh').read_text()
+        script = e5_retained_text(ROOT / '.github/scripts/m4-sony-durability.sh')
         for token in ('invoke "$build" "$name" seed','am force-stop "$APP_ID"',
                       'pidof "$APP_ID"','invoke "$build" "$name" reload','"$first" = "$second"'):
             self.assertIn(token, script)
@@ -127,7 +128,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
 
     def test_same_native_fixture_executes_the_pinned_before_fix_negative_control(self):
         """Old actual Android code must reproduce present generic padding/CORRUPT before corrected persistence passes."""
-        workflow = (ROOT / '.github/workflows/android-installation-durability.yml').read_text()
+        workflow = e5_retained_text(ROOT / '.github/workflows/android-installation-durability.yml')
         self.assertIn('api: [31, 35]', workflow)
         self.assertIn('git archive 824339de562c0de8542f4c1b2a22266832c8abef', workflow)
         self.assertIn('SCENEVIBE_DURABILITY_TEST_ROOT: ${{ github.workspace }}', workflow)
@@ -137,7 +138,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
                       'BASELINE_POST_PROCESS_CORRUPT', 'BASELINE_RAW_ACK_EXACT',
                       'BASELINE_STARTUP_FAIL_CLOSED', 'BASELINE_CORRUPTION_REPRODUCED'):
             self.assertIn(token, fixture)
-        init = (ROOT / '.github/scripts/m4-sony-durability.init.gradle').read_text()
+        init = e5_retained_text(ROOT / '.github/scripts/m4-sony-durability.init.gradle')
         self.assertIn('sourceSets.androidTest.java.srcDirs', init)
         self.assertIn('sourceSets.androidTest.assets.srcDirs', init)
         self.assertNotIn('sourceSets.main', init)
@@ -145,11 +146,11 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
     def test_actual_result_accounting_is_additive_and_native_evidence_is_separate(self):
         """The full actual Gradle suite map/private skip policy remains required; native counts cannot inflate JVM cases."""
         self.assertEqual({'M4SonyPreferenceTransportTest':10,'M4SonyReadFailureTest':9}, BASELINE['phaseGCorrectiveSuites'])
-        summary = (ROOT / '.github/scripts/m4-phase-a-test-summary.py').read_text()
+        summary = e5_retained_text(ROOT / '.github/scripts/m4-phase-a-test-summary.py')
         for token in ("**sony['phaseGCorrectiveSuites']", 'if suites != expected:',
                       "baseline['allowedOptInSkips']", "baseline['fixtureSha256']"):
             self.assertIn(token, summary)
-        native = (ROOT / '.github/scripts/m4-sony-durability-summary.py').read_text()
+        native = e5_retained_text(ROOT / '.github/scripts/m4-sony-durability-summary.py')
         for token in ('Missing native PASS','Missing instrumentation completion','Missing native process id',
                       "phases[0] == phases[1]",'Missing pinned baseline failure proof',
                       "'sonyPhysicalRequalification': 'NOT PERFORMED'"):
@@ -161,7 +162,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
         paths = [path for path in BASELINE['correctivePatches'] if path.endswith('.py')]
         paths += [path for path in BASELINE['additiveFiles'] if path.endswith('.py')]
         for path in paths:
-            tree = ast.parse((ROOT / path).read_text())
+            tree = ast.parse(e5_retained_text(ROOT / path))
             last_import = max(i for i,node in enumerate(tree.body) if isinstance(node,(ast.Import,ast.ImportFrom)))
             self.assertTrue(any(isinstance(node,ast.Expr) and isinstance(node.value,ast.Constant)
                                 and isinstance(node.value.value,str) for node in tree.body[last_import+1:]),path)
@@ -171,7 +172,7 @@ class M4SonyCorrectiveBoundaryTest(unittest.TestCase):
 
     def test_sony_protocol_preserves_first_failure_and_pending_physical_gate(self):
         """The unchanged numbered acceptance checks record the old failure and require a genuine offline reboot of the candidate."""
-        protocol = (ROOT / 'docs/m4-sony-physical-qualification-protocol.md').read_text()
+        protocol = e5_retained_text(ROOT / 'docs/m4-sony-physical-qualification-protocol.md')
         for token in ('PARTIAL / FAIL','NOT PERFORMED','GENERIC_INVALID / CACHE_FAILED',
                       '3aa97275855b85dd2ccecda395bb5c2c0724c9ccd4713576c523c127c4f9a6e2',
                       'Installation read failure: NONE','Last startup restore: ARMED','adb install -r',

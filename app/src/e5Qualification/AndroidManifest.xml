@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- E5-NATIVE-035 debug opt-in only: explicit media playback and read-only foreground proof.
+     This overlay is absent from flag-OFF and release APKs. No new service/window is declared.
+     Usage Access is granted manually later; missing proof refuses native transport. -->
+<manifest
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <uses-permission
+    android:name="android.permission.PACKAGE_USAGE_STATS"
+    tools:ignore="ProtectedPermissions" />
+  <application>
+    <service
+      android:name=".OverlayService"
+      android:foregroundServiceType="specialUse|mediaPlayback"
+      tools:replace="android:foregroundServiceType" />
+  </application>
+</manifest>

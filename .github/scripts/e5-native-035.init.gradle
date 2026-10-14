@@ -1,0 +1,11 @@
+// E5-NATIVE-035: use only for explicit local/CI software instrumentation.
+// Native session commands are simulated; renderer/player/resources are actual Android.
+// No production build configuration, cloud assignment or Sony operation is performed.
+gradle.beforeProject { project ->
+    if (project.path == ":app") {
+        project.plugins.withId("com.android.application") {
+            project.android.defaultConfig.testInstrumentationRunner =
+                "com.scenevibe.tvcompanionpoc.E5NativeInstrumentation"
+        }
+    }
+}
