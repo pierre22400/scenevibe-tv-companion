@@ -281,7 +281,7 @@
   "changes": {
     ".github/scripts/m4-phase-a-test-summary.py": {
       "beforeSha": "6cfed896f2d87e525a8b45835a008e874e75337b",
-      "afterSha": "40738e619b4ad590c0a268bd51f2449c0d5cead4",
+      "afterSha": "be9c168227373ba0a04419c31a9e1173e811fa23",
       "inverse": [
         {
           "before": "    if suites != expected:\n",
@@ -294,6 +294,10 @@
         {
           "before": "        })\n    # E5-039 explicitly adds two suites; all prior counts, fixture checks and skips stay frozen.\n    if (root / '.github/scripts/e5-position-039-provenance.json').exists():\n        expected.update({'SonyStalePosition039Test': 14, 'NativeDiagnostics039Test': 2})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n        raise ValueError('An unexpected JVM case was skipped')\n",
           "after": "        })\n    # E5-039 explicitly adds two suites; all prior counts, fixture checks and skips stay frozen.\n    if (root / '.github/scripts/e5-position-039-provenance.json').exists():\n        expected.update({'SonyStalePosition039Test': 14, 'NativeDiagnostics039Test': 2})\n    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n        raise ValueError('An unexpected JVM case was skipped')\n"
+        },
+        {
+          "before": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n",
+          "after": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    # E5-042 adds fourteen lifecycle reconstruction cases; old suites stay mandatory.\n    expected.update({'NativeForegroundHistory042Test': 14})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
         }
       ]
     },
@@ -855,7 +859,7 @@
     },
     "app/build.gradle": {
       "beforeSha": "043a1b11da8e89107b2d82f0badffb3993bbf880",
-      "afterSha": "27693b1212bcc753fc2d35b4e6f80d7e7ea6f135",
+      "afterSha": "b720ea588fcc325b7691ba65e1af07c18c68cb6d",
       "inverse": [
         {
           "before": "}\n\ndef enableLanDev = providers.environmentVariable(\"SCENEVIBE_ENABLE_LAN_DEV\").orElse(\"false\").get()\ndef enableLanDevLiteral = enableLanDev.equalsIgnoreCase(\"true\") ? \"true\" : \"false\"\n\nandroid {\n    buildFeatures { buildConfig true }\n    namespace \"com.scenevibe.tvcompanionpoc\"\n",
@@ -888,6 +892,14 @@
         {
           "before": "    }\n\n    testOptions { unitTests.returnDefaultValues = true }\n    if (e5Native) {\n        defaultConfig.versionCode = 16\n        sourceSets.debug.manifest.srcFile \"src/e5Qualification/AndroidManifest.xml\"\n        sourceSets.debug.assets.srcDirs += [\"src/e5Qualification/assets\"]\n        sourceSets.debug.java.srcDirs += [\"src/e5Qualification/java\"]\n        // Keep E5 platform probes out of historical M4/M5 reconstruction builds.\n",
           "after": "    }\n\n    testOptions { unitTests.returnDefaultValues = true }\n    if (e5Native) {\n        defaultConfig.versionCode = 17\n        sourceSets.debug.manifest.srcFile \"src/e5Qualification/AndroidManifest.xml\"\n        sourceSets.debug.assets.srcDirs += [\"src/e5Qualification/assets\"]\n        sourceSets.debug.java.srcDirs += [\"src/e5Qualification/java\"]\n        // Keep E5 platform probes out of historical M4/M5 reconstruction builds.\n"
+        },
+        {
+          "before": "    buildTypes {\n        debug {\n            buildConfigField \"boolean\", \"E5_NATIVE_QUALIFICATION\", e5Native ? \"true\" : \"false\"\n            if (e5Native) versionNameSuffix \"-e5-native041-diagnostics\"\n        }\n        // Explicit production RELEASE variant. The POC intentionally keeps minify\n        // and resource shrinking OFF so the qualified 0.8.1 runtime behavior stays\n",
+          "after": "    buildTypes {\n        debug {\n            buildConfigField \"boolean\", \"E5_NATIVE_QUALIFICATION\", e5Native ? \"true\" : \"false\"\n            if (e5Native) versionNameSuffix \"-e5-native042-foreground\"\n        }\n        // Explicit production RELEASE variant. The POC intentionally keeps minify\n        // and resource shrinking OFF so the qualified 0.8.1 runtime behavior stays\n"
+        },
+        {
+          "before": "\n    testOptions { unitTests.returnDefaultValues = true }\n    if (e5Native) {\n        defaultConfig.versionCode = 17\n        sourceSets.debug.manifest.srcFile \"src/e5Qualification/AndroidManifest.xml\"\n        sourceSets.debug.assets.srcDirs += [\"src/e5Qualification/assets\"]\n        sourceSets.debug.java.srcDirs += [\"src/e5Qualification/java\"]\n",
+          "after": "\n    testOptions { unitTests.returnDefaultValues = true }\n    if (e5Native) {\n        defaultConfig.versionCode = 18\n        sourceSets.debug.manifest.srcFile \"src/e5Qualification/AndroidManifest.xml\"\n        sourceSets.debug.assets.srcDirs += [\"src/e5Qualification/assets\"]\n        sourceSets.debug.java.srcDirs += [\"src/e5Qualification/java\"]\n"
         }
       ]
     }
@@ -908,8 +920,8 @@
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeTransportOwner.java": "902a7697a7f9d8fb91f5aeda44313af22770ec18",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeForegroundProof.java": "a6be54ad3646c1a2ae714cf603bd1fd2bce4c044",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalVideoPort.java": "062276bb515f50db0026e090436b9f63dcc8ac35",
-    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java": "c694cc836de55b9723d3ae21978915c483eeaae0",
-    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java": "70ea9006f88653ff3639b5325abf761be38d29e5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java": "023aeba3cb753a42af6e1980ea1e055f91e4951f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java": "b5459b8a3cdd8b14135a0027a391af3ad7d24c02",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeDiagnostics.java": "b3c6493b190aa45e04d715a4fcbe4934dd809985",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/LocalMediaResource.java": "5eb26895c8c396607ad5c85d16541ecae0fbdda8",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidLocalVideoPort.java": "66e19aaa85e5b5af1f558aa93505c17bec8ea0f8",
@@ -925,7 +937,7 @@
     ".github/workflows/e5-native-035-software.yml": "60d7e70f30647837fd5288d8e11a0f18a17a94e6",
     ".github/scripts/e5-native-035.init.gradle": "eb43cd7a77ad42483778e343cec49e6746a37eac",
     ".github/scripts/e5-native-035-platform.sh": "eed2a42488ac0bdab28a8ad62516c2a865ed373e",
-    "app/src/e5QualificationAndroidTest/AndroidManifest.xml": "8307bbf479f7882c8fbcb542ea678647b840d3ce",
+    "app/src/e5QualificationAndroidTest/AndroidManifest.xml": "6311972772e01682833e1d88f550561bd0abeb0e",
     "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbSenderInstrumentation.java": "c774f630207aacd8c941a21555bc86df718b7ae8",
     "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerInstrumentation.java": "b7fe908fd313d20cfacf114f2012926286f953ce",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/E5LocalRequest.java": "0b83a13ffab19f23828e811cbd25a17e368aa425",
@@ -967,10 +979,10 @@
     "docs/e5-admission-040/sony-evidence.json": "235e40c90d64db7a811027783fa968696aeca0ea",
     ".github/workflows/e5-admission-040.yml": "08d1ecf17c7e82fa62a2092435893a04561dff21",
     "docs/e5-admission-040/qualification-proof.json": "9edd562891125162332ca84440d54da35303af06",
-    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSelectionTrace.java": "12b42938160252921a7cb918473c750753a7333f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSelectionTrace.java": "5bae4e784b273fd5a4e4815f4df3feaff5c79cba",
     "app/src/test/java/com/scenevibe/tvcompanionpoc/NativeSelectionDiagnostics041Test.java": "21c5f92f275841551de3181691b79c1f6835e07c",
-    "tests/e5_selection_041_provenance.py": "32455cece5888a8f706a33adff1bb917258dfe57",
-    "tests/test_e5_selection_041.py": "601923df6f46c84a48d3ed0ec0434b8dd4877cbc",
+    "tests/e5_selection_041_provenance.py": "72bf1942ffd77f4c4eec17363bddee4d18835da9",
+    "tests/test_e5_selection_041.py": "c022b30f12b8ea08029e8dc4afce79158f2cee6e",
     ".github/workflows/e5-selection-041.yml": "5b447d48a75b43e669294825acef6a2637e2289f",
     ".github/scripts/e5-selection-041-provenance.json": "a284518a1e756030b6421de33d0369f40eaeeb4a",
     ".github/scripts/e5-selection-041-verify.py": "a106a2e7296e3811d6cabe0f661fe286d9784c13",
@@ -987,7 +999,21 @@
     "docs/e5-selection-041/candidate-proof.json": "0ac3bf611ae42df1bfc7b512f71fea2486e46c8a",
     "docs/e5-selection-041/Invoke-E5-041.ps1": "accedab63781b131a2d6ee47e234a3dfb9e54dae",
     "docs/e5-selection-041/qualification-summary.json": "2a435a4f6602e50789d72f59e8583ceaa7885edc",
-    "docs/e5-selection-041/powershell-host-tests.json": "9b7d7a7458e5d4c20e38f9cc9db16f49f7643c2d"
+    "docs/e5-selection-041/powershell-host-tests.json": "9b7d7a7458e5d4c20e38f9cc9db16f49f7643c2d",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeForegroundHistory.java": "1c9c1d1fde65afad6820f5791d3e997d1afe27e8",
+    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5Foreground042Instrumentation.java": "126a81055b38b6f5f2a04b2877e26d3aea7fe217",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/NativeForegroundHistory042Test.java": "81ba09e533808696f8164b0c07e0c68db85924f1",
+    "tests/test_e5_foreground_042.py": "af5ff4789c18cda38766b4ba97f06aabaf03e82a",
+    "tests/e5_foreground_042_provenance.py": "c7919e45dc334fd3f98bb2063d8654da081cf216",
+    ".github/scripts/e5-foreground-042-verify.py": "fb366ceb5b93fe4975f0237a5210a68e8c49ac12",
+    ".github/scripts/e5-foreground-042-powershell-test.py": "24301e89ca85bf492aec816ed893b74194b801a0",
+    ".github/scripts/e5-foreground-042-platform.sh": "3833664529e2a38bb39eef9c37702324b9bd7428",
+    ".github/scripts/e5-foreground-042-provenance.json": "cba7686cc50b69b8c5d8070871392b384a420275",
+    ".github/scripts/e5-foreground-042-replay.py": "3e7a8c66ba8db7768d973ca5837549adfd6e6f80",
+    ".github/workflows/e5-foreground-042.yml": "6b5835822f9ef8d05e9b9cf2c673e626a34eb382",
+    "docs/e5-foreground-042/analysis-and-handoff.md": "af917682d4424844c42132c9177570edc451bb94",
+    "docs/e5-foreground-042/Invoke-E5-042.ps1": "d3b96d6ad13f97071ccbbd2de7b789025f4d0c61",
+    "docs/e5-foreground-042/Foreground042Replay.java": "6564660aef55c9a58d94410a202b95bf025931f6"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
   "scope": "Historical byte/inventory assertions only; actual JVM/Android/E5 gates use candidate"

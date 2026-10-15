@@ -62,6 +62,8 @@ final class AndroidNativeSessionPort implements NativeSessionPort {
                 || selected.snapshot.speed != 1f
                 || !selected.snapshot.canPause || !selected.snapshot.canPlay) return false;
         try {
+            if (!foreground.primeForeground()
+                    || !policy.fresh(selected.snapshot, SystemClock.elapsedRealtime())) return false;
             selected.controller.getTransportControls().pause();
             return true;
         } catch (RuntimeException refused) {
@@ -83,6 +85,8 @@ final class AndroidNativeSessionPort implements NativeSessionPort {
             return false;
         }
         try {
+            if (!foreground.primeForeground()
+                    || !policy.fresh(selected.snapshot, SystemClock.elapsedRealtime())) return false;
             selected.controller.getTransportControls().play();
             return true;
         } catch (RuntimeException refused) {

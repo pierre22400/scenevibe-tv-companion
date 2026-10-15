@@ -1,0 +1,120 @@
+{
+  "baseHead": "bb13d7cf7a1448fc23f6b5e0aebb5c6a1a022ec2",
+  "applicationChanges": [
+    "app/build.gradle",
+    "app/src/e5QualificationAndroidTest/AndroidManifest.xml",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSelectionTrace.java"
+  ],
+  "changes": {
+    ".github/scripts/m4-phase-a-test-summary.py": {
+      "beforeSha": "40738e619b4ad590c0a268bd51f2449c0d5cead4",
+      "afterSha": "be9c168227373ba0a04419c31a9e1173e811fa23",
+      "inverse": [
+        {
+          "before": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n",
+          "after": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    # E5-042 adds fourteen lifecycle reconstruction cases; old suites stay mandatory.\n    expected.update({'NativeForegroundHistory042Test': 14})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
+        }
+      ]
+    },
+    "app/build.gradle": {
+      "beforeSha": "27693b1212bcc753fc2d35b4e6f80d7e7ea6f135",
+      "afterSha": "b720ea588fcc325b7691ba65e1af07c18c68cb6d",
+      "inverse": [
+        {
+          "before": "    buildTypes {\n        debug {\n            buildConfigField \"boolean\", \"E5_NATIVE_QUALIFICATION\", e5Native ? \"true\" : \"false\"\n            if (e5Native) versionNameSuffix \"-e5-native041-diagnostics\"\n        }\n        // Explicit production RELEASE variant. The POC intentionally keeps minify\n        // and resource shrinking OFF so the qualified 0.8.1 runtime behavior stays\n",
+          "after": "    buildTypes {\n        debug {\n            buildConfigField \"boolean\", \"E5_NATIVE_QUALIFICATION\", e5Native ? \"true\" : \"false\"\n            if (e5Native) versionNameSuffix \"-e5-native042-foreground\"\n        }\n        // Explicit production RELEASE variant. The POC intentionally keeps minify\n        // and resource shrinking OFF so the qualified 0.8.1 runtime behavior stays\n"
+        },
+        {
+          "before": "\n    testOptions { unitTests.returnDefaultValues = true }\n    if (e5Native) {\n        defaultConfig.versionCode = 17\n        sourceSets.debug.manifest.srcFile \"src/e5Qualification/AndroidManifest.xml\"\n        sourceSets.debug.assets.srcDirs += [\"src/e5Qualification/assets\"]\n        sourceSets.debug.java.srcDirs += [\"src/e5Qualification/java\"]\n",
+          "after": "\n    testOptions { unitTests.returnDefaultValues = true }\n    if (e5Native) {\n        defaultConfig.versionCode = 18\n        sourceSets.debug.manifest.srcFile \"src/e5Qualification/AndroidManifest.xml\"\n        sourceSets.debug.assets.srcDirs += [\"src/e5Qualification/assets\"]\n        sourceSets.debug.java.srcDirs += [\"src/e5Qualification/java\"]\n"
+        }
+      ]
+    },
+    "app/src/e5QualificationAndroidTest/AndroidManifest.xml": {
+      "beforeSha": "8307bbf479f7882c8fbcb542ea678647b840d3ce",
+      "afterSha": "6311972772e01682833e1d88f550561bd0abeb0e",
+      "inverse": [
+        {
+          "before": "  <instrumentation\n    android:name=\"com.scenevibe.tvcompanionpoc.E5AdbSenderInstrumentation\"\n    android:targetPackage=\"com.scenevibe.tvcompanionpoc.test\" />\n</manifest>\n",
+          "after": "  <instrumentation\n    android:name=\"com.scenevibe.tvcompanionpoc.E5AdbSenderInstrumentation\"\n    android:targetPackage=\"com.scenevibe.tvcompanionpoc.test\" />\n  <instrumentation\n    android:name=\"com.scenevibe.tvcompanionpoc.E5Foreground042Instrumentation\"\n    android:targetPackage=\"com.scenevibe.tvcompanionpoc\" />\n</manifest>\n"
+        }
+      ]
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java": {
+      "beforeSha": "70ea9006f88653ff3639b5325abf761be38d29e5",
+      "afterSha": "b5459b8a3cdd8b14135a0027a391af3ad7d24c02",
+      "inverse": [
+        {
+          "before": "package com.scenevibe.tvcompanionpoc;\n\nimport android.app.AppOpsManager;\nimport android.app.usage.UsageEvents;\nimport android.app.usage.UsageStatsManager;\nimport android.content.Context;\nimport android.os.Process;\n\n/**\n * Qualification-only, read-only foreground proof; no history or app names are persisted.\n",
+          "after": "package com.scenevibe.tvcompanionpoc;\n\nimport android.app.AppOpsManager;\nimport android.app.KeyguardManager;\nimport android.app.usage.UsageEvents;\nimport android.app.usage.UsageStatsManager;\nimport android.content.Context;\nimport android.os.Process;\nimport android.os.PowerManager;\nimport android.os.UserManager;\n\n/**\n * Qualification-only, read-only foreground proof; no history or app names are persisted.\n"
+        },
+        {
+          "before": " * This optional debug profile therefore requires explicit Usage Access and a recent resumed\n * Prime Activity. Missing/old evidence refuses transport. It is not used by M5 or flag-OFF builds.</p>\n */\nfinal class AndroidForegroundEvidence {\n    private final Context context;\n    static final long EVENT_WINDOW_MS = 30000L;\n\n    /** Retain only the application context, never an Activity or a durable access credential. */\n    AndroidForegroundEvidence(Context context) { this.context = context.getApplicationContext(); }\n",
+          "after": " * This optional debug profile therefore requires explicit Usage Access and a recent resumed\n * Prime Activity. Missing/old evidence refuses transport. It is not used by M5 or flag-OFF builds.</p>\n */\n/** E5-042 supersedes the recent-window algorithm described above with a retained epoch replay.\n * Current device visibility is required before and after every replay; no positive cache exists.\n */\nfinal class AndroidForegroundEvidence {\n    private final Context context;\n    static final int EVENT_LIMIT = 32768;\n\n    /** Retain only the application context, never an Activity or a durable access credential. */\n    AndroidForegroundEvidence(Context context) { this.context = context.getApplicationContext(); }\n"
+        },
+        {
+          "before": "\n    /** Observe the existing finite reduction without changing any decision or exception path. */\n    boolean primeForeground(NativeSelectionTrace trace) {\n        if (trace != null) trace.foregroundWindowMs = EVENT_WINDOW_MS;\n        try {\n            return evaluateForeground(trace);\n        } catch (RuntimeException unavailable) {\n",
+          "after": "\n    /** Observe the existing finite reduction without changing any decision or exception path. */\n    boolean primeForeground(NativeSelectionTrace trace) {\n        // E5-042 records the actual retained-history query span below.\n        try {\n            return evaluateForeground(trace);\n        } catch (RuntimeException unavailable) {\n"
+        },
+        {
+          "before": "            mark(trace, NativeSelectionTrace.Foreground.MANAGER_UNAVAILABLE);\n            return false;\n        }\n        long now = System.currentTimeMillis();\n        UsageEvents events = usage.queryEvents(now - EVENT_WINDOW_MS, now);\n        if (events == null) {\n            mark(trace, NativeSelectionTrace.Foreground.EVENTS_UNAVAILABLE);\n            return false;\n        }\n        UsageEvents.Event event = new UsageEvents.Event();\n        NativeForegroundProof proof = new NativeForegroundProof();\n        int examined = 0;\n        while (events.hasNextEvent()) {\n            if (++examined > 1024) {\n                if (trace != null) trace.eventsExamined = examined;\n                mark(trace, NativeSelectionTrace.Foreground.EVENT_LIMIT);\n                return false;\n            }\n            if (trace != null) trace.eventsExamined = examined;\n            events.getNextEvent(event);\n            proof.event(event.getEventType(), event.getPackageName());\n            observeEvent(trace, event, examined, now);\n        }\n        boolean admitted = proof.primeAlone();\n        if (trace != null) {\n            trace.resumedApps = proof.resumedCount();\n            mark(trace, admitted ? NativeSelectionTrace.Foreground.PRIME_ALONE\n                    : trace.relevantEvents == 0 ? NativeSelectionTrace.Foreground.NO_RELEVANT_EVENTS\n                    : trace.resumedApps > 1 ? NativeSelectionTrace.Foreground.AMBIGUOUS\n                    : NativeSelectionTrace.Foreground.PRIME_NOT_FOREGROUND);\n        }\n        return admitted;\n    }\n\n    /** Write a bounded diagnostic enum only; it is never input to primeAlone(). */\n",
+          "after": "            mark(trace, NativeSelectionTrace.Foreground.MANAGER_UNAVAILABLE);\n            return false;\n        }\n        if (!deviceVisible()) {\n            mark(trace, NativeSelectionTrace.Foreground.DEVICE_NOT_VISIBLE);\n            return false;\n        }\n        long now = System.currentTimeMillis();\n        if (trace != null) trace.foregroundWindowMs = now;\n        // Zero requests the retained history, not an arbitrary larger recent window.\n        UsageEvents events = usage.queryEvents(0, now);\n        if (events == null) {\n            mark(trace, NativeSelectionTrace.Foreground.EVENTS_UNAVAILABLE);\n            return false;\n        }\n        UsageEvents.Event event = new UsageEvents.Event();\n        NativeForegroundHistory proof = new NativeForegroundHistory();\n        int examined = 0;\n        while (events.hasNextEvent()) {\n            if (++examined > EVENT_LIMIT) {\n                if (trace != null) trace.eventsExamined = examined;\n                mark(trace, NativeSelectionTrace.Foreground.EVENT_LIMIT);\n                return false;\n            }\n            if (trace != null) trace.eventsExamined = examined;\n            if (!events.getNextEvent(event) || event.getTimeStamp() >= now) {\n                mark(trace, NativeSelectionTrace.Foreground.HISTORY_INCOMPLETE);\n                return false;\n            }\n            proof.event(event.getEventType(), event.getPackageName(), event.getClassName(),\n                    event.getTimeStamp());\n            observeEvent(trace, event, examined, now);\n        }\n        boolean admitted = proof.primeAlone() && deviceVisible() && accessGranted();\n        if (trace != null) {\n            trace.resumedApps = proof.resumedCount();\n            mark(trace, admitted ? NativeSelectionTrace.Foreground.PRIME_ALONE\n                    : proof.incomplete() ? NativeSelectionTrace.Foreground.HISTORY_INCOMPLETE\n                    : trace.relevantEvents == 0 ? NativeSelectionTrace.Foreground.NO_RELEVANT_EVENTS\n                    : trace.resumedApps > 1 ? NativeSelectionTrace.Foreground.AMBIGUOUS\n                    : NativeSelectionTrace.Foreground.PRIME_NOT_FOREGROUND);\n        }\n        return admitted;\n    }\n\n    /** Require an unlocked user, an interactive display and no current keyguard ownership. */\n    private boolean deviceVisible() {\n        UserManager user = context.getSystemService(UserManager.class);\n        PowerManager power = context.getSystemService(PowerManager.class);\n        KeyguardManager keyguard = context.getSystemService(KeyguardManager.class);\n        return user != null && user.isUserUnlocked() && power != null && power.isInteractive()\n                && keyguard != null && !keyguard.isKeyguardLocked();\n    }\n\n    /** Write a bounded diagnostic enum only; it is never input to primeAlone(). */\n"
+        }
+      ]
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java": {
+      "beforeSha": "c694cc836de55b9723d3ae21978915c483eeaae0",
+      "afterSha": "023aeba3cb753a42af6e1980ea1e055f91e4951f",
+      "inverse": [
+        {
+          "before": "                || selected.snapshot.speed != 1f\n                || !selected.snapshot.canPause || !selected.snapshot.canPlay) return false;\n        try {\n            selected.controller.getTransportControls().pause();\n            return true;\n        } catch (RuntimeException refused) {\n",
+          "after": "                || selected.snapshot.speed != 1f\n                || !selected.snapshot.canPause || !selected.snapshot.canPlay) return false;\n        try {\n            if (!foreground.primeForeground()\n                    || !policy.fresh(selected.snapshot, SystemClock.elapsedRealtime())) return false;\n            selected.controller.getTransportControls().pause();\n            return true;\n        } catch (RuntimeException refused) {\n"
+        },
+        {
+          "before": "            return false;\n        }\n        try {\n            selected.controller.getTransportControls().play();\n            return true;\n        } catch (RuntimeException refused) {\n",
+          "after": "            return false;\n        }\n        try {\n            if (!foreground.primeForeground()\n                    || !policy.fresh(selected.snapshot, SystemClock.elapsedRealtime())) return false;\n            selected.controller.getTransportControls().play();\n            return true;\n        } catch (RuntimeException refused) {\n"
+        }
+      ]
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSelectionTrace.java": {
+      "beforeSha": "12b42938160252921a7cb918473c750753a7333f",
+      "afterSha": "5bae4e784b273fd5a4e4815f4df3feaff5c79cba",
+      "inverse": [
+        {
+          "before": "    enum Foreground {\n        NOT_EVALUATED, PRIME_ALONE, ACCESS_DENIED, MANAGER_UNAVAILABLE,\n        EVENTS_UNAVAILABLE, NO_RELEVANT_EVENTS, EVENT_LIMIT, AMBIGUOUS,\n        PRIME_NOT_FOREGROUND, SYSTEM_EXCEPTION\n    }\n    /** Indicate the exact original short-circuit comparison that rejected the double read. */\n    enum Read {\n",
+          "after": "    enum Foreground {\n        NOT_EVALUATED, PRIME_ALONE, ACCESS_DENIED, MANAGER_UNAVAILABLE,\n        EVENTS_UNAVAILABLE, NO_RELEVANT_EVENTS, EVENT_LIMIT, AMBIGUOUS,\n        PRIME_NOT_FOREGROUND, SYSTEM_EXCEPTION, HISTORY_INCOMPLETE, DEVICE_NOT_VISIBLE\n    }\n    /** Indicate the exact original short-circuit comparison that rejected the double read. */\n    enum Read {\n"
+        }
+      ]
+    },
+    "tests/e5_selection_041_provenance.py": {
+      "beforeSha": "32455cece5888a8f706a33adff1bb917258dfe57",
+      "afterSha": "72bf1942ffd77f4c4eec17363bddee4d18835da9",
+      "inverse": [
+        {
+          "before": "from pathlib import Path\n\nfrom e5_native_provenance import blob_hash\n\n\"\"\"Reverse only exactly hashed E5-041 edits for historical source comparisons.\n\n",
+          "after": "from pathlib import Path\n\nfrom e5_native_provenance import blob_hash\nfrom e5_foreground_042_provenance import e5042_retained_bytes\n\n\"\"\"Reverse only exactly hashed E5-041 edits for historical source comparisons.\n\n"
+        },
+        {
+          "before": "def e5041_retained_bytes(path):\n    \"\"\"Verify complete candidate bytes and finite inverse hunks before exposing the base bytes.\"\"\"\n    path = Path(path)\n    content = path.read_bytes()\n    data = json.loads((ROOT / '.github/scripts/e5-selection-041-provenance.json').read_text())\n    if data['baseHead'] != BASE:\n        raise ValueError('Unknown E5-041 base')\n",
+          "after": "def e5041_retained_bytes(path):\n    \"\"\"Verify complete candidate bytes and finite inverse hunks before exposing the base bytes.\"\"\"\n    path = Path(path)\n    content = e5042_retained_bytes(path)\n    data = json.loads((ROOT / '.github/scripts/e5-selection-041-provenance.json').read_text())\n    if data['baseHead'] != BASE:\n        raise ValueError('Unknown E5-041 base')\n"
+        }
+      ]
+    },
+    "tests/test_e5_selection_041.py": {
+      "beforeSha": "601923df6f46c84a48d3ed0ec0434b8dd4877cbc",
+      "afterSha": "c022b30f12b8ea08029e8dc4afce79158f2cee6e",
+      "inverse": [
+        {
+          "before": "import unittest\n\nfrom e5_selection_041_provenance import BASE, e5041_retained_bytes\n\n\"\"\"Check actual observation-only E5-041 scope separately from historical byte reconstructions.\"\"\"\n\n",
+          "after": "import unittest\n\nfrom e5_selection_041_provenance import BASE, e5041_retained_bytes\nfrom e5_foreground_042_provenance import e5042_retained_bytes\n\n\"\"\"Check actual observation-only E5-041 scope separately from historical byte reconstructions.\"\"\"\n\n"
+        },
+        {
+          "before": "        for name in names:\n            if name not in allowed:\n                self.assertEqual(subprocess.check_output(['git', 'show', BASE + ':' + name], cwd=ROOT),\n                                 (ROOT / name).read_bytes(), name)\n\n    def test_all_edits_recover_exact_e5040_bytes(self):\n        \"\"\"Full hashes and unique finite literals preserve every old file exactly, including tests.\"\"\"\n",
+          "after": "        for name in names:\n            if name not in allowed:\n                self.assertEqual(subprocess.check_output(['git', 'show', BASE + ':' + name], cwd=ROOT),\n                                 e5042_retained_bytes(ROOT / name), name)\n\n    def test_all_edits_recover_exact_e5040_bytes(self):\n        \"\"\"Full hashes and unique finite literals preserve every old file exactly, including tests.\"\"\"\n"
+        }
+      ]
+    }
+  }
+}
