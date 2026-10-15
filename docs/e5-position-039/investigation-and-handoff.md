@@ -4,7 +4,12 @@ Date : 15 octobre 2026. GitHub est la source de vérité.
 Base immuable : `efd3a7983a03458ec1f919d760c10f1b1f9c57ff`.
 Branche : `work/scenevibe-e5-native-stale-position-039`, cible PR E5-038.
 
-**QUALIFICATION EN COURS — aucune qualification physique revendiquée.**
+**READY FOR SONY RETEST — E5 Sony Android 12/API31/VOD attestée.**
+
+PR Draft : https://github.com/pierre22400/scenevibe-tv-companion/pull/20
+HEAD logiciel qualifié et APK : `24a1b9376eb629567bf018b1a4e967f01625688b`.
+La clôture documentaire ultérieure ne modifie ni logiciel ni test compilé.
+**E5 PHYSICALLY QUALIFIED : non acquis.**
 
 ## Faits physiques et portée de la preuve
 
@@ -133,8 +138,8 @@ Aucun ancien test négatif, assertion, docstring ou skip n'est retiré.
 
 ## Qualification, APK et risques résiduels
 
-Résultats intermédiaires vérifiés sur le HEAD logiciel
-`efac69e664ec0be3aacb1ea9ba81d81b620db15a` :
+Résultats finaux vérifiés sur le HEAD logiciel
+`24a1b9376eb629567bf018b1a4e967f01625688b` :
 
 - Local : 131 Python PASS ; 80 JVM E5 PASS (64 historiques + 14 Sony + 2 diagnostics).
 - CI OFF et ON : **1131 cas par profil, 1130 PASS + 1 SKIP historique, zéro échec**.
@@ -147,9 +152,9 @@ Résultats intermédiaires vérifiés sur le HEAD logiciel
   sortie non nulle sur rejet, aucun PLAY/PAUSE ni retry.
 
 Run de qualification :
-https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/38668130263
-Artefact logiciel : 11943217214 ; digest ZIP revérifié
-`2981ee0bdd01a4a010a666f40d4329f4d97d48c226a98befb399effdc3e130a5`.
+https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/38668622187
+Artefact logiciel : 11942423451 ; digest ZIP revérifié
+`dd881714648829214294aecc13d72f6643ca0292ab429c8858544feba3f573a7`.
 Les APK OFF/ON ont été inspectées localement : identité, version, flags compilés,
 fixture, composant DUMP et absence OFF conformes.
 
@@ -157,6 +162,12 @@ Le premier run 38667880726 a compilé et exécuté les JVM avec succès puis éc
 au compteur figé des suites M4/M5, qui ignorait les deux nouvelles classes E5-039.
 Le deuxième commit ajoute exactement 14 et 2 cas à cet inventaire ; aucune assertion
 ancienne, fixture ou règle de skip n'est modifiée. Le premier échec reste visible.
+Le run 38668130263 a ensuite passé tout le logiciel, mais la nouvelle sonde Android
+s'est arrêtée à ANDROID_UNKNOWN_DURATION sur sa première lecture immédiate de
+MediaSession synthétique. Le dernier ajustement attend au plus 2s la publication
+cohérente de cette fixture, sans modifier l'adaptateur ni aucune garde du runtime.
+Un timeout affiche l'état/durée réellement disponibles ; il ne devient pas PASS.
+La signature est restée SKIPPED sur ce run en échec.
 Les inventaires Python provisoires ont également refusé les fichiers non encore
 admis ; ils ont ensuite tous passé après l'admission exacte, sans wildcard.
 
@@ -165,7 +176,39 @@ plugin Android via le réseau du poste de travail. Ils ne sont pas déclarés PA
 La compilation/lint/suite complète retenues sont celles du runner CI du HEAD exact.
 Les 80 JVM critiques ont été compilés localement depuis les sources courantes et
 exécutés avec JDK 17, JUnit réel et JSON réel, indépendamment de cette difficulté.
-Les sondes Android et l'identité de candidate restent à consolider après leurs jobs.
+Le run final compte trois jobs **SUCCESS** : software, platform31, stable-candidate.
+Les sondes API31 et leurs fichiers ont été téléchargés et relus : 20 assertions
+réelles (15 enveloppe/permissions + 5 conversion Android), émetteur non autorisé
+sous UID 10146 refusé (1 assertion), même foreground Settings avant/après, commande
+malformée refusée, endpoint OFF absent. Le PAUSE/PLAY Prime n'est pas exercé par
+ces sondes ; le nominal complet est couvert par les observations indépendantes JVM.
+
+La candidate a été signée uniquement après ces succès. ZIP et APK ont été vérifiés
+localement : égalité de tout le payload applicatif avec l'APK ON testée, certificat
+API31, package, version, flags DEX, fixture et SHA-256. La référence E5 stable
+47f675db a été revérifiée localement par apksigner : même certificat f908…a2e9c.
+Le mode debug opt-in reste intentionnel et Sony/API31 seulement.
+
+| Candidate | Valeur |
+|---|---|
+| Fichier | SceneVibe_E5_039_stable.apk |
+| applicationId | com.scenevibe.tvcompanionpoc |
+| versionCode | **16 > 15** |
+| versionName | 0.8.2-tv-release-hardening-e5-native039-position |
+| SHA-256 APK | aacda02ac414e9d4e8a885870fcaf5f4e444eeb0db746a7c3aef80231d02db64 |
+| Certificat SHA-256 | f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c |
+| Cloud / LAN / qualification E5 | vide / OFF / ON |
+
+[Preuve indépendante APK](candidate-proof.json).
+Artefacts du run final (digests ZIP revérifiés) :
+- software 11942423451 : `dd881714648829214294aecc13d72f6643ca0292ab429c8858544feba3f573a7` ;
+- platform31 11943228780 : `965863e3d59cc578106fc0c39b08ee2b51a33bd2179b51083e7cf43268dece0d` ;
+- candidate 11943138804 : `c3eecd5fdd8d3361d5a4f5a3795c4f086f8bf9bf7c8a22ccc35fd69283b70ea8`.
+
+La procédure et [le script PowerShell](Invoke-E5-039.ps1) ne sont pas exécutés sur
+Sony. Le script est livré en UTF-8 avec BOM pour Windows PowerShell 5.1 ; le fichier
+final a été reparsé localement. Les modifications finales de documentation/encodage
+ne sont pas attribuées à une nouvelle compilation APK.
 Signature uniquement avec la clé stable déjà configurée, sans extraire de clé vers
 le poste de travail, ni générer une nouvelle identité.
 
@@ -183,3 +226,20 @@ Les données live mal attestées ne peuvent pas être identifiées comme VOD par
 métadonnée -1 : le mandat reste manuel et limité à l'épisode VOD attesté.
 
 Aucune installation/intervention Sony, fusion, Production, Cloud, Vercel ou Neon.
+
+
+## Références des fonctions modifiées et décision de clôture
+
+| Source | Fonctions / rôle |
+|---|---|
+| [NativeQualificationPolicy.java](../../app/src/main/java/com/scenevibe/tvcompanionpoc/NativeQualificationPolicy.java) | fresh / evidence : âge, cohérence et durée distingués |
+| [NativeSessionSnapshot.java](../../app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSessionSnapshot.java) | usableDurationEvidence / sameTarget : ID explicite, égalité exacte |
+| [NativeTransportOwner.java](../../app/src/main/java/com/scenevibe/tvcompanionpoc/NativeTransportOwner.java) | requestPause / sameFresh / beginAttempt : admission, observations et motif retiré |
+| [NativeDiagnostics.java](../../app/src/main/java/com/scenevibe/tvcompanionpoc/NativeDiagnostics.java) | evaluated / describe : tentative, garde réelle, données et terminal |
+| [SceneRuntimeController.java](../../app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java) | requestLocal : seule remise à NONE du motif précédent |
+
+La correction logicielle et sa candidate sont prêtes pour une décision de rejeu.
+Le prochain geste est un **GO propriétaire distinct** pour la mise à jour en place
+et le nouveau test physique décrit dans [la procédure](Procedure_PowerShell_E5_039.md).
+Le critère physique reste pause effective de Prime, interlude image+son puis reprise
+correcte observés par Pierre. Aucun résultat logiciel ne le remplace. STOP après livraison.

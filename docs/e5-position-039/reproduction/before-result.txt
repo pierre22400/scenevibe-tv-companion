@@ -1,7 +1,7 @@
 JUnit version 4.13.2
 .REPLAY phase=REFUSED reason=STALE_POSITION pauses=0 events=[REQUEST, PREFLIGHT, prepare, PLAYER_READY, NATIVE_ADMISSION_STALE_POSITION, player-release, host-detach, CLEANUP]
 E
-Time: 0.034
+Time: 0.033
 There was 1 failure:
 1) sonyFreshUnknownDurationReachesPauseDispatch(com.scenevibe.tvcompanionpoc.SonyAdmissionReplay)
 java.lang.AssertionError: Fresh Sony evidence must not be rejected as stale expected:<1> but was:<0>
