@@ -188,6 +188,27 @@ public final class Foreground042Replay {
                 "independent playing confirmation");
         check(w.prime.pauses == 1 && w.prime.plays == 1, "one command each");
         cases++;
+        w = new World();
+        final World lateDeparture = w;
+        w.prime.afterToken = () -> lateDeparture.prime.afterToken =
+                () -> lateDeparture.add(2, PRIME, "Player", 500);
+        refused("departure after PAUSE native read", w);
+        w = new World();
+        final int[] queries = {0};
+        w.usage.afterQuery = () -> { if (++queries[0] == 3) SystemClock.now += 1001; };
+        refused("snapshot stale during final foreground query", w);
+        w = new World();
+        for (int i = 0; i < 32768; i++) w.add(7, PRIME, "Player", 500);
+        refused("bounded history overflow", w);
+        w = new World();
+        check(w.owner.requestPause(1, SystemClock.now, true), "valid pause");
+        w.paused();
+        final World latePlayDeparture = w;
+        w.prime.afterToken = () -> latePlayDeparture.prime.afterToken =
+                () -> latePlayDeparture.add(2, PRIME, "Player", 500);
+        check(!w.owner.requestPlay(1, SystemClock.now, true) && w.prime.plays == 0,
+                "departure after PLAY native read");
+        cases++;
         System.out.println("AFTER PASS scenarios=" + cases + " native=CONTROLLED_ANDROID_INPUTS sony=NOT_EXECUTED");
     }
 }

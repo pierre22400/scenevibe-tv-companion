@@ -67,7 +67,7 @@ les codes de refus et la version de la candidate changent. Profil OFF/release : 
 flag OFF, pas de fixture/receiver. Candidate debug de qualification : version18, suffixe042,
 Cloud vide, LAN OFF, signature stable exclusivement dans la CI existante.
 
-14 nouveaux tests JVM purs ; replay sur les vraies sources avant/après, 26 scénarios après :
+14 nouveaux tests JVM purs ; replay sur les vraies sources avant/après, 30 scénarios après :
 lecture prolongée, départ/switch/multi-resume, historique incomplet ou contradictoire, identité
 manquante, managers indisponibles, état écran/verrou, session absente/concurrente/remplacée,
 métadonnées absentes/incohérentes, position invalide ou périmée, VOD absente, départ avant PAUSE,

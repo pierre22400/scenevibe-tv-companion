@@ -39,7 +39,7 @@ def emit(event):
 
 
 if 'dumpsys' in args:
-    version = 16 if scenario == 'wrong-version' else 17
+    version = 17 if scenario == 'wrong-version' else 18
     print('versionCode=' + str(version) + ' minSdk=26 targetSdk=35')
     print('versionName=0.8.2-tv-release-hardening-e5-native042-foreground')
 elif 'broadcast' in args:
@@ -93,7 +93,7 @@ def main():
             fake = directory / 'adb-fake'
             fake.write_text(FAKE)
             fake.chmod(0o700)
-            script = ROOT / 'docs/e5-selection-042/Invoke-E5-042.ps1'
+            script = ROOT / 'docs/e5-foreground-042/Invoke-E5-042.ps1'
             command = ('function Start-Sleep { param([int]$Seconds,[int]$Milliseconds) '
                        '$name=if($Seconds){"emitted"}else{"capture-ready"}; '
                        '$fixture=Join-Path $env:FAKE_E5_DIR $name; '
@@ -129,7 +129,7 @@ def main():
                     raise AssertionError('Old/foreign attempt leaked into diagnostic export')
             results.append({'scenario': scenario, 'pass': True, 'broadcasts': expected,
                             'expectedExitSuccess': success})
-    output = ROOT / 'e5-selection-042-powershell.json'
+    output = ROOT / 'e5-foreground-042-powershell.json'
     output.write_text(json.dumps({'cases': results, 'sonyAccess': False}, indent=2) + '\n')
     print('PowerShell fake ADB: 6 PASS; one broadcast per admitted invocation; zero native/UI commands')
 

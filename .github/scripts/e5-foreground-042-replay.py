@@ -20,6 +20,9 @@ STUBS['android/app/usage/UsageEvents.java'] = STUBS['android/app/usage/UsageEven
     'public int getEventType()', 'public String getClassName(){return activity;}public int getEventType()').replace(
     'public void getNextEvent(Event e)', 'public boolean getNextEvent(Event e)').replace(
     'e.time=v.time;e.timestampFails=v.timestampFails;', 'e.time=v.time;e.activity=v.activity;e.timestampFails=v.timestampFails;return true;')
+STUBS['android/app/usage/UsageStatsManager.java'] = STUBS['android/app/usage/UsageStatsManager.java'].replace(
+    'public boolean nullEvents,queryFails,iterationFails;', 'public Runnable afterQuery; public boolean nullEvents,queryFails,iterationFails;').replace(
+    'return result;', 'if(afterQuery!=null)afterQuery.run();return result;')
 STUBS.update({
     'android/os/PowerManager.java': 'package android.os; public class PowerManager {public boolean interactive=true;public boolean isInteractive(){return interactive;}}',
     'android/os/UserManager.java': 'package android.os; public class UserManager {public boolean unlocked=true;public boolean isUserUnlocked(){return unlocked;}}',

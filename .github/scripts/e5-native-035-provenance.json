@@ -1006,14 +1006,14 @@
     "tests/test_e5_foreground_042.py": "af5ff4789c18cda38766b4ba97f06aabaf03e82a",
     "tests/e5_foreground_042_provenance.py": "c7919e45dc334fd3f98bb2063d8654da081cf216",
     ".github/scripts/e5-foreground-042-verify.py": "fb366ceb5b93fe4975f0237a5210a68e8c49ac12",
-    ".github/scripts/e5-foreground-042-powershell-test.py": "24301e89ca85bf492aec816ed893b74194b801a0",
+    ".github/scripts/e5-foreground-042-powershell-test.py": "a43df888732231505ecb3e68a8675c35bbe2458a",
     ".github/scripts/e5-foreground-042-platform.sh": "3833664529e2a38bb39eef9c37702324b9bd7428",
     ".github/scripts/e5-foreground-042-provenance.json": "cba7686cc50b69b8c5d8070871392b384a420275",
-    ".github/scripts/e5-foreground-042-replay.py": "3e7a8c66ba8db7768d973ca5837549adfd6e6f80",
+    ".github/scripts/e5-foreground-042-replay.py": "a7fe1b6ec93e048cde82448006999f095496cb74",
     ".github/workflows/e5-foreground-042.yml": "6b5835822f9ef8d05e9b9cf2c673e626a34eb382",
-    "docs/e5-foreground-042/analysis-and-handoff.md": "af917682d4424844c42132c9177570edc451bb94",
+    "docs/e5-foreground-042/analysis-and-handoff.md": "597b6532246d153f4a01ef03324a640c1812e181",
     "docs/e5-foreground-042/Invoke-E5-042.ps1": "d3b96d6ad13f97071ccbbd2de7b789025f4d0c61",
-    "docs/e5-foreground-042/Foreground042Replay.java": "6564660aef55c9a58d94410a202b95bf025931f6"
+    "docs/e5-foreground-042/Foreground042Replay.java": "641d21264fe7672b023632cb0b32ee08a470896f"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
   "scope": "Historical byte/inventory assertions only; actual JVM/Android/E5 gates use candidate"
