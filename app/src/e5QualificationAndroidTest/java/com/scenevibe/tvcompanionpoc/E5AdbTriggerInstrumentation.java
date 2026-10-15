@@ -103,7 +103,17 @@ public final class E5AdbTriggerInstrumentation extends Instrumentation {
         java.lang.reflect.Method method = AndroidNativeSessionPort.class.getDeclaredMethod(
                 "snapshot", android.media.session.MediaController.class, boolean.class, NativeSelectionTrace.class);
         method.setAccessible(true);
-        NativeSessionSnapshot sample = (NativeSessionSnapshot) method.invoke(null, session.getController(), true, trace);
+        NativeSessionSnapshot sample;
+        // E5-042 fixture-only wait: Android projects PLAYING position/time per Binder call.
+        // Match awaitSnapshot's bounded publication seam; runtime never retries a selection.
+        long deadline = android.os.SystemClock.elapsedRealtime() + 2000;
+        do {
+            trace = new NativeSelectionTrace(NativeSelectionTrace.Operation.SELECT, 1,
+                    android.os.SystemClock.elapsedRealtime());
+            sample = (NativeSessionSnapshot) method.invoke(null, session.getController(), true, trace);
+            if (sample != null) break;
+            Thread.sleep(10);
+        } while (android.os.SystemClock.elapsedRealtime() < deadline);
         require(sample != null && trace.read == NativeSelectionTrace.Read.COHERENT, "ANDROID_BOTH_READS_COHERENT");
         require(trace.firstState == 3 && trace.secondState == 3
                 && trace.firstPositionMs == trace.secondPositionMs

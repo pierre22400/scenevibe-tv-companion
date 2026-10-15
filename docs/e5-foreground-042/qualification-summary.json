@@ -1,0 +1,135 @@
+{
+  "verdict": "READY FOR SONY FUNCTIONAL TEST",
+  "softwareHead": "d2c07c0260ab10bd27beaa43aa73abed0d7c4332",
+  "base": "bb13d7cf7a1448fc23f6b5e0aebb5c6a1a022ec2",
+  "ciRun": 38771214069,
+  "ciJobs": {
+    "software": 116547209126,
+    "platform31": 116548185941,
+    "stable-candidate": 116549657940
+  },
+  "ciConclusions": {
+    "software": "success",
+    "platform31": "success",
+    "stable-candidate": "success"
+  },
+  "python": {
+    "pass": 138,
+    "skip": 0
+  },
+  "jvm": {
+    "OFF": {
+      "reports": 91,
+      "total": 1152,
+      "pass": 1151,
+      "fail": 0,
+      "skipped": [
+        {
+          "name": "originalColumboProjectionIsInstallable",
+          "classname": "com.scenevibe.tvcompanionpoc.M1CloudInteropTest",
+          "time": "0.005"
+        }
+      ]
+    },
+    "ON": {
+      "reports": 91,
+      "total": 1152,
+      "pass": 1151,
+      "fail": 0,
+      "skipped": [
+        {
+          "name": "originalColumboProjectionIsInstallable",
+          "classname": "com.scenevibe.tvcompanionpoc.M1CloudInteropTest",
+          "time": "0.009"
+        }
+      ]
+    },
+    "onApk": {
+      "apk_sha256": "7e450fd679379c17c4eb4fd2dc9d183e88ad6290e926bb92e68dee5a9ff9363f",
+      "package": "com.scenevibe.tvcompanionpoc",
+      "versionCode": 18,
+      "versionName": "0.8.2-tv-release-hardening-e5-native042-foreground",
+      "debuggable": true,
+      "compiledConfig": {
+        "APPLICATION_ID": "com.scenevibe.tvcompanionpoc",
+        "BUILD_TYPE": "debug",
+        "CLOUD_ORIGIN": "",
+        "E5_NATIVE_QUALIFICATION": true,
+        "ENABLE_LAN_DEV": false,
+        "VERSION_CODE": 18,
+        "VERSION_NAME": "0.8.2-tv-release-hardening-e5-native042-foreground"
+      },
+      "certificate_sha256": null,
+      "fixture_sha256": "c66ded0b6a2ea41ef34320a289f2c1ec37e2a87d34ef580d9ac45d08815682ec",
+      "mode": "on",
+      "git_head": "d2c07c0260ab10bd27beaa43aa73abed0d7c4332",
+      "sony_executed": false,
+      "installed": false
+    }
+  },
+  "foregroundPureCases": 15,
+  "realSourceReplayAfterCases": 30,
+  "powershellFakeAdbCases": 6,
+  "android31": {
+    "legacyChecks": 30,
+    "unauthorizedSenderChecks": 1,
+    "foregroundPhases": {
+      "stable": 5,
+      "left": 5
+    },
+    "witness": "real Settings lifecycle, target mapping test only"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 25,
+    "sameAs041ByIdMessageFile": true
+  },
+  "apk": {
+    "apk_sha256": "5864262a1978313b1e0d04689ffe963d5fa77629de263fdaf3a0135155854318",
+    "package": "com.scenevibe.tvcompanionpoc",
+    "versionCode": 18,
+    "versionName": "0.8.2-tv-release-hardening-e5-native042-foreground",
+    "debuggable": true,
+    "compiledConfig": {
+      "APPLICATION_ID": "com.scenevibe.tvcompanionpoc",
+      "BUILD_TYPE": "debug",
+      "CLOUD_ORIGIN": "",
+      "E5_NATIVE_QUALIFICATION": true,
+      "ENABLE_LAN_DEV": false,
+      "VERSION_CODE": 18,
+      "VERSION_NAME": "0.8.2-tv-release-hardening-e5-native042-foreground"
+    },
+    "certificate_sha256": "f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c",
+    "fixture_sha256": "c66ded0b6a2ea41ef34320a289f2c1ec37e2a87d34ef580d9ac45d08815682ec",
+    "mode": "signed",
+    "git_head": "d2c07c0260ab10bd27beaa43aa73abed0d7c4332",
+    "sony_executed": false,
+    "installed": false
+  },
+  "diagnosticInstrumentationAbsentFromCandidateDex": true,
+  "sonyExecuted": false,
+  "physicalAttemptsByWork": 0,
+  "windowsPowerShell51Executed": false,
+  "failedPriorRunsRetained": [
+    38768539361,
+    38768828103,
+    38770272275
+  ],
+  "artifacts": [
+    {
+      "id": 11991456975,
+      "name": "software",
+      "sha256": "d2b163228163c243daa9c7f6f5197a43124f8664f31af7210859c75361b38788"
+    },
+    {
+      "id": 11991447402,
+      "name": "platform31",
+      "sha256": "a2b47fb56f639c7c118b01702c18d7437357e1013c604f9c74f149ceda0c0ef7"
+    },
+    {
+      "id": 11992321530,
+      "name": "stable-candidate",
+      "sha256": "185c73462131c7d1a0fee7151d8288bce620827bb8f80cb62cfaef2bcd9f8ad9"
+    }
+  ]
+}

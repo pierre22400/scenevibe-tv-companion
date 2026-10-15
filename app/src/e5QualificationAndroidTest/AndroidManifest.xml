@@ -7,4 +7,7 @@
   <instrumentation
     android:name="com.scenevibe.tvcompanionpoc.E5AdbSenderInstrumentation"
     android:targetPackage="com.scenevibe.tvcompanionpoc.test" />
+  <instrumentation
+    android:name="com.scenevibe.tvcompanionpoc.E5Foreground042Instrumentation"
+    android:targetPackage="com.scenevibe.tvcompanionpoc" />
 </manifest>

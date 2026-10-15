@@ -6,6 +6,7 @@ import subprocess
 import unittest
 
 from e5_selection_041_provenance import BASE, e5041_retained_bytes
+from e5_foreground_042_provenance import e5042_retained_bytes
 
 """Check actual observation-only E5-041 scope separately from historical byte reconstructions."""
 
@@ -27,7 +28,7 @@ class E5Selection041Test(unittest.TestCase):
         for name in names:
             if name not in allowed:
                 self.assertEqual(subprocess.check_output(['git', 'show', BASE + ':' + name], cwd=ROOT),
-                                 (ROOT / name).read_bytes(), name)
+                                 e5042_retained_bytes(ROOT / name), name)
 
     def test_all_edits_recover_exact_e5040_bytes(self):
         """Full hashes and unique finite literals preserve every old file exactly, including tests."""

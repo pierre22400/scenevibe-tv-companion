@@ -1,0 +1,22 @@
+{
+  "apk_sha256": "5864262a1978313b1e0d04689ffe963d5fa77629de263fdaf3a0135155854318",
+  "package": "com.scenevibe.tvcompanionpoc",
+  "versionCode": 18,
+  "versionName": "0.8.2-tv-release-hardening-e5-native042-foreground",
+  "debuggable": true,
+  "compiledConfig": {
+    "APPLICATION_ID": "com.scenevibe.tvcompanionpoc",
+    "BUILD_TYPE": "debug",
+    "CLOUD_ORIGIN": "",
+    "E5_NATIVE_QUALIFICATION": true,
+    "ENABLE_LAN_DEV": false,
+    "VERSION_CODE": 18,
+    "VERSION_NAME": "0.8.2-tv-release-hardening-e5-native042-foreground"
+  },
+  "certificate_sha256": "f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c",
+  "fixture_sha256": "c66ded0b6a2ea41ef34320a289f2c1ec37e2a87d34ef580d9ac45d08815682ec",
+  "mode": "signed",
+  "git_head": "d2c07c0260ab10bd27beaa43aa73abed0d7c4332",
+  "sony_executed": false,
+  "installed": false
+}

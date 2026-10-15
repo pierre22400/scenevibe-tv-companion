@@ -22,7 +22,7 @@ final class NativeSelectionTrace {
     enum Foreground {
         NOT_EVALUATED, PRIME_ALONE, ACCESS_DENIED, MANAGER_UNAVAILABLE,
         EVENTS_UNAVAILABLE, NO_RELEVANT_EVENTS, EVENT_LIMIT, AMBIGUOUS,
-        PRIME_NOT_FOREGROUND, SYSTEM_EXCEPTION
+        PRIME_NOT_FOREGROUND, SYSTEM_EXCEPTION, HISTORY_INCOMPLETE, DEVICE_NOT_VISIBLE
     }
     /** Indicate the exact original short-circuit comparison that rejected the double read. */
     enum Read {

@@ -1,0 +1,1 @@
+BEFORE foreground=NO_RELEVANT_EVENTS selection=FOREGROUND_REFUSED commands=0
