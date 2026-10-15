@@ -1,0 +1,22 @@
+PASS foreground-empty TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS foreground-resume-outside-30s TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS foreground-concurrent TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS usage-access-denied TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS notification-access-denied TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS prime-session-absent TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS wrong-package TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS competing-playing-session TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS provider-update-between-double-read TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS metadata-change-between-double-read TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS vod-not-attested TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS live-not-attested TARGET snapshot=null guard=NO_OBSERVATION pause=0 play=0
+PASS observed-generation-2 STALE_POSITION firstGuard=DURATION_OR_IDENTITY age=35907 pause=0
+PASS genuinely-stale-position REFUSED pause=0
+PASS missing-position REFUSED
+PASS wall-clock-in-playback-timestamp REFUSED
+PASS token-changed-before-pause REFUSED pause=0
+PASS valid-unknown-duration-vod pause=1 confirmedPAUSED EOF play=1 confirmedPLAYING
+PASS concurrent-session-after-pause REFUSED play=0
+PASS seek-after-pause REFUSED play=0
+PASS interruption-and-release REFUSED play=0
+SCENARIOS=21 FAILURES=0 ANDROID_DEVICE_EXECUTION=false
