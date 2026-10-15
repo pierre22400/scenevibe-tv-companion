@@ -36,6 +36,13 @@ public final class E5Foreground042Instrumentation extends Instrumentation {
             while (events.hasNextEvent()) {
                 require(++examined <= AndroidForegroundEvidence.EVENT_LIMIT && events.getNextEvent(event), "EVENT_BOUND");
                 String pkg = event.getPackageName();
+                int type = event.getEventType();
+                if (type == 1 || type == 2 || type == 23 || type == 16 || type == 17
+                        || type == 26 || type == 27) {
+                    // Disposable emulator evidence only; production never logs usage history.
+                    android.util.Log.i("E5_FOREGROUND042", "type=" + type + " package=" + pkg
+                            + " class=" + event.getClassName() + " timestamp=" + event.getTimeStamp());
+                }
                 if ("com.android.settings".equals(pkg)) {
                     if (event.getEventType() == 1) resumedAt = event.getTimeStamp();
                     pkg = NativeQualificationPolicy.PRIME_PACKAGE;
@@ -43,7 +50,8 @@ public final class E5Foreground042Instrumentation extends Instrumentation {
                 history.event(event.getEventType(), pkg, event.getClassName(), event.getTimeStamp());
             }
             require(resumedAt > 0 && now - resumedAt > 30000, "NO_RECENT_WITNESS_RESUME");
-            require(history.primeAlone() == "stable".equals(phase), "REAL_LIFECYCLE_STATE_" + phase);
+            require(history.primeAlone() == "stable".equals(phase), "REAL_LIFECYCLE_STATE_" + phase
+                    + " incomplete=" + history.incomplete() + " resumedApps=" + history.resumedCount());
             require(!new AndroidForegroundEvidence(getTargetContext()).primeForeground(), "REAL_ADAPTER_REFUSES_NON_PRIME");
             result.putInt("passed", 5);
             result.putInt("failed", 0);

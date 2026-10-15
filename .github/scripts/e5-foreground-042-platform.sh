@@ -5,7 +5,7 @@ SCENEVIBE_EMULATOR_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
 [[ "$SCENEVIBE_EMULATOR_SERIAL" =~ ^emulator-[0-9]+$ ]] || { echo "REFUSED_NON_EMULATOR"; exit 2; }
 mkdir -p e5-adb-038-evidence
 # Preserve the actual platform error even when an early assertion or runner launch fails.
-trap 'adb -s "$SCENEVIBE_EMULATOR_SERIAL" logcat -d > e5-adb-038-evidence/full-logcat.txt 2>&1 || true' EXIT
+trap 'adb -s "$SCENEVIBE_EMULATOR_SERIAL" logcat -d > e5-adb-038-evidence/full-logcat.txt 2>&1 || true; adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell dumpsys usagestats > e5-adb-038-evidence/emulator-usage-events.txt 2>&1 || true' EXIT
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW allow
