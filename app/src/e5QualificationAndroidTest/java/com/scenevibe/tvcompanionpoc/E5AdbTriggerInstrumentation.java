@@ -73,31 +73,47 @@ public final class E5AdbTriggerInstrumentation extends Instrumentation {
                     .setActions(android.media.session.PlaybackState.ACTION_PAUSE
                             | android.media.session.PlaybackState.ACTION_PLAY)
                     .setState(3, 2475551, 1f, now).build());
-            java.lang.reflect.Method method = AndroidNativeSessionPort.class.getDeclaredMethod(
-                    "snapshot", android.media.session.MediaController.class, boolean.class);
-            method.setAccessible(true);
-            NativeSessionSnapshot playing = (NativeSessionSnapshot) method.invoke(null,
-                    session.getController(), true);
+            NativeSessionSnapshot playing = awaitSnapshot(session, 3, -1);
             require(playing != null && playing.durationMs == -1, "ANDROID_UNKNOWN_DURATION");
             require(NativeQualificationPolicy.local035().fresh(playing,
                     android.os.SystemClock.elapsedRealtime()), "ANDROID_FRESH_POSITION");
             session.setPlaybackState(new android.media.session.PlaybackState.Builder()
                     .setActions(android.media.session.PlaybackState.ACTION_PLAY)
                     .setState(2, 2475551, 0f, android.os.SystemClock.elapsedRealtime()).build());
-            NativeSessionSnapshot paused = (NativeSessionSnapshot) method.invoke(null,
-                    session.getController(), true);
+            NativeSessionSnapshot paused = awaitSnapshot(session, 2, -1);
             require(playing.sameTarget(paused), "ANDROID_SAME_TARGET_AFTER_PAUSE");
             require(paused.state == 2 && paused.estimatedPosition(
                     android.os.SystemClock.elapsedRealtime() + 1000) == 2475551, "ANDROID_RAW_PAUSED");
             session.setMetadata(new android.media.MediaMetadata.Builder()
                     .putString(android.media.MediaMetadata.METADATA_KEY_MEDIA_ID, "synthetic-vod").build());
-            NativeSessionSnapshot missing = (NativeSessionSnapshot) method.invoke(null,
-                    session.getController(), true);
+            NativeSessionSnapshot missing = awaitSnapshot(session, 2, 0);
             require(missing.durationMs == 0 && !NativeQualificationPolicy.local035().fresh(missing,
                     android.os.SystemClock.elapsedRealtime()), "ANDROID_MISSING_DURATION_REFUSED");
         } finally {
             session.release();
         }
+    }
+
+    /** Await only publication of our synthetic fixture; never retry an application transport. */
+    private NativeSessionSnapshot awaitSnapshot(android.media.session.MediaSession session,
+            int expectedState, long expectedDuration) throws Exception {
+        java.lang.reflect.Method method = AndroidNativeSessionPort.class.getDeclaredMethod(
+                "snapshot", android.media.session.MediaController.class, boolean.class);
+        method.setAccessible(true);
+        long deadline = android.os.SystemClock.elapsedRealtime() + 2000;
+        do {
+            NativeSessionSnapshot snapshot = (NativeSessionSnapshot) method.invoke(null,
+                    session.getController(), true);
+            if (snapshot != null && snapshot.state == expectedState
+                    && snapshot.durationMs == expectedDuration) return snapshot;
+            Thread.sleep(10);
+        } while (android.os.SystemClock.elapsedRealtime() < deadline);
+        android.media.MediaMetadata metadata = session.getController().getMetadata();
+        android.media.session.PlaybackState state = session.getController().getPlaybackState();
+        throw new AssertionError("SYNTHETIC_PUBLICATION_TIMEOUT state="
+                + (state == null ? -1 : state.getState()) + " duration="
+                + (metadata == null ? "missing" : metadata.getLong(
+                        android.media.MediaMetadata.METADATA_KEY_DURATION)));
     }
 
     /** Remove the attestation while retaining the explicit endpoint. */

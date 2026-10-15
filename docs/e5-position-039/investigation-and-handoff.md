@@ -133,7 +133,39 @@ Aucun ancien test négatif, assertion, docstring ou skip n'est retiré.
 
 ## Qualification, APK et risques résiduels
 
-Résultats et identité de candidate à consolider après les jobs de qualification.
+Résultats intermédiaires vérifiés sur le HEAD logiciel
+`efac69e664ec0be3aacb1ea9ba81d81b620db15a` :
+
+- Local : 131 Python PASS ; 80 JVM E5 PASS (64 historiques + 14 Sony + 2 diagnostics).
+- CI OFF et ON : **1131 cas par profil, 1130 PASS + 1 SKIP historique, zéro échec**.
+  Les XML téléchargés ont été reconcomptés indépendamment dans [jvm-summary.json](jvm-summary.json).
+- Builds debug/release OFF ; debug/AndroidTest ON ; lint : software SUCCESS.
+- Replay identique : [échec attendu E5-038](reproduction/before-result.txt),
+  puis [PASS E5-039](reproduction/after-result.txt).
+- PowerShell : ParseFile local et CI PASS ; faux ADB local, argv exact, une demande
+  par invocation, capture complète, terminal REFUSED interprété comme refus,
+  sortie non nulle sur rejet, aucun PLAY/PAUSE ni retry.
+
+Run de qualification :
+https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/38668130263
+Artefact logiciel : 11943217214 ; digest ZIP revérifié
+`2981ee0bdd01a4a010a666f40d4329f4d97d48c226a98befb399effdc3e130a5`.
+Les APK OFF/ON ont été inspectées localement : identité, version, flags compilés,
+fixture, composant DUMP et absence OFF conformes.
+
+Le premier run 38667880726 a compilé et exécuté les JVM avec succès puis échoué
+au compteur figé des suites M4/M5, qui ignorait les deux nouvelles classes E5-039.
+Le deuxième commit ajoute exactement 14 et 2 cas à cet inventaire ; aucune assertion
+ancienne, fixture ou règle de skip n'est modifiée. Le premier échec reste visible.
+Les inventaires Python provisoires ont également refusé les fichiers non encore
+admis ; ils ont ensuite tous passé après l'admission exacte, sans wildcard.
+
+Les builds Gradle locaux ont échoué **avant compilation**, au téléchargement du
+plugin Android via le réseau du poste de travail. Ils ne sont pas déclarés PASS.
+La compilation/lint/suite complète retenues sont celles du runner CI du HEAD exact.
+Les 80 JVM critiques ont été compilés localement depuis les sources courantes et
+exécutés avec JDK 17, JUnit réel et JSON réel, indépendamment de cette difficulté.
+Les sondes Android et l'identité de candidate restent à consolider après leurs jobs.
 Signature uniquement avec la clé stable déjà configurée, sans extraire de clé vers
 le poste de travail, ni générer une nouvelle identité.
 
