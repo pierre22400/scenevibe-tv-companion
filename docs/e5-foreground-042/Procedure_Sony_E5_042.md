@@ -1,17 +1,19 @@
 # E5-042 — une seule tentative fonctionnelle Sony
 
-**En attente de qualification : ne pas exécuter tant que le verdict READY et le SHA-256 final
-ne sont pas publiés. WORK n'accède jamais à la Sony.**
+**READY FOR SONY FUNCTIONAL TEST. APK signée et vérifiée ; aucune qualification physique revendiquée.
+WORK n’a effectué aucun accès à la Sony.**
 
 ## Vérifier et mettre à jour
 
-Placer `SceneVibe_E5_042_foreground_stable.apk`, `Invoke-E5-042.ps1` et `adb.exe` dans un dossier.
+Télécharge le [script à déclenchement unique](Invoke-E5-042.ps1). Place-le avec
+`SceneVibe_E5_042_foreground_stable.apk` et `adb.exe` dans un dossier. Utilise la connexion ADB
+déjà établie pour E5-041.
 Vérifier le SHA-256 publié, puis installer par mise à jour, sans désinstaller ni effacer les données :
 
 ```powershell
 $Sony = 'ADRESSE_SONY:5555'
 $Apk = '.\SceneVibe_E5_042_foreground_stable.apk'
-$Attendu = 'SHA256_A_COMPLETER_APRES_QUALIFICATION'
+$Attendu = '5864262a1978313b1e0d04689ffe963d5fa77629de263fdaf3a0135155854318'
 if ((Get-FileHash -Algorithm SHA256 -LiteralPath $Apk).Hash -ne $Attendu) {
   throw 'SHA-256 différent : arrêt.'
 }
@@ -27,7 +29,9 @@ n'est automatiquement modifiée par le kit. Le script refuse une autre version.
 
 ## Déclencher une fois
 
-Lancer Columbo sur Prime Video, vérifier la VOD réellement en lecture, puis rester dans Prime
+Après installation, mettre manuellement la TV en veille puis la réveiller. Ce cycle fournit
+un repère explicite de premier plan ; il ne faut ni désinstaller Companion ni effacer les données.
+Lancer ensuite Columbo sur Prime Video, vérifier la VOD réellement en lecture, puis rester dans Prime
 **au moins 45 secondes** sans ouvrir Companion/Diagnostics. Cela dépasse délibérément l'ancienne
 fenêtre de 30 secondes. Garder la TV allumée et déverrouillée. Ne pas effectuer d'autre commande
 ou navigation pendant cette unique tentative.

@@ -1,0 +1,15 @@
+{
+  "base": "bb13d7cf7a1448fc23f6b5e0aebb5c6a1a022ec2",
+  "byteIdentical": {
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeTransportOwner.java": "57cd2220d0ae6e11d710a0a24c88a801e8b6c6f6d612cc88c563196115447ffa",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeQualificationPolicy.java": "033517511eca3a3e8b87f59cd1617df108ae739f7ff1dde40e7d3bce44822ea5",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSessionSnapshot.java": "f35323352dbd80babee2193ee995671870ade085b41eaee72b851ed64f1d0ef7",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRuntimeController.java": "c0cd3386ea12aaaa26e27e583e0e7d437ce99e87491eb559ea58b4061530bfd8",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/SceneRenderer.java": "df184bbe616c971142eec08b2650f63ebde39b0710291702f2ca82eaa82dae03",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidLocalVideoPort.java": "6c6ff9a644fcc93defb013dd7c3b1f35fd9345b8666c29c2e5ec2fe19cd7f53f",
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeForegroundProof.java": "948322c54e705a1c5d38d6d1741b50e661d1a219e4d285fa95a165c613272284",
+    "app/src/e5Qualification/AndroidManifest.xml": "dc38da2635dca044fae48683609f648aee16bbb070f1a5c455468584808f35e0",
+    "app/src/e5Qualification/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerReceiver.java": "fc2050d7b4dc08facd33782907744c57777db066de6d68b50f1369ed694bfac7",
+    "app/src/main/AndroidManifest.xml": "8823fcbfa7d81a76d9b613c8faa42eaa8ff633e90c85e71222b513a46905b3cd"
+  }
+}

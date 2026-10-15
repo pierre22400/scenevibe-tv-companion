@@ -3,7 +3,7 @@
 Base vérifiée : `bb13d7cf7a1448fc23f6b5e0aebb5c6a1a022ec2` ; PR #22 OPEN / DRAFT / non fusionnée.
 Branche : `work/scenevibe-e5-foreground-042`, vers `work/scenevibe-e5-selection-diagnostics-041`.
 
-**QUALIFICATION EN COURS — ne pas installer ni déclencher tant que le verdict n'est pas READY.**
+**READY FOR SONY FUNCTIONAL TEST — qualification logicielle et APK signée vérifiées.**
 
 ## Cause et preuve avant/après
 
@@ -85,7 +85,7 @@ ni Sony. Le renderer/MediaPlayer réel reste couvert par la qualification E5 his
 présente CI ajoute les transitions de premier plan et conserve les gardes d'endpoint.
 
 Aucun accès Sony, aucune fusion, aucun déploiement, aucune mutation Cloud/Vercel/Neon/Production.
-Les résultats exécutés, les IDs CI, les bytes APK et la procédure unique sont complétés après CI.
+Les résultats exécutés, IDs CI, bytes APK et la procédure unique sont fournis dans qualification.md et qualification-summary.json.
 
 ## Ajustement causal du banc Android
 
@@ -99,6 +99,6 @@ attend >30s puis teste HOME. Aucun cycle appareil n'est exécuté par WORK sur S
 
 L'assertion diagnostique historique sur une double lecture PLAYING a échoué deux fois et passé
 à HEAD identique une fois. Le banc attend désormais un échantillon cohérent de sa seule fixture
-synthétique pendant au plus2s, comme le faisait déjà awaitSnapshot, puis exécute toutes les
+synthétique pendant au plus 2 s, comme le faisait déjà awaitSnapshot, puis exécute toutes les
 assertions d'origine. La garde snapshot applicative, ses valeurs/seuils et l'absence de retry
 runtime restent inchangées. Un timeout reste un échec ; aucune commande média n'est envoyée.
