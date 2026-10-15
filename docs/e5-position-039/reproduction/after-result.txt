@@ -1,0 +1,7 @@
+JUnit version 4.13.2
+.REPLAY phase=PAUSE_REQUESTED reason=NONE pauses=1 events=[REQUEST, PREFLIGHT, prepare, PLAYER_READY, NATIVE_ADMISSION_CHECK, TARGET_VALIDATED, pause-command, PAUSE_SENT]
+
+Time: 0.033
+
+OK (1 test)
+

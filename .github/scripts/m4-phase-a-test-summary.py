@@ -67,6 +67,9 @@ def summarize(root):
             'NativeTransportOwnerTest': 30,
             'SceneRuntimeLocalInterludeTest': 24,
         })
+    # E5-039 explicitly adds two suites; all prior counts, fixture checks and skips stay frozen.
+    if (root / '.github/scripts/e5-position-039-provenance.json').exists():
+        expected.update({'SonyStalePosition039Test': 14, 'NativeDiagnostics039Test': 2})
     if suites != expected:
         raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):

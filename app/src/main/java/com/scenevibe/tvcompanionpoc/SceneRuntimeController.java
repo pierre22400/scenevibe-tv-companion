@@ -334,6 +334,7 @@ final class SceneRuntimeController {
             return false;
         }
         localAttempt++;
+        localTransport.beginAttempt();
         localRevisionGeneration = generation;
         localPlan = plan;
         localPhase = LocalPhase.PREPARING;
