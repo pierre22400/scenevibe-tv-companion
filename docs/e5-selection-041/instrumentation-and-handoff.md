@@ -1,7 +1,9 @@
 # E5-041 — instrumentation observationnelle de la sélection native
 
 Date : 15 octobre 2026. GitHub est la source de vérité.
-Statut provisoire : qualification CI et disponibilité de l'APK à vérifier avant livraison.
+**READY FOR SONY DIAGNOSTIC** — instrumentation et APK signée qualifiées.
+HEAD logiciel/APK : `098f68aa522b100f441bf0aafa6242a1baaaf27b`.
+PR [#22](https://github.com/pierre22400/scenevibe-tv-companion/pull/22) OPEN/DRAFT/UNMERGED.
 E5-039 reste PHYSICAL FAIL ; E5-041 n'est pas une correction fonctionnelle.
 
 ## Références et périmètre
@@ -138,9 +140,14 @@ version, livraison refusée et IDs concurrents. Aucun appareil n'est contacté p
 
 ## Livraison et limites
 
-APK prévue : `SceneVibe_E5_041_diagnostic_stable.apk`, package `com.scenevibe.tvcompanionpoc`,
+APK disponible : `SceneVibe_E5_041_diagnostic_stable.apk`, package `com.scenevibe.tvcompanionpoc`,
 versionCode **17 >16**, versionName `0.8.2-tv-release-hardening-e5-native041-diagnostics`.
-L'identité/signature et le SHA-256 seront consignés après construction et contrôle des bytes.
+SHA-256 : `a7c5ea934b0e3ab909eece48cc9233d5dde786a05594afed908d1e2d7aec01f6`.
+Certificat SHA-256 : `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c`.
+Signature API31, identité manifest/DEX, flags, fixture et égalité du payload avec l'APK ON
+testée ont été vérifiés sur les bytes téléchargés. Le certificat est identique à celui de
+l'APK E5-039 de référence, elle aussi téléchargée et vérifiée à nouveau.
+[Artefact signé](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/38693178040/artifacts/11952439950).
 Le profil OFF reste versionCode 12 et E5 désactivé. La clé stable existante reste uniquement
 sur le runner de signature, après les gates software et platform31 ; aucune nouvelle clé.
 

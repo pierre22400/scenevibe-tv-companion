@@ -6,13 +6,13 @@ WORK n'a exécuté aucune opération ADB sur ta Sony.
 ## 1. Vérifier, installer, contrôler
 
 Télécharge l'APK diagnostique et `Invoke-E5-041.ps1`, place-les avec `adb.exe`.
-Le SHA-256 et le verdict final seront publiés après la qualification de la candidate.
-N'installe pas une candidate dont le SHA-256 n'est pas encore renseigné et vérifié.
+Verdict : **READY FOR SONY DIAGNOSTIC**. Signature stable vérifiée contre la référence E5-039.
+Vérifie le SHA-256 ci-dessous avant toute installation.
 
 ```powershell
 $Sony = 'ADRESSE_SONY:5555'
 $Apk = '.\SceneVibe_E5_041_diagnostic_stable.apk'
-$Attendu = '__APK_SHA256__'
+$Attendu = 'a7c5ea934b0e3ab909eece48cc9233d5dde786a05594afed908d1e2d7aec01f6'
 if ((Get-FileHash -Algorithm SHA256 -LiteralPath $Apk).Hash -ne $Attendu) {
   throw 'SHA-256 APK différent : arrêt.'
 }
@@ -21,6 +21,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Installation échouée : arrêt sans déclench
 & .\adb.exe -s $Sony shell dumpsys package com.scenevibe.tvcompanionpoc |
   Select-String 'versionCode=|versionName='
 ```
+
+Le champ de log historique `profile=E5-NATIVE-035` reste inchangé ; il ne remplace pas le contrôle de version.
 
 Attendu : versionCode **17**, versionName **0.8.2-tv-release-hardening-e5-native041-diagnostics**.
 La signature doit permettre la mise à jour `-r` de l'installation existante. Pas d'uninstall,

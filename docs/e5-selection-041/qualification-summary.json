@@ -1,0 +1,113 @@
+{
+  "verdict": "READY FOR SONY DIAGNOSTIC",
+  "baseHead": "0206a498c412dbf70535295e90426488cadede91",
+  "qualifiedSoftwareHead": "098f68aa522b100f441bf0aafa6242a1baaaf27b",
+  "ciRun": 38693178040,
+  "jobs": {
+    "software": 116283577048,
+    "platform31": 116284245577,
+    "stableCandidate": 116285133187
+  },
+  "ciConclusion": "success",
+  "local": {
+    "pythonPass": 135,
+    "e5JvmPass": 86,
+    "differentialScenarios": 57,
+    "decisionDifferences": 0,
+    "powershellHostCases": 6
+  },
+  "ciJvm": {
+    "OFF": {
+      "tests": 1137,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 1136,
+      "xmlFiles": 90,
+      "skippedCases": [
+        "com.scenevibe.tvcompanionpoc.M1CloudInteropTest.originalColumboProjectionIsInstallable"
+      ]
+    },
+    "ON": {
+      "tests": 1137,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 1136,
+      "xmlFiles": 90,
+      "skippedCases": [
+        "com.scenevibe.tvcompanionpoc.M1CloudInteropTest.originalColumboProjectionIsInstallable"
+      ]
+    }
+  },
+  "androidApi31": {
+    "endpointAndDiagnosticsAssertions": 30,
+    "unauthorizedSenderAssertions": 1,
+    "senderUid": 10146,
+    "foregroundWitnessUnchanged": true,
+    "malformedAndOffRefused": true,
+    "sony": false
+  },
+  "candidate": {
+    "apk_sha256": "a7c5ea934b0e3ab909eece48cc9233d5dde786a05594afed908d1e2d7aec01f6",
+    "package": "com.scenevibe.tvcompanionpoc",
+    "versionCode": 17,
+    "versionName": "0.8.2-tv-release-hardening-e5-native041-diagnostics",
+    "debuggable": true,
+    "compiledConfig": {
+      "APPLICATION_ID": "com.scenevibe.tvcompanionpoc",
+      "BUILD_TYPE": "debug",
+      "CLOUD_ORIGIN": "",
+      "E5_NATIVE_QUALIFICATION": true,
+      "ENABLE_LAN_DEV": false,
+      "VERSION_CODE": 17,
+      "VERSION_NAME": "0.8.2-tv-release-hardening-e5-native041-diagnostics"
+    },
+    "certificate_sha256": "f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c",
+    "fixture_sha256": "c66ded0b6a2ea41ef34320a289f2c1ec37e2a87d34ef580d9ac45d08815682ec",
+    "mode": "signed",
+    "git_head": "098f68aa522b100f441bf0aafa6242a1baaaf27b",
+    "sony_executed": false,
+    "installed": false
+  },
+  "reference039": {
+    "apk_sha256": "aacda02ac414e9d4e8a885870fcaf5f4e444eeb0db746a7c3aef80231d02db64",
+    "certificate_sha256": "f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c",
+    "api31SignatureVerified": true
+  },
+  "payloadIdenticalToTestedOnApk": true,
+  "zipArtifacts": [
+    {
+      "id": 11952744029,
+      "name": "e5-selection-041-software",
+      "sha256": "28f1deefd3161c09f855e3cc018f80ff93caed570b1e9f0f8e32c2cee71f2321"
+    },
+    {
+      "id": 11952354748,
+      "name": "e5-selection-041-platform31",
+      "sha256": "0d277bd64a8782b6a56cf0faad626d5e9b31714a0e60970a7f3360664656d629"
+    },
+    {
+      "id": 11952439950,
+      "name": "e5-selection-041-stable-candidate",
+      "sha256": "820c9b4d91621d0194a67136f466547d68928404345bc6749557ede5c8744a88"
+    }
+  ],
+  "artifactZipDigestsVerified": true,
+  "sonyAccessByWork": false,
+  "physicalQualificationClaimed": false,
+  "lint": {
+    "errors": 0,
+    "warnings": 25,
+    "sameWarningIdsMessagesAndFilesAsE5040": true,
+    "referenceRun": 38688155384,
+    "warningCountsById": {
+      "SetTextI18n": 15,
+      "ApplySharedPref": 5,
+      "IconLocation": 2,
+      "DataExtractionRules": 1,
+      "IconColors": 1,
+      "IconLauncherShape": 1
+    }
+  }
+}
