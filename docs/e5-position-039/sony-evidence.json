@@ -1,0 +1,46 @@
+{
+  "filename": "scenevibe-e5-038-logcat.txt",
+  "encoding": "UTF-16LE BOM",
+  "size_bytes": 1113616,
+  "sha256": "14b4bbf1c7c8cab84f87681af200d61d631a0f75ed36bb6903b0d63f86b09724",
+  "captured_complete_attempts": 1,
+  "note": "One complete attempt is present in the supplied journal; two owner-reported attempts are not counted as two captured traces.",
+  "redacted_lines": [
+    {
+      "line": 2982,
+      "text": "10-14 22:49:35.807 I/SceneVibeMedia(12000): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2474518 estimatedMs=2474519 speed=1.0 updateAgeMs=1 mediaId=[redacted] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "line": 3051,
+      "text": "10-14 22:49:36.463 I/SceneVibeE5Adb(12000): QUEUED_GUARDS_PENDING"
+    },
+    {
+      "line": 3053,
+      "text": "10-14 22:49:36.478 I/SceneVibeE5(12000): {\"profile\":\"E5-NATIVE-035\",\"event\":\"REQUEST\",\"phase\":\"PREPARING\",\"generation\":3,\"executionAtMs\":18329532,\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "line": 3054,
+      "text": "10-14 22:49:36.478 I/SceneVibeE5(12000): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PREFLIGHT\",\"phase\":\"PREPARING\",\"generation\":3,\"executionAtMs\":18329533,\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "line": 3508,
+      "text": "10-14 22:49:36.844 I/SceneVibeMedia(12000): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2475551 estimatedMs=2475557 speed=1.0 updateAgeMs=6 mediaId=[redacted] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "line": 3510,
+      "text": "10-14 22:49:36.860 I/SceneVibeE5(12000): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PLAYER_READY\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":3,\"executionAtMs\":18329915,\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "line": 3511,
+      "text": "10-14 22:49:36.870 I/SceneVibeE5(12000): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_STALE_POSITION\",\"phase\":\"REFUSED\",\"generation\":3,\"executionAtMs\":18329925,\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "line": 3561,
+      "text": "10-14 22:49:36.927 I/SceneVibeE5(12000): {\"profile\":\"E5-NATIVE-035\",\"event\":\"CLEANUP\",\"phase\":\"REFUSED\",\"generation\":3,\"executionAtMs\":18329981,\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "line": 3596,
+      "text": "10-14 22:49:37.846 I/SceneVibeMedia(12000): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2476561 estimatedMs=2476561 speed=1.0 updateAgeMs=0 mediaId=[redacted] durationMs=-1 title=- subtitle=-"
+    }
+  ]
+}

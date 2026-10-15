@@ -9,6 +9,12 @@ package com.scenevibe.tvcompanionpoc;
  * checked during the later physical mandate; it is not an Android-wide guarantee.</p>
  */
 final class NativeQualificationPolicy {
+    /** Bounded evidence codes distinguish metadata failures from actual clock/position age. */
+    enum Evidence {
+        SUFFICIENT, SAMPLE_MISSING, TOKEN_MISSING, DURATION_OR_IDENTITY,
+        POSITION_MISSING, POSITION_OUT_OF_RANGE, UPDATE_TIME_INVALID,
+        OBSERVATION_TIME_INVALID, SAMPLE_STALE, PROVIDER_STALE
+    }
     static final String PRIME_PACKAGE = "com.amazon.amazonvideo.livingroom";
     final long preparationTimeoutMs;
     final long pauseTimeoutMs;
@@ -50,10 +56,29 @@ final class NativeQualificationPolicy {
 
     /** Refuse missing, future, old or incoherent positions before any transport action. */
     boolean fresh(NativeSessionSnapshot sample, long nowMs) {
-        return sample != null && sample.token != null && sample.durationMs > 0
-                && sample.positionMs >= 0 && sample.positionMs <= sample.durationMs
-                && sample.updatedAtMs > 0 && sample.updatedAtMs <= sample.observedAtMs
-                && sample.observedAtMs <= nowMs && nowMs - sample.observedAtMs <= sampleMaxAgeMs
-                && nowMs - sample.updatedAtMs <= providerMaxAgeMs;
+        return evidence(sample, nowMs) == Evidence.SUFFICIENT;
+    }
+
+    /**
+     * Evaluate each existing bound without changing its threshold or clock basis.
+     * Unknown duration -1 needs the stronger explicit-ID/VOD evidence; known durations
+     * retain their position upper bound. No duration, position or timestamp is invented.
+     */
+    Evidence evidence(NativeSessionSnapshot sample, long nowMs) {
+        if (sample == null) return Evidence.SAMPLE_MISSING;
+        if (sample.token == null) return Evidence.TOKEN_MISSING;
+        if (!sample.usableDurationEvidence()) return Evidence.DURATION_OR_IDENTITY;
+        if (sample.positionMs < 0) return Evidence.POSITION_MISSING;
+        if (sample.durationMs > 0 && sample.positionMs > sample.durationMs
+                || sample.estimatedPosition(nowMs) == Long.MAX_VALUE) {
+            return Evidence.POSITION_OUT_OF_RANGE;
+        }
+        if (sample.updatedAtMs <= 0 || sample.updatedAtMs > sample.observedAtMs) {
+            return Evidence.UPDATE_TIME_INVALID;
+        }
+        if (sample.observedAtMs > nowMs) return Evidence.OBSERVATION_TIME_INVALID;
+        if (nowMs - sample.observedAtMs > sampleMaxAgeMs) return Evidence.SAMPLE_STALE;
+        if (nowMs - sample.updatedAtMs > providerMaxAgeMs) return Evidence.PROVIDER_STALE;
+        return Evidence.SUFFICIENT;
     }
 }

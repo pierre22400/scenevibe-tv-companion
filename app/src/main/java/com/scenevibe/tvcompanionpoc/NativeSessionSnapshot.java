@@ -59,7 +59,17 @@ final class NativeSessionSnapshot {
         if (!mediaId.equals(other.mediaId)) return false;
         if (mediaId.isEmpty() && title.length() < 8) return false;
         return title.equals(other.title) && subtitle.equals(other.subtitle)
-                && durationMs == other.durationMs && durationMs > 0L;
+                && durationMs == other.durationMs && usableDurationEvidence();
+    }
+
+    /**
+     * E5-039: -1 is Android's unknown-duration sentinel, not an expired position.
+     * Only an explicitly attested VOD with a nonempty native ID can use that sentinel;
+     * zero/missing durations and title-only unknown-duration targets remain refused.
+     * Exact token, ID, metadata and duration equality still apply at every reacquisition.
+     */
+    boolean usableDurationEvidence() {
+        return durationMs > 0 || durationMs == -1 && !mediaId.isEmpty() && vodConfirmed;
     }
 
     /** Estimate only a freshly bounded PLAYING observation; PAUSED uses the raw anchor. */

@@ -23,6 +23,11 @@ final class NativeTransportOwner {
     interface Diagnostics {
         /** Record a command/observation/decision with its ephemeral attempt generation. */
         void record(String event, long generation, NativeSessionSnapshot snapshot, Reason reason);
+        /** Preserve the exact post-query evaluation time and result; old observers remain valid. */
+        default void evaluated(String event, long generation, NativeSessionSnapshot snapshot,
+                Reason reason, long evaluatedAtMs, NativeQualificationPolicy.Evidence evidence) {
+            record(event, generation, snapshot, reason);
+        }
     }
     /** The only lease; it is never persisted, restored or transferred between presentations. */
     private static final class Lease {
@@ -71,6 +76,8 @@ final class NativeTransportOwner {
         if (lease != null) return refuse(Reason.BUSY);
         NativeSessionSnapshot target = port.select(vodConfirmed);
         nowMs = afterObservation(nowMs);
+        diagnostics.evaluated("NATIVE_ADMISSION_CHECK", generation, target, Reason.NONE,
+                nowMs, policy.evidence(target, nowMs));
         if (target == null || !NativeQualificationPolicy.PRIME_PACKAGE.equals(target.packageName)) {
             return refuse(Reason.TARGET);
         }
@@ -81,7 +88,9 @@ final class NativeTransportOwner {
         }
         if (!target.canPause || !target.canPlay) return refuse(Reason.ACTION_UNAVAILABLE);
         if (target.mediaId.isEmpty() && target.title.length() < 8) return refuse(Reason.TARGET);
-        if (target.estimatedPosition(nowMs) >= target.durationMs) return refuse(Reason.STALE_POSITION);
+        if (target.durationMs > 0 && target.estimatedPosition(nowMs) >= target.durationMs) {
+            return refuse(Reason.STALE_POSITION);
+        }
         diagnostics.record("TARGET_VALIDATED", generation, target, Reason.NONE);
         lease = new Lease(generation, target, nowMs);
         if (!port.pause(target, policy, nowMs)) {
@@ -203,6 +212,11 @@ final class NativeTransportOwner {
         return reason;
     }
 
+    /** Clear only the retired decision before a new admitted attempt; never replace a lease. */
+    void beginAttempt() {
+        if (lease == null) reason = Reason.NONE;
+    }
+
     /** Fail closed for callbacks from another presentation generation. */
     private boolean owns(long generation) {
         return lease != null && lease.generation == generation || refuse(Reason.GENERATION);
@@ -210,6 +224,8 @@ final class NativeTransportOwner {
 
     /** Validate target identity and position age before every observation-dependent action. */
     private boolean sameFresh(NativeSessionSnapshot current, long nowMs) {
+        diagnostics.evaluated("NATIVE_OBSERVATION", lease.generation, current, Reason.NONE,
+                nowMs, policy.evidence(current, nowMs));
         if (current == null || !lease.initial.sameTarget(current)) return refuse(Reason.SESSION_CHANGED);
         if (!current.vodConfirmed) return refuse(Reason.NOT_VOD);
         if (!policy.fresh(current, nowMs)) return refuse(Reason.STALE_POSITION);

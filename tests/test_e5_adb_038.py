@@ -3,6 +3,8 @@ import subprocess
 import unittest
 import xml.etree.ElementTree as ET
 
+from e5_position_039_provenance import e5039_retained_bytes, e5039_retained_text
+
 """Check the actual shell entry and enforce byte-exact excluded E5/M5 runtime files."""
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,7 +38,7 @@ class E5Adb038Test(unittest.TestCase):
         self.assertEqual('true', receiver.get(android + 'exported'))
         self.assertIsNone(receiver.find('intent-filter'))
         self.assertNotIn('E5AdbTriggerReceiver', (ROOT / 'app/src/main/AndroidManifest.xml').read_text())
-        gradle = (ROOT / 'app/build.gradle').read_text()
+        gradle = e5039_retained_text(ROOT / 'app/build.gradle')
         self.assertIn('sourceSets.debug.java.srcDirs += ["src/e5Qualification/java"]', gradle)
         self.assertIn('defaultConfig.versionCode = 15', gradle)
 
@@ -47,7 +49,7 @@ class E5Adb038Test(unittest.TestCase):
             if relative.endswith('/DiagnosticsActivity.java'):
                 continue
             expected = subprocess.check_output(['git', 'show', BASE + ':' + relative], cwd=ROOT)
-            self.assertEqual(expected, (ROOT / relative).read_bytes(), relative)
+            self.assertEqual(expected, e5039_retained_bytes(ROOT / relative), relative)
 
 
 if __name__ == '__main__':
