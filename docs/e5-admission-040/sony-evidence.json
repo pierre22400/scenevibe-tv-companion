@@ -1,0 +1,193 @@
+{
+  "date": "2026-10-15",
+  "sourceTimeZone": "Sony logcat timestamps; no offset embedded",
+  "files": [
+    {
+      "name": "scenevibe-e5-039-full-logcat.txt",
+      "size_bytes": 13146050,
+      "sha256": "a75143cc0dee6457d1e61205df9df3a5aec7d160da43c6fda38b2b4fbee75896",
+      "encoding": "UTF-16LE BOM"
+    },
+    {
+      "name": "scenevibe-e5-039-sony-logcat.txt",
+      "size_bytes": 169424,
+      "sha256": "a63aaf7e51b4b719f3f526c95c5081722c9ce079e08d563b75838ffe24ad1c1c",
+      "encoding": "UTF-8"
+    }
+  ],
+  "captured_complete_attempts": 3,
+  "redacted_lines": [
+    {
+      "fullLogLine": 19321,
+      "text": "10-15 07:20:00.328 I/ActivityTaskManager( 3075): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LEANBACK_LAUNCHER] flg=0x10000000 pkg=com.amazon.amazonvideo.livingroom cmp=com.amazon.amazonvideo.livingroom/com.amazon.ignition.IgnitionActivity} from uid 10023"
+    },
+    {
+      "fullLogLine": 19370,
+      "text": "10-15 07:20:00.408 I/SonySystemService( 3985): PictureModeController onActivityChanged: packageName=com.amazon.amazonvideo.livingroom, isTranslucent=false"
+    },
+    {
+      "fullLogLine": 35074,
+      "text": "10-15 07:20:55.414 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2897806 estimatedMs=2897809 speed=1.0 updateAgeMs=3 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 35084,
+      "text": "10-15 07:20:55.619 I/SceneVibeE5Adb(26182): QUEUED_GUARDS_PENDING"
+    },
+    {
+      "fullLogLine": 35088,
+      "text": "10-15 07:20:55.659 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"REQUEST\",\"phase\":\"PREPARING\",\"generation\":1,\"attemptId\":\"f734cb3b-1\",\"executionAtMs\":49008711,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 35089,
+      "text": "10-15 07:20:55.660 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PREFLIGHT\",\"phase\":\"PREPARING\",\"generation\":1,\"attemptId\":\"f734cb3b-1\",\"executionAtMs\":49008713,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 35596,
+      "text": "10-15 07:20:56.211 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PLAYER_READY\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":1,\"attemptId\":\"f734cb3b-1\",\"executionAtMs\":49009263,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 35597,
+      "text": "10-15 07:20:56.217 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_CHECK\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":1,\"attemptId\":\"f734cb3b-1\",\"executionAtMs\":49009271,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 35598,
+      "text": "10-15 07:20:56.218 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_TARGET\",\"phase\":\"REFUSED\",\"generation\":1,\"attemptId\":\"f734cb3b-1\",\"executionAtMs\":49009272,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":true,\"guard\":\"NO_OBSERVATION\",\"reason\":\"TARGET\"}"
+    },
+    {
+      "fullLogLine": 35648,
+      "text": "10-15 07:20:56.262 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"CLEANUP\",\"phase\":\"REFUSED\",\"generation\":1,\"attemptId\":\"f734cb3b-1\",\"executionAtMs\":49009314,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":true,\"guard\":\"NO_OBSERVATION\",\"reason\":\"TARGET\"}"
+    },
+    {
+      "fullLogLine": 35653,
+      "text": "10-15 07:20:56.417 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2898813 estimatedMs=2898814 speed=1.0 updateAgeMs=1 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 36268,
+      "text": "10-15 07:21:06.218 I/ActivityTaskManager( 3075): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LEANBACK_LAUNCHER] flg=0x10000000 pkg=com.scenevibe.tvcompanionpoc cmp=com.scenevibe.tvcompanionpoc/.MainActivity (has extras)} from uid 10022"
+    },
+    {
+      "fullLogLine": 39845,
+      "text": "10-15 07:21:13.681 I/ActivityTaskManager( 3075): START u0 {cmp=com.scenevibe.tvcompanionpoc/.DiagnosticsActivity} from uid 10236"
+    },
+    {
+      "fullLogLine": 40022,
+      "text": "10-15 07:21:17.276 I/ActivityTaskManager( 3075): START u0 {act=android.settings.USAGE_ACCESS_SETTINGS cmp=com.android.tv.settings/.device.apps.specialaccess.AppUsageAccessActivity} from uid 10236"
+    },
+    {
+      "fullLogLine": 41184,
+      "text": "10-15 07:21:43.667 I/SceneVibeMedia(26182): NO_ACTIVE_SESSIONS"
+    },
+    {
+      "fullLogLine": 41209,
+      "text": "10-15 07:21:44.101 I/ActivityTaskManager( 3075): moveTaskToBack: Task{2f530e #11467 type=standard A=10236:com.scenevibe.tvcompanionpoc U=0 visible=true mode=fullscreen translucent=false sz=2}"
+    },
+    {
+      "fullLogLine": 41213,
+      "text": "10-15 07:21:44.143 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"REQUEST\",\"phase\":\"PREPARING\",\"generation\":2,\"attemptId\":\"f734cb3b-2\",\"executionAtMs\":49057197,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 41214,
+      "text": "10-15 07:21:44.144 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PREFLIGHT\",\"phase\":\"PREPARING\",\"generation\":2,\"attemptId\":\"f734cb3b-2\",\"executionAtMs\":49057198,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 41657,
+      "text": "10-15 07:21:44.351 D/NowPlayingListener( 5055): onActiveSessionsChanged() called with: controllers = [[android.media.session.MediaController@[redacted]]], lastActiveMediaController = null, lastUpdatedAppPackageName = null"
+    },
+    {
+      "fullLogLine": 41662,
+      "text": "10-15 07:21:44.354 D/NowPlayingListener( 5055): MediaController {packageName = com.amazon.amazonvideo.livingroom, state = 0}"
+    },
+    {
+      "fullLogLine": 41663,
+      "text": "10-15 07:21:44.362 W/MediaSessionHelper(23740): Playback state is PlaybackState {state=0, position=0, buffered position=0, speed=1.0, updated=49021558, actions=1049455, custom actions=[], active item id=-1, error=null}."
+    },
+    {
+      "fullLogLine": 41683,
+      "text": "10-15 07:21:44.384 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PLAYER_READY\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":2,\"attemptId\":\"f734cb3b-2\",\"executionAtMs\":49057436,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 41755,
+      "text": "10-15 07:21:44.424 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_CHECK\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":2,\"attemptId\":\"f734cb3b-2\",\"executionAtMs\":49057465,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"DURATION_OR_IDENTITY\",\"reason\":\"NONE\",\"session\":\"e0012256d01a5ccb\",\"identity\":\"bf8999316aed0d9e\",\"state\":0,\"positionMs\":0,\"estimatedPositionMs\":0,\"durationMs\":-1,\"durationKnown\":false,\"speed\":\"1.0\",\"observedAtMs\":49057465,\"updatedAtMs\":49021558,\"sampleAgeMs\":0,\"providerAgeMs\":35907}"
+    },
+    {
+      "fullLogLine": 41756,
+      "text": "10-15 07:21:44.425 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_STALE_POSITION\",\"phase\":\"REFUSED\",\"generation\":2,\"attemptId\":\"f734cb3b-2\",\"executionAtMs\":49057479,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":true,\"guard\":\"NO_OBSERVATION\",\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "fullLogLine": 41795,
+      "text": "10-15 07:21:44.451 I/SonySystemService( 3985): PictureModeController onActivityChanged: packageName=com.amazon.amazonvideo.livingroom, isTranslucent=false"
+    },
+    {
+      "fullLogLine": 41856,
+      "text": "10-15 07:21:44.493 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"CLEANUP\",\"phase\":\"REFUSED\",\"generation\":2,\"attemptId\":\"f734cb3b-2\",\"executionAtMs\":49057547,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":true,\"guard\":\"NO_OBSERVATION\",\"reason\":\"STALE_POSITION\"}"
+    },
+    {
+      "fullLogLine": 42331,
+      "text": "10-15 07:21:44.675 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=NONE positionMs=0 estimatedMs=0 speed=1.0 updateAgeMs=36170 mediaId=- durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 42883,
+      "text": "10-15 07:21:45.681 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=NONE positionMs=0 estimatedMs=0 speed=1.0 updateAgeMs=37177 mediaId=- durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 44515,
+      "text": "10-15 07:21:47.692 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=NONE positionMs=0 estimatedMs=0 speed=1.0 updateAgeMs=39187 mediaId=- durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 44646,
+      "text": "10-15 07:21:48.701 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=NONE positionMs=0 estimatedMs=0 speed=1.0 updateAgeMs=40197 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 44741,
+      "text": "10-15 07:21:49.704 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=BUFFERING positionMs=0 estimatedMs=0 speed=1.0 updateAgeMs=140 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 45496,
+      "text": "10-15 07:21:50.710 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=STOPPED positionMs=2905445 estimatedMs=2905445 speed=1.0 updateAgeMs=240 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 45723,
+      "text": "10-15 07:21:51.718 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2906344 estimatedMs=2906347 speed=1.0 updateAgeMs=3 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 46086,
+      "text": "10-15 07:21:58.766 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2913394 estimatedMs=2913395 speed=1.0 updateAgeMs=1 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 46127,
+      "text": "10-15 07:21:59.709 I/SceneVibeE5Adb(26182): QUEUED_GUARDS_PENDING"
+    },
+    {
+      "fullLogLine": 46134,
+      "text": "10-15 07:21:59.735 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"REQUEST\",\"phase\":\"PREPARING\",\"generation\":3,\"attemptId\":\"f734cb3b-3\",\"executionAtMs\":49072788,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 46135,
+      "text": "10-15 07:21:59.736 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PREFLIGHT\",\"phase\":\"PREPARING\",\"generation\":3,\"attemptId\":\"f734cb3b-3\",\"executionAtMs\":49072790,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 46358,
+      "text": "10-15 07:21:59.941 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2914566 estimatedMs=2914568 speed=1.0 updateAgeMs=2 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    },
+    {
+      "fullLogLine": 46591,
+      "text": "10-15 07:22:00.033 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"PLAYER_READY\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":3,\"attemptId\":\"f734cb3b-3\",\"executionAtMs\":49073087,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 46594,
+      "text": "10-15 07:22:00.050 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_CHECK\",\"phase\":\"PAUSE_REQUESTED\",\"generation\":3,\"attemptId\":\"f734cb3b-3\",\"executionAtMs\":49073105,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":false,\"guard\":\"NO_OBSERVATION\",\"reason\":\"NONE\"}"
+    },
+    {
+      "fullLogLine": 46595,
+      "text": "10-15 07:22:00.054 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"NATIVE_ADMISSION_TARGET\",\"phase\":\"REFUSED\",\"generation\":3,\"attemptId\":\"f734cb3b-3\",\"executionAtMs\":49073106,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":true,\"guard\":\"NO_OBSERVATION\",\"reason\":\"TARGET\"}"
+    },
+    {
+      "fullLogLine": 46647,
+      "text": "10-15 07:22:00.106 I/SceneVibeE5(26182): {\"profile\":\"E5-NATIVE-035\",\"event\":\"CLEANUP\",\"phase\":\"REFUSED\",\"generation\":3,\"attemptId\":\"f734cb3b-3\",\"executionAtMs\":49073159,\"clockBasis\":\"elapsedRealtimeMs\",\"terminal\":true,\"guard\":\"NO_OBSERVATION\",\"reason\":\"TARGET\"}"
+    },
+    {
+      "fullLogLine": 46715,
+      "text": "10-15 07:22:00.946 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2915574 estimatedMs=2915575 speed=1.0 updateAgeMs=1 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "verdict": "BLOCKED — ROOT CAUSE NOT PROVEN",
+  "ownerPhysicalVerdict": "E5-039 PHYSICAL FAIL",
+  "baseHead": "b97aa06885b264d64274dc65f054ffbf2cd6e53e",
+  "qualifiedInvestigationHead": "a4453d2a0502a8ae9db750cc6c742eb29c5b3618",
+  "appGitTree": "5039f76a452640add65ad8517777ae3059a02df5",
+  "appUnchanged": true,
+  "localPythonPass": 131,
+  "localJvmPass": 80,
+  "controlledAndroidApiReplayPass": 21,
+  "deviceExecutionInReplay": false,
+  "ciRun": 38688155384,
+  "ciSoftwareJob": 116267681646,
+  "ciPlatform31Job": 116268104033,
+  "ciJvm": {
+    "OFF": {
+      "tests": 1131,
+      "skipped": 1,
+      "failures": 0,
+      "errors": 0,
+      "xmlFiles": 89,
+      "passed": 1130
+    },
+    "ON": {
+      "tests": 1131,
+      "skipped": 1,
+      "failures": 0,
+      "errors": 0,
+      "xmlFiles": 89,
+      "passed": 1130
+    }
+  },
+  "allowedSkip": "M1CloudInteropTest.originalColumboProjectionIsInstallable (SCENEVIBE_M1_SONY_FIXTURES absent)",
+  "android31": {
+    "endpointAssertionsPassed": 20,
+    "unauthorizedSenderPassed": 1,
+    "unauthorizedSenderUid": 10146,
+    "foregroundWitness": "Android Settings unchanged",
+    "sony": false
+  },
+  "artifactZips": [
+    {
+      "id": 11950924387,
+      "name": "e5-admission-040-software",
+      "sha256": "b4d9ac24cc918b68ccdae7ae0330f85ccab97ed7144314a870a7353c3957ceca"
+    },
+    {
+      "id": 11951105384,
+      "name": "e5-admission-040-platform31",
+      "sha256": "8d748faf5fac897579c95b678288afcf5559b62abf0c7681c186fb2043709bd0"
+    }
+  ],
+  "newOwnerCandidateApk": null,
+  "signingJob": null,
+  "sonyAccessByWork": false
+}
