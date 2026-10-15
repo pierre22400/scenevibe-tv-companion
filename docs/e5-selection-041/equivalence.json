@@ -1,0 +1,7 @@
+{
+  "baseHead": "0206a498c412dbf70535295e90426488cadede91",
+  "scenarios": 57,
+  "differences": 0,
+  "compared": "decision, reason, command counts and critical Android query order",
+  "androidDeviceExecution": false
+}

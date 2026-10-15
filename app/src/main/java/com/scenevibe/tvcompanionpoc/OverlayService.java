@@ -389,7 +389,8 @@ public final class OverlayService extends Service {
             if (localVideoPort == null) {
                 localVideoPort = new AndroidLocalVideoPort(this, ensureSceneRenderer());
                 nativeTransportOwner = new NativeTransportOwner(
-                        new AndroidNativeSessionPort(this, foreground),
+                        new AndroidNativeSessionPort(this, foreground,
+                                trace -> nativeDiagnostics.selection(sceneController.localAttempt(), trace)),
                         NativeQualificationPolicy.local035(), nativeDiagnostics,
                         android.os.SystemClock::elapsedRealtime);
                 sceneController.configureLocal(true, localVideoPort, nativeTransportOwner,
