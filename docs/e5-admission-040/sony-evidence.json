@@ -18,6 +18,14 @@
   "captured_complete_attempts": 3,
   "redacted_lines": [
     {
+      "fullLogLine": 19321,
+      "text": "10-15 07:20:00.328 I/ActivityTaskManager( 3075): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LEANBACK_LAUNCHER] flg=0x10000000 pkg=com.amazon.amazonvideo.livingroom cmp=com.amazon.amazonvideo.livingroom/com.amazon.ignition.IgnitionActivity} from uid 10023"
+    },
+    {
+      "fullLogLine": 19370,
+      "text": "10-15 07:20:00.408 I/SonySystemService( 3985): PictureModeController onActivityChanged: packageName=com.amazon.amazonvideo.livingroom, isTranslucent=false"
+    },
+    {
       "fullLogLine": 35074,
       "text": "10-15 07:20:55.414 I/SceneVibeMedia(26182): SESSION index=0 package=com.amazon.amazonvideo.livingroom state=PLAYING positionMs=2897806 estimatedMs=2897809 speed=1.0 updateAgeMs=3 mediaId=[redacted-native-media-id] durationMs=-1 title=- subtitle=-"
     },

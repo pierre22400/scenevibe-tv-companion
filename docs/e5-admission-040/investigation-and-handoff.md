@@ -2,7 +2,7 @@
 
 **BLOCKED — ROOT CAUSE NOT PROVEN. E5-039 PHYSICAL FAIL.**
 
-La tentative à 07:21:44 est expliquée par une session Prime en cours de réinitialisation,
+La tentative à 07:21:44 est expliquée par une session Prime réapparue en état NONE,
 sans identité et avec une position ancienne. Les deux autres tentatives échouent avant
 qu'une observation native soit transmise au propriétaire de transport. Les traces ne
 contiennent pas la branche interne qui les refuse. Plusieurs causes différentes donnent
@@ -113,6 +113,8 @@ Même avec un ID inventé, l'âge 35907 ms dépasserait la limite existante 2000
 l'état NONE n'autoriserait aucune pause. Le rejeu reproduit STALE_POSITION et sa première
 garde sur ces valeurs, puis vérifie qu'une vraie position ancienne avec ID valide reste refusée.
 Aucune conversion ms/ns ni confusion wall/monotone n'est nécessaire pour expliquer ce refus.
+Le mécanisme interne Prime (nouveau token, réinitialisation ou réactivation du même token)
+reste indéterminé ; le refus sûr est démontré sans prétendre diagnostiquer ce mécanisme.
 
 ## Générations 1 et 3 : limite de preuve démontrée
 
@@ -138,6 +140,12 @@ une activité longtemps au premier plan ne réémet pas nécessairement RESUMED 
 La double lecture peut aussi refuser une mise à jour normale entre deux lectures Binder.
 Le rejeu exécute ces deux chemins sur le véritable adaptateur et obtient dans les deux cas
 TARGET / snapshot=null / aucune commande. **Cela ne démontre pas lequel s'est exécuté sur Sony.**
+
+Pour la génération 1, le lancement Prime à 07:20:00.328 (ligne 19321) précède
+l'admission de près de 56 s : la fenêtre de 30 s est donc une hypothèse appuyée par le
+contexte. Les UsageEvents effectifs ne sont toutefois pas dans la preuve. Pour la
+génération 3, le signal Sony de retour à Prime précède l'admission d'environ 16 s :
+il faut éviter d'appliquer automatiquement la même explication aux deux refus.
 
 Aucune session d'index >0 n'apparaît dans le probe complet. Cela réduit l'indice de concurrence
 aux instants échantillonnés, sans prouver la liste active au moment exact de choose.

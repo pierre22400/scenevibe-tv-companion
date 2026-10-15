@@ -942,14 +942,15 @@
     "docs/e5-position-039/reproduction/after-result.txt": "d22bf4a5bd5dfa63840c158027f28683c8f86afe",
     "docs/e5-position-039/reproduction/SonyAdmissionReplay.java": "662ec12cb1852b2be48408554be47a87d8ea9c18",
     "docs/e5-admission-040/Procedure_PowerShell_E5_040.md": "27913a17f1e300af412b0ee5a7f4e7597c636b56",
-    "docs/e5-admission-040/investigation-and-handoff.md": "af9fec1eefdd775cdc3f928fbe4de11288ec87be",
+    "docs/e5-admission-040/investigation-and-handoff.md": "e2220972d078f188915be21107ecefcf52de6fa4",
     "docs/e5-admission-040/jvm-result.txt": "637dccd4141cb6a02d354c5d737711e0c2863b89",
-    "docs/e5-admission-040/qualification.md": "bb5cc5df5f8e1129f64410798a4d3927acc5a50f",
+    "docs/e5-admission-040/qualification.md": "b51f460f6e829a3d5de79e08cad352407583170c",
     "docs/e5-admission-040/replay-result.txt": "764ce48e528c2714a73f519419d838ac92f64f60",
     "docs/e5-admission-040/reproduce_admission.py": "475dd0598f9fbff25fc153ee09b0f6bc497153f5",
     "docs/e5-admission-040/run_jvm.py": "b2f405d402ee305db85f2a23fce719fc5afcb75d",
-    "docs/e5-admission-040/sony-evidence.json": "67acc418afbc9efb66f2c2a431664b5b659c3fe1",
-    ".github/workflows/e5-admission-040.yml": "08d1ecf17c7e82fa62a2092435893a04561dff21"
+    "docs/e5-admission-040/sony-evidence.json": "235e40c90d64db7a811027783fa968696aeca0ea",
+    ".github/workflows/e5-admission-040.yml": "08d1ecf17c7e82fa62a2092435893a04561dff21",
+    "docs/e5-admission-040/qualification-proof.json": "9edd562891125162332ca84440d54da35303af06"
   },
   "ledgerPath": ".github/scripts/e5-native-035-provenance.json",
   "scope": "Historical byte/inventory assertions only; actual JVM/Android/E5 gates use candidate"
