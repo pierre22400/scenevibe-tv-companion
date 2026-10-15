@@ -1,6 +1,16 @@
 {
   "baseHead": "efd3a7983a03458ec1f919d760c10f1b1f9c57ff",
   "changes": {
+    ".github/scripts/m4-phase-a-test-summary.py": {
+      "beforeSha": "416e97e9daf0d7253141b8b405d83f33923a7be3",
+      "afterSha": "2d39e6fb8db2516dc85496e5da9130e5efac02c8",
+      "inverse": [
+        {
+          "before": "            'E5LocalPlanAndForegroundTest': 10,\n            'NativeTransportOwnerTest': 30,\n            'SceneRuntimeLocalInterludeTest': 24,\n        })\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n        raise ValueError('An unexpected JVM case was skipped')\n",
+          "after": "            'E5LocalPlanAndForegroundTest': 10,\n            'NativeTransportOwnerTest': 30,\n            'SceneRuntimeLocalInterludeTest': 24,\n        })\n    # E5-039 explicitly adds two suites; all prior counts, fixture checks and skips stay frozen.\n    if (root / '.github/scripts/e5-position-039-provenance.json').exists():\n        expected.update({'SonyStalePosition039Test': 14, 'NativeDiagnostics039Test': 2})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n        raise ValueError('An unexpected JVM case was skipped')\n"
+        }
+      ]
+    },
     "app/build.gradle": {
       "beforeSha": "efd6ee1c95850444ac6bfa0b7c88772da432b7ad",
       "afterSha": "97750f9d3f5cf73923e50695510c7bf7df914c0a",

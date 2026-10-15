@@ -281,11 +281,15 @@
   "changes": {
     ".github/scripts/m4-phase-a-test-summary.py": {
       "beforeSha": "6cfed896f2d87e525a8b45835a008e874e75337b",
-      "afterSha": "416e97e9daf0d7253141b8b405d83f33923a7be3",
+      "afterSha": "2d39e6fb8db2516dc85496e5da9130e5efac02c8",
       "inverse": [
         {
           "before": "    if suites != expected:\n",
           "after": "    # E5-NATIVE-035 adds precisely these three separate JVM suites (64 tests).\n    # Preserve every frozen M4/M5 suite and skip rule; never accept other additions.\n    if (root / '.github/scripts/e5-native-035-provenance.json').exists():\n        expected.update({\n            'E5LocalPlanAndForegroundTest': 10,\n            'NativeTransportOwnerTest': 30,\n            'SceneRuntimeLocalInterludeTest': 24,\n        })\n    if suites != expected:\n"
+        },
+        {
+          "before": "            'E5LocalPlanAndForegroundTest': 10,\n            'NativeTransportOwnerTest': 30,\n            'SceneRuntimeLocalInterludeTest': 24,\n        })\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n        raise ValueError('An unexpected JVM case was skipped')\n",
+          "after": "            'E5LocalPlanAndForegroundTest': 10,\n            'NativeTransportOwnerTest': 30,\n            'SceneRuntimeLocalInterludeTest': 24,\n        })\n    # E5-039 explicitly adds two suites; all prior counts, fixture checks and skips stay frozen.\n    if (root / '.github/scripts/e5-position-039-provenance.json').exists():\n        expected.update({'SonyStalePosition039Test': 14, 'NativeDiagnostics039Test': 2})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n        raise ValueError('An unexpected JVM case was skipped')\n"
         }
       ]
     },
@@ -922,12 +926,12 @@
     "app/src/test/java/com/scenevibe/tvcompanionpoc/SonyStalePosition039Test.java": "5db4b6cece0468364a383200691558e464f8ce70",
     "tests/test_e5_position_039.py": "9391dd4f33df8a6adb181403ca8d6200c058848d",
     "tests/e5_position_039_provenance.py": "8c89d3bd26fc7676dc5ecded3234684347259e74",
-    ".github/scripts/e5-position-039-provenance.json": "d7ed341502c03e7a43bf4f6fb3e6f3c13b491620",
+    ".github/scripts/e5-position-039-provenance.json": "e192d8b689e1f8d49ed8e6e8f4fded16803386e2",
     ".github/scripts/e5-position-039-admit.py": "e183dc92eaa78018950ecc40d6622930b41098f1",
     ".github/scripts/e5-position-039-platform.sh": "5166033b0ed61dfae11032b544da31fa8dc4ed53",
     ".github/scripts/e5-position-039-verify.py": "c17f7cde263d4b9d506d6548b27e69965e06945c",
     ".github/scripts/e5-position-039-reproduce.py": "39ae408bcc555bd7d761594f2a73f5907d64636d",
-    ".github/workflows/e5-position-039.yml": "7f67654de4cb17c5ef5cab1072b321b2532a6023",
+    ".github/workflows/e5-position-039.yml": "f26590a20327a79edd938077c7577d10020de9b2",
     "docs/e5-position-039/investigation-and-handoff.md": "dc4db457523d124b35768fe1ae1175ea30244bf2",
     "docs/e5-position-039/Invoke-E5-039.ps1": "99ea6cc36a9a159bd42bd18bf3f5c03ae642d08d",
     "docs/e5-position-039/Procedure_PowerShell_E5_039.md": "d5a935615f45b4a4344b2735b8bf7749a173d0e2",
