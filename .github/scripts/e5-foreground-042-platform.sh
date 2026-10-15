@@ -22,6 +22,14 @@ grep -q 'INSTRUMENTATION_RESULT: passed=30' e5-adb-038-evidence/E5AdbTriggerInst
 grep -q 'INSTRUMENTATION_RESULT: passed=1' e5-adb-038-evidence/E5AdbSenderInstrumentation.txt
 # Real foreground lifecycle lasts >30 seconds; all commands remain emulator scoped.
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell appops set com.scenevibe.tvcompanionpoc GET_USAGE_STATS allow
+# Fresh API31 provisioning contains an orphan launcher PAUSED (retained as negative evidence).
+# Establish a real, observed invalidation boundary; do not assume a complete boot prefix.
+sleep 15
+adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell input keyevent KEYCODE_SLEEP
+sleep 1
+adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell input keyevent KEYCODE_WAKEUP
+adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell input keyevent 82
+sleep 2
 adb -s "$SCENEVIBE_EMULATOR_SERIAL" shell am start -a android.settings.SETTINGS
 sleep 35
 for phase in stable left; do

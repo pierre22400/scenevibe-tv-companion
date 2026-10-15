@@ -141,4 +141,22 @@ public final class NativeForegroundHistory042Test {
         h.event(7, PRIME, "Player", 3);
         assertFalse(h.primeAlone());
     }
+    /** A real first-boot missing launcher resume refuses until a new visible lifecycle epoch. */
+    @Test public void firstBootGapNeedsNewEpochAndExplicitResume() {
+        NativeForegroundHistory h = epoch();
+        h.event(1, "setup", "Setup", 2);
+        h.event(2, "launcher", "Launcher", 3);
+        h.event(2, "setup", "Setup", 4);
+        h.event(1, PRIME, "Player", 5);
+        h.event(7, PRIME, "Player", 45000);
+        assertFalse(h.primeAlone());
+        assertTrue(h.incomplete());
+        h.event(16, null, null, 45001);
+        h.event(15, null, null, 45002);
+        assertFalse(h.primeAlone());
+        h.event(1, PRIME, "Player", 45003);
+        h.event(7, PRIME, "Player", 90000);
+        assertTrue(h.primeAlone());
+    }
+
 }

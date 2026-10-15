@@ -281,7 +281,7 @@
   "changes": {
     ".github/scripts/m4-phase-a-test-summary.py": {
       "beforeSha": "6cfed896f2d87e525a8b45835a008e874e75337b",
-      "afterSha": "be9c168227373ba0a04419c31a9e1173e811fa23",
+      "afterSha": "f63779e32084037979d30ed982aa99825d430846",
       "inverse": [
         {
           "before": "    if suites != expected:\n",
@@ -297,7 +297,7 @@
         },
         {
           "before": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n",
-          "after": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    # E5-042 adds fourteen lifecycle reconstruction cases; old suites stay mandatory.\n    expected.update({'NativeForegroundHistory042Test': 14})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
+          "after": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    # E5-042 adds fifteen lifecycle reconstruction cases; old suites stay mandatory.\n    expected.update({'NativeForegroundHistory042Test': 15})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
         }
       ]
     },
@@ -939,7 +939,7 @@
     ".github/scripts/e5-native-035-platform.sh": "eed2a42488ac0bdab28a8ad62516c2a865ed373e",
     "app/src/e5QualificationAndroidTest/AndroidManifest.xml": "6311972772e01682833e1d88f550561bd0abeb0e",
     "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbSenderInstrumentation.java": "c774f630207aacd8c941a21555bc86df718b7ae8",
-    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerInstrumentation.java": "b7fe908fd313d20cfacf114f2012926286f953ce",
+    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerInstrumentation.java": "4d592545d38b0545e4f06088d8e4f0ae7d707920",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/E5LocalRequest.java": "0b83a13ffab19f23828e811cbd25a17e368aa425",
     "app/src/e5Qualification/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerReceiver.java": "d4041291213a69cea9b38eac39b13dc3f924d466",
     "tests/test_e5_adb_038.py": "bff4e1d4af3741fe93acf082413879fed809a95d",
@@ -1002,18 +1002,18 @@
     "docs/e5-selection-041/powershell-host-tests.json": "9b7d7a7458e5d4c20e38f9cc9db16f49f7643c2d",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeForegroundHistory.java": "1c9c1d1fde65afad6820f5791d3e997d1afe27e8",
     "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5Foreground042Instrumentation.java": "61dd0e607eb8c6c2d789dfcab8a17acc7393353c",
-    "app/src/test/java/com/scenevibe/tvcompanionpoc/NativeForegroundHistory042Test.java": "81ba09e533808696f8164b0c07e0c68db85924f1",
-    "tests/test_e5_foreground_042.py": "af5ff4789c18cda38766b4ba97f06aabaf03e82a",
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/NativeForegroundHistory042Test.java": "a7e3614224888cf1a6e64d3b268277238650d78d",
+    "tests/test_e5_foreground_042.py": "4b52455f28833cc77048dd108a7142dfff7dc792",
     "tests/e5_foreground_042_provenance.py": "c7919e45dc334fd3f98bb2063d8654da081cf216",
     ".github/scripts/e5-foreground-042-verify.py": "fb366ceb5b93fe4975f0237a5210a68e8c49ac12",
     ".github/scripts/e5-foreground-042-powershell-test.py": "a43df888732231505ecb3e68a8675c35bbe2458a",
-    ".github/scripts/e5-foreground-042-platform.sh": "d676124244bba2992231b42303094270015f3567",
-    ".github/scripts/e5-foreground-042-provenance.json": "cba7686cc50b69b8c5d8070871392b384a420275",
+    ".github/scripts/e5-foreground-042-platform.sh": "e4a3e8edf62000bdd216f16f04c26ed12da04cef",
+    ".github/scripts/e5-foreground-042-provenance.json": "cdf5ee5e214dcc15f609a21c1223790f592d7fa4",
     ".github/scripts/e5-foreground-042-replay.py": "a7fe1b6ec93e048cde82448006999f095496cb74",
     ".github/workflows/e5-foreground-042.yml": "6b5835822f9ef8d05e9b9cf2c673e626a34eb382",
     "docs/e5-foreground-042/Procedure_Sony_E5_042.md": "9fc5053059e1f3e17fb8cd2bbe1e41f8a043ecd2",
     "docs/e5-foreground-042/qualification.md": "93033d34369202cae1796c891ef8b182305ed286",
-    "docs/e5-foreground-042/analysis-and-handoff.md": "597b6532246d153f4a01ef03324a640c1812e181",
+    "docs/e5-foreground-042/analysis-and-handoff.md": "f5e6a525c9d15b27b01e636e257abf9feccc5aa3",
     "docs/e5-foreground-042/Invoke-E5-042.ps1": "d3b96d6ad13f97071ccbbd2de7b789025f4d0c61",
     "docs/e5-foreground-042/Foreground042Replay.java": "641d21264fe7672b023632cb0b32ee08a470896f"
   },

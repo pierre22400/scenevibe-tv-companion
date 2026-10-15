@@ -28,6 +28,7 @@ class E5Foreground042Test(unittest.TestCase):
             'app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java',
             'app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSelectionTrace.java',
             'app/src/e5QualificationAndroidTest/AndroidManifest.xml',
+            'app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerInstrumentation.java',
         }, allowed)
 
     def test_finite_inverse_and_docstrings(self):

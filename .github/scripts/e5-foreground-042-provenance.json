@@ -3,6 +3,7 @@
   "applicationChanges": [
     "app/build.gradle",
     "app/src/e5QualificationAndroidTest/AndroidManifest.xml",
+    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerInstrumentation.java",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidForegroundEvidence.java",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/AndroidNativeSessionPort.java",
     "app/src/main/java/com/scenevibe/tvcompanionpoc/NativeSelectionTrace.java"
@@ -10,11 +11,11 @@
   "changes": {
     ".github/scripts/m4-phase-a-test-summary.py": {
       "beforeSha": "40738e619b4ad590c0a268bd51f2449c0d5cead4",
-      "afterSha": "be9c168227373ba0a04419c31a9e1173e811fa23",
+      "afterSha": "f63779e32084037979d30ed982aa99825d430846",
       "inverse": [
         {
           "before": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n",
-          "after": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    # E5-042 adds fourteen lifecycle reconstruction cases; old suites stay mandatory.\n    expected.update({'NativeForegroundHistory042Test': 14})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
+          "after": "    # E5-041 adds exactly six observation/correlation cases; prior suites and skips stay frozen.\n    if (root / '.github/scripts/e5-selection-041-provenance.json').exists():\n        expected.update({'NativeSelectionDiagnostics041Test': 6})\n    # E5-042 adds fifteen lifecycle reconstruction cases; old suites stay mandatory.\n    expected.update({'NativeForegroundHistory042Test': 15})\n    if suites != expected:\n        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')\n    if any(name not in baseline['allowedOptInSkips'] for name in skipped):\n"
         }
       ]
     },
@@ -39,6 +40,16 @@
         {
           "before": "  <instrumentation\n    android:name=\"com.scenevibe.tvcompanionpoc.E5AdbSenderInstrumentation\"\n    android:targetPackage=\"com.scenevibe.tvcompanionpoc.test\" />\n</manifest>\n",
           "after": "  <instrumentation\n    android:name=\"com.scenevibe.tvcompanionpoc.E5AdbSenderInstrumentation\"\n    android:targetPackage=\"com.scenevibe.tvcompanionpoc.test\" />\n  <instrumentation\n    android:name=\"com.scenevibe.tvcompanionpoc.E5Foreground042Instrumentation\"\n    android:targetPackage=\"com.scenevibe.tvcompanionpoc\" />\n</manifest>\n"
+        }
+      ]
+    },
+    "app/src/e5QualificationAndroidTest/java/com/scenevibe/tvcompanionpoc/E5AdbTriggerInstrumentation.java": {
+      "beforeSha": "b7fe908fd313d20cfacf114f2012926286f953ce",
+      "afterSha": "4d592545d38b0545e4f06088d8e4f0ae7d707920",
+      "inverse": [
+        {
+          "before": "        java.lang.reflect.Method method = AndroidNativeSessionPort.class.getDeclaredMethod(\n                \"snapshot\", android.media.session.MediaController.class, boolean.class, NativeSelectionTrace.class);\n        method.setAccessible(true);\n        NativeSessionSnapshot sample = (NativeSessionSnapshot) method.invoke(null, session.getController(), true, trace);\n        require(sample != null && trace.read == NativeSelectionTrace.Read.COHERENT, \"ANDROID_BOTH_READS_COHERENT\");\n        require(trace.firstState == 3 && trace.secondState == 3\n                && trace.firstPositionMs == trace.secondPositionMs\n",
+          "after": "        java.lang.reflect.Method method = AndroidNativeSessionPort.class.getDeclaredMethod(\n                \"snapshot\", android.media.session.MediaController.class, boolean.class, NativeSelectionTrace.class);\n        method.setAccessible(true);\n        NativeSessionSnapshot sample;\n        // E5-042 fixture-only wait: Android projects PLAYING position/time per Binder call.\n        // Match awaitSnapshot's bounded publication seam; runtime never retries a selection.\n        long deadline = android.os.SystemClock.elapsedRealtime() + 2000;\n        do {\n            trace = new NativeSelectionTrace(NativeSelectionTrace.Operation.SELECT, 1,\n                    android.os.SystemClock.elapsedRealtime());\n            sample = (NativeSessionSnapshot) method.invoke(null, session.getController(), true, trace);\n            if (sample != null) break;\n            Thread.sleep(10);\n        } while (android.os.SystemClock.elapsedRealtime() < deadline);\n        require(sample != null && trace.read == NativeSelectionTrace.Read.COHERENT, \"ANDROID_BOTH_READS_COHERENT\");\n        require(trace.firstState == 3 && trace.secondState == 3\n                && trace.firstPositionMs == trace.secondPositionMs\n"
         }
       ]
     },

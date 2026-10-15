@@ -67,7 +67,7 @@ les codes de refus et la version de la candidate changent. Profil OFF/release : 
 flag OFF, pas de fixture/receiver. Candidate debug de qualification : version18, suffixe042,
 Cloud vide, LAN OFF, signature stable exclusivement dans la CI existante.
 
-14 nouveaux tests JVM purs ; replay sur les vraies sources avant/après, 30 scénarios après :
+15 nouveaux tests JVM purs ; replay sur les vraies sources avant/après, 30 scénarios après :
 lecture prolongée, départ/switch/multi-resume, historique incomplet ou contradictoire, identité
 manquante, managers indisponibles, état écran/verrou, session absente/concurrente/remplacée,
 métadonnées absentes/incohérentes, position invalide ou périmée, VOD absente, départ avant PAUSE,
@@ -86,3 +86,19 @@ présente CI ajoute les transitions de premier plan et conserve les gardes d'end
 
 Aucun accès Sony, aucune fusion, aucun déploiement, aucune mutation Cloud/Vercel/Neon/Production.
 Les résultats exécutés, les IDs CI, les bytes APK et la procédure unique sont complétés après CI.
+
+## Ajustement causal du banc Android
+
+L'artefact `11990548737` du run `38770272275` conserve le dumpsys réel API31 :
+DEVICE_STARTUP, RESUMED Setup, puis PAUSED NexusLauncher sans RESUMED préalable. Ce préfixe
+incomplet déclenche correctement le refus conservateur, même quand une activité visible arrive
+ensuite. Il ne faut pas supprimer cette garde pour rendre le test vert. Un nouveau cas JVM
+reproduit ce préfixe et exige un repère réel plus un RESUMED explicite pour récupérer une preuve.
+Le banc fait donc un cycle SLEEP/WAKE de l'émulateur après provisionnement, ouvre Settings,
+attend >30s puis teste HOME. Aucun cycle appareil n'est exécuté par WORK sur Sony.
+
+L'assertion diagnostique historique sur une double lecture PLAYING a échoué deux fois et passé
+à HEAD identique une fois. Le banc attend désormais un échantillon cohérent de sa seule fixture
+synthétique pendant au plus2s, comme le faisait déjà awaitSnapshot, puis exécute toutes les
+assertions d'origine. La garde snapshot applicative, ses valeurs/seuils et l'absence de retry
+runtime restent inchangées. Un timeout reste un échec ; aucune commande média n'est envoyée.
