@@ -50,7 +50,8 @@ public final class E5AdbTriggerInstrumentation extends Instrumentation {
                     new Intent(valid).putExtra("e5VodConfirmed", false)));
             require(capture.calls == 1, "MALFORMED_NO_DISPATCH");
             verifySonySnapshot(context);
-            result.putInt("passed", 20);
+            verifySelectionDiagnostics(context);
+            result.putInt("passed", 30);
             result.putInt("failed", 0);
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
@@ -77,6 +78,7 @@ public final class E5AdbTriggerInstrumentation extends Instrumentation {
             require(playing != null && playing.durationMs == -1, "ANDROID_UNKNOWN_DURATION");
             require(NativeQualificationPolicy.local035().fresh(playing,
                     android.os.SystemClock.elapsedRealtime()), "ANDROID_FRESH_POSITION");
+            verifyNativeReadTrace(session);
             session.setPlaybackState(new android.media.session.PlaybackState.Builder()
                     .setActions(android.media.session.PlaybackState.ACTION_PLAY)
                     .setState(2, 2475551, 0f, android.os.SystemClock.elapsedRealtime()).build());
@@ -92,6 +94,48 @@ public final class E5AdbTriggerInstrumentation extends Instrumentation {
         } finally {
             session.release();
         }
+    }
+
+    /** Exercise both-read numeric evidence using a real Android controller and synthetic VOD. */
+    private void verifyNativeReadTrace(android.media.session.MediaSession session) throws Exception {
+        NativeSelectionTrace trace = new NativeSelectionTrace(NativeSelectionTrace.Operation.SELECT, 1,
+                android.os.SystemClock.elapsedRealtime());
+        java.lang.reflect.Method method = AndroidNativeSessionPort.class.getDeclaredMethod(
+                "snapshot", android.media.session.MediaController.class, boolean.class, NativeSelectionTrace.class);
+        method.setAccessible(true);
+        NativeSessionSnapshot sample = (NativeSessionSnapshot) method.invoke(null, session.getController(), true, trace);
+        require(sample != null && trace.read == NativeSelectionTrace.Read.COHERENT, "ANDROID_BOTH_READS_COHERENT");
+        require(trace.firstState == 3 && trace.secondState == 3
+                && trace.firstPositionMs == trace.secondPositionMs
+                && trace.firstUpdatedAtMs == trace.secondUpdatedAtMs, "ANDROID_BOTH_READS_VALUES");
+    }
+
+    /** An un-attested real selector must report its refusal without any native-session command. */
+    private void verifySelectionDiagnostics(Context context) throws Exception {
+        NativeDiagnostics diagnostics = new NativeDiagnostics(() -> "REFUSED");
+        final int[] observations = {0};
+        AndroidNativeSessionPort port = new AndroidNativeSessionPort(context,
+                new AndroidForegroundEvidence(context), trace -> {
+                    observations[0]++;
+                    diagnostics.selection(41, trace);
+                });
+        require(port.select(false) == null, "ANDROID_UNATTESTED_SELECTION_REFUSED");
+        require(observations[0] == 1, "ANDROID_SINGLE_SELECTION_TRACE");
+        org.json.JSONObject admitted = diagnostics.describe("NATIVE_ADMISSION_CHECK", 41, null,
+                NativeTransportOwner.Reason.NONE, android.os.SystemClock.elapsedRealtime());
+        org.json.JSONObject selection = admitted.getJSONObject("selection");
+        require("VOD_NOT_ATTESTED".equals(selection.getString("code")), "ANDROID_SELECTION_CODE");
+        require("SELECT".equals(selection.getString("operation")), "ANDROID_SELECTION_OPERATION");
+        require(selection.getLong("finishedAtMs") >= selection.getLong("selectedAtMs"), "ANDROID_SELECTION_TIME");
+        org.json.JSONObject terminal = diagnostics.describe("CLEANUP", 41, null,
+                NativeTransportOwner.Reason.TARGET, android.os.SystemClock.elapsedRealtime());
+        require(admitted.getString("attemptId").equals(terminal.getString("attemptId"))
+                && "TARGET".equals(terminal.getString("reason")) && terminal.getBoolean("terminal"),
+                "ANDROID_CORRELATED_TERMINAL");
+        require(!selection.has("mediaId") && !selection.has("token") && !selection.has("packageName"),
+                "ANDROID_SELECTION_PRIVATE");
+        require(!diagnostics.describe("NATIVE_ADMISSION_CHECK", 42, null, NativeTransportOwner.Reason.NONE,
+                android.os.SystemClock.elapsedRealtime()).has("selection"), "ANDROID_NO_ATTEMPT_LEAK");
     }
 
     /** Await only publication of our synthetic fixture; never retry an application transport. */

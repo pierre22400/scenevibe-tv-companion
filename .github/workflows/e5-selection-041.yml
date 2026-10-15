@@ -1,0 +1,139 @@
+# Only this isolated qualification branch; no Cloud, release, main or Sony execution.
+name: E5 WORK 041 Sony selection diagnostics
+on:
+  push:
+    branches: [work/scenevibe-e5-selection-diagnostics-041]
+    paths: ['app/**', 'tests/**', '.github/scripts/e5-selection-041*', '.github/workflows/e5-selection-041.yml']
+permissions:
+  contents: read
+concurrency:
+  group: e5-selection-041
+  cancel-in-progress: false
+jobs:
+  software:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Python boundaries and unchanged M4/M5/Companion JVM contracts, OFF
+        run: |
+          python3 -m unittest discover -s tests
+          gradle :app:assembleDebug :app:assembleRelease :app:lintDebug :app:lintRelease :app:testDebugUnitTest --console=plain
+          python3 .github/scripts/m4-phase-a-test-summary.py
+          python3 .github/scripts/e5-position-039-reproduce.py
+          python3 .github/scripts/e5-selection-041-replay.py
+          mkdir -p e5-adb-038-off
+          cp app/build/outputs/apk/debug/app-debug.apk e5-adb-038-off/
+          cp -r app/build/test-results e5-adb-038-off/
+          python3 .github/scripts/e5-selection-041-verify.py off e5-adb-038-off/app-debug.apk "$ANDROID_HOME/build-tools/35.0.0" e5-adb-038-off/apk.json
+      - name: Parse owner PowerShell without invoking ADB
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'docs/e5-selection-041/Invoke-E5-041.ps1'),
+            [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+      - name: Exercise owner script with fake ADB only
+        run: python3 .github/scripts/e5-selection-041-powershell-test.py
+      - name: ON profile and tests; compile actual endpoint instrumentation
+        env: {SCENEVIBE_E5_NATIVE_QUALIFICATION: e5-native-035}
+        run: |
+          gradle :app:clean --console=plain
+          gradle --init-script .github/scripts/e5-adb-038.init.gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:testDebugUnitTest --console=plain
+          python3 .github/scripts/e5-selection-041-verify.py on app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME/build-tools/35.0.0" e5-selection-041-on.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e5-selection-041-software
+          path: |
+            e5-adb-038-off
+            e5-selection-041-on.json
+            e5-position-039-reproduction
+            e5-selection-041-replay
+            e5-selection-041-powershell.json
+            app/build/test-results
+            app/build/reports/lint-results-*.xml
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          retention-days: 30
+  platform31:
+    needs: software
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: e5-selection-041-software}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - name: Enable disposable runner emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvmall.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash .github/scripts/e5-selection-041-platform.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: e5-selection-041-platform31, path: e5-adb-038-evidence, retention-days: 30}
+  stable-candidate:
+    needs: [software, platform31]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: e5-selection-041-software}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager "build-tools;35.0.0"
+      - name: Require existing signing configuration; no new key
+        run: test "$SIGNING_ENABLED" = true
+      - name: Decode existing stable key in isolated temporary directory
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/scenevibe-stable.jks"
+      - name: Sign distinct local-qualification copy
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p e5-selection-041-candidate
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$RUNNER_TEMP/scenevibe-stable.jks" \
+            --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD \
+            --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" \
+            --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD \
+            --out e5-selection-041-candidate/SceneVibe_E5_041_diagnostic_stable.apk \
+            app/build/outputs/apk/debug/app-debug.apk
+          python3 .github/scripts/e5-selection-041-verify.py signed e5-selection-041-candidate/SceneVibe_E5_041_diagnostic_stable.apk \
+            "$ANDROID_HOME/build-tools/35.0.0" e5-selection-041-candidate/qualification-proof.json \
+            --source app/build/outputs/apk/debug/app-debug.apk
+          sha256sum e5-selection-041-candidate/SceneVibe_E5_041_diagnostic_stable.apk > e5-selection-041-candidate/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with: {name: e5-selection-041-stable-candidate, path: e5-selection-041-candidate, retention-days: 30}
+      - name: Discard stable key even on refusal
+        if: always()
+        run: rm -f "$RUNNER_TEMP/scenevibe-stable.jks"

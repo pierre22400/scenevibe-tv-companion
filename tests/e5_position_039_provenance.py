@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from e5_native_provenance import blob_hash
+from e5_selection_041_provenance import e5041_retained_bytes
 
 """Retain E5-038's historical byte assertions while checking each E5-039 edit exactly.
 
@@ -15,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def e5039_retained_bytes(path):
     """Validate full corrective bytes, reverse finite literals, and verify the E5-038 blob."""
     path = Path(path)
-    content = path.read_bytes()
+    content = e5041_retained_bytes(path)
     name = str(path.relative_to(ROOT))
     data = json.loads((ROOT / '.github/scripts/e5-position-039-provenance.json').read_text())
     if data['baseHead'] != 'efd3a7983a03458ec1f919d760c10f1b1f9c57ff':

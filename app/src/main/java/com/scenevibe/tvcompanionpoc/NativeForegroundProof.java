@@ -22,4 +22,7 @@ final class NativeForegroundProof {
     boolean primeAlone() {
         return resumed.size() == 1 && resumed.contains(NativeQualificationPolicy.PRIME_PACKAGE);
     }
+
+    /** E5-041: expose only a count for diagnostics, without changing foreground admission. */
+    int resumedCount() { return resumed.size(); }
 }

@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "scenario": "threadtime",
+      "pass": true,
+      "broadcasts": 1,
+      "expectedExitSuccess": true
+    },
+    {
+      "scenario": "brief",
+      "pass": true,
+      "broadcasts": 1,
+      "expectedExitSuccess": true
+    },
+    {
+      "scenario": "missing-selection",
+      "pass": true,
+      "broadcasts": 1,
+      "expectedExitSuccess": false
+    },
+    {
+      "scenario": "wrong-version",
+      "pass": true,
+      "broadcasts": 0,
+      "expectedExitSuccess": false
+    },
+    {
+      "scenario": "delivery-rejected",
+      "pass": true,
+      "broadcasts": 1,
+      "expectedExitSuccess": false
+    },
+    {
+      "scenario": "ambiguous",
+      "pass": true,
+      "broadcasts": 1,
+      "expectedExitSuccess": false
+    }
+  ],
+  "sonyAccess": false
+}

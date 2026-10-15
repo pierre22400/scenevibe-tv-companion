@@ -4,6 +4,7 @@ import subprocess
 import unittest
 
 from e5_position_039_provenance import e5039_retained_bytes
+from e5_selection_041_provenance import e5041_retained_bytes
 
 """Check exact scope and historical assertions separately from actual candidate runtime tests."""
 
@@ -34,7 +35,7 @@ class E5Position039Test(unittest.TestCase):
                  'app/src/main/AndroidManifest.xml']
         for name in names:
             self.assertEqual(subprocess.check_output(['git', 'show', BASE + ':' + name], cwd=ROOT),
-                             (ROOT / name).read_bytes(), name)
+                             e5041_retained_bytes(ROOT / name), name)
 
     def test_sony_trace_not_substituted_for_physical_qualification(self):
         """The redacted evidence records one captured refusal and never invents a PAUSE command."""

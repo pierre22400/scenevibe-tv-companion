@@ -43,7 +43,7 @@ android {
     buildTypes {
         debug {
             buildConfigField "boolean", "E5_NATIVE_QUALIFICATION", e5Native ? "true" : "false"
-            if (e5Native) versionNameSuffix "-e5-native039-position"
+            if (e5Native) versionNameSuffix "-e5-native041-diagnostics"
         }
         // Explicit production RELEASE variant. The POC intentionally keeps minify
         // and resource shrinking OFF so the qualified 0.8.1 runtime behavior stays
@@ -67,7 +67,7 @@ android {
 
     testOptions { unitTests.returnDefaultValues = true }
     if (e5Native) {
-        defaultConfig.versionCode = 16
+        defaultConfig.versionCode = 17
         sourceSets.debug.manifest.srcFile "src/e5Qualification/AndroidManifest.xml"
         sourceSets.debug.assets.srcDirs += ["src/e5Qualification/assets"]
         sourceSets.debug.java.srcDirs += ["src/e5Qualification/java"]
