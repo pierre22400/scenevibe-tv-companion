@@ -28,6 +28,13 @@ final class AutostartPolicy {
     enum Decision {
         /** All preconditions met: start OverlayService in boot-prepare (armed) mode. */
         START,
+        /**
+         * A KNOWN Banner codec/handler durable is present with opt-in + overlay, so the service may
+         * boot-prepare (armed, not visible) WITHOUT a MediaSession/Notification grant (section 12).
+         * It is a distinct bounded value from {@link #START} so the diagnostics screen records that
+         * the boot armed a Banner path specifically; the receiver treats it exactly like START.
+         */
+        START_BANNER,
         /** Autostart opt-in is off; the default state, so the TV boots with nothing armed. */
         AUTOSTART_DISABLED,
         /** Autostart enabled but Display-over-other-apps is not granted. */
@@ -61,5 +68,47 @@ final class AutostartPolicy {
             return Decision.AUTOSTART_NOTHING_TO_RESTORE;
         }
         return Decision.START;
+    }
+
+    /**
+     * The bounded durable kind the receiver reads from METADATA only (never a Banner parse): the
+     * codec/handler identity of the one present installation. {@link #BANNER} is a known Banner
+     * codec/handler snapshot; {@link #VIDEO} is a known Video shape; {@link #UNKNOWN} is a present
+     * but unrecognized shape; {@link #NONE} is no durable installation at all.
+     */
+    enum DurableKind { NONE, VIDEO, BANNER, UNKNOWN }
+
+    /**
+     * Banner-aware boot decision (section 12). A KNOWN Banner codec/handler durable permits a
+     * boot-prepare (armed, not visible) start on opt-in + overlay + durable present WITHOUT a
+     * MediaSession/Notification grant, because a WALL Banner needs no passive MediaSession clock. A
+     * {@link DurableKind#VIDEO} or {@link DurableKind#UNKNOWN} durable, and the credentials-only /
+     * nothing-to-restore / permission-ordering paths, keep their exact existing decisions by
+     * delegating to the five-argument {@link #decide}. This never parses a package: {@code kind} is
+     * derived from durable metadata by the caller.
+     *
+     * @param autostartEnabled        the persisted "Start SceneVibe with TV" opt-in
+     * @param overlayPermissionGranted Settings.canDrawOverlays result
+     * @param mediaAccessGranted       NotificationAccess.isGranted result
+     * @param hasUsableCloudCredential a usable durable Cloud credential
+     * @param hasValidCachedTrack      a durable installation snapshot is present (revision &gt; 0)
+     * @param kind                     the bounded durable kind read from metadata only
+     */
+    static Decision decide(boolean autostartEnabled,
+            boolean overlayPermissionGranted,
+            boolean mediaAccessGranted,
+            boolean hasUsableCloudCredential,
+            boolean hasValidCachedTrack,
+            DurableKind kind) {
+        if (!autostartEnabled) return Decision.AUTOSTART_DISABLED;
+        if (!overlayPermissionGranted) return Decision.AUTOSTART_BLOCKED_OVERLAY_PERMISSION;
+        // A known Banner durable may arm without the MediaSession grant: it does not drive a passive
+        // MediaSession clock. Overlay + opt-in + a present known-Banner installation suffice.
+        if (kind == DurableKind.BANNER && hasValidCachedTrack) {
+            return Decision.START_BANNER;
+        }
+        // Every other path (Video, unknown, credentials-only, permission ordering) is unchanged.
+        return decide(autostartEnabled, overlayPermissionGranted, mediaAccessGranted,
+                hasUsableCloudCredential, hasValidCachedTrack);
     }
 }

@@ -8,9 +8,9 @@ import java.util.TreeMap;
 
 /**
  * Eager immutable registry assembled explicitly from build-local handler instances.
- * Only the two current shape slots are permitted. Lookup never constructs, discovers,
- * registers or invokes a handler. No current composition registers a production handler
- * in Phase B; deterministic test handlers prove this abstraction before Phase D.
+ * At most three current shape slots are permitted: the two Video handlers plus one Banner
+ * handler (section 8). Lookup never constructs, discovers, registers or invokes a handler.
+ * The extension is explicit and finite; there is no discovery, reflection or remote handler.
  */
 public final class InstallationHandlerRegistry {
     private static final InstallationHandlerRegistry EMPTY=new InstallationHandlerRegistry();
@@ -35,9 +35,9 @@ public final class InstallationHandlerRegistry {
         public InstallationHandler handler() {return handler;}
     }
 
-    /** Freeze at most two explicit registrations, rejecting unknown or ambiguous shape slots. */
+    /** Freeze at most three explicit registrations, rejecting unknown or ambiguous shape slots. */
     public InstallationHandlerRegistry(Entry... registrations) {
-        if (registrations==null||registrations.length>2)
+        if (registrations==null||registrations.length>3)
             throw new IllegalArgumentException("Invalid handler registry count");
         Map<String,Entry> handlers=new TreeMap<>(),codecs=new TreeMap<>();
         for (Entry entry:registrations) {

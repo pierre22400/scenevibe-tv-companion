@@ -63,6 +63,12 @@ final class RuntimeDiagnostics {
                 .lastCloudErrorCode(errorCode)
                 .lastManifestCode(observed.lastManifestCode())
                 .lastSceneCode(observed.lastSceneCode())
+                .lastWallCode(observed.lastWallCode())
+                .wallClockKind(observed.wallClockKind())
+                .wallGeneration(observed.wallGeneration())
+                .wallWindowCount(observed.wallWindowCount())
+                .wallAnchored(observed.wallAnchored())
+                .wallWaitArmed(observed.wallWaitArmed())
                 .build();
     }
 
@@ -115,6 +121,21 @@ final class RuntimeDiagnostics {
      */
     enum SceneCode { NONE, SCENE_ASSET_UNAVAILABLE, SCENE_RENDER_FAILED }
 
+    /**
+     * Bounded WALL runtime taxonomy (section 15). These describe the last notable WALL
+     * driver/owner transition and are the only WALL values that ever reach a diagnostics surface.
+     * They are observational ONLY: a WALL code never gates selection, the clock or an ACK, and it
+     * NEVER carries Banner text, table content, a user-supplied eventId, a token, a device
+     * credential, a URL, a payload, an editorial source or a stack trace with data. NONE means the
+     * last WALL cycle had nothing to report. The set mirrors the driver's bounded subset plus the
+     * calendar/anchor/horizon lifecycle the owner observes.
+     */
+    enum WallCode {
+        NONE, WALL_CALENDAR_LOADED, WALL_ANCHORED, WALL_EVENT_DUE, WALL_EVENT_EXPIRED,
+        WALL_EVENT_SUPERSEDED, WALL_CLOCK_REEVALUATED, WALL_CALENDAR_CLEARED,
+        WALL_HORIZON_EXHAUSTED, WALL_DISPLAY_SUSPENDED, WALL_CLOCK_INVALID, WALL_DEADLINE_FAILED
+    }
+
     final String appVersion;
     final boolean serviceRunning;
     final boolean autostartEnabled;
@@ -159,6 +180,18 @@ final class RuntimeDiagnostics {
     final ManifestCode lastManifestCode;
     /** Bounded outcome of the last scene-runtime render attempt; NONE when none seen. */
     final SceneCode lastSceneCode;
+    /** Bounded last WALL runtime transition; NONE when none seen. Observational only. */
+    final WallCode lastWallCode;
+    /** Fixed WALL clock-kind label (never a credential/content), or null when no WALL path exists. */
+    final String wallClockKind;
+    /** Bounded monotonic WALL temporal-source generation; 0 when disarmed. Never a token. */
+    final long wallGeneration;
+    /** Bounded count of windows in the active WALL calendar; 0 when none. Never content. */
+    final int wallWindowCount;
+    /** Whether the WALL volatile path currently holds an in-memory anchor. Observational. */
+    final boolean wallAnchored;
+    /** Whether the WALL single bounded wait is currently armed. Observational. */
+    final boolean wallWaitArmed;
 
     /** Freeze scalar observational metadata only; no store, snapshot or artifact is retained. */
     private RuntimeDiagnostics(Builder builder) {
@@ -191,6 +224,12 @@ final class RuntimeDiagnostics {
         this.lastCloudErrorCode = builder.lastCloudErrorCode;
         this.lastManifestCode = builder.lastManifestCode;
         this.lastSceneCode = builder.lastSceneCode;
+        this.lastWallCode = builder.lastWallCode;
+        this.wallClockKind = builder.wallClockKind;
+        this.wallGeneration = builder.wallGeneration;
+        this.wallWindowCount = builder.wallWindowCount;
+        this.wallAnchored = builder.wallAnchored;
+        this.wallWaitArmed = builder.wallWaitArmed;
     }
 
     /**
@@ -236,6 +275,12 @@ final class RuntimeDiagnostics {
         private CloudErrorCode lastCloudErrorCode = CloudErrorCode.NONE;
         private ManifestCode lastManifestCode = ManifestCode.NONE;
         private SceneCode lastSceneCode = SceneCode.NONE;
+        private WallCode lastWallCode = WallCode.NONE;
+        private String wallClockKind;
+        private long wallGeneration;
+        private int wallWindowCount;
+        private boolean wallAnchored;
+        private boolean wallWaitArmed;
 
         /** Project one coherent read into bounded metadata and old aliases; never inspect canonical bytes. */
         Builder installation(InstallationStore.ReadResult durable) {
@@ -288,6 +333,12 @@ final class RuntimeDiagnostics {
         Builder lastCloudErrorCode(CloudErrorCode value) { this.lastCloudErrorCode = value; return this; }
         Builder lastManifestCode(ManifestCode value) { this.lastManifestCode = value; return this; }
         Builder lastSceneCode(SceneCode value) { this.lastSceneCode = value; return this; }
+        Builder lastWallCode(WallCode value) { this.lastWallCode = value; return this; }
+        Builder wallClockKind(String value) { this.wallClockKind = value; return this; }
+        Builder wallGeneration(long value) { this.wallGeneration = value; return this; }
+        Builder wallWindowCount(int value) { this.wallWindowCount = value; return this; }
+        Builder wallAnchored(boolean value) { this.wallAnchored = value; return this; }
+        Builder wallWaitArmed(boolean value) { this.wallWaitArmed = value; return this; }
 
         RuntimeDiagnostics build() { return new RuntimeDiagnostics(this); }
     }

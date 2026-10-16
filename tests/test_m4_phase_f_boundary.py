@@ -8,6 +8,9 @@ import unittest
 from sony_corrective_provenance import retained_bytes, retained_text
 from m5_phase_b_provenance import calendar_model_files
 from m5_phase_c_provenance import phase_c_production_files
+from m6_phase_b_provenance import m6_phase_b_production_files
+from m6_phase_c_provenance import m6_phase_c_production_files, m6_phase_c_authorized_changes
+from m6_phase_d_provenance import m6_phase_d_added_paths, m6_phase_d_production_files, m6_phase_d_retained_bytes
 
 """Qualify the live Cloud cutover without weakening the retained M4 evidence.
 
@@ -125,7 +128,7 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
 
     def test_service_owns_one_generic_stack_and_real_main_thread_ports(self):
         """One service composition binds the existing core owners and proves the current Cloud client after dispatch."""
-        source = code_only((ROOT / JAVA / 'OverlayService.java').read_text())
+        source = code_only(phase_d_retained_bytes(ROOT / JAVA / 'OverlayService.java').decode('utf-8'))
         for token in ('new AndroidInstallationBackend(', 'new InstallationStore(',
                       'new PackageInstaller(', 'new LiveVideoRuntimePorts('):
             self.assertEqual(1, source.count(token), token)
@@ -191,6 +194,8 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         for path, expected in BASELINE['qualifiedRuntimeBlobs'].items():
             if path in BASELINE['authorizedProductionChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
         installer = JAVA + 'installation/PackageInstaller.java'
         self.assertIn(installer, BASELINE['qualifiedRuntimeBlobs'])
@@ -200,7 +205,9 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         """Retain exact qualified auth/HTTPS/disconnect behavior and leave historical helpers for Phase G."""
         for name, key in [('CloudControlClient.java', 'protectedClientMethods'),
                           ('OverlayService.java', 'protectedServiceMethods')]:
-            source = (ROOT / JAVA / name).read_text()
+            # M6 D's exact whole-blob inverse preserves the historical HTTPS/auth
+            # method pin while the new generic decoder is exercised by its JVM suite.
+            source = m6_phase_d_retained_bytes(ROOT / JAVA / name).decode('utf-8')
             historical = (ROOT / PHASE_G['historicalServiceFile']).read_text() if PHASE_G else source
             for signature, expected in BASELINE[key].items():
                 if name == 'OverlayService.java' and any(method in signature for method in PHASE_G.get('removedServiceHelpers', [])):
@@ -231,12 +238,14 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
         for path, expected in frozen.items():
             if path in BASELINE['authorizedTestChanges'] or path in PHASE_G.get('authorizedProductionChanges', []):
                 continue
+            if path in m6_phase_c_authorized_changes():
+                continue
             self.assertEqual(expected, blob_hash(retained_bytes(ROOT / path)), path)
 
     def test_production_inventory_and_semantic_bridge_have_no_phase_g_or_future_type(self):
         """Exactly one new adapter and one nested service port are permitted; the bridge remains handler-owned."""
         actual = {str(path.relative_to(ROOT)) for path in (ROOT / 'app/src/main/java').rglob('*.java')}
-        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files(), actual)
+        self.assertEqual(set(BASELINE['productionFiles']) | calendar_model_files() | phase_c_production_files() | m6_phase_b_production_files() | (m6_phase_c_production_files() | m6_phase_d_production_files()), actual)
         bridges, ports = [], []
         for relative in actual:
             source = code_only((ROOT / relative).read_text())
@@ -244,8 +253,11 @@ class M4PhaseFBoundaryTest(unittest.TestCase):
                 bridges.append(Path(relative).name)
             if re.search(r'\bimplements\s+VideoInstallationRuntimePorts\b', source):
                 ports.append(Path(relative).name)
+        phase_c_ports = sorted(Path(p).name for p in (m6_phase_c_production_files() | m6_phase_d_production_files())
+                               if re.search(r'\bimplements\s+VideoInstallationRuntimePorts\b',
+                                            code_only((ROOT / p).read_text(encoding='utf-8'))))
         self.assertEqual(['VideoManifestInstallationHandler.java'], bridges)
-        self.assertEqual(['OverlayService.java'], ports)
+        self.assertEqual(sorted(['OverlayService.java'] + phase_c_ports), sorted(ports))
 
     def test_prior_predicates_accounting_and_workflow_changes_are_exactly_reversible(self):
         """Reverse every inventoried boundary/CI addition to the exact F-start source; no earlier assertion is removed."""

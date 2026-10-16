@@ -19,6 +19,7 @@ import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 import com.scenevibe.tvcompanionpoc.installation.PackageInstaller;
 import com.scenevibe.tvcompanionpoc.installation.TvCapabilities;
+import com.scenevibe.tvcompanionpoc.wall.WallCalendarScheduler;
 
 /**
  * User-started foreground service that owns the Android overlay window.
@@ -78,6 +79,19 @@ public final class OverlayService extends Service {
     private SceneRuntimeController sceneController;
     /** The active revision currently driving the scheduler (0 when none restored/installed). */
     private long activeRevision;
+    /**
+     * Banner (WALL) activation core bound beside the Video core on the single principal owner, plus
+     * the Android WALL clock/driver (FEAT-003) and the dynamic time/interactivity receiver. These
+     * are created lazily beside the Video stack and never create a second owner authority or a
+     * competing scheduler; {@link #overlayRuntimePorts} is the single installer-facing surface that
+     * routes each handler's ARM to the matching core.
+     */
+    private LiveBannerRuntimePorts bannerRuntimePorts;
+    private OverlayRuntimePorts overlayRuntimePorts;
+    private WallCalendarScheduler wallScheduler;
+    private WallClockDriver wallClockDriver;
+    private AndroidWallSignalReceiver wallSignalReceiver;
+    private boolean wallSignalRegistered;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -172,8 +186,8 @@ public final class OverlayService extends Service {
                     }
                 });
                 installationStore = new InstallationStore(new AndroidInstallationBackend(this));
-                packageInstaller = new PackageInstaller(installationStore,
-                        VideoInstallationHandlers.registry(), TvCapabilities.current());
+                // Common Video+Banner composition replaces the exclusively-Video registry so the
+                // installer can restore/arm either kind through the single durable path.
                 videoRuntimePorts = new LiveVideoRuntimePorts(
                         () -> Looper.myLooper() == Looper.getMainLooper(),
                         () -> trackScheduler, () -> sceneController,
@@ -200,11 +214,49 @@ public final class OverlayService extends Service {
                                     ?RuntimeDiagnostics.MediaIdentityState.ELIGIBLE:RuntimeDiagnostics.MediaIdentityState.BLOCKED);
                             if(!eligible)DiagnosticsStore.INSTANCE.setLastBlockCode(BLOCK_CODE_MEDIA_IDENTITY);
                         });
+                // Banner (WALL) activation core on the SAME single principal owner. It reuses the
+                // controller and the SceneRenderer retirement seam, retires the opposite Video
+                // surface and neutralizes the MEDIA path on a Banner selection, and never
+                // instantiates a competing scheduler. Promotion arms the Android WALL driver under
+                // the active token so the first fresh evaluation happens only after promotion.
+                bannerRuntimePorts = new LiveBannerRuntimePorts(
+                        () -> Looper.myLooper() == Looper.getMainLooper(),
+                        () -> sceneController,
+                        () -> { if (renderer != null) renderer.dismiss(); },
+                        () -> { if (trackScheduler != null) trackScheduler.clear(); },
+                        () -> { if (sceneRenderer != null) sceneRenderer.dismissNow(); },
+                        revision -> { activeRevision = revision; armWallDriver(); },
+                        eligible -> {
+                            // Observational only: the Banner path's local eligibility transition.
+                            DiagnosticsStore.INSTANCE.setMediaIdentityState(eligible
+                                    ? RuntimeDiagnostics.MediaIdentityState.ELIGIBLE
+                                    : RuntimeDiagnostics.MediaIdentityState.BLOCKED);
+                        });
+                // The single installer-facing surface routes each handler's ARM to its matching core.
+                overlayRuntimePorts = new OverlayRuntimePorts(videoRuntimePorts, bannerRuntimePorts);
+                // The Android WALL clock/driver (FEAT-003) produces the results the Banner owner
+                // routes. It is created disarmed; a Banner promotion arms it via armWallDriver().
+                wallScheduler = new WallCalendarScheduler();
+                wallClockDriver = new WallClockDriver(new AndroidWallClockSource(),
+                        new AndroidWallWaitScheduler(), wallScheduler, bannerRuntimePorts,
+                        new DiagnosticsStoreWallSink());
+                wallSignalReceiver = new AndroidWallSignalReceiver(wallClockDriver);
+                // Advertise the named qualification descriptor only after every local runtime
+                // dependency exists; the same installer/store then serves restore and polling.
+                packageInstaller = new PackageInstaller(installationStore,
+                        OverlayInstallationHandlers.registry(), BuildConfig.M6_QUALIFICATION
+                                ? TvCapabilities.packageQualification() : TvCapabilities.current());
                 // Complete durable restoration on main before either probe events or Cloud polling.
                 // Only the installer's same-revision path resolves/validates the durable handler.
+                // The composite ports route a Video durable to the Video core and a Banner durable
+                // to the Banner core (which arms the WALL driver on promotion).
                 InstallationStatus restored = restoreInstalledPackage(installationStore,
-                        packageInstaller, videoRuntimePorts, DiagnosticsStore.INSTANCE);
+                        packageInstaller, overlayRuntimePorts, DiagnosticsStore.INSTANCE);
                 Log.i(TAG, "Installation startup restore=" + (restored == null ? "EMPTY" : restored.name()));
+                // Register the dynamic WALL time/interactivity receiver once, on the owner thread.
+                // It carries no new permission (ordinary system broadcasts) and is unregistered in
+                // onDestroy. A registration failure degrades to a logged diagnostic, never a crash.
+                registerWallSignalReceiver();
             }
 
             // The CommentaryServer / port 8765 / LAN pairing surface is a LAN DEV tool only.
@@ -254,7 +306,9 @@ public final class OverlayService extends Service {
                 // field: a reset client's io executor is shut down and cannot be reused, so the
                 // only correct way to re-arm the cloud is a brand-new CloudControlClient here.
                 cloudClient = new CloudControlClient(this, installationStore, packageInstaller,
-                        videoRuntimePorts, videoRuntimePorts::abortActivation, () -> cloudClient);
+                        BuildConfig.M6_QUALIFICATION ? overlayRuntimePorts : videoRuntimePorts,
+                        BuildConfig.M6_QUALIFICATION ? overlayRuntimePorts::abortActivation
+                                : videoRuntimePorts::abortActivation, () -> cloudClient);
                 cloudClient.start();
             }
             if (ACTION_CLOUD_CONNECT.equals(action) && cloudClient != null) cloudClient.activate();
@@ -283,6 +337,10 @@ public final class OverlayService extends Service {
                     renderer = null;
                 }
                 if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();
+                // Disarm the WALL volatile path and abort any Banner activation so no stale WALL
+                // callback or Banner scene survives a reset; the durable is cleared by the wipe.
+                if (wallClockDriver != null) wallClockDriver.disarm();
+                if (bannerRuntimePorts != null) bannerRuntimePorts.abortActivation();
                 // The reset wipe clears the cache + scheduler; disarm the regie and drop any
                 // visible scene too, so no stale manifested scene survives a reset.
                 if (sceneController != null) sceneController.unload();
@@ -322,6 +380,73 @@ public final class OverlayService extends Service {
             renderer = new OverlayRenderer(this, this::onPermissionLost, BuildConfig.ENABLE_LAN_DEV);
         }
         renderer.show(bottomPosition);
+    }
+
+    /**
+     * Arm the Android WALL driver under the Banner owner's active activation token after a Banner
+     * promotion (section 8: the first fresh evaluation happens only after promotion). It reads the
+     * active token and the prepared pure calendar from the owner and arms the driver; a failed arm
+     * fails closed through the driver's own masking (durable intact, no commit/ACK). It is a no-op
+     * for a non-Banner selection (no banner core state) and for a selection that cleared the active
+     * revision (revision 0 via abort), where the driver is instead disarmed.
+     */
+    private void armWallDriver() {
+        if (wallClockDriver == null || bannerRuntimePorts == null) return;
+        String token = bannerRuntimePorts.activeToken();
+        BannerPreparedState state = bannerRuntimePorts.activeState();
+        if (token == null || state == null) {
+            wallClockDriver.disarm();
+            return;
+        }
+        wallClockDriver.arm(token, state.calendar);
+    }
+
+    /** Register the single dynamic WALL signal receiver on the owner thread; idempotent and bounded. */
+    private void registerWallSignalReceiver() {
+        if (wallSignalRegistered || wallSignalReceiver == null) return;
+        try {
+            registerReceiver(wallSignalReceiver, AndroidWallSignalReceiver.filter());
+            wallSignalRegistered = true;
+        } catch (RuntimeException registrationFailed) {
+            // A failed dynamic registration never crashes the service; the next arm/signal still
+            // re-reads the clock. Record a bounded diagnostic only.
+            DiagnosticsStore.INSTANCE.setLastWallCode(RuntimeDiagnostics.WallCode.WALL_DEADLINE_FAILED);
+            Log.w(TAG, "WALL signal receiver registration failed");
+        }
+    }
+
+    /** Unregister the dynamic WALL signal receiver if registered; idempotent and exception-safe. */
+    private void unregisterWallSignalReceiver() {
+        if (!wallSignalRegistered || wallSignalReceiver == null) return;
+        try { unregisterReceiver(wallSignalReceiver); }
+        catch (RuntimeException alreadyGone) { /* Idempotent cleanup. */ }
+        finally { wallSignalRegistered = false; }
+    }
+
+    /**
+     * Forwards the bounded WALL driver diagnostic codes into the observational
+     * {@link DiagnosticsStore} WALL taxonomy (section 15). It maps each closed driver {@link
+     * WallDriverDiagnostics.Code} to the matching {@link RuntimeDiagnostics.WallCode} and never
+     * carries content/token/credential/eventId/URL/payload; it never gates selection/clock/ACK.
+     */
+    private static final class DiagnosticsStoreWallSink implements WallDriverDiagnostics {
+        @Override public void record(Code code) {
+            if (code == null) return;
+            RuntimeDiagnostics.WallCode mapped;
+            switch (code) {
+                case WALL_ANCHORED: mapped = RuntimeDiagnostics.WallCode.WALL_ANCHORED; break;
+                case WALL_EVENT_DUE: mapped = RuntimeDiagnostics.WallCode.WALL_EVENT_DUE; break;
+                case WALL_EVENT_EXPIRED: mapped = RuntimeDiagnostics.WallCode.WALL_EVENT_EXPIRED; break;
+                case WALL_CLOCK_REEVALUATED: mapped = RuntimeDiagnostics.WallCode.WALL_CLOCK_REEVALUATED; break;
+                case WALL_HORIZON_EXHAUSTED: mapped = RuntimeDiagnostics.WallCode.WALL_HORIZON_EXHAUSTED; break;
+                case WALL_DISPLAY_SUSPENDED: mapped = RuntimeDiagnostics.WallCode.WALL_DISPLAY_SUSPENDED; break;
+                case WALL_CLOCK_INVALID: mapped = RuntimeDiagnostics.WallCode.WALL_CLOCK_INVALID; break;
+                case WALL_DEADLINE_FAILED: mapped = RuntimeDiagnostics.WallCode.WALL_DEADLINE_FAILED; break;
+                default: mapped = RuntimeDiagnostics.WallCode.NONE; break;
+            }
+            DiagnosticsStore.INSTANCE.setLastWallCode(mapped);
+            DiagnosticsStore.INSTANCE.setWallClockKind("wall");
+        }
     }
 
     /**
@@ -654,6 +779,20 @@ public final class OverlayService extends Service {
             mediaSessionProbe.stop();
             mediaSessionProbe = null;
         }
+        // WALL teardown first: unregister the dynamic receiver, disarm the driver so a late
+        // delivered runnable is a NO-OP, and abort any Banner activation. No durable is touched.
+        unregisterWallSignalReceiver();
+        if (wallClockDriver != null) {
+            wallClockDriver.disarm();
+            wallClockDriver = null;
+        }
+        wallSignalReceiver = null;
+        wallScheduler = null;
+        if (bannerRuntimePorts != null) {
+            bannerRuntimePorts.abortActivation();
+            bannerRuntimePorts = null;
+        }
+        overlayRuntimePorts = null;
         if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();
         if (trackScheduler != null) {
             trackScheduler.clear();

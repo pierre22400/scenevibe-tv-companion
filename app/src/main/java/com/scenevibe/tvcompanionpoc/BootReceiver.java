@@ -7,6 +7,7 @@ import android.provider.Settings;
 import android.util.Log;
 import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
+import com.scenevibe.tvcompanionpoc.installation.TvCapabilities;
 
 /**
  * Autostart entry point (user section 9). It listens ONLY to BOOT_COMPLETED and
@@ -58,7 +59,8 @@ public final class BootReceiver extends BroadcastReceiver {
             // and not only in Logcat. This never gates the decision itself.
             DiagnosticsStore.INSTANCE.setLastAutostartDecision(decision);
 
-            if (decision == AutostartPolicy.Decision.START) {
+            if (decision == AutostartPolicy.Decision.START
+                    || decision == AutostartPolicy.Decision.START_BANNER) {
                 arm(app);
             } else {
                 // Bounded, secret-free diagnostic only; no UI, no permission prompt, no retry loop.
@@ -88,11 +90,41 @@ public final class BootReceiver extends BroadcastReceiver {
         }
     }
 
-    /** Delegate unchanged permission/opt-in ordering; only a complete durable representation counts. */
+    /**
+     * Delegate unchanged permission/opt-in ordering while passing the bounded durable kind read
+     * from METADATA only (section 12). The receiver never parses or restores a Banner package: it
+     * only reads the durable snapshot's codec/handler identity to let AutostartPolicy permit a
+     * Banner-known boot-prepare start without a MediaSession grant. Full validate/restore stay in
+     * the service.
+     */
     static AutostartPolicy.Decision decide(boolean enabled, boolean overlay, boolean media,
             boolean credential, InstallationStore.ReadResult durable) {
-        return AutostartPolicy.decide(enabled, overlay, media, credential,
-                durable != null && durable.state() == InstallationStore.ReadState.SNAPSHOT);
+        boolean present = durable != null && durable.state() == InstallationStore.ReadState.SNAPSHOT;
+        return AutostartPolicy.decide(enabled, overlay, media, credential, present,
+                durableKind(durable));
+    }
+
+    /**
+     * Map a durable read to the bounded {@link AutostartPolicy.DurableKind} using only the snapshot's
+     * codec/handler metadata; it never decodes the artifact bytes. A present snapshot whose codec is
+     * the Banner codec and whose handler is the Banner handler id is BANNER; a present Video shape is
+     * VIDEO; any other present shape is UNKNOWN; an absent/corrupt durable is NONE.
+     */
+    static AutostartPolicy.DurableKind durableKind(InstallationStore.ReadResult durable) {
+        if (durable == null || durable.state() != InstallationStore.ReadState.SNAPSHOT
+                || durable.snapshot() == null) {
+            return AutostartPolicy.DurableKind.NONE;
+        }
+        String codec = durable.snapshot().codecId();
+        String handler = durable.snapshot().handlerId();
+        if (TvCapabilities.CODEC_BANNER_WALL_OVERLAY.equals(codec)
+                && BannerInstallationHandler.HANDLER_ID.equals(handler)) {
+            return AutostartPolicy.DurableKind.BANNER;
+        }
+        if (TvCapabilities.CODEC_TRACK_OVERLAY.equals(codec) || TvCapabilities.CODEC_TRACK.equals(codec)) {
+            return AutostartPolicy.DurableKind.VIDEO;
+        }
+        return AutostartPolicy.DurableKind.UNKNOWN;
     }
 
     /** Usable credentials require both existing non-empty identifiers; no value is logged. */

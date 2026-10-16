@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Baseline re-verification after the frozen session (orchestrator-level; ALREADY DONE, recorded here for auditability). Re-establish the exact green Phase C starting state at HEAD 2d2c22ac2926531ce728575ab7b87a4b5a66fd99 on branch work/scenevibe-os-m6-banner-wall-architecture-001 without polluting the repository inventory. This feature does NOT extend the inventory; the first authorized inventory extension belongs to FEAT-005 (Phase C provenance). The requested baseline.md could NOT be committed without violating the inherited 287-path Phase B provenance gate; the authoritative measured baseline IS the exact green repository state itself.",
+  "status": "completed",
+  "steps": [
+    "Verify local HEAD == GitHub HEAD == 2d2c22ac2926531ce728575ab7b87a4b5a66fd99 and branch work/scenevibe-os-m6-banner-wall-architecture-001 (clean, up to date).",
+    "Clean tests/__pycache__ (build output, NOT gitignored) and confirm `git ls-files --cached --others --exclude-standard | wc -l` == 287 and `git diff --check` passes with zero untracked non-ignored files.",
+    "Reproduce the Python provenance+boundary suite GREEN: `cd tests && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p \"test_*.py\"` => Ran 141 tests OK (0 FAIL / 0 SKIP). This transitively compiles+executes the pure-JDK WALL contract (68 contracts) via javac/java.",
+    "Confirm there is no baseline.md anywhere in the tree and no stray reconstructed planner artifact. Record the FEAT-001 finding: baseline.md must not be committed or left untracked-non-ignored; the measured baseline is the exact green state (287 paths, 141 Python OK, 68 WALL contracts)."
+  ],
+  "acceptance_criteria": [
+    "HEAD and branch match the mandated Phase C start exactly; working tree clean; git diff --check passes.",
+    "Inventory `git ls-files --cached --others --exclude-standard` == 287 paths with zero untracked non-ignored files (after clearing tests/__pycache__).",
+    "Python suite reproduces 141 OK / 0 FAIL / 0 SKIP; pure-JDK WALL contract runs 68/68.",
+    "No baseline.md and no stray planner artifact anywhere in the repository tree."
+  ],
+  "verification": [
+    "git rev-parse HEAD (== 2d2c22ac2926531ce728575ab7b87a4b5a66fd99); git status --porcelain (clean); git diff --check",
+    "find tests -name __pycache__ -type d -exec rm -rf {} + ; git ls-files --cached --others --exclude-standard | wc -l (== 287)",
+    "cd tests && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p \"test_*.py\" (Ran 141 tests OK)"
+  ],
+  "blocked_reason": null,
+  "findings": "Verified by the planner before decomposition: HEAD==2d2c22ac2926531ce728575ab7b87a4b5a66fd99, branch work/scenevibe-os-m6-banner-wall-architecture-001, git diff --check PASS. After clearing the non-gitignored tests/__pycache__ (transient Python bytecode, the only untracked content), `git ls-files --cached --others --exclude-standard` == 287. Python suite: Ran 141 tests OK (0 FAIL / 0 SKIP). No baseline.md and no stray planner artifact anywhere in the tree. Decision recorded: baseline.md is NOT committed and NOT left untracked-non-ignored (it would be a 288th path failing tests/test_m6_phase_b_boundary.py); the authoritative baseline is the exact green repository state."
+}

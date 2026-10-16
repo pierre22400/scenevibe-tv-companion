@@ -40,6 +40,13 @@ final class DiagnosticsStore {
             RuntimeDiagnostics.ManifestCode.NONE;
     private RuntimeDiagnostics.SceneCode lastSceneCode =
             RuntimeDiagnostics.SceneCode.NONE;
+    private RuntimeDiagnostics.WallCode lastWallCode =
+            RuntimeDiagnostics.WallCode.NONE;
+    private String wallClockKind;
+    private long wallGeneration;
+    private int wallWindowCount;
+    private boolean wallAnchored;
+    private boolean wallWaitArmed;
     /** Last startup attempt only; null means EMPTY/not attempted, never current runtime authority. */
     private InstallationStatus lastStartupRestoreResult;
 
@@ -115,6 +122,35 @@ final class DiagnosticsStore {
         if (code != null) this.lastSceneCode = code;
     }
 
+    /**
+     * Observational: bounded outcome of the last WALL runtime transition (anchored, due, expired,
+     * reevaluated, suspended, clock-invalid, deadline-failed, etc.). It is a bounded enum, never
+     * Banner content, a user-supplied eventId, a token, a credential, a URL or a payload, and it
+     * never gates selection/clock/ACK; it only surfaces on the diagnostics screen.
+     */
+    synchronized void setLastWallCode(RuntimeDiagnostics.WallCode code) {
+        if (code != null) this.lastWallCode = code;
+    }
+
+    /** Observational: fixed WALL clock-kind label (never a credential/content); null clears nothing. */
+    synchronized void setWallClockKind(String kind) { this.wallClockKind = kind; }
+
+    /** Observational: bounded monotonic WALL temporal-source generation; never a token. */
+    synchronized void setWallGeneration(long generation) {
+        if (generation >= 0) this.wallGeneration = generation;
+    }
+
+    /** Observational: bounded count of windows in the active WALL calendar; never content. */
+    synchronized void setWallWindowCount(int count) {
+        this.wallWindowCount = count < 0 ? 0 : Math.min(count, 256);
+    }
+
+    /** Observational: whether the WALL volatile path currently holds an in-memory anchor. */
+    synchronized void setWallAnchored(boolean anchored) { this.wallAnchored = anchored; }
+
+    /** Observational: whether the WALL single bounded wait is currently armed. */
+    synchronized void setWallWaitArmed(boolean armed) { this.wallWaitArmed = armed; }
+
     /** Record only the installer's bounded startup outcome, including EMPTY's neutral null. */
     synchronized void setLastStartupRestoreResult(InstallationStatus result) {
         this.lastStartupRestoreResult = result;
@@ -134,6 +170,12 @@ final class DiagnosticsStore {
         this.lastCloudErrorCode = RuntimeDiagnostics.CloudErrorCode.NONE;
         this.lastManifestCode = RuntimeDiagnostics.ManifestCode.NONE;
         this.lastSceneCode = RuntimeDiagnostics.SceneCode.NONE;
+        this.lastWallCode = RuntimeDiagnostics.WallCode.NONE;
+        this.wallClockKind = null;
+        this.wallGeneration = 0;
+        this.wallWindowCount = 0;
+        this.wallAnchored = false;
+        this.wallWaitArmed = false;
         this.lastStartupRestoreResult = null;
     }
 
@@ -149,6 +191,12 @@ final class DiagnosticsStore {
     synchronized RuntimeDiagnostics.CloudErrorCode lastCloudErrorCode() { return lastCloudErrorCode; }
     synchronized RuntimeDiagnostics.ManifestCode lastManifestCode() { return lastManifestCode; }
     synchronized RuntimeDiagnostics.SceneCode lastSceneCode() { return lastSceneCode; }
+    synchronized RuntimeDiagnostics.WallCode lastWallCode() { return lastWallCode; }
+    synchronized String wallClockKind() { return wallClockKind; }
+    synchronized long wallGeneration() { return wallGeneration; }
+    synchronized int wallWindowCount() { return wallWindowCount; }
+    synchronized boolean wallAnchored() { return wallAnchored; }
+    synchronized boolean wallWaitArmed() { return wallWaitArmed; }
     /** Read historical startup observation without authorizing an ARM or a retry. */
     synchronized InstallationStatus lastStartupRestoreResult() { return lastStartupRestoreResult; }
 }
