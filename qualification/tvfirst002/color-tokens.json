@@ -1,0 +1,94 @@
+{
+  "background": {
+    "oklch": "0.985 0.006 95",
+    "srgb": "#FBFAF6"
+  },
+  "foreground": {
+    "oklch": "0.19 0.02 75",
+    "srgb": "#19130A"
+  },
+  "card": {
+    "oklch": "1 0 0",
+    "srgb": "#FFFFFF"
+  },
+  "card-foreground": {
+    "oklch": "0.19 0.02 75",
+    "srgb": "#19130A"
+  },
+  "popover": {
+    "oklch": "1 0 0",
+    "srgb": "#FFFFFF"
+  },
+  "popover-foreground": {
+    "oklch": "0.19 0.02 75",
+    "srgb": "#19130A"
+  },
+  "primary": {
+    "oklch": "0.45 0.13 132",
+    "srgb": "#386300"
+  },
+  "primary-foreground": {
+    "oklch": "0.985 0.01 105",
+    "srgb": "#FBFBF3"
+  },
+  "secondary": {
+    "oklch": "0.94 0.04 112",
+    "srgb": "#EBEED0"
+  },
+  "secondary-foreground": {
+    "oklch": "0.27 0.06 125",
+    "srgb": "#202B06"
+  },
+  "muted": {
+    "oklch": "0.955 0.009 95",
+    "srgb": "#F2F0E9"
+  },
+  "muted-foreground": {
+    "oklch": "0.49 0.025 75",
+    "srgb": "#695F51"
+  },
+  "accent": {
+    "oklch": "0.93 0.045 112",
+    "srgb": "#E8EBC9"
+  },
+  "accent-foreground": {
+    "oklch": "0.25 0.06 125",
+    "srgb": "#1B2602"
+  },
+  "border": {
+    "oklch": "0.89 0.012 90",
+    "srgb": "#DEDBD2"
+  },
+  "input": {
+    "oklch": "0.89 0.012 90",
+    "srgb": "#DEDBD2"
+  },
+  "ring": {
+    "oklch": "0.52 0.14 132",
+    "srgb": "#49780A"
+  },
+  "sidebar": {
+    "oklch": "0.97 0.012 100",
+    "srgb": "#F7F5EC"
+  },
+  "sidebar-foreground": {
+    "oklch": "0.22 0.025 75",
+    "srgb": "#21190D"
+  },
+  "sidebar-accent": {
+    "oklch": "0.91 0.04 115",
+    "srgb": "#E0E5C7"
+  },
+  "sidebar-accent-foreground": {
+    "oklch": "0.25 0.07 125",
+    "srgb": "#1A2700"
+  },
+  "sidebar-border": {
+    "oklch": "0.89 0.012 90",
+    "srgb": "#DEDBD2"
+  },
+  "public-action-border": {
+    "oklch": "0.64 0.03 95",
+    "srgb": "#928C78"
+  }
+}

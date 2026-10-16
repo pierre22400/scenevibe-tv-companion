@@ -46,10 +46,18 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    testOptions { unitTests.returnDefaultValues = true }
+    testOptions {
+        unitTests.returnDefaultValues = true
+        // Actual Android View/lifecycle qualification, without changing production dependencies.
+        unitTests.includeAndroidResources = true
+        // Historical HTTPS fixtures install a JVM-global URLStreamHandlerFactory.
+        // A fresh fork per class keeps real Android resource loading independent.
+        unitTests.all { forkEvery = 1 }
+    }
 }
 
 dependencies {
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.json:json:20240303"
+    testImplementation "org.robolectric:robolectric:4.14.1"
 }

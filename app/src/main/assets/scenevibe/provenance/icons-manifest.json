@@ -1,0 +1,77 @@
+[
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/sparkles.svg",
+    "sourceSha256": "f5499f33f09d7158151e9bd2ec0faf79ff8fb57292f84fdd7286d96d0f0424d8",
+    "resource": "res/drawable/tv_icon_sparkles.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/house.svg",
+    "sourceSha256": "28216c479005731ef5e382e7d8627eda2b129b019eb1f3d9de9f5915576d448e",
+    "resource": "res/drawable/tv_icon_house.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/bookmark.svg",
+    "sourceSha256": "1d5023760db81f21c3b5a63f012ef540acc01932731c733e4645012a876d39f4",
+    "resource": "res/drawable/tv_icon_bookmark.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/settings.svg",
+    "sourceSha256": "0ae27fd0f81999229e3127ac96c5b32edfea448e291d509e76212b917551d66b",
+    "resource": "res/drawable/tv_icon_settings.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/activity.svg",
+    "sourceSha256": "050fbcda05e13c2051cf857683645e19c6b180861ef4d0cc28a6f09ba1ea1666",
+    "resource": "res/drawable/tv_icon_activity.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/check.svg",
+    "sourceSha256": "7f33acc9a77a61659531044525fc008edebe215bf4dcf1c789c8674ad3277db0",
+    "resource": "res/drawable/tv_icon_check.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/circle-dashed.svg",
+    "sourceSha256": "9b964be491a821be8ffd714baf3b94ca2d70af789bddcfc1bda6bde250d89187",
+    "resource": "res/drawable/tv_icon_circle_dashed.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/info.svg",
+    "sourceSha256": "bc977a64eb96f3e9c1041ffd09a3fceb70e3e65c02b571f76064062ed31f3cb9",
+    "resource": "res/drawable/tv_icon_info.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/layers.svg",
+    "sourceSha256": "ce16d0a955e3581cda17f6b2fd5c5bc2034b405f9cecc31c8ebb8495b4afc1bb",
+    "resource": "res/drawable/tv_icon_layers.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/monitor.svg",
+    "sourceSha256": "d1a443233345724859de8e4fb48968ba91e885e12ddbd710701548bd91b39428",
+    "resource": "res/drawable/tv_icon_monitor.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/arrow-left.svg",
+    "sourceSha256": "c5f4b88076108eb1a0d95336e1aa7e7bb1419a3a92af96f6247d88cd3456f933",
+    "resource": "res/drawable/tv_icon_arrow_left.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/rotate-ccw.svg",
+    "sourceSha256": "622685386ab4017eabfde01cd74550a20b1924df233b353f73b6b155371f2afd",
+    "resource": "res/drawable/tv_icon_rotate_ccw.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/x.svg",
+    "sourceSha256": "4a9cdab38fbb96162e7dace28e33f4ca0e49d8963a6162abc3d4691b7d675117",
+    "resource": "res/drawable/tv_icon_x.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/refresh-cw.svg",
+    "sourceSha256": "2e10dd403c85a24f163d59fc6151aa21147fe9402e1305dfc8979208caee8944",
+    "resource": "res/drawable/tv_icon_refresh_cw.xml"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/circle-off.svg",
+    "sourceSha256": "0d79af6d7b882eeb2d84c4fad7c965a4d20a043f7d2eeb42b16cd74ef0381c54",
+    "resource": "res/drawable/tv_icon_circle_off.xml"
+  }
+]

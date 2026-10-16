@@ -1,0 +1,83 @@
+[
+  {
+    "id": "columbo-eaux-troubles",
+    "title": "Columbo — Eaux troubles",
+    "description": "Un regard de qualification : des commentaires TEXT à lire pendant l’épisode, dans votre application de streaming habituelle.",
+    "longDescription": "Cette Track de qualification sert à vérifier le parcours de sélection sur télévision. Elle propose des commentaires écrits, synchronisés avec la lecture de l’épisode une fois la Track préparée sur cette TV. Le contenu présenté ici est un exemple de test.",
+    "filmTitle": "Columbo · épisode « Eaux troubles »",
+    "edition": "Édition de qualification · version française (simulée)",
+    "language": "Français",
+    "format": "Video / TEXT",
+    "illustration": "/public-editorial/cinema-noir.svg",
+    "illustrationAlt": "Ombres et indices : illustration éditoriale originale SceneVibe",
+    "visualLabel": "Qualification simulée",
+    "channel": null,
+    "unavailableReason": "Cette Track a été retirée : elle ne peut plus être préparée sur cette TV.",
+    "origin": "Scénario de test · non publié dans le Cloud",
+    "revision": "Révision simulée 001",
+    "preview": [
+      {
+        "id": "ouverture",
+        "label": "Poser le regard",
+        "position": "Repère illustratif · début de l’œuvre",
+        "title": "Avant la première réplique",
+        "context": "Texte illustratif fictif",
+        "text": "Prenez une minute pour observer la pièce avant que quiconque ne parle. Le décor dit déjà ce que les personnages hésitent à dire : ce qui est rangé, ce qui est déplacé, ce qui traîne un peu trop au premier plan."
+      },
+      {
+        "id": "detail",
+        "label": "Un détail à garder en tête",
+        "position": "Repère illustratif · milieu de l’œuvre",
+        "title": "Le détail qui ne cadre pas",
+        "context": "Texte illustratif fictif",
+        "text": "Un objet banal revient dans le cadre, toujours à la même place. Rien ne le souligne, et c’est précisément ce qui invite à le remarquer : il suffit parfois qu’un élément reste calme pour qu’il devienne suspect."
+      },
+      {
+        "id": "echange",
+        "label": "Écouter les silences",
+        "position": "Repère illustratif · fin de l’œuvre",
+        "title": "Quand la conversation se resserre",
+        "context": "Texte illustratif fictif",
+        "text": "Observez la manière dont l’échange se resserre. Les silences comptent autant que les mots : la mise en scène laisse au regard le temps de faire son travail."
+      }
+    ]
+  },
+  {
+    "id": "demo-contrechamp",
+    "title": "Contrechamp — le regard de l’autre",
+    "description": "Exemple fictif : un regard éditorial qui s’attarde sur ce que la caméra ne montre pas, pour illustrer une Track retirée.",
+    "longDescription": "Track de démonstration, entièrement fictive. Elle sert à présenter l’état « indisponible » et ses explications, ainsi qu’une Track qui reviendrait disponible depuis le panneau concepteur.",
+    "filmTitle": "Film fictif · « Les Heures grises »",
+    "edition": "Édition de démonstration · version originale sous-titrée",
+    "language": "Français",
+    "format": "Video / TEXT",
+    "illustration": "/public-editorial/contrechamp.svg",
+    "illustrationAlt": "Contrechamp : illustration éditoriale originale SceneVibe",
+    "visualLabel": "Track fictive",
+    "channel": {
+      "title": "Atelier Contrechamp (fictif)",
+      "initials": "AC"
+    },
+    "unavailableReason": "Cette Track a été retirée par son auteur. Elle reste visible à titre d’exemple, mais sa sélection est impossible.",
+    "origin": "Exemple fictif de démonstration",
+    "revision": "Révision fictive 001",
+    "preview": [
+      {
+        "id": "champ",
+        "label": "Ce que le cadre laisse hors champ",
+        "position": "Repère illustratif · début de l’œuvre",
+        "title": "Le hors-champ",
+        "context": "Texte illustratif fictif",
+        "text": "Une conversation se joue d’abord sur un visage, puis sur l’absence de l’autre. Le montage choisit ce qu’on voit et ce qu’on devine ; c’est dans cet écart que se loge le regard."
+      },
+      {
+        "id": "retour",
+        "label": "Le retour du plan",
+        "position": "Repère illustratif · milieu de l’œuvre",
+        "title": "Revenir au même endroit",
+        "context": "Texte illustratif fictif",
+        "text": "Le même cadre revient, légèrement décalé. Ce léger décalage suffit à changer le sens de ce qu’on regarde, sans qu’aucun mot ne le précise."
+      }
+    ]
+  }
+]

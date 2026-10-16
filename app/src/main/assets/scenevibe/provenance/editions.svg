@@ -1,0 +1,28 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 640 360"
+  role="img"
+  aria-labelledby="title"
+>
+  <!-- Illustration originale SceneVibe I2 ; aucun visuel d’œuvre tierce. -->
+  <title id="title">Deux éditions, deux identités</title>
+  <rect width="640" height="360" fill="#e9e5ee" />
+  <circle cx="610" cy="-20" r="240" fill="#dcd8e5" />
+  <g transform="rotate(-10 320 170)">
+    <rect x="63" y="74" width="500" height="140" rx="6" fill="#455b39" />
+    <rect x="81" y="97" width="136" height="94" rx="3" fill="#cfdbb9" />
+    <rect x="241" y="97" width="136" height="94" rx="3" fill="#d8b78b" />
+    <rect x="401" y="97" width="136" height="94" rx="3" fill="#f9f5e8" />
+    <path d="M82 83 H545 M82 203 H545" stroke="#e5e9da" stroke-width="6" stroke-dasharray="7 13" />
+    <circle cx="300" cy="140" r="22" fill="#9b7c56" />
+    <path d="M458 170 L483 123 L508 170 Z" fill="#839e6c" />
+  </g>
+  <g transform="rotate(7 320 253)">
+    <rect x="103" y="193" width="462" height="106" rx="6" fill="#fffaf0" stroke="#8c8099" stroke-width="3" />
+    <rect x="120" y="207" width="117" height="77" rx="3" fill="#dad0df" />
+    <rect x="257" y="207" width="117" height="77" rx="3" fill="#c3cfae" />
+    <rect x="394" y="207" width="149" height="77" rx="3" fill="#e0bb8e" />
+    <path d="M267 230 L350 265 M424 265 L512 230" stroke="#5c734c" stroke-width="3" />
+  </g>
+  <path d="M49 280 L49 312 L81 312 M570 46 L599 46 L599 77" stroke="#455b39" stroke-width="3" fill="none" />
+</svg>

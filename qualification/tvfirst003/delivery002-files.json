@@ -1,0 +1,428 @@
+{
+  "base": "17cbe36ae99ac7f48aaf861e0d1feac702a9e521",
+  "cloudReference": "d062ba4c34a00729bfe2512723ae0c356f8ecc60",
+  "modifiedTrackedFiles": 2,
+  "addedFiles": 58,
+  "files": [
+    {
+      "path": "app/build.gradle",
+      "status": "modified",
+      "category": "qualification / test-only build changes",
+      "bytes": 2410,
+      "sha256": "eec77b8fb733426d7e9a0e1932545cf5402da867876fb25da27196ecf88c9df7"
+    },
+    {
+      "path": "app/src/debug/assets/tvfirst002/demo-offers.json",
+      "status": "added",
+      "category": "development provider only",
+      "bytes": 4641,
+      "sha256": "e17403bacab1ae8d489b1ff6d26dba25f2bd07c85d81c0d2d1ea093ae0674583"
+    },
+    {
+      "path": "app/src/debug/java/com/scenevibe/tvcompanionpoc/presentation/TvSourceFactory.java",
+      "status": "added",
+      "category": "development provider only",
+      "bytes": 7133,
+      "sha256": "c3a00baecece81193875a5700d12983e8390447e2a4e8070aac1316272ae9726"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/assets-manifest.json",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 3331,
+      "sha256": "dea401709c386701c47fbba2f46beba0898f29f26af438d3db03596248f0a5c3"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/cinema-noir.svg",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 777,
+      "sha256": "aaeb16da97fc3c4fdaa4a58bc15177f7e71ebcdaa61b9f6377903037edfe67e6"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/contrechamp.svg",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 1300,
+      "sha256": "8f806f97faa4884f5bc3e3717f6fecccaae1366560389ca9a59fc37745269a0b"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/detail.svg",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 1503,
+      "sha256": "161d054d0449d53dd1353443105e18075da3960589217a3b5ed249e081f80b48"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/editions.svg",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 1490,
+      "sha256": "21994f7f4572b3f0fb4ad21fb303b31246e3302c83d238b1b246e2a9ea18d6f0"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/icons-manifest.json",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 3604,
+      "sha256": "466ee2a2bb772c172455c1fc227c57ba88fb9858dc3918b040f5237555ebfcdb"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/inter-OFL.txt",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 4377,
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/lucide-LICENSE.txt",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 3208,
+      "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/mise-en-scene.svg",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 924,
+      "sha256": "9b7c31194506f00d3a16edf0726a89552bfebb9427d52b2c87583da925b42278"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/space-columbo.svg",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 1768,
+      "sha256": "140f91bf9c03589c07d0ab80bffec456abc27c1adff0ae16b98e37b7445eb30e"
+    },
+    {
+      "path": "app/src/main/assets/scenevibe/provenance/spacegrotesk-OFL.txt",
+      "status": "added",
+      "category": "provenance / licenses / original SVG",
+      "bytes": 4495,
+      "sha256": "564ce565c371c5e5bbf286006565a7c9aa55a9f56e7ca58d56e05d649dd61a72"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java",
+      "status": "modified",
+      "category": "existing activity / presentation bridge",
+      "bytes": 19191,
+      "sha256": "3e55d554bfea28633157bc3079a373f2730a28e6eaf082a600e38798126b9fe7"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvActionRow.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 1611,
+      "sha256": "a74f335401cff783c101eb2dcc329e4383fefc7b5b675b477db3b9a9a8247ca4"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvFocusSearch.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 3610,
+      "sha256": "965b840649fdbff9748f280b426b2499f322dcefa6bb857917abbad7c289ba59"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvNavigation.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 3853,
+      "sha256": "d2cb7beeb4aaee84deaf524c5e0e693e6ad806c500622e475958518088f44c55"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvOffer.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 2174,
+      "sha256": "b04bbca4862efb667526c1993863a201e7573ff2941c5a4dc3cbf71a8272fb22"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvPreparation.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 4633,
+      "sha256": "e235e45c408cbf3cc456cd85d4acea099605739af172b26631ed8e3913bcb66c"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvPresentationSource.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 1534,
+      "sha256": "35ce5fab80bd4e44b828bdb608cb599048329c4e18505d7e788c19d078dcf32b"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvShellController.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 56798,
+      "sha256": "7edd5fc4a27a71107a04eb714b492ea558e67426c429a03817747fad2ee0dcba"
+    },
+    {
+      "path": "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvViews.java",
+      "status": "added",
+      "category": "native presentation",
+      "bytes": 9576,
+      "sha256": "64138f807e59628825cd7649f93dde21ecb8623856cf803eef36c0cf6446c722"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/editorial_cinema_noir.png",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 57160,
+      "sha256": "42593a44e1b0ef5cf64328cf38aecdd2d89d8dc5de70a26f620bb6df4dcd31ae"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/editorial_contrechamp.png",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 20532,
+      "sha256": "6a4b77e1f8a6a5d0f164af82fdbd4bddd9294c100f966ce38bf520d1adec0dfa"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/editorial_detail.png",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 45595,
+      "sha256": "dbd08c97e3a72166a55f3a29d8b648bb7dec80cc9d2a3dadd6825d6daacb1da8"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/editorial_editions.png",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 57431,
+      "sha256": "c9123039212d427546edd93bbf16ee49d1d0e9d9da6e69729120b358fec399e7"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/editorial_mise_en_scene.png",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 23119,
+      "sha256": "dc5297ea213bb4d762f5363d6c69bd681639ff6a2f5f545f2290b9018f901d52"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/editorial_space_columbo.png",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 38771,
+      "sha256": "9bc053a1d935b3dac335a352a2cfb96bdecc012a29858f4be0b19e033683dce2"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_activity.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 510,
+      "sha256": "d8529e31cf5827f4ef2d87368a29cfad8f420b641234cc82dda4fae2418f4037"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_arrow_left.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 585,
+      "sha256": "30dbf38236d588618220b8b0fb48f3b33996d87ea67e0e0f47fcbd602607334d"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_bookmark.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 506,
+      "sha256": "5878351d42909dd0ec557876aa34db8bb9108492e61d53fa20149e0a6c6f7473"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_check.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 403,
+      "sha256": "e4ed21e62a15329989455a9959d7272dac5f01149703f0cacdee68e1e803fba1"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_circle_dashed.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 1867,
+      "sha256": "7d42b9701be1eb63b93644dbbc0e5a4060a7ef92adace0daaba2d5e616f6e2f7"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_circle_off.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 815,
+      "sha256": "cbc0ae03b5c72c78febe243744afd8f43dd3d69d61aefbb1a7305d1e0a7a443d"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_house.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 706,
+      "sha256": "21513196727a30ac13d402219778cffd1f6e95db16d876abdf207dd0bba2b4d3"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_info.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 812,
+      "sha256": "c1c28f0726b852394cf1ee428c40a2bf9491056730c6829db998478153540ad2"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_layers.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 992,
+      "sha256": "40bfbed9b7ec57e11b34a2d5f7ffec43cb9c75dd0a59393111848e4ec45669d4"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_monitor.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 786,
+      "sha256": "d9af126e89b34eeaed04a0bbeaabc3ee63373f11f87b4542b2e22bcd96ad7f22"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_refresh_cw.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 1033,
+      "sha256": "60a198a50d5b38efadb1e7833b274c152829c88eeb09020132aff4ddfdb894c8"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_rotate_ccw.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 620,
+      "sha256": "f7cbcf92bb4594b4e3301f541130f2ae2294b23d18ea67a83b6cac6fc450308b"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_settings.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 940,
+      "sha256": "567b205ce6301f581bc7bab4a030e1d3ca115edb572905c166f1f3a510599d57"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_sparkles.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 1240,
+      "sha256": "670a3ad8ae8df4692f7e610f2e30e8bbb3fecce29023a162a764ac731d4b4159"
+    },
+    {
+      "path": "app/src/main/res/drawable/tv_icon_x.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 583,
+      "sha256": "37f7f4c9982160b808bd04f3a4e39327288678089ed93e74348e5593b91f73e0"
+    },
+    {
+      "path": "app/src/main/res/font/scenevibe_inter.ttf",
+      "status": "added",
+      "category": "licensed font resource",
+      "bytes": 876576,
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "path": "app/src/main/res/font/scenevibe_spacegrotesk.ttf",
+      "status": "added",
+      "category": "licensed font resource",
+      "bytes": 136676,
+      "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72"
+    },
+    {
+      "path": "app/src/main/res/values/scenevibe_colors.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 1467,
+      "sha256": "6c9bf7b9774f278db970e53c5859cadafca3cf9673bfa9affbf1719dadb5327c"
+    },
+    {
+      "path": "app/src/main/res/values/scenevibe_dimens.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 1117,
+      "sha256": "e89d469c55aabd92c05b28a569ba31f5727f3f2dc7de1dcd660f1aa59320e819"
+    },
+    {
+      "path": "app/src/main/res/values/scenevibe_strings.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 11393,
+      "sha256": "34d41d6b1b2a4fb712f35a0e7a3838710037f30ef2d7a8aebb23ce3703384845"
+    },
+    {
+      "path": "app/src/main/res/values/scenevibe_styles.xml",
+      "status": "added",
+      "category": "native graphic / theme resource",
+      "bytes": 625,
+      "sha256": "ffd6a29a9499bc7b5cb017bb0dcb1419fc7171dbba49a45129ac2ed24025c7ce"
+    },
+    {
+      "path": "app/src/release/java/com/scenevibe/tvcompanionpoc/presentation/TvSourceFactory.java",
+      "status": "added",
+      "category": "release unavailable provider",
+      "bytes": 2001,
+      "sha256": "320fddb57c61d8b67c59e3358f457453f7309e4dd8493a18f1ab39e47a23a769"
+    },
+    {
+      "path": "app/src/test/java/com/scenevibe/tvcompanionpoc/presentation/TvFocusSearchTest.java",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 2643,
+      "sha256": "c0527d6f3867127c3e703b37f2401d09f6fe6187b965832c80294e8591cf5177"
+    },
+    {
+      "path": "app/src/test/java/com/scenevibe/tvcompanionpoc/presentation/TvNavigationTest.java",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 3810,
+      "sha256": "3abb998c5ccee9e9be8b99ca088738148b9162d3b7610c532b51a49a27fa1da8"
+    },
+    {
+      "path": "app/src/test/java/com/scenevibe/tvcompanionpoc/presentation/TvPreparationTest.java",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 4694,
+      "sha256": "7439eecbe21f092a0dc3fe4fc1a1e84f7eb3c0a55ce3cf5c285e7d030f396d80"
+    },
+    {
+      "path": "app/src/testDebug/java/com/scenevibe/tvcompanionpoc/presentation/TvNativeViewsTest.java",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 15755,
+      "sha256": "1e9a4de024d04bdb911001f65be6261720124a930b0919de5129d18e1c79d903"
+    },
+    {
+      "path": "app/src/testRelease/java/com/scenevibe/tvcompanionpoc/presentation/TvReleaseSourceTest.java",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 1129,
+      "sha256": "ebb456af7fd66f2731b8f5ca9fbd3ffe3112d9dc028685d1adaa3289bae1ff47"
+    },
+    {
+      "path": "qualification/tvfirst002/README.md",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 5944,
+      "sha256": "6b4347582398e13916a4b0fb46d4468b73cdd942818c1ab5e290a4e621bc18d8"
+    },
+    {
+      "path": "qualification/tvfirst002/color-tokens.json",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 1757,
+      "sha256": "8d2e0263f9cb7407281e21d0e10df379a35fb0588cb6e269eee84be3f0e1fcb0"
+    },
+    {
+      "path": "qualification/tvfirst002/run_historical_retention.py",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 1599,
+      "sha256": "689b141b19dddd5de84ce2cbdf553d3d41badbd030d93e205be28f8dfb8f3fb2"
+    },
+    {
+      "path": "qualification/tvfirst002/verify_delivery.py",
+      "status": "added",
+      "category": "qualification",
+      "bytes": 8577,
+      "sha256": "4f2ed2b281fd0670b931b498e0c48fd66d3278da45c6ab5f076e4fb9a4e49348"
+    }
+  ]
+}

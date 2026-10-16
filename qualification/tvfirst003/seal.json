@@ -1,0 +1,15 @@
+{
+  "base": "17cbe36ae99ac7f48aaf861e0d1feac702a9e521",
+  "ciModifiedBaseFiles": [
+    ".github/workflows/android-debug.yml"
+  ],
+  "files": {
+    ".github/workflows/android-debug.yml": "30e1a34906efc281834e55908ca3a26b14ae2b10d849b6507b71543bdcfad964",
+    ".github/workflows/android-tvfirst003.yml": "1423da1a7cd6fa18986aa576010822af77c57c317621640fc6a8566bc24f151a",
+    "qualification/tvfirst003/README.md": "882222ce44749a08128e45bb3cb79440ada1636ce50a9ee2295fcfa23b89a8e1",
+    "qualification/tvfirst003/delivery002-files.json": "5035f6f5b2ed4ef6a7373e555d069b089039fdb78d5d6bd9a3bcf7c7258e53ee",
+    "qualification/tvfirst003/gate.py": "47b770114cdab8822a63f392346268b03f6602bed935063c92f97de32c6024ab",
+    "qualification/tvfirst003/run.py": "13cea6c87f7a3b73b1e6ffe5d818467752ac042e5944019a39fb601f316365c0",
+    "qualification/tvfirst003/test_gate.py": "0d126786b3cf72fb10c03ea0a4c31899c579e25f82239fcfd1dbc0521e232495"
+  }
+}

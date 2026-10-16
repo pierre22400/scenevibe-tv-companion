@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accepted v0 tokens, OKLCH → sRGB. See qualification/tvfirst002/color-tokens.json. -->
+<resources>
+    <color name="scenevibe_background">#FBFAF6</color>
+    <color name="scenevibe_foreground">#19130A</color>
+    <color name="scenevibe_card">#FFFFFF</color>
+    <color name="scenevibe_card_foreground">#19130A</color>
+    <color name="scenevibe_popover">#FFFFFF</color>
+    <color name="scenevibe_popover_foreground">#19130A</color>
+    <color name="scenevibe_primary">#386300</color>
+    <color name="scenevibe_primary_foreground">#FBFBF3</color>
+    <color name="scenevibe_secondary">#EBEED0</color>
+    <color name="scenevibe_secondary_foreground">#202B06</color>
+    <color name="scenevibe_muted">#F2F0E9</color>
+    <color name="scenevibe_muted_foreground">#695F51</color>
+    <color name="scenevibe_accent">#E8EBC9</color>
+    <color name="scenevibe_accent_foreground">#1B2602</color>
+    <color name="scenevibe_border">#DEDBD2</color>
+    <color name="scenevibe_input">#DEDBD2</color>
+    <color name="scenevibe_ring">#49780A</color>
+    <color name="scenevibe_sidebar">#F7F5EC</color>
+    <color name="scenevibe_sidebar_foreground">#21190D</color>
+    <color name="scenevibe_sidebar_accent">#E0E5C7</color>
+    <color name="scenevibe_sidebar_accent_foreground">#1A2700</color>
+    <color name="scenevibe_sidebar_border">#DEDBD2</color>
+    <color name="scenevibe_public_action_border">#928C78</color>
+</resources>

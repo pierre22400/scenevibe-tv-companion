@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reference dimensions / 2; 48dp minimum button target is the accessibility adaptation. -->
+<resources>
+    <dimen name="tv_safe_x">48dp</dimen>
+    <dimen name="tv_safe_y">27dp</dimen>
+    <dimen name="tv_header_height">60dp</dimen>
+    <dimen name="tv_sidebar_width">208dp</dimen>
+    <dimen name="tv_sidebar_end">16dp</dimen>
+    <dimen name="tv_content_start">28dp</dimen>
+    <dimen name="tv_content_top">20dp</dimen>
+    <dimen name="tv_page_gap">14dp</dimen>
+    <dimen name="tv_nav_height">48dp</dimen>
+    <dimen name="tv_nav_gap">6dp</dimen>
+    <dimen name="tv_button_min_height">48dp</dimen>
+    <dimen name="tv_button_radius">8dp</dimen>
+    <dimen name="tv_card_radius">12dp</dimen>
+    <dimen name="tv_state_radius">10dp</dimen>
+    <dimen name="tv_side_column">280dp</dimen>
+    <dimen name="tv_column_gap">24dp</dimen>
+    <dimen name="tv_focus_width">3dp</dimen>
+    <dimen name="tv_focus_offset">3dp</dimen>
+    <dimen name="tv_image_width">320dp</dimen>
+    <dimen name="tv_step_height">52dp</dimen>
+    <dimen name="tv_step_gap">7dp</dimen>
+</resources>

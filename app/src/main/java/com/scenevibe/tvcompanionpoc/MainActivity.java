@@ -2,6 +2,7 @@ package com.scenevibe.tvcompanionpoc;
 
 import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
+import com.scenevibe.tvcompanionpoc.presentation.TvShellController;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -13,6 +14,8 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -34,6 +37,7 @@ public final class MainActivity extends Activity {
     private TextView pairingStatus;
     private TextView cloudStatus;
     private Button autostartButton;
+    private TvShellController presentation;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
      * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
@@ -46,6 +50,7 @@ public final class MainActivity extends Activity {
                 refreshPairing();
             }
             refreshCloud();
+            if (presentation != null) presentation.refreshRuntime();
             handler.postDelayed(this, 1000L);
         }
     };
@@ -54,7 +59,21 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        LinearLayout controls = createRuntimeControls();
+        presentation = new TvShellController(this, controls, this::presentationStatus,
+                this::openDiagnostics, savedInstanceState);
+        setContentView(presentation.view());
+    }
 
+    /**
+     * Preserve the existing actual control tree and every listener. The native shell hosts
+     * this tree in Settings; merely navigating to it never starts or resets the service.
+     */
+    private LinearLayout createRuntimeControls() {
         LinearLayout controls = new LinearLayout(this);
         controls.setOrientation(LinearLayout.VERTICAL);
         controls.setGravity(Gravity.CENTER);
@@ -134,10 +153,29 @@ public final class MainActivity extends Activity {
         instruction.setPadding(0, dp(24), 0, 0);
         controls.addView(instruction);
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.addView(controls);
-        setContentView(scroll);
+        return controls;
+    }
+
+    /** Read only bounded local observations; no pairing, Cloud activation or ACK is requested. */
+    private TvShellController.RuntimeStatus presentationStatus() {
+        RuntimeDiagnostics status = RuntimeDiagnostics.capture(this, DiagnosticsStore.INSTANCE);
+        android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+        return new TvShellController.RuntimeStatus(cloudStatus.getText().toString(),
+                permissionStatus.getText() + "\n" + mediaAccessStatus.getText(),
+                "Overlay service: " + (status.serviceRunning ? "running" : "stopped"),
+                getString(R.string.tv_version_device, android.os.Build.MODEL,
+                        metrics.widthPixels, metrics.heightPixels));
+    }
+
+    /** Save only UI route/focus/scroll memory; all runtime persistence stays service-owned. */
+    @Override protected void onSaveInstanceState(Bundle outState) {
+        if (presentation != null) presentation.save(outState);
+        super.onSaveInstanceState(outState);
+    }
+
+    /** Pop one native presentation visit, then let Android leave the launcher root normally. */
+    @Override public void onBackPressed() {
+        if (presentation == null || !presentation.back()) super.onBackPressed();
     }
 
     /** Refresh authorization after returning from Android settings. */
@@ -152,9 +190,12 @@ public final class MainActivity extends Activity {
                 : "Media access: Not granted");
         handler.removeCallbacks(statusRefresh);
         statusRefresh.run();
+        if (presentation != null) presentation.resume();
     }
 
+    /** Pause only UI refresh and remember focus; the foreground service keeps its lifetime. */
     @Override protected void onPause() {
+        if (presentation != null) presentation.remember();
         handler.removeCallbacks(statusRefresh);
         super.onPause();
     }

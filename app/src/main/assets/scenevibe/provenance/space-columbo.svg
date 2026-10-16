@@ -1,0 +1,31 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1200 260"
+  role="img"
+  aria-labelledby="title"
+>
+  <!-- Illustration originale SceneVibe I2 ; aucun visuel d’œuvre tierce. -->
+  <title id="title">Des regards reliés par un fil éditorial</title>
+  <rect width="1200" height="260" fill="#e9ead9" />
+  <path d="M0 227 L1200 144 L1200 260 L0 260 Z" fill="#d5dec4" />
+  <path d="M94 161 L320 82 L537 183 L797 99 L1097 170" stroke="#496c35" stroke-width="3" stroke-dasharray="7 8" fill="none" />
+  <g transform="rotate(-9 310 120)">
+    <rect x="224" y="46" width="163" height="175" rx="4" fill="#fdf9ef" />
+    <rect x="242" y="72" width="124" height="85" rx="3" fill="#98ad81" />
+    <circle cx="303" cy="114" r="22" fill="#f2e9d5" />
+    <path d="M242 178 H334 M242 194 H305" stroke="#b8c2a4" stroke-width="4" />
+  </g>
+  <g transform="rotate(5 574 150)">
+    <rect x="468" y="77" width="192" height="142" rx="5" fill="#385a2f" />
+    <path d="M488 95 H537 M488 95 V142 M638 201 H589 M638 201 V153" stroke="#d4dfbf" stroke-width="3" fill="none" />
+    <rect x="538" y="117" width="57" height="59" rx="3" fill="#b29464" />
+    <circle cx="573" cy="137" r="10" fill="#f2e9d5" />
+  </g>
+  <rect x="746" y="43" width="159" height="176" rx="5" fill="#fdf9ef" transform="rotate(10 746 43)" />
+  <path d="M775 83 L854 94 M770 109 L850 120 M765 135 L822 143" stroke="#b8c2a4" stroke-width="4" />
+  <circle cx="975" cy="135" r="63" fill="#e6c79c" stroke="#496c35" stroke-width="7" />
+  <circle cx="975" cy="135" r="40" fill="#fdf9ef" />
+  <path d="M1022 181 L1071 224" stroke="#496c35" stroke-width="12" stroke-linecap="round" />
+  <path d="M1092 57 H1138 M1115 34 V80" stroke="#496c35" stroke-width="2" />
+  <circle cx="179" cy="184" r="7" fill="#b29464" />
+</svg>

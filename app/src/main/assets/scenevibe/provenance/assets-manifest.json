@@ -1,0 +1,64 @@
+[
+  {
+    "source": "scenevibe-tv-handoff.zip/public/public-editorial/cinema-noir.svg",
+    "sourceSha256": "aaeb16da97fc3c4fdaa4a58bc15177f7e71ebcdaa61b9f6377903037edfe67e6",
+    "resource": "res/drawable-nodpi/editorial_cinema_noir.png",
+    "sha256": "42593a44e1b0ef5cf64328cf38aecdd2d89d8dc5de70a26f620bb6df4dcd31ae",
+    "conversion": "CairoSVG raster 1280 × 720, sRGB, no network"
+  },
+  {
+    "source": "scenevibe-tv-handoff.zip/public/public-editorial/contrechamp.svg",
+    "sourceSha256": "8f806f97faa4884f5bc3e3717f6fecccaae1366560389ca9a59fc37745269a0b",
+    "resource": "res/drawable-nodpi/editorial_contrechamp.png",
+    "sha256": "6a4b77e1f8a6a5d0f164af82fdbd4bddd9294c100f966ce38bf520d1adec0dfa",
+    "conversion": "CairoSVG raster 1280 × 720, sRGB, no network"
+  },
+  {
+    "source": "scenevibe-tv-handoff.zip/public/public-editorial/detail.svg",
+    "sourceSha256": "161d054d0449d53dd1353443105e18075da3960589217a3b5ed249e081f80b48",
+    "resource": "res/drawable-nodpi/editorial_detail.png",
+    "sha256": "dbd08c97e3a72166a55f3a29d8b648bb7dec80cc9d2a3dadd6825d6daacb1da8",
+    "conversion": "CairoSVG raster 1280 × 720, sRGB, no network"
+  },
+  {
+    "source": "scenevibe-tv-handoff.zip/public/public-editorial/editions.svg",
+    "sourceSha256": "21994f7f4572b3f0fb4ad21fb303b31246e3302c83d238b1b246e2a9ea18d6f0",
+    "resource": "res/drawable-nodpi/editorial_editions.png",
+    "sha256": "c9123039212d427546edd93bbf16ee49d1d0e9d9da6e69729120b358fec399e7",
+    "conversion": "CairoSVG raster 1280 × 720, sRGB, no network"
+  },
+  {
+    "source": "scenevibe-tv-handoff.zip/public/public-editorial/mise-en-scene.svg",
+    "sourceSha256": "9b7c31194506f00d3a16edf0726a89552bfebb9427d52b2c87583da925b42278",
+    "resource": "res/drawable-nodpi/editorial_mise_en_scene.png",
+    "sha256": "dc5297ea213bb4d762f5363d6c69bd681639ff6a2f5f545f2290b9018f901d52",
+    "conversion": "CairoSVG raster 1280 × 720, sRGB, no network"
+  },
+  {
+    "source": "scenevibe-tv-handoff.zip/public/public-editorial/space-columbo.svg",
+    "sourceSha256": "140f91bf9c03589c07d0ab80bffec456abc27c1adff0ae16b98e37b7445eb30e",
+    "resource": "res/drawable-nodpi/editorial_space_columbo.png",
+    "sha256": "9bc053a1d935b3dac335a352a2cfb96bdecc012a29858f4be0b19e033683dce2",
+    "conversion": "CairoSVG raster 1280 × 720, sRGB, no network"
+  },
+  {
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf",
+    "resource": "res/font/scenevibe_spacegrotesk.ttf",
+    "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72"
+  },
+  {
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf",
+    "resource": "res/font/scenevibe_inter.ttf",
+    "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+  },
+  {
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/OFL.txt",
+    "resource": "assets/scenevibe/provenance/spacegrotesk-OFL.txt",
+    "sha256": "564ce565c371c5e5bbf286006565a7c9aa55a9f56e7ca58d56e05d649dd61a72"
+  },
+  {
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/OFL.txt",
+    "resource": "assets/scenevibe/provenance/inter-OFL.txt",
+    "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+  }
+]
