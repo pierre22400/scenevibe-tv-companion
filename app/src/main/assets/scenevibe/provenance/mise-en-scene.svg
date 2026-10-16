@@ -1,0 +1,18 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 640 360"
+  role="img"
+  aria-labelledby="title"
+>
+  <!-- Illustration originale SceneVibe I2 ; aucun visuel d’œuvre tierce. -->
+  <title id="title">L’espace, la lumière, le cadre</title>
+  <rect width="640" height="360" fill="#e8e2d0" />
+  <path d="M76 0 L293 294 L0 294 Z" fill="#d2d8b7" />
+  <path d="M538 0 L640 290 L290 290 Z" fill="#f9f2df" />
+  <path d="M31 310 H610 M320 85 V330" stroke="#9dad8b" stroke-width="2" stroke-dasharray="6 8" />
+  <rect x="142" y="87" width="361" height="180" rx="6" fill="none" stroke="#436436" stroke-width="5" />
+  <path d="M162 107 H201 M162 107 V147 M483 247 H444 M483 247 V207" stroke="#436436" stroke-width="3" />
+  <rect x="194" y="154" width="74" height="113" rx="3" fill="#849f72" />
+  <rect x="385" y="203" width="77" height="64" rx="3" fill="#c29a68" />
+  <circle cx="380" cy="135" r="37" fill="#d3b386" />
+</svg>

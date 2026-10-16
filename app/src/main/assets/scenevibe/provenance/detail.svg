@@ -1,0 +1,25 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 640 360"
+  role="img"
+  aria-labelledby="title"
+>
+  <!-- Illustration originale SceneVibe I2 ; aucun visuel d’œuvre tierce. -->
+  <title id="title">Le détail change le regard</title>
+  <rect width="640" height="360" fill="#eae7d5" />
+  <circle cx="540" cy="40" r="165" fill="#dadfc4" />
+  <path d="M0 296 L640 222 L640 360 L0 360 Z" fill="#c5ceb0" />
+  <rect x="65" y="67" width="257" height="202" rx="7" fill="#496445" transform="rotate(-7 65 67)" />
+  <rect x="84" y="75" width="257" height="202" rx="7" fill="#fffaf0" transform="rotate(-7 84 75)" />
+  <path d="M110 115 L257 97 M107 140 L234 124 M104 165 L189 154" stroke="#b3baa2" stroke-width="4" />
+  <rect x="140" y="180" width="87" height="63" rx="3" fill="#ce9970" transform="rotate(-7 140 180)" />
+  <path d="M131 244 L252 229" stroke="#456333" stroke-width="5" />
+  <circle cx="395" cy="159" r="92" fill="#f9f5e9" stroke="#365529" stroke-width="12" />
+  <circle cx="395" cy="159" r="68" fill="#e0e7cf" />
+  <path d="M365 135 L423 135 L423 189 L365 189 Z" fill="#b08a53" />
+  <circle cx="404" cy="152" r="12" fill="#fffaf0" />
+  <path d="M338 159 L350 159 M440 159 L453 159 M395 102 L395 115 M395 205 L395 217" stroke="#456333" stroke-width="3" />
+  <path d="M460 226 L528 294" stroke="#365529" stroke-width="22" stroke-linecap="round" />
+  <circle cx="104" cy="44" r="5" fill="#b08a53" />
+  <path d="M546 151 L580 151 M563 134 L563 168" stroke="#456333" stroke-width="2" />
+</svg>

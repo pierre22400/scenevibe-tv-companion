@@ -18,7 +18,36 @@ permissions:
   contents: read
 
 jobs:
+  qualification-profile:
+    runs-on: ubuntu-latest
+    outputs:
+      profile: ${{ steps.profile.outputs.profile }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Authorize exact TV-FIRST content before routing
+        id: profile
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -e qualification/tvfirst003/seal.json ]; then
+            python3 -B qualification/tvfirst003/gate.py --expected-head "$EXPECTED_HEAD"
+            echo 'profile=tvfirst003' >> "$GITHUB_OUTPUT"
+          else
+            echo 'profile=historical' >> "$GITHUB_OUTPUT"
+          fi
+
+  tvfirst003:
+    needs: qualification-profile
+    if: needs.qualification-profile.outputs.profile == 'tvfirst003'
+    uses: ./.github/workflows/android-tvfirst003.yml
+
   debug:
+    needs: qualification-profile
+    if: needs.qualification-profile.outputs.profile == 'historical'
     runs-on: ubuntu-latest
     env:
       # `secrets` is not available in step-level `if:` expressions, so expose the

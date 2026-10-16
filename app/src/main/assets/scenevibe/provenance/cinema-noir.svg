@@ -1,0 +1,16 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 640 360"
+  role="img"
+  aria-labelledby="title"
+>
+  <!-- Illustration originale SceneVibe I2 ; aucun visuel d’œuvre tierce. -->
+  <title id="title">Ombres et indices</title>
+  <rect width="640" height="360" fill="#354632" />
+  <path d="M0 0 H110 L451 360 H311 Z M262 0 H348 L640 309 V360 Z" fill="#6d8361" />
+  <circle cx="403" cy="114" r="76" fill="#d6bd83" />
+  <path d="M245 0 L640 360 H498 L168 0 Z" fill="#263b28" />
+  <rect x="96" y="91" width="159" height="175" rx="5" fill="#e6e7d8" transform="rotate(-7 96 91)" />
+  <path d="M118 118 L223 105 M119 145 L207 134 M118 234 L187 227" stroke="#7b946e" stroke-width="4" />
+  <circle cx="472" cy="259" r="32" fill="none" stroke="#d6bd83" stroke-width="4" />
+</svg>
