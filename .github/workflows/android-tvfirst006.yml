@@ -1,0 +1,50 @@
+name: TV-FIRST 006 passive MEDIA software qualification
+
+# Prepared locally only. No dispatch, secret, signing, device access or APK upload.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  software:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      SCENEVIBE_CLOUD_ORIGIN: ""
+      SCENEVIBE_ENABLE_LAN_DEV: "false"
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+          cache-disabled: true
+      - name: Install qualified Android toolchain
+        run: sdkmanager "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
+      - name: Exact 006 authorization, frozen 003, retained Python, current JVM/lint/unsigned packaging
+        run: python3 -B qualification/tvfirst006/run.py all
+      - name: Upload software reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-tvfirst006-software-${{ github.run_id }}
+          path: |
+            build/tvfirst006/
+            app/build/reports/lint-results-*.html
+            app/build/reports/lint-results-*.xml
+            app/build/test-results/testDebugUnitTest/TEST-*.xml
+            app/build/test-results/testObservationUnitTest/TEST-*.xml
+            app/build/test-results/testReleaseUnitTest/TEST-*.xml
+          if-no-files-found: error
+          retention-days: 30

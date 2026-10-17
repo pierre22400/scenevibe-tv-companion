@@ -19,6 +19,7 @@ import com.scenevibe.tvcompanionpoc.installation.InstallationStatus;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 import com.scenevibe.tvcompanionpoc.installation.PackageInstaller;
 import com.scenevibe.tvcompanionpoc.installation.TvCapabilities;
+import com.scenevibe.tvcompanionpoc.tvfirst.ObservationDiagnostics;
 
 /**
  * User-started foreground service that owns the Android overlay window.
@@ -78,6 +79,8 @@ public final class OverlayService extends Service {
     private SceneRuntimeController sceneController;
     /** The active revision currently driving the scheduler (0 when none restored/installed). */
     private long activeRevision;
+    /** Captured observation lifetime, never an installation or MEDIA admission authority. */
+    private ObservationDiagnostics.Session observationSession;
 
     /** Create the notification channel and enter foreground mode promptly. */
     @Override
@@ -94,7 +97,9 @@ public final class OverlayService extends Service {
             Notification notification = new Notification.Builder(this, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_launcher)
                     .setContentTitle("SceneVibe TV Companion POC")
-                    .setContentText("Overlay and MediaSession-synced track scheduler are running.")
+                    .setContentText(BuildConfig.TVFIRST_OBSERVATION_ONLY
+                            ? "Passive MEDIA observation; commentary rendering disabled."
+                            : "Overlay and MediaSession-synced track scheduler are running.")
                     .setContentIntent(openControls)
                     .setOngoing(true)
                     .build();
@@ -115,6 +120,7 @@ public final class OverlayService extends Service {
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return startObservationOnly();
         if (!foregroundReady) {
             return START_NOT_STICKY;
         }
@@ -183,6 +189,7 @@ public final class OverlayService extends Service {
                         new LiveVideoRuntimePorts.LegacySink() {
                             /** Create the legacy window lazily using the exact prepared payload. */
                             @Override public void due(ScheduledTrack.Event event) {
+                                if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return;
                                 showRenderer();
                                 if(renderer!=null)renderer.showTrackedCommentary(event.text,event.durationMs,event.mediaBitmap);
                             }
@@ -213,7 +220,7 @@ public final class OverlayService extends Service {
             if (BuildConfig.ENABLE_LAN_DEV && commentaryServer == null) {
                 commentaryServer = new CommentaryServer(
                         (id, text, durationMs, mediaBitmap) -> {
-                            if (renderer != null) {
+                            if (!BuildConfig.TVFIRST_OBSERVATION_ONLY && renderer != null) {
                                 renderer.showCommentary(text, durationMs, mediaBitmap);
                             }
                         },
@@ -318,6 +325,7 @@ public final class OverlayService extends Service {
      * draws no card until a comment is actually due and the scheduler triggers a render.
      */
     private void showRenderer() {
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return;
         if (renderer == null) {
             renderer = new OverlayRenderer(this, this::onPermissionLost, BuildConfig.ENABLE_LAN_DEV);
         }
@@ -341,6 +349,8 @@ public final class OverlayService extends Service {
      * manifested comment is actually due.
      */
     private SceneRenderer ensureSceneRenderer() {
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY)
+            throw new IllegalStateException("Observation profile has no scene renderer");
         if (sceneRenderer == null) {
             sceneRenderer = new SceneRenderer(this, this::resolveLocalAsset, this::onPermissionLost);
         }
@@ -365,6 +375,7 @@ public final class OverlayService extends Service {
     private final SceneRuntimeController.SceneSink sceneSink =
             new SceneRuntimeController.SceneSink() {
         @Override public boolean preflight(OverlayManifest.Scene scene) {
+            if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return false;
             boolean ok = ensureSceneRenderer().preflight(scene);
             if (!ok) {
                 // Bounded diagnostic only: a required local asset did not resolve. A missing
@@ -377,6 +388,7 @@ public final class OverlayService extends Service {
             return ok;
         }
         @Override public void show(OverlayManifest.Scene scene) {
+            if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return;
             ensureSceneRenderer().render(scene);
         }
         @Override public void hide(OverlayManifest.Scene scene) {
@@ -646,6 +658,11 @@ public final class OverlayService extends Service {
     /** Remove the window and notification on every normal destruction path. */
     @Override
     public void onDestroy() {
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY) {
+            stopObservationOnly();
+            super.onDestroy();
+            return;
+        }
         if (cloudClient != null) {
             cloudClient.stop();
             cloudClient = null;
@@ -683,5 +700,31 @@ public final class OverlayService extends Service {
         DiagnosticsStore.INSTANCE.setServiceRunning(false);
         Log.i(TAG, "OverlayService destroyed");
         super.onDestroy();
+    }
+
+    /** Enter before permission/preference/restore/Cloud/LAN work; all actions are observation-only. */
+    private int startObservationOnly() {
+        if (!foregroundReady) return START_NOT_STICKY;
+        if (observationSession == null) {
+            observationSession = ObservationDiagnostics.begin();
+            ObservationDiagnostics.Session capturedSession = observationSession;
+            mediaSessionProbe = new MediaSessionProbe(this, null, capturedSession::record);
+            mediaSessionProbe.start();
+        }
+        return START_STICKY;
+    }
+
+    /** Invalidate the captured writer before stopping the probe; never restore, clear or ACK data. */
+    private void stopObservationOnly() {
+        if (observationSession != null) {
+            observationSession.close();
+            observationSession = null;
+        }
+        if (mediaSessionProbe != null) {
+            mediaSessionProbe.stop();
+            mediaSessionProbe = null;
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE);
+        DiagnosticsStore.INSTANCE.setServiceRunning(false);
     }
 }
