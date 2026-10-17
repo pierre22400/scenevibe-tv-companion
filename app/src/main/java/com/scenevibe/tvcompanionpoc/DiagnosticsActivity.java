@@ -54,12 +54,15 @@ public final class DiagnosticsActivity extends Activity {
         controls.addView(report);
 
         addButton(controls, "Refresh diagnostics", this::refresh);
-        addButton(controls, "Reset SceneVibe Cloud connection", this::resetCloud);
+        if (!BuildConfig.TVFIRST_OBSERVATION_ONLY)
+            addButton(controls, "Reset SceneVibe Cloud connection", this::resetCloud);
 
         TextView note = new TextView(this);
         note.setText("Reset deletes this TV's SceneVibe Cloud credential and installed SceneVibe content, "
                 + "then creates a fresh local installation id so the TV can pair again safely. "
                 + "The previous TV entry remains in your SceneVibe account until you remove it.");
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY)
+            note.setText("Observation only. Commentary rendering, Cloud and reset are disabled.");
         note.setTextColor(0xFFA89F92);
         note.setTextSize(13);
         note.setGravity(Gravity.CENTER);
@@ -80,6 +83,12 @@ public final class DiagnosticsActivity extends Activity {
 
     /** Rebuilds the read-only snapshot from the current stores and observational signals. */
     private void refresh() {
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY) {
+            report.setText(com.scenevibe.tvcompanionpoc.tvfirst.MediaEvidencePolicy.describe(
+                    com.scenevibe.tvcompanionpoc.tvfirst.ObservationDiagnostics.latest(),
+                    android.os.SystemClock.elapsedRealtime()));
+            return;
+        }
         RuntimeDiagnostics diagnostics = RuntimeDiagnostics.capture(this, DiagnosticsStore.INSTANCE);
         report.setText(render(diagnostics));
     }
@@ -92,6 +101,7 @@ public final class DiagnosticsActivity extends Activity {
      * on a network/timeout/401.
      */
     private void resetCloud() {
+        if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return;
         if (DiagnosticsStore.INSTANCE.serviceRunning()) {
             // The service (and thus a CloudControlClient that may be polling) is up. Route the
             // reset through the runtime so it runs on the client's io executor after

@@ -2,6 +2,11 @@ plugins {
     id "com.android.application"
 }
 
+/**
+ * Keep the historical default build intact. The separate observation variant has no
+ * Cloud/LAN transport or signing identity; qualification can also make debug unsigned.
+ */
+
 def cloudOrigin = providers.environmentVariable("SCENEVIBE_CLOUD_ORIGIN").orElse("").get()
 if (cloudOrigin && !(cloudOrigin ==~ /https:\/\/[^\/:?#]+/)) {
     throw new GradleException("SCENEVIBE_CLOUD_ORIGIN must be an exact HTTPS origin on port 443")
@@ -23,6 +28,7 @@ android {
         versionName "0.8.2-tv-release-hardening"
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
+        buildConfigField "boolean", "TVFIRST_OBSERVATION_ONLY", "false"
     }
 
     buildTypes {
@@ -39,6 +45,20 @@ android {
             shrinkResources false
             signingConfig null
         }
+        observation {
+            initWith release
+            buildConfigField "boolean", "TVFIRST_OBSERVATION_ONLY", "true"
+            buildConfigField "String", "CLOUD_ORIGIN", '""'
+            buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
+            signingConfig null
+        }
+    }
+
+    sourceSets.observation.java.srcDir "src/release/java"
+
+    // An explicit qualification-only property prevents even disposable debug signing.
+    if (providers.gradleProperty("scenevibeQualificationUnsigned").orElse("false").get() == "true") {
+        buildTypes.configureEach { signingConfig null }
     }
 
     compileOptions {

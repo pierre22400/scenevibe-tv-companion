@@ -33,12 +33,21 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          if [ -e qualification/tvfirst003/seal.json ]; then
+          if [ -d qualification/tvfirst006 ]; then
+            python3 -B qualification/tvfirst006/gate.py --expected-head "$EXPECTED_HEAD"
+            echo 'profile=tvfirst006' >> "$GITHUB_OUTPUT"
+          elif [ -d qualification/tvfirst003 ]; then
             python3 -B qualification/tvfirst003/gate.py --expected-head "$EXPECTED_HEAD"
             echo 'profile=tvfirst003' >> "$GITHUB_OUTPUT"
           else
-            echo 'profile=historical' >> "$GITHUB_OUTPUT"
+            echo 'No reviewed qualification generation is present' >&2
+            exit 1
           fi
+
+  tvfirst006:
+    needs: qualification-profile
+    if: needs.qualification-profile.outputs.profile == 'tvfirst006'
+    uses: ./.github/workflows/android-tvfirst006.yml
 
   tvfirst003:
     needs: qualification-profile

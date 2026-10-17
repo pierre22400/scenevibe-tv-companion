@@ -12,6 +12,8 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.List;
+import com.scenevibe.tvcompanionpoc.tvfirst.MediaEvidence;
+import com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReader;
 
 /**
  * Passive one-second probe of active Android MediaSessions.
@@ -20,6 +22,11 @@ import java.util.List;
  * transport controls or interacts with the streaming application's UI.
  */
 public final class MediaSessionProbe {
+    /** Independent observation sink; it cannot receive a scheduling or rendering command. */
+    public interface Observer {
+        /** Receive one immutable batch whose programme/edition/context proofs remain unknown. */
+        void onObservation(MediaEvidence evidence);
+    }
     private static final String TAG = "SceneVibeMedia";
     private static final long SAMPLE_INTERVAL_MS = 1000L;
 
@@ -73,6 +80,8 @@ public final class MediaSessionProbe {
     private final MediaSessionManager sessions;
     private final ComponentName listenerComponent;
     private final Listener listener;
+    private final Observer observer;
+    private final PassiveMediaReader observationReader;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
 
@@ -85,17 +94,28 @@ public final class MediaSessionProbe {
         }
     };
 
+    /** Preserve the historical no-listener construction. */
     public MediaSessionProbe(Context context) {
         this(context, null);
     }
 
+    /** Preserve the historical listener and its sampling branch exactly by default. */
     public MediaSessionProbe(Context context, Listener listener) {
+        this(context, listener, null);
+    }
+
+    /** Select a passive observation branch without constructing a second probe or transport. */
+    public MediaSessionProbe(Context context, Listener listener, Observer observer) {
+        if (listener != null && observer != null) throw new IllegalArgumentException("One probe mode only");
         this.context = context;
         this.listener = listener;
+        this.observer = observer;
+        observationReader = observer == null ? null : new PassiveMediaReader();
         sessions = context.getSystemService(MediaSessionManager.class);
         listenerComponent = NotificationAccess.component(context);
     }
 
+    /** Start the existing one-second sampler once for this probe lifetime. */
     public void start() {
         if (started) return;
         started = true;
@@ -103,13 +123,20 @@ public final class MediaSessionProbe {
         sampler.run();
     }
 
+    /** Stop future sampling; the captured service writer also rejects late callbacks. */
     public void stop() {
         started = false;
         handler.removeCallbacks(sampler);
         Log.i(TAG, "Passive MediaSession probe stopped");
     }
 
+    /** Dispatch one exclusive probe branch; the legacy branch below is retained unchanged. */
     private void sample() {
+        if (observer != null) {
+            observer.onObservation(observationReader.capture(sessions, listenerComponent,
+                    NotificationAccess.isGranted(context), android.provider.Settings.canDrawOverlays(context)));
+            return;
+        }
         if (!NotificationAccess.isGranted(context)) {
             Log.i(TAG, "ACCESS_REQUIRED notificationListener=false");
             unavailable();
@@ -152,10 +179,12 @@ public final class MediaSessionProbe {
         if (listener != null && primary != null) listener.onSnapshot(primary);
     }
 
+    /** Preserve historical absence forwarding without constructing an observation fallback. */
     private void unavailable() {
         if (listener != null) listener.onUnavailable();
     }
 
+    /** Read the historical scalar snapshot and preserve its original logging and estimate. */
     private Snapshot snapshotController(int index, MediaController controller) {
         PlaybackState state = controller.getPlaybackState();
         MediaMetadata metadata = controller.getMetadata();
@@ -205,6 +234,7 @@ public final class MediaSessionProbe {
                 durationMs);
     }
 
+    /** Preserve the historic estimate; the independent observation reader retains the raw anchor. */
     private long estimatePositionMs(
             PlaybackState state, long positionMs, float speed, long updateAgeMs) {
         if (state == null || positionMs < 0L || updateAgeMs < 0L) return positionMs;
@@ -217,12 +247,14 @@ public final class MediaSessionProbe {
         return Math.max(0L, positionMs + Math.round(updateAgeMs * speed));
     }
 
+    /** Preserve the historic absent-string representation. */
     private String metadataText(MediaMetadata metadata, String key) {
         if (metadata == null) return "";
         CharSequence value = metadata.getText(key);
         return value == null ? "" : value.toString();
     }
 
+    /** Preserve the existing bounded state labels for historical listeners. */
     private String stateName(PlaybackState state) {
         if (state == null) return "NONE";
         switch (state.getState()) {
@@ -242,6 +274,7 @@ public final class MediaSessionProbe {
         }
     }
 
+    /** Preserve the historical single-line diagnostic representation. */
     private String safe(String value) {
         if (value == null || value.isEmpty()) return "-";
         return value.replace('\n', ' ').replace('\r', ' ').replace(' ', '_');

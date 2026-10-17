@@ -1,0 +1,148 @@
+{
+  "generation": "TV-FIRST 006",
+  "base": "a3cf497dc8bba6a2d1980476d7c24cbbe1aa153a",
+  "baseTree": "f51796913d549e660133243a94cb62d19bffb2ce",
+  "normalization": "Only MANIFEST_SHA256 in gate.py is replaced by 64 zeroes for its own file digest. All other files use exact bytes.",
+  "files": {
+    ".github/workflows/android-debug.yml": {
+      "status": "modified",
+      "baseBlob": "ee4e55f001fbee291e01c9525daa61773dcb3bb9",
+      "mode": "100644",
+      "bytes": 7880,
+      "sha256": "93837b69c57047b4d4e013628d3b73f35ede35d4d6c738940321c9a0c9549e86"
+    },
+    ".github/workflows/android-tvfirst006.yml": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 1792,
+      "sha256": "ff55302b323c7555c9c89ce8a99811fd8ea87d2eb83ac6ec2bf9f18b7b64eed1"
+    },
+    "app/build.gradle": {
+      "status": "modified",
+      "baseBlob": "2e1bf214eef461be2f00f479454a9d5472f2aaa2",
+      "mode": "100644",
+      "bytes": 3268,
+      "sha256": "e0272686777c8d18e7179101f8422006c731c32643b6cd20e15bf6e9266af8e1"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": {
+      "status": "modified",
+      "baseBlob": "9d4e68a6dcac398b0c3994f0a35349298a07c86d",
+      "mode": "100644",
+      "bytes": 10827,
+      "sha256": "ae9aa6575be74b67482867d14fc150aec8e73e87774dd0efbed2492ed1619292"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/MediaSessionProbe.java": {
+      "status": "modified",
+      "baseBlob": "9c205b09ff5ffd85977250175eaab5019984b1b1",
+      "mode": "100644",
+      "bytes": 11526,
+      "sha256": "841f52d65b9a1a5c07c2845b7e3c679895dd0b74da61a6187491f30a42a9f6c9"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": {
+      "status": "modified",
+      "baseBlob": "71665c90c8d39cdd692bb8b57592c76374fcda27",
+      "mode": "100644",
+      "bytes": 41600,
+      "sha256": "c9e6dfb1721b6a3c19b93cb851f8273c9f2db349d3f54d779f40a5d4357373ad"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/tvfirst/MediaEvidence.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 4016,
+      "sha256": "e9bb493276eb73935885939481410276f48ed9269deec43a9ce5504dd88fff75"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/tvfirst/MediaEvidencePolicy.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 5649,
+      "sha256": "e9f3ac061caadc27d5aba2365a3ced8c5b443101c15c4b66f6e3e72eff3a876d"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/tvfirst/ObservationDiagnostics.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 2086,
+      "sha256": "3add02790bbbfcc9dbe5c6a04627e61ed66fa922fd9fe274a8a688a0cd56cc6c"
+    },
+    "app/src/main/java/com/scenevibe/tvcompanionpoc/tvfirst/PassiveMediaReader.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 6301,
+      "sha256": "fdd8334d3e362eb0846c5f86c01423c3663b48718b2731c54afc49be1035d7b1"
+    },
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/tvfirst/MediaEvidenceTest.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 8281,
+      "sha256": "2e80252fe4180d3386b0b91a74296e76189b14ea0de552a00e5463a433a81b29"
+    },
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/tvfirst/ObservationDiagnosticsTest.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 2422,
+      "sha256": "48c92e4eb712b7a1598bd308e9587261c838d0dfd4a8494e20108df95f66930f"
+    },
+    "app/src/test/java/com/scenevibe/tvcompanionpoc/tvfirst/PassiveMediaReaderTest.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 7867,
+      "sha256": "1a1f530f44207a2223a63f4af66a35a3a85304f7cccfa89827db61da253ce9b0"
+    },
+    "app/src/testDebug/java/com/scenevibe/tvcompanionpoc/TvFirstDefaultServiceTest.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 1301,
+      "sha256": "1720eba52c30eb3341161af3d6bdff369d2aa513dfb172e6f4daf6b58cda89ea"
+    },
+    "app/src/testObservation/java/com/scenevibe/tvcompanionpoc/TvFirstServiceObservationTest.java": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 14999,
+      "sha256": "3d99161ae82c92e88f79e6d419a3a7682d544137f9a7bab96291a8e6985fe775"
+    },
+    "docs/tv-first-006-observation.md": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 9192,
+      "sha256": "5633765c6c17ab8d2386ef51ad923f83ff68124d49d3043a1301e936f380ea4d"
+    },
+    "qualification/tvfirst006/README.md": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 4705,
+      "sha256": "277a9a7d7bb6a5c8aa97b404437fc5860f9699297d46ffbe642f24803265e54a"
+    },
+    "qualification/tvfirst006/gate.py": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 7540,
+      "sha256": "a30661ba362051af4d7ac436fb4091b2953a72fd0ad5ca9c2e6500cc6c7283e6"
+    },
+    "qualification/tvfirst006/run.py": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 13882,
+      "sha256": "d3c79c4cc9b03a08470758acc91d1a3859a45c64af6b88e930a6edc12286e0d7"
+    },
+    "qualification/tvfirst006/test_gate.py": {
+      "status": "added",
+      "baseBlob": null,
+      "mode": "100644",
+      "bytes": 6104,
+      "sha256": "a671c71b877ddcb8c8a57b836dc1cd361e1eb2b2c75e78720aa7e6845c600589"
+    }
+  }
+}
