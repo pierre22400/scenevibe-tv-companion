@@ -44,6 +44,11 @@ public final class PackageInstaller {
 
     /** Validate and prepare without mutation, then commit once and verify exact durable readback. */
     private InstallationStatus installNewer(InstallRequest request,InstallationHandler.RuntimePorts ports) {
+        return prepareAndCommit(request,ports,true);
+    }
+
+    /** Share the qualified preparation/commit/readback path; only the historical caller may ARM. */
+    private InstallationStatus prepareAndCommit(InstallRequest request,InstallationHandler.RuntimePorts ports,boolean activate) {
         InstallationHandlerRegistry.Entry binding=registry.findCodec(request.codecId());
         if (binding==null) return InstallationStatus.INVALID_PACKAGE;
         InstallationSnapshot candidate;
@@ -78,7 +83,34 @@ public final class PackageInstaller {
         if (restoredBinding!=binding||durable.revision()!=candidate.revision()
                 ||!sameArtifacts(candidate.canonical(),durable.canonical()))
             return InstallationStatus.CACHE_FAILED;
-        return restoreAndArm(durable,restoredBinding,ports);
+        return activate?restoreAndArm(durable,restoredBinding,ports):restorePrepared(durable,restoredBinding);
+    }
+
+    /** Validate, persist and re-read a package without accepting any runtime or rendering port. */
+    public synchronized InstallationStatus prepareOnly(InstallRequest request) {
+        InstallationStore.ReadResult current=readDurable();
+        if (current==null||current.state()==InstallationStore.ReadState.CORRUPT) return InstallationStatus.CACHE_FAILED;
+        if (request==null) return InstallationStatus.INVALID_PACKAGE;
+        if (current.state()==InstallationStore.ReadState.SNAPSHOT) {
+            InstallationSnapshot durable=current.snapshot();
+            if (request.revision()<durable.revision()) return InstallationStatus.STALE;
+            if (request.revision()==durable.revision()) {
+                InstallationHandlerRegistry.Entry binding=durableBinding(durable);
+                if (binding==null||!request.codecId().equals(durable.codecId())||!sameArtifacts(request,durable.canonical()))
+                    return InstallationStatus.INVALID_PACKAGE;
+                return restorePrepared(durable,binding);
+            }
+        }
+        return prepareAndCommit(request,null,false);
+    }
+
+    /** Revalidate durable bytes only; PREPARED is cache evidence and never ARMED or ACK authority. */
+    private InstallationStatus restorePrepared(InstallationSnapshot durable,InstallationHandlerRegistry.Entry binding) {
+        try {
+            PreparedInstallation restored=binding.handler().restoreFromCache(durable.canonical(),capabilities);
+            return coherent(restored,durable.canonical(),binding)&&sameArtifacts(restored.canonical(),durable.canonical())
+                    ?InstallationStatus.PREPARED:InstallationStatus.CACHE_FAILED;
+        } catch (RuntimeException invalid) {return InstallationStatus.CACHE_FAILED;}
     }
 
     /** Read under the store's consistency contract; backend exceptions grant no write or activation. */

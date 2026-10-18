@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Explicit user-started service only. Installation/replacement/boot can never arm TEXT. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <application android:usesCleartextTraffic="false">
+        <receiver android:name=".BootReceiver" android:enabled="false" />
+    </application>
+</manifest>

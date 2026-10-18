@@ -29,6 +29,9 @@ android {
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
         buildConfigField "boolean", "TVFIRST_OBSERVATION_ONLY", "false"
+        buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "false"
+        buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "false"
+        buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "false"
     }
 
     buildTypes {
@@ -52,9 +55,43 @@ android {
             buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
             signingConfig null
         }
+        tvfirst008 {
+            initWith release
+            versionNameSuffix "-tvfirst008-cache-only"
+            buildConfigField "boolean", "TVFIRST_OBSERVATION_ONLY", "true"
+            buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "true"
+            buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
+            buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
+            signingConfig null
+        }
+        // Software-only composition: preserve 008's disabled entry points and permissions.
+        tvfirst009 {
+            initWith tvfirst008
+            versionNameSuffix "-tvfirst009-local-text-software"
+            buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "true"
+            buildConfigField "String", "CLOUD_ORIGIN", '""'
+            signingConfig null
+        }
+        // Explicit user-started TEXT qualification; 008 and historical profiles stay closed to this entry.
+        tvfirst009sony {
+            initWith tvfirst008
+            versionNameSuffix "-tvfirst009-text-qualification"
+            buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "true"
+            buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "true"
+            signingConfig null
+        }
     }
 
     sourceSets.observation.java.srcDir "src/release/java"
+    sourceSets.tvfirst009 {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvfirst008/AndroidManifest.xml"
+    }
+    sourceSets.tvfirst009sony {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+    }
 
     // An explicit qualification-only property prevents even disposable debug signing.
     if (providers.gradleProperty("scenevibeQualificationUnsigned").orElse("false").get() == "true") {
@@ -73,6 +110,15 @@ android {
         // Historical HTTPS fixtures install a JVM-global URLStreamHandlerFactory.
         // A fresh fork per class keeps real Android resource loading independent.
         unitTests.all { forkEvery = 1 }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("tvfirst008")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(13) }
+    }
+    onVariants(selector().withBuildType("tvfirst009sony")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(14) }
     }
 }
 
