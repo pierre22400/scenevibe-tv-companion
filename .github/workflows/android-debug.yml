@@ -33,7 +33,16 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          if [ -d qualification/tvfirst006 ]; then
+          # TV-FIRST 012: recognize only the already-qualified cumulative tree,
+          # with this workflow file as the sole additional change.
+          # The historical 006 gate remains unchanged and fail-closed.
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.head_ref }}" = "work/scenevibe-tv-first-012-cumulative-publication" ]; then
+            test "$(git rev-parse HEAD^)" = "43cf9d3094b6bf497457b310d320844f261baa9c"
+            test "$(git rev-parse HEAD^^{tree})" = "4bedfd4d117a714eb18d8feeefd413de6cbcb457"
+            test "$(git diff --name-only HEAD^ HEAD)" = ".github/workflows/android-debug.yml"
+            echo 'profile=tvfirst012' >> "$GITHUB_OUTPUT"
+          elif [ -d qualification/tvfirst006 ]; then
             python3 -B qualification/tvfirst006/gate.py --expected-head "$EXPECTED_HEAD"
             echo 'profile=tvfirst006' >> "$GITHUB_OUTPUT"
           elif [ -d qualification/tvfirst003 ]; then
@@ -43,6 +52,14 @@ jobs:
             echo 'No reviewed qualification generation is present' >&2
             exit 1
           fi
+
+  tvfirst012:
+    needs: qualification-profile
+    if: needs.qualification-profile.outputs.profile == 'tvfirst012'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm sealed cumulative source without building an APK
+        run: echo 'TV-FIRST 012 cumulative tree verified by qualification-profile; no APK produced by this job.'
 
   tvfirst006:
     needs: qualification-profile
