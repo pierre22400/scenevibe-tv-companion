@@ -80,8 +80,18 @@ android {
             buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "true"
             signingConfig null
         }
+        // Distinct unsigned v15 candidate; the qualified v14 variant remains unchanged.
+        tvfirst013sony {
+            initWith tvfirst009sony
+            versionNameSuffix "-tvfirst013-text-diagnostics"
+            signingConfig null
+        }
     }
 
+    sourceSets.tvfirst013sony {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+    }
     sourceSets.observation.java.srcDir "src/release/java"
     sourceSets.tvfirst009 {
         java.srcDir "src/tvfirst008/java"
@@ -119,6 +129,9 @@ androidComponents {
     }
     onVariants(selector().withBuildType("tvfirst009sony")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(14) }
+    }
+    onVariants(selector().withBuildType("tvfirst013sony")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(15) }
     }
 }
 
