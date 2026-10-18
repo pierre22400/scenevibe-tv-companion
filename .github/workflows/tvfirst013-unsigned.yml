@@ -1,5 +1,8 @@
 name: TV-FIRST 013 unsigned Sony APK preparation
 on:
+  push:
+    branches:
+      - work/scenevibe-tv-first-013-apk-preparation
   workflow_dispatch:
 permissions:
   contents: read
