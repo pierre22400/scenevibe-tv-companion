@@ -75,6 +75,10 @@ android {
     }
 
     sourceSets.observation.java.srcDir "src/release/java"
+    // initWith copies build settings, not source directories. Reuse the existing
+    // development provider and its Android lifecycle/view tests for audioexp only.
+    sourceSets.audioexp.java.srcDir "src/debug/java"
+    sourceSets.testAudioexp.java.srcDir "src/testDebug/java"
 
     // An explicit qualification-only property prevents even disposable debug signing.
     if (providers.gradleProperty("scenevibeQualificationUnsigned").orElse("false").get() == "true") {

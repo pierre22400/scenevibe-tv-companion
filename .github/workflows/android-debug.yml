@@ -18,7 +18,10 @@ permissions:
   contents: read
 
 jobs:
+  # AUDIO 003 has a separate build profile; the exact historical gates remain
+  # authoritative on their own branches, without claiming they qualify AUDIO.
   qualification-profile:
+    if: (github.head_ref || github.ref_name) != 'work/kiro-audio-002-local-integration-001'
     runs-on: ubuntu-latest
     outputs:
       profile: ${{ steps.profile.outputs.profile }}
@@ -162,3 +165,61 @@ jobs:
         env:
           KEYSTORE_PATH: ${{ steps.stable_keystore.outputs.keystore_path }}
         run: rm -f "$KEYSTORE_PATH" "$RUNNER_TEMP/scenevibe-tv-companion-cloud-qualification-stable.apk"
+
+  audioexp:
+    name: AUDIO 003 experimental Android qualification
+    if: (github.head_ref || github.ref_name) == 'work/kiro-audio-002-local-integration-001'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: ""
+      SCENEVIBE_ENABLE_LAN_DEV: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Install Android compile and verification tools
+        run: sdkmanager "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
+      - name: Check unchanged functional sources and forbidden capabilities
+        run: python3 .github/scripts/audio-003-verify.py source
+      - name: Compile experimental Android variant
+        run: gradle :app:compileAudioexpJavaWithJavac --stacktrace
+      - name: Run shared JVM and Android lifecycle tests on audioexp
+        run: gradle :app:testAudioexpUnitTest --stacktrace
+      - name: Require executed AUDIO and Android lifecycle tests
+        run: python3 .github/scripts/audio-003-verify.py tests
+      - name: Lint experimental variant
+        run: gradle :app:lintAudioexp --stacktrace
+      - name: Assemble disposable debug-signed experimental APK
+        run: gradle :app:assembleAudioexp --stacktrace
+      - name: Verify actual APK identity, debug signature and digest
+        run: python3 .github/scripts/audio-003-verify.py apk
+      - name: Upload qualified experimental APK only after all checks
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-audio003-audioexp-${{ github.sha }}
+          path: build/audio003/delivery/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload real software evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-audio003-reports-${{ github.sha }}
+          path: |
+            build/audio003/*.json
+            build/audio003/*.txt
+            app/build/reports/tests/testAudioexpUnitTest/
+            app/build/test-results/testAudioexpUnitTest/TEST-*.xml
+            app/build/reports/lint-results-audioexp.*
+          if-no-files-found: warn
+          retention-days: 30
