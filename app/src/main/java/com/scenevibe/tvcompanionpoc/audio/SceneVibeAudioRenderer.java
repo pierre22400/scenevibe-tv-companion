@@ -98,6 +98,15 @@ public final class SceneVibeAudioRenderer {
      * scheduler drives stop via {@code onEligibility(false)}.
      */
     public void setCatalog(String token, Iterable<AudioEvent> events) {
+        // C2 (pre-preparation invalidation): a Track change replaces the catalog, so a
+        // resource pre-prepared for the OLD track must be released rather than left held
+        // or, worse, started later against the wrong catalog. If something was merely
+        // pre-prepared (prepared, not yet audibly started) release it now so no stale
+        // prepared asset survives the Track change. An already-playing comment is left to
+        // the scheduler's onEligibility(false) stop (episode change path).
+        if (activeEventId != null && activePrepared && !activeStarted) {
+            teardown();
+        }
         catalog.clear();
         catalogToken = token;
         if (events != null) {
@@ -114,6 +123,20 @@ public final class SceneVibeAudioRenderer {
      * sound ({@code prepare != start}), to reduce player-prep startup latency
      * (design section 6). No-op if AUDIO is OFF, the event is unknown, or something
      * is already active. Does not change the 1s sampling cadence.
+     *
+     * <p>C2 (AUDIO 002B) decision: pre-preparation is NOT auto-wired into the live
+     * OverlayService lifecycle. The only scheduler edge that could trigger it in-app
+     * is a per-position "about to be due" signal, which the passive
+     * {@link com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler} does NOT
+     * emit (it emits {@code onDue} exactly AT the media instant). Driving a look-ahead
+     * from the renderer would require a second clock / position counter, which the
+     * single-media-time-authority constraint forbids. Per the mandate's "only if a
+     * demonstrated benefit" clause, {@code prePrepare} therefore remains a
+     * spec/latency-optimization hook exercised by tests only. Whichever path a future
+     * adapter takes, this hook is correctly INVALIDATED by the existing lifecycle
+     * edges: a Track change ({@link #setCatalog}) releases a pre-prepared-not-started
+     * asset, eligibility loss ({@code onEligibility(token,false)}) and AUDIO disable
+     * ({@link #setAudioEnabled(boolean) setAudioEnabled(false)}) both {@code teardown}.
      */
     public void prePrepare(String eventId) {
         if (!audioEnabled || activeEventId != null) {
@@ -173,6 +196,14 @@ public final class SceneVibeAudioRenderer {
         if (!audioEnabled || !playing) {
             return;
         }
+        // C3 (session tokens): a due bearing a token that is NOT the current catalog
+        // token comes from a stale/previous activation. The scheduler only emits the
+        // active activation's token on main, but we defend against a late/reordered
+        // callback: a stale-token due must neither start a new comment nor restart or
+        // disturb one already playing under the current (live) token. Ignore it.
+        if (catalogToken != null && !catalogToken.equals(token)) {
+            return;
+        }
         AudioEvent event = catalog.get(eventId);
         if (event == null) {
             return;
@@ -199,6 +230,12 @@ public final class SceneVibeAudioRenderer {
      * active comment; otherwise ignored (the scheduler already closed the window).
      */
     public void onExpire(String token, String eventId) {
+        // C3 (session tokens): an expire bearing a token that is NOT the current
+        // catalog token belongs to a stale/previous activation. It must never
+        // interrupt/expire a comment that is active in the NEW session, so ignore it.
+        if (catalogToken != null && !catalogToken.equals(token)) {
+            return;
+        }
         if (eventId != null && eventId.equals(activeEventId)) {
             teardown();
         }

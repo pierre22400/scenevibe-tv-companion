@@ -233,6 +233,14 @@ public final class OverlayService extends Service {
                     /** Preserve old-binding load invalidation before any new activation becomes active. */
                     @Override public void onEligibility(String token,boolean eligible) {
                         if(videoRuntimePorts!=null)videoRuntimePorts.onEligibility(token,eligible);
+                        // AUDIO 002B C1: when an activation becomes eligible, bind the audio
+                        // catalog to the REAL activation token and the REAL event ids the
+                        // scheduler will carry on onDue. bindAudioCatalog maps the active
+                        // track's SceneEvent ids to AUDIO cues (DemoAudioTrack.catalogForCalendar)
+                        // and calls audioRenderer.setCatalog(token, mapped) so catalog.get(eventId)
+                        // resolves and AUDIO actually starts end to end. This replaces the old
+                        // demo-token preload, which never matched the live token/eventIds.
+                        if(eligible)bindAudioCatalog(token);
                         if(audioRenderer!=null)audioRenderer.onEligibility(token,eligible);
                     }
                 });
@@ -412,11 +420,37 @@ public final class OverlayService extends Service {
         }
         audioPort = new AndroidLocalAudioPort(this);
         audioRenderer = new SceneVibeAudioRenderer(audioPort);
-        // Local demonstration AUDIO track (dev fixture). The same demo events key both
-        // demo tokens so an episode change (DEMO_TOKEN -> DEMO_TOKEN_EPISODE_B) can be
-        // exercised locally; eligibility loss on the old token stops that audio.
-        DemoAudioTrack demo = DemoAudioTrack.defaultEpisode();
-        audioRenderer.setCatalog(DemoAudioTrack.DEMO_TOKEN, demo.events());
+        // AUDIO 002B C1: the catalog is NO LONGER preloaded under the never-matching demo
+        // token (DEMO_TOKEN + demo-audio-1/2/3). Instead it is bound lazily to the REAL
+        // activation token and the REAL event ids via bindAudioCatalog(token) the moment the
+        // scheduler reports an activation eligible, so onDue(token,eventId) actually resolves.
+    }
+
+    /**
+     * AUDIO 002B C1 catalog binding. Map the ACTIVE activation's media-calendar event ids to
+     * demo AUDIO cues and register them under the SAME token the scheduler emits on
+     * {@code onDue}. This is the fix that makes AUDIO triggerable end to end: the renderer's
+     * catalog token now equals the scheduler's activation token and its keys equal the exact
+     * eventIds {@code onDue} carries. It only READS the active calendar's TEXT event ids (via
+     * {@link LiveVideoRuntimePorts#activeAudioCalendar()}); it never mutates a TEXT eventId or
+     * touches the TEXT draw path. No-op when the renderer is absent, no activation is active,
+     * or the eligible token is not the active token (a stale eligibility callback).
+     */
+    private void bindAudioCatalog(String token) {
+        if (audioRenderer == null || videoRuntimePorts == null || token == null) {
+            return;
+        }
+        if (!token.equals(videoRuntimePorts.activeAudioToken())) {
+            return;
+        }
+        com.scenevibe.tvcompanionpoc.calendar.MediaCalendar calendar =
+                videoRuntimePorts.activeAudioCalendar();
+        if (calendar == null) {
+            return;
+        }
+        audioRenderer.setCatalog(token, DemoAudioTrack.catalogForCalendar(calendar));
+        // Re-apply the current LOCAL gain / AUDIO toggle after a fresh catalog binding.
+        reconcileAudioControls();
     }
 
     /**
@@ -604,6 +638,25 @@ public final class OverlayService extends Service {
             SceneRuntimeController runtime=controller.get();if(runtime==null||runtime.hasActiveManifest())return false;
             selection.accept(0);active=pending;pending=null;return true;
         }
+        /**
+         * AUDIO 002B C1: expose the ACTIVE activation's token so the audio catalog can be
+         * keyed to the SAME opaque token the scheduler emits on {@code onDue}. Android-free
+         * (returns the already-minted String); null when no activation is active.
+         */
+        String activeAudioToken() {
+            return active == null ? null : active.token;
+        }
+
+        /**
+         * AUDIO 002B C1: expose the ACTIVE activation's media calendar so the audio path can
+         * map the REAL event ids to AUDIO cues (see {@code DemoAudioTrack.catalogForCalendar}).
+         * This only READS the calendar/event ids; it never touches the TEXT draw path and
+         * never mutates a TEXT eventId. Android-free; null when no activation is active.
+         */
+        com.scenevibe.tvcompanionpoc.calendar.MediaCalendar activeAudioCalendar() {
+            return active == null ? null : active.state.calendar;
+        }
+
         /** Project only the active prepared track through the qualified C observation adapter. */
         void onSnapshot(MediaSessionProbe.Snapshot snapshot) {
             if(!isOwnerThread()||active==null)return;
