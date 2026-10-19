@@ -52,6 +52,26 @@ android {
             buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
             signingConfig null
         }
+        // AUDIO 002 EXPERIMENTAL, LOCAL dev + SOFTWARE qualification only (mandate §15).
+        // A DISTINCT applicationId (via applicationIdSuffix) so this experimental APK
+        // installs ALONGSIDE the stable package without clobbering its data/pairing:
+        // stable  = com.scenevibe.tvcompanionpoc
+        // audioexp = com.scenevibe.tvcompanionpoc.audioexp
+        // It is debuggable and uses the DISPOSABLE default debug signing only; it NEVER
+        // references the M5 release keystore (no signingConfig assigned here). The stable
+        // applicationId and versionCode (12 on this branch; never bumped to interfere with
+        // the stable 15) are untouched. Do NOT run a signed/release build with this type.
+        audioexp {
+            initWith debug
+            applicationIdSuffix ".audioexp"
+            versionNameSuffix "-audio002-exp"
+            debuggable true
+            minifyEnabled false
+            shrinkResources false
+            // Disposable debug signing only: inherit the default debug SigningConfig that
+            // AGP auto-provisions for debuggable builds. Explicitly NOT the M5 keystore.
+            signingConfig signingConfigs.debug
+        }
     }
 
     sourceSets.observation.java.srcDir "src/release/java"
