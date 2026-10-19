@@ -94,9 +94,18 @@ def apk():
     digest = digests[0].lower()
     assert digest != M5, "Stable M5 certificate forbidden"
     assert "CN=Android Debug" in certs, "Not an Android debug signer"
+    # AGP resolves the user directory from Android preferences; do not guess it.
+    signing = (OUT / "signing-report.txt").read_text()
+    section = re.search(r"Variant: audioexp\n(.*?)(?:\nVariant:|\Z)", signing, re.S)
+    assert section, "No audioexp signing report"
+    store = re.search(r"^Store: (.+)$", section.group(1), re.M)
+    alias = re.search(r"^Alias: (.+)$", section.group(1), re.M)
+    assert store and alias and alias.group(1).strip().lower() == "androiddebugkey", "Not debug signing"
+    debug_store = Path(store.group(1).strip())
+    assert debug_store.name == "debug.keystore" and debug_store.is_file(), "Missing runner debug key"
     public_cert = OUT / "debug-certificate.der"
     command("keytool", "-exportcert", "-alias", "androiddebugkey", "-keystore",
-            str(Path.home() / ".android/debug.keystore"), "-storepass", "android",
+            str(debug_store), "-storepass", "android",
             "-file", str(public_cert))
     assert hashlib.sha256(public_cert.read_bytes()).hexdigest() == digest, "Not this runner's debug key"
     public_cert.unlink()  # Public certificate only; the keystore is never included in artifacts.

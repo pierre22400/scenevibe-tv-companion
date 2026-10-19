@@ -202,7 +202,9 @@ jobs:
       - name: Assemble disposable debug-signed experimental APK
         run: gradle :app:assembleAudioexp --stacktrace
       - name: Verify actual APK identity, debug signature and digest
-        run: python3 .github/scripts/audio-003-verify.py apk
+        run: |
+          gradle :app:signingReport --console=plain > build/audio003/signing-report.txt
+          python3 .github/scripts/audio-003-verify.py apk
       - name: Upload qualified experimental APK only after all checks
         uses: actions/upload-artifact@v4
         with:
