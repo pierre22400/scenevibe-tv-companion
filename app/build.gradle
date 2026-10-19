@@ -78,6 +78,7 @@ android {
     // initWith copies build settings, not source directories. Reuse the existing
     // development provider and its Android lifecycle/view tests for audioexp only.
     sourceSets.audioexp.java.srcDir "src/debug/java"
+    sourceSets.audioexp.assets.srcDir "src/debug/assets"
     sourceSets.testAudioexp.java.srcDir "src/testDebug/java"
 
     // An explicit qualification-only property prevents even disposable debug signing.
