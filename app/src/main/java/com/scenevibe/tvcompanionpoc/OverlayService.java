@@ -81,11 +81,20 @@ public final class OverlayService extends Service {
     private long activeRevision;
     /** Captured observation lifetime, never an installation or MEDIA admission authority. */
     private ObservationDiagnostics.Session observationSession;
+    /** Exclusive 009-004 owner; it never constructs the historical installation/Cloud stack. */
+    private TvFirst009TextServiceOwner textQualification;
 
     /** Create the notification channel and enter foreground mode promptly. */
+    // Lint treats this disabled 008 service as absent. The 008 branch returns before
+    // this call; historical manifests retain specialUse and the actual variant is tested.
+    @android.annotation.SuppressLint("ForegroundServiceType")
     @Override
     public void onCreate() {
         super.onCreate();
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            textQualification=new TvFirst009TextServiceOwner(this);textQualification.create();return;
+        }
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) return;
         Log.i(TAG, "OverlayService created");
         try {
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -120,6 +129,9 @@ public final class OverlayService extends Service {
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION)
+            return textQualification==null?START_NOT_STICKY:textQualification.start(intent);
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) { stopSelf(); return START_NOT_STICKY; }
         if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return startObservationOnly();
         if (!foregroundReady) {
             return START_NOT_STICKY;
@@ -658,6 +670,11 @@ public final class OverlayService extends Service {
     /** Remove the window and notification on every normal destruction path. */
     @Override
     public void onDestroy() {
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            if (textQualification!=null) { textQualification.destroy();textQualification=null; }
+            super.onDestroy();return;
+        }
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) { super.onDestroy(); return; }
         if (BuildConfig.TVFIRST_OBSERVATION_ONLY) {
             stopObservationOnly();
             super.onDestroy();

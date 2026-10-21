@@ -17,6 +17,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import com.scenevibe.tvcompanionpoc.R;
+import com.scenevibe.tvcompanionpoc.BuildConfig;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -143,10 +144,16 @@ public final class TvShellController {
         page = ui.column();
         scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
         render();
+        if (source instanceof TvAccountSource) ((TvAccountSource) source).onChange(() -> {
+            remember(); render();
+        });
     }
 
     /** Returns the single native root for the existing MainActivity content view. */
     public View view() { return root; }
+
+    /** Expose the existing source to explicit local qualification controls without creating a second journey. */
+    public TvPresentationSource sourceForLocalQualification() { return source; }
 
     /** Resolves accepted dimensions through Android resources. */
     private int d(int resource) { return activity.getResources().getDimensionPixelSize(resource); }
@@ -343,15 +350,30 @@ public final class TvShellController {
 
     /** Restores focus after permission settings or the existing DiagnosticsActivity returns. */
     public void resume() {
+        if (source instanceof TvAccountSource) ((TvAccountSource) source).resume();
         refreshRuntime();
         root.post(() -> restoreFocus(true));
+    }
+
+    /** Invalidate Activity-owned network callbacks before pause; no service is affected. */
+    public void pause() {
+        remember();
+        if (source instanceof TvAccountSource) ((TvAccountSource) source).pause();
+    }
+
+    /** Release only the account source owned by this Activity. */
+    public void close() {
+        if (source instanceof TvAccountSource) ((TvAccountSource) source).close();
     }
 
     /** Reads existing status only; the 1s legacy status refresh never rebuilds or steals focus. */
     public void refreshRuntime() {
         RuntimeStatus status = runtime.read();
-        if (accountStatus != null) accountStatus.setText(status.cloud);
-        if (diagnosticConnection != null) diagnosticConnection.setText(status.cloud);
+        String cloud = source instanceof TvAccountSource ? ((TvAccountSource) source).accountMessage() : status.cloud;
+        if (source instanceof TvAccountSource) connection.setText(((TvAccountSource) source).accountStage() == TvAccountSource.AccountStage.ASSOCIATED
+                ? (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION ? "Compte associé · Qualification TEXT" : "Compte associé · Cache uniquement") : "Compte non confirmé");
+        if (accountStatus != null) accountStatus.setText(cloud);
+        if (diagnosticConnection != null) diagnosticConnection.setText(cloud);
         if (diagnosticService != null) diagnosticService.setText(status.service + "\n" + status.permissions);
         if (diagnosticDevice != null) diagnosticDevice.setText(status.device);
     }
@@ -485,10 +507,10 @@ public final class TvShellController {
     private String cardStatus(TvOffer offer) {
         if (!offer.available) return s(R.string.tv_unavailable);
         TvPreparation prep = source.preparation(offer.id);
-        if (prep.readyFor(offer.id)) return s(R.string.tv_ready);
+        if (prep.readyFor(offer.id)) return source instanceof TvAccountSource ? "Cache confirmé" : s(R.string.tv_ready);
         if (source.isLocalDemo() && prep.demonstration && prep.stage == TvPreparation.Stage.READY) return s(R.string.tv_demo_ready);
         if (prep.stage != TvPreparation.Stage.NONE && prep.stage != TvPreparation.Stage.FAILED) return s(R.string.tv_in_progress);
-        return s(R.string.tv_available);
+        return source instanceof TvAccountSource ? "Ajout à vérifier" : s(R.string.tv_available);
     }
 
     /** Reuses the wide/recap TrackCard hierarchy and blocks child focus inside the clickable card. */
@@ -544,13 +566,18 @@ public final class TvShellController {
                 : prep.stage == TvPreparation.Stage.READY && prep.readyFor(offer.id) ? R.string.tv_stage_ready_detail
                 : prep.stage != TvPreparation.Stage.NONE && prep.stage != TvPreparation.Stage.FAILED
                         ? R.string.tv_in_progress_detail : R.string.tv_available_detail;
-        paragraph(copy, s(statusDetail), 12, 3);
+        paragraph(copy, source instanceof TvAccountSource ? (prep.readyFor(offer.id)
+                ? "Cache durable et reçu Cloud concordants. Aucun rendu ni MEDIA."
+                : "La distributabilité sera vérifiée lors de l’ajout.") : s(statusDetail), 12, 3);
         outer.addView(card, new FrameLayout.LayoutParams(-1, -2));
         if (interactive) {
             outer.setBackground(ui.focusBackground(R.color.scenevibe_card, 0, 12, false));
             outer.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
             outer.setContentDescription(offer.title + ". " + offer.filmTitle + ". " + cardStatus(offer));
-            outer.setOnClickListener(v -> open(TvNavigation.Screen.TRACK, offer.id));
+            outer.setOnClickListener(v -> {
+                if (source instanceof TvAccountSource) ((TvAccountSource) source).inspect(offer.id);
+                open(TvNavigation.Screen.TRACK, offer.id);
+            });
             target(outer, "card-" + offer.id);
         }
         return outer;
@@ -558,6 +585,7 @@ public final class TvShellController {
 
     /** Renders the reference introduction and one featured card without manufacturing empty content. */
     private void home() {
+        if (accountPanel()) return;
         demoNotice(page);
         introduction(s(R.string.tv_home_eyebrow), s(R.string.tv_home_title), s(R.string.tv_home_intro));
         LinearLayout section = ui.column();
@@ -578,6 +606,7 @@ public final class TvShellController {
 
     /** Shows real absence explicitly and retains withdrawn cards as consultable but not preparable. */
     private void tracks() {
+        if (accountPanel()) return;
         introduction(s(R.string.tv_tracks), s(R.string.tv_tracks_title), s(R.string.tv_tracks_intro));
         List<TvOffer> offers = source.offers();
         if (offers.isEmpty()) {
@@ -589,10 +618,63 @@ public final class TvShellController {
             for (TvOffer offer : offers) block(page, card(offer, true, true), 16);
             defaultFocus = "card-" + offers.get(0).id;
         }
+        if (source instanceof TvAccountSource) {
+            TvAccountSource account = (TvAccountSource) source;
+            accountAction(page, "Actualiser Mes Tracks", "tracks-refresh", account::refresh);
+            accountAction(page, "Abandonner la demande d’ajout en attente", "tracks-cancel-pending", () -> source.cancel(""));
+            if (account.hasMore()) accountAction(page, "Afficher la suite", "tracks-more", account::loadMore);
+        }
+    }
+
+    /** Reuse native focus targets for explicit account operations; no timer advances success. */
+    private void accountAction(LinearLayout parent, String label, String key, Runnable run) {
+        Button button = action(parent, R.string.tv_retry, false, key, run);
+        button.setText(label);
+        button.setEnabled(!((TvAccountSource) source).busy());
+    }
+
+    /** Explain real account state and an explicit human code, with no fixture or automatic TV creation. */
+    private boolean accountPanel() {
+        if (!(source instanceof TvAccountSource)) return false;
+        TvAccountSource account = (TvAccountSource) source;
+        if (account.accountStage() == TvAccountSource.AccountStage.ASSOCIATED) return false;
+        introduction("Compte SceneVibe", account.accountStage() == TvAccountSource.AccountStage.ERROR ? "Vérifier la connexion et le compte" : "Associer ma TV", account.accountMessage());
+        if (!account.verification().isEmpty()) {
+            TextView code = text(account.verification(), 24, true, 650, R.color.scenevibe_foreground);
+            code.setTag("account-human-code"); block(page, code, 16);
+            paragraph(page, "Saisis ce code uniquement sur le site SceneVibe indiqué. Ne partage jamais ce code.", 13, 12);
+            accountAction(page, "Vérifier la confirmation", "account-check", account::refresh);
+            accountAction(page, "Abandonner ce code", "account-cancel", account::cancelPairing);
+            defaultFocus = "account-check";
+        } else if (account.accountStage() != TvAccountSource.AccountStage.UNCONFIGURED) {
+            paragraph(page, "Sur le site, tu peux créer ton compte ou te connecter. Les anciennes Tracks d’un autre compte ne seront pas réattribuées.", 14, 12);
+            accountAction(page, "Nouvelle association", "account-new", () -> account.beginPairing(false));
+            accountAction(page, "Récupérer une TV de mon compte", "account-recover", () -> account.beginPairing(true));
+            accountAction(page, "Vérifier / Réessayer", "account-check", account::refresh);
+            accountAction(page, "Abandonner le code en attente", "account-cancel", account::cancelPairing);
+            defaultFocus = "account-new";
+        } else {
+            action(page, R.string.tv_diag_details, false, "account-diagnostics", openTechnicalDiagnostics);
+            defaultFocus = "account-diagnostics";
+        }
+        paragraph(page, "Ce profil consulte et prépare le cache. Aucun rendu de commentaire, overlay ou MEDIA n’est autorisé.", 13, 16);
+        return true;
+    }
+
+    /** Require a human confirmation before the trusted adapter may request an assignment. */
+    private void confirmSelection(TvOffer offer) {
+        new AlertDialog.Builder(activity).setTitle("Ajouter à ma TV ?")
+                .setMessage("Cette sélection remplacera l’affectation courante de cette TV. Seul le cache sera préparé ; aucun commentaire ne démarrera.")
+                .setPositiveButton("Ajouter à ma TV", (dialog, which) -> {
+                    try { source.select(offer.id); open(TvNavigation.Screen.PREPARE, offer.id); }
+                    catch (IllegalStateException | IllegalArgumentException refused) { render(); }
+                }).setNegativeButton("Annuler", (dialog, which) -> dialog.dismiss())
+                .setOnDismissListener(dialog -> root.post(() -> restoreFocus(true))).show();
     }
 
     /** Resolves only the explicitly routed offer, refusing an unknown or disappeared reference. */
     private TvOffer routedOffer() {
+        if (accountPanel()) return null;
         for (TvOffer offer : source.offers()) if (offer.id.equals(navigation.current().offerId)) return offer;
         introduction(s(R.string.tv_tracks), s(R.string.tv_error_missing), s(R.string.tv_error_missing_detail));
         action(page, R.string.tv_back_tracks, false, "missing-back", () -> returnToTracks(navigation.current().offerId));
@@ -627,10 +709,10 @@ public final class TvShellController {
         block(identity, text(offer.title, 28, true, 650, R.color.scenevibe_foreground), 4);
         block(identity, text(offer.filmTitle, 16, false, 500, R.color.scenevibe_foreground), 8);
         block(identity, editionLine(offer, 14), 5);
-        paragraph(identity, s(R.string.tv_language_line, offer.language), 12, 5);
+        paragraph(identity, source instanceof TvAccountSource ? "Langue de la référence : " + offer.language + " · Langue du commentaire : non démontrée" : s(R.string.tv_language_line, offer.language), 12, 5);
         if (offer.channel != null) {
             paragraph(identity, s(R.string.tv_channel_author), 12, 12);
-            block(identity, state(offer.channel, s(R.string.tv_channel_demo), false), 6);
+            block(identity, state(offer.channel, source instanceof TvAccountSource ? "Information fournie par le compte ; absente si non renseignée." : s(R.string.tv_channel_demo), false), 6);
         }
         block(main, identity, 16);
         if (!offer.available) block(main, state(s(R.string.tv_selection_impossible), s(R.string.tv_unavailable_detail), true), 16);
@@ -639,12 +721,19 @@ public final class TvShellController {
             int label = prep.stage == TvPreparation.Stage.READY ? R.string.tv_view_preparation
                     : prep.stage == TvPreparation.Stage.NONE || prep.stage == TvPreparation.Stage.FAILED
                             ? R.string.tv_prepare_action : R.string.tv_follow_preparation;
-            action(main, label, true, "track-primary", () -> {
+            Button primary = action(main, label, true, "track-primary", () -> {
+                if (source instanceof TvAccountSource && source.preparation(offer.id).stage != TvPreparation.Stage.READY) {
+                    confirmSelection(offer); return;
+                }
                 try { if (source.preparation(offer.id).stage == TvPreparation.Stage.NONE
                         || source.preparation(offer.id).stage == TvPreparation.Stage.FAILED) source.select(offer.id);
                     open(TvNavigation.Screen.PREPARE, offer.id);
                 } catch (IllegalArgumentException | IllegalStateException unavailable) { render(); }
             });
+            if (source instanceof TvAccountSource) {
+                primary.setText(prep.readyFor(offer.id) ? "Voir la confirmation du cache" : "Ajouter à ma TV");
+                primary.setEnabled(!((TvAccountSource) source).busy());
+            }
         }
         action(main, R.string.tv_back_tracks, false, "track-back", () -> returnToTracks(offer.id));
         LinearLayout availability = state(s(R.string.tv_availability), "", false);
@@ -653,8 +742,8 @@ public final class TvShellController {
         ui.typography((TextView) availability.getChildAt(0), 16, true, 650);
         // The empty body from the generic panel is replaced by the actual four availability rows.
         availability.removeViewAt(1);
-        paragraph(availability, (offer.available ? "✓  " : "⊘  ") + s(offer.available ? R.string.tv_available_format : R.string.tv_track_unavailable), 12, 0);
-        paragraph(availability, s(source.isLocalDemo() ? R.string.tv_connection_demo : R.string.tv_unconnected_header), 12, 8);
+        paragraph(availability, (offer.available ? "✓  " : "⊘  ") + (source instanceof TvAccountSource ? "FinalTrack V1 : validation lors de l’ajout" : s(offer.available ? R.string.tv_available_format : R.string.tv_track_unavailable)), 12, 0);
+        paragraph(availability, source instanceof TvAccountSource ? ((TvAccountSource) source).accountMessage() : s(source.isLocalDemo() ? R.string.tv_connection_demo : R.string.tv_unconnected_header), 12, 8);
         paragraph(availability, s(R.string.tv_no_activation), 12, 8);
         paragraph(availability, s(R.string.tv_admission_boundary), 12, 8);
         block(side, availability, 0);
@@ -744,6 +833,11 @@ public final class TvShellController {
         String message = failed ? s(copy[1]) : prep.stage == TvPreparation.Stage.NONE ? s(R.string.tv_no_preparation_detail)
                 : demo ? s(R.string.tv_demo_stage_detail) : s(new int[] {R.string.tv_stage_requested_detail,
                     R.string.tv_stage_waiting_detail, R.string.tv_stage_preparing_detail, R.string.tv_stage_ready_detail}[Math.max(0, Math.min(index, 3))]);
+        if (source instanceof TvAccountSource && !failed) {
+            title = ready ? "Cache confirmé" : "Préparation du cache";
+            message = ready ? "La sélection, l’affectation, les octets relus et le reçu Cloud concordent. Aucun rendu ni MEDIA n’est armé."
+                    : "La confirmation dépend des réponses du service et de la relecture durable du cache.";
+        }
         introduction(s(R.string.tv_preparation_eyebrow, offer.title), title, message);
         LinearLayout[] columns = columns(); LinearLayout main = columns[0], recap = columns[1];
         if (failed) {
@@ -762,14 +856,14 @@ public final class TvShellController {
                 LinearLayout words = ui.column();
                 LinearLayout.LayoutParams wordsParams = new LinearLayout.LayoutParams(0, -2, 1); wordsParams.leftMargin = ui.dp(11);
                 step.addView(words, wordsParams);
-                block(words, text(s(titles[i]) + (demo && i == 3 ? s(R.string.tv_demo_stage_suffix) : ""), 15, false, 650,
+                block(words, text((source instanceof TvAccountSource && i == 3 ? "Cache confirmé" : s(titles[i])) + (demo && i == 3 ? s(R.string.tv_demo_stage_suffix) : ""), 15, false, 650,
                         done || current ? R.color.scenevibe_foreground : R.color.scenevibe_muted_foreground), 0);
                 paragraph(words, s(done ? R.string.tv_done : current ? R.string.tv_current : R.string.tv_todo), 12, 0);
                 block(main, step, 7);
             }
             if (ready) {
                 LinearLayout recognition = state(s(prep.mediaAdmittedFor(offer.id) ? R.string.tv_program_admitted : R.string.tv_no_program),
-                        s(prep.mediaAdmittedFor(offer.id) ? R.string.tv_program_admitted_detail : R.string.tv_no_program_detail), false);
+                        source instanceof TvAccountSource ? "Ce cache n’autorise aucun commentaire, overlay, transport ni synchronisation MEDIA." : s(prep.mediaAdmittedFor(offer.id) ? R.string.tv_program_admitted_detail : R.string.tv_no_program_detail), false);
                 recognition.setPadding(ui.dp(18), ui.dp(16), ui.dp(18), ui.dp(16));
                 recognition.setBackground(ui.accentPanel(R.color.scenevibe_muted, 10));
                 ui.typography((TextView) recognition.getChildAt(0), 16, true, 650);
@@ -801,6 +895,11 @@ public final class TvShellController {
             if (!failed && prep.stage != TvPreparation.Stage.NONE) action(actions, R.string.tv_cancel, false, "prepare-cancel", () -> {
                 source.cancel(offer.id); back();
             });
+        }
+        if (source instanceof TvAccountSource && !ready) {
+            accountAction(main, "Vérifier le compte et l’affectation", "prepare-refresh", ((TvAccountSource) source)::refresh);
+            if (prep.stage == TvPreparation.Stage.AWAITING_CONFIRMATION || prep.stage == TvPreparation.Stage.PREPARING)
+                accountAction(main, "Reprendre la confirmation du cache", "prepare-resume", () -> confirmSelection(offer));
         }
         block(recap, card(offer, false, false), 0);
         defaultFocus = "prepare-primary";
@@ -845,7 +944,7 @@ public final class TvShellController {
         introduction(s(R.string.tv_settings), s(R.string.tv_settings_title), s(R.string.tv_settings_intro));
         RuntimeStatus status = runtime.read();
         LinearLayout[] cards = stateGrid(new String[] {s(R.string.tv_settings_account), s(R.string.tv_settings_language), s(R.string.tv_settings_format)},
-                new String[] {status.cloud, s(R.string.tv_french), s(R.string.tv_settings_format_detail)});
+                new String[] {source instanceof TvAccountSource ? ((TvAccountSource) source).accountMessage() : status.cloud, s(R.string.tv_french), s(R.string.tv_settings_format_detail)});
         accountStatus = (TextView) cards[0].getChildAt(1);
         action(page, R.string.tv_back_home, false, "settings-back", () -> { remember(); navigation.section(TvNavigation.Screen.HOME); render(); });
         block(page, text(s(R.string.tv_runtime_controls), 22, true, 650, R.color.scenevibe_foreground), 16);

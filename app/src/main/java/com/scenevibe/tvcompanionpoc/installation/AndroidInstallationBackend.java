@@ -32,6 +32,12 @@ public final class AndroidInstallationBackend implements InstallationStore.Backe
         if (context==null) throw new IllegalArgumentException("Missing installation context");
         preferences=context.getApplicationContext().getSharedPreferences("cloud_track",Context.MODE_PRIVATE);
     }
+    /** Reuse the same durable codec/backend in an explicit 008 association-generation namespace. */
+    public AndroidInstallationBackend(Context context,String namespace) {
+        if (context==null||namespace==null||!namespace.matches("tvfirst008_cache_[0-9a-f]{32}"))
+            throw new IllegalArgumentException("Invalid delivery cache namespace");
+        preferences=context.getApplicationContext().getSharedPreferences(namespace,Context.MODE_PRIVATE);
+    }
     /** Use the shared preferences identity to serialize all adapters for the same file. */
     @Override public Object monitor() {return preferences;}
 

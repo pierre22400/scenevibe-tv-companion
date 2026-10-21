@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- This candidate owns only an Activity and outbound HTTPS cache delivery. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <application android:usesCleartextTraffic="false">
+        <service android:name=".OverlayService" android:enabled="false" />
+        <service android:name=".MediaSessionAccessService" android:enabled="false" />
+        <receiver android:name=".BootReceiver" android:enabled="false" />
+    </application>
+</manifest>

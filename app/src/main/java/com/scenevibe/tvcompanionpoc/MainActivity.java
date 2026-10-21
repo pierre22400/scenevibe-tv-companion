@@ -38,6 +38,8 @@ public final class MainActivity extends Activity {
     private TextView cloudStatus;
     private Button autostartButton;
     private TvShellController presentation;
+    private TextView textQualificationStatus;
+    private Button textActivateButton,textStopButton;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
      * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
@@ -46,6 +48,11 @@ public final class MainActivity extends Activity {
      */
     private final Runnable statusRefresh = new Runnable() {
         @Override public void run() {
+            if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+                refreshTextQualification();
+                if (presentation!=null) presentation.refreshRuntime();
+                handler.postDelayed(this,1000L);return;
+            }
             if (BuildConfig.ENABLE_LAN_DEV) {
                 refreshPairing();
             }
@@ -79,6 +86,36 @@ public final class MainActivity extends Activity {
         controls.setGravity(Gravity.CENTER);
         controls.setPadding(dp(48), dp(32), dp(48), dp(32));
         controls.setBackgroundColor(0xFF17130F);
+
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            textQualificationStatus=new TextView(this);
+            textQualificationStatus.setTextColor(0xFFFFFFFF);textQualificationStatus.setTextSize(17);
+            controls.addView(textQualificationStatus);
+            Button activate=addButton(controls,"Activer les commentaires TEXT",this::activateTextQualification);
+            textActivateButton=activate;
+            activate.setTag("tvfirst009-start-text");
+            Button stop=addButton(controls,"Arrêter les commentaires TEXT",() -> {
+                TvFirst009TextServiceOwner.requestStop(this);refreshTextQualification();
+            });
+            textStopButton=stop;
+            stop.setTag("tvfirst009-stop-text");
+            addButton(controls,"Autorisation de superposition",this::openPermissionSettings);
+            addButton(controls,"Accès aux sessions MEDIA",this::openMediaSessionAccessSettings);
+            addButton(controls,"Diagnostics TEXT en lecture seule",this::openDiagnostics);
+            TextView notice=new TextView(this);notice.setTextColor(0xFFD0C9BE);notice.setTextSize(15);
+            notice.setText("Qualification TEXT sans publicité. Active volontairement, puis ouvre Prime Video toi-même. L’activation ne remplace pas la reconnaissance de Columbo. Aucun commentaire en cas d’identité ou de position inconnue.");
+            controls.addView(notice);refreshTextQualification();return controls;
+        }
+
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) {
+            permissionStatus = new TextView(this); mediaAccessStatus = new TextView(this); cloudStatus = new TextView(this);
+            cloudStatus.setText("Association gérée depuis le parcours Compte. Cache uniquement.");
+            permissionStatus.setText("Aucune autorisation d’overlay demandée par ce profil.");
+            mediaAccessStatus.setText("MEDIA et rendu interdits.");
+            controls.addView(cloudStatus); controls.addView(permissionStatus); controls.addView(mediaAccessStatus);
+            addButton(controls, "Diagnostics en lecture seule", this::openDiagnostics);
+            return controls;
+        }
 
         TextView title = new TextView(this);
         title.setText("SceneVibe\nTV Companion " + BuildConfig.VERSION_NAME);
@@ -158,6 +195,14 @@ public final class MainActivity extends Activity {
 
     /** Read only bounded local observations; no pairing, Cloud activation or ACK is requested. */
     private TvShellController.RuntimeStatus presentationStatus() {
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            return new TvShellController.RuntimeStatus("État d’association et de cache à vérifier dans le parcours Compte existant.",
+                    "Superposition : "+Settings.canDrawOverlays(this)+" · accès MEDIA : "+NotificationAccess.isGranted(this),
+                    TvFirst009TextServiceOwner.describe(),"SceneVibe TV · "+BuildConfig.VERSION_NAME);
+        }
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) return new TvShellController.RuntimeStatus(
+                "Compte vérifié par le parcours d’association uniquement.", "Aucun accès MEDIA ni overlay demandé.",
+                "Rendu interdit · service désactivé dans cette variante", "SceneVibe TV · " + BuildConfig.VERSION_NAME);
         RuntimeDiagnostics status = RuntimeDiagnostics.capture(this, DiagnosticsStore.INSTANCE);
         android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
         return new TvShellController.RuntimeStatus(cloudStatus.getText().toString(),
@@ -182,6 +227,16 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            handler.removeCallbacks(statusRefresh);
+            if (presentation!=null) presentation.resume();
+            statusRefresh.run();return;
+        }
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) {
+            handler.removeCallbacks(statusRefresh);
+            if (presentation != null) presentation.resume();
+            return;
+        }
         permissionStatus.setText(Settings.canDrawOverlays(this)
                 ? "Display over other apps: Granted"
                 : "Display over other apps: Not granted");
@@ -195,9 +250,41 @@ public final class MainActivity extends Activity {
 
     /** Pause only UI refresh and remember focus; the foreground service keeps its lifetime. */
     @Override protected void onPause() {
-        if (presentation != null) presentation.remember();
+        if (presentation != null) presentation.pause();
         handler.removeCallbacks(statusRefresh);
         super.onPause();
+    }
+
+    /** Release Activity-owned 008 work; historical service lifetime remains independent. */
+    @Override protected void onDestroy() {
+        if (presentation != null) presentation.close();
+        super.onDestroy();
+    }
+
+    /** Reuse the shell's existing real 008 source; never construct a parallel identity or Cloud client. */
+    private TvFirst008Source textQualificationSource() {
+        if (!BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION || presentation==null) return null;
+        Object source=presentation.sourceForLocalQualification();
+        return source instanceof TvFirst008Source?(TvFirst008Source)source:null;
+    }
+
+    /** Only this explicit D-pad button action can mint a one-use in-memory service request. */
+    private void activateTextQualification() {
+        TvFirst009TextServiceOwner.requestStart(this,textQualificationSource());
+        refreshTextQualification();
+    }
+
+    /** Refresh bounded text without reading historical credentials or automatically starting anything. */
+    private void refreshTextQualification() {
+        if (textQualificationStatus==null) return;
+        TvFirst008Source source=textQualificationSource();
+        if (source!=null && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ERROR
+                && TvFirst009TextServiceOwner.status().active) TvFirst009TextServiceOwner.requestStop(this);
+        textQualificationStatus.setText(TvFirst009TextServiceOwner.describe()
+                +"\nSuperposition : "+Settings.canDrawOverlays(this)+" · accès MEDIA : "+NotificationAccess.isGranted(this));
+        boolean busy=TvFirst009TextServiceOwner.controlBusy();
+        textActivateButton.setEnabled(!busy);
+        textStopButton.setEnabled(busy);
     }
 
     private void startPairing() {
@@ -390,6 +477,7 @@ public final class MainActivity extends Activity {
 
     /** Start the foreground service only after an explicit user action and permission check. */
     private boolean startOverlay(String action) {
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) return false;
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "Grant Display over other apps first.", Toast.LENGTH_LONG).show();
             return false;

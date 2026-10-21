@@ -33,6 +33,7 @@ public final class BootReceiver extends BroadcastReceiver {
                 && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             return;
         }
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) return;
         try {
             Context app = context.getApplicationContext();
 

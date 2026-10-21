@@ -3,6 +3,8 @@ package com.scenevibe.tvcompanionpoc;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.widget.Button;
@@ -27,7 +29,16 @@ import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
 public final class DiagnosticsActivity extends Activity {
     private static final String TAG = "SceneVibePoc";
     private TextView report;
+    private final Handler textRefreshHandler=new Handler(Looper.getMainLooper());
+    private final Runnable textRefresh=new Runnable() {
+        /** Refresh only visible TEXT observations, never an account, probe or service. */
+        @Override public void run() {
+            refresh();
+            textRefreshHandler.postDelayed(this,1000L);
+        }
+    };
 
+    /** Build the existing read-only screen without acquiring any runtime authority. */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,6 +74,9 @@ public final class DiagnosticsActivity extends Activity {
                 + "The previous TV entry remains in your SceneVibe account until you remove it.");
         if (BuildConfig.TVFIRST_OBSERVATION_ONLY)
             note.setText("Observation only. Commentary rendering, Cloud and reset are disabled.");
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) note.setText("Compte et cache uniquement. Aucun reset, rendu, service ou accès MEDIA dans ce profil.");
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION)
+            note.setText("Qualification TEXT explicite sans publicité. Aucune activation au boot, aucun reset et aucun contrôle du lecteur Prime. Une requête de rendu n’est pas une preuve d’affichage physique.");
         note.setTextColor(0xFFA89F92);
         note.setTextSize(13);
         note.setGravity(Gravity.CENTER);
@@ -75,14 +89,37 @@ public final class DiagnosticsActivity extends Activity {
         setContentView(scroll);
     }
 
+    /** Re-read TEXT state while visible; historical profiles retain their manual refresh behavior. */
     @Override
     protected void onResume() {
         super.onResume();
-        refresh();
+        textRefreshHandler.removeCallbacks(textRefresh);
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) textRefresh.run();
+        else refresh();
+    }
+
+    /** Stop Activity-owned refresh on departure without affecting the foreground TEXT session. */
+    @Override protected void onPause() {
+        textRefreshHandler.removeCallbacks(textRefresh);
+        super.onPause();
+    }
+
+    /** Retire queued UI work even if this screen is destroyed independently of the service. */
+    @Override protected void onDestroy() {
+        textRefreshHandler.removeCallbacks(textRefresh);
+        super.onDestroy();
     }
 
     /** Rebuilds the read-only snapshot from the current stores and observational signals. */
     private void refresh() {
+        if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            report.setText("TV-FIRST 009-004 — TEXT\n"+TvFirst009TextServiceOwner.describe()
+                    +"\nÉdition universelle et publicité : NON DÉMONTRÉES\nAutostart : désactivé\nAucun secret, compte ou identifiant lu par cet écran.");return;
+        }
+        if (BuildConfig.TVFIRST_DELIVERY_ONLY) {
+            report.setText("TV-FIRST 008 — cache uniquement\nRendu : FORBIDDEN\nMEDIA : UNKNOWN / non sollicité\nService et autostart : désactivés\nCompte, affectation, cache durable et reçu Cloud : faits distincts, vérifiés dans le parcours natif.\nAucun secret ni identifiant lu par cet écran.");
+            return;
+        }
         if (BuildConfig.TVFIRST_OBSERVATION_ONLY) {
             report.setText(com.scenevibe.tvcompanionpoc.tvfirst.MediaEvidencePolicy.describe(
                     com.scenevibe.tvcompanionpoc.tvfirst.ObservationDiagnostics.latest(),

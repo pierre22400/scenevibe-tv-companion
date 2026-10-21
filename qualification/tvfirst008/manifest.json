@@ -1,0 +1,382 @@
+{
+  "profile": "tvfirst008-cache-v1",
+  "scope": "OWNER_AUTHORIZED_LOCAL_008_L",
+  "android": {
+    "base": "fdc5f6d5f17a19ef775422bf0b6e63454cc0fbbb",
+    "baseTree": "c6c9dfd63aa46f96619bf9d9c42d90a77f90c467",
+    "files": {
+      "app/build.gradle": {
+        "status": "modified",
+        "baseBlob": "f89c59a9559ec50371962ac5823857cd1ad98bc8",
+        "sha256": "c9fcc5f7673467b16a60aeaa41e5d2ac430a223cc56a85a09b2ea4b953bc6e14",
+        "bytes": 3939
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/BootReceiver.java": {
+        "status": "modified",
+        "baseBlob": "c6f822db097c52b15d44b4d76253a2346b926ea6",
+        "sha256": "6a4cedf6ea39c67d5e183a5622b1538aa73e7f3e4c0c08a8853aef32505a3106",
+        "bytes": 5351
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/DiagnosticsActivity.java": {
+        "status": "modified",
+        "baseBlob": "595dcabc5e0226de97139f00c6213863971805d6",
+        "sha256": "e6d9ad3899fc61f25a1cdda811647f47098de74d4c3b3f7682a7f476093ebbb5",
+        "bytes": 11366
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/MainActivity.java": {
+        "status": "modified",
+        "baseBlob": "df329072c69c83f1d8e84036d0f01442591b094b",
+        "sha256": "81579d71f72760a83c22b13277c0f0de27e79899087ea9dcfc1e220e025879c1",
+        "bytes": 20691
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/OverlayService.java": {
+        "status": "modified",
+        "baseBlob": "f115da057d0e088f531fbd631ac20e57e8cd417b",
+        "sha256": "c7649d18e4affeb9e43392894a26e0e264e17bae9a990ad190165426494af222",
+        "bytes": 42060
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/SecretStore.java": {
+        "status": "modified",
+        "baseBlob": "447b4e2e6fb4a7852bfcb2cb9e94217adf46f884",
+        "sha256": "b0eda8fa5b3bc1df78fc12195aa4062cbc13f75819a7f5377d1e9e12a7ef3d21",
+        "bytes": 11769
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/TvFirst008Cache.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "41e371c5a9ce997ba307d68499d3d2927bbd08f7ca66b727cf5525b7a41f95b2",
+        "bytes": 2329
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/TvFirst008Http.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "112f9dee75f220079e2042f9fc2c2597a953696c8934a46797222f7065a0696a",
+        "bytes": 3335
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/TvFirst008HttpPort.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "a8ba35b3c3446c7626979064c49aefbc134e3bef29fc567b5ee0e8f7f753e0e8",
+        "bytes": 388
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/TvFirst008Source.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "a7ea6799770fbe81e8d3d0b6899f9106c6fe3fa76b0c22f452157568a381a26a",
+        "bytes": 26169
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/TvFirst008State.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "f6c017375a549e90fbeeaef6c3eaadb707c4dab787e03e73fe4426e78d52b222",
+        "bytes": 6475
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/TvFirst008Wire.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "1057ec121f709be017f3074a601035012f90c9e08a64e3719aeb0bf80f6a5114",
+        "bytes": 7812
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/AndroidInstallationBackend.java": {
+        "status": "modified",
+        "baseBlob": "3b2b62d3fe73840ede72ea9a3f2abe24a6f9fbc7",
+        "sha256": "7c420f4dfcb01d2393d551a2ad2955071d04b337f241346bec409d7606613c25",
+        "bytes": 8892
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/installation/PackageInstaller.java": {
+        "status": "modified",
+        "baseBlob": "0f973271d1f6c133adddff6a8136ffb9eef19fd5",
+        "sha256": "bc5d6ece5ca108ff0d8bf7719d3079d63bda312a10f7cef9df326389a63072ba",
+        "bytes": 9888
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvAccountSource.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "1e8ef7afb1e76482d359647862386d67af5d685c785651e10b27d6d908f695c1",
+        "bytes": 1843
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvPreparation.java": {
+        "status": "modified",
+        "baseBlob": "bd8197b2bca10f399a6484bf9aa25ad06d55b092",
+        "sha256": "cd83d635610de491c9743efbf44f6bd56e05573853891fc0bcea0a8efd8a67bb",
+        "bytes": 6155
+      },
+      "app/src/main/java/com/scenevibe/tvcompanionpoc/presentation/TvShellController.java": {
+        "status": "modified",
+        "baseBlob": "5e02e921d102408e2b71519dcf8eea05f8077af1",
+        "sha256": "7dbb77a3653907e89dfc9170439ee804cbd1a54ffef8ec9b1ae68b463b315aa6",
+        "bytes": 64230
+      },
+      "app/src/testTvfirst008/java/com/scenevibe/tvcompanionpoc/TvFirst008BoundaryTest.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "d41492643dddc5482a962fe3e3f371ce45126eeb9a99a5129f5a8f4f7bd3e57d",
+        "bytes": 7586
+      },
+      "app/src/testTvfirst008/java/com/scenevibe/tvcompanionpoc/TvFirst008CacheTest.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "e4a5c9c34aef088b57beb7dd0019c276e26b1164f57a3e599ab7e82e68459a6e",
+        "bytes": 8544
+      },
+      "app/src/testTvfirst008/java/com/scenevibe/tvcompanionpoc/TvFirst008HttpTest.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "c3ea2a3c30cddb85663639e0c8c2c5945a2ec43eda583428024af3765a0967cf",
+        "bytes": 7166
+      },
+      "app/src/testTvfirst008/java/com/scenevibe/tvcompanionpoc/TvFirst008IdentityTest.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "f3ffb01f786d35900260c65e1d141d7027de5254a4ea2b7464f05d9afc2346a9",
+        "bytes": 11704
+      },
+      "app/src/testTvfirst008/java/com/scenevibe/tvcompanionpoc/TvFirst008JourneyTest.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "c6614b0d40e92b9e7261849723709d5306ab6afc613a469d75f397b903a1bb5a",
+        "bytes": 16635
+      },
+      "app/src/tvfirst008/AndroidManifest.xml": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "e609fa6bec99fdf0732b8c3baed74c9258c160d789e1b011f4bce839197a48de",
+        "bytes": 967
+      },
+      "app/src/tvfirst008/java/com/scenevibe/tvcompanionpoc/presentation/TvSourceFactory.java": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "ecb050647e06a301014586fa9e4b5ebbda2aed9b8ca5c42292628fdbdc75efd2",
+        "bytes": 571
+      },
+      "app/src/tvfirst008/res/drawable/ic_launcher.xml": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "9d3d770fb09a6d635c24fb13e4d52c1717082c13408d920044937a11a821b5b0",
+        "bytes": 1563
+      },
+      "app/src/tvfirst008/res/drawable/tv_banner.xml": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "9e5ef726216134a25b689613a11e1fd8250b8d239563bf4dfd7f860a7e592dee",
+        "bytes": 14278
+      },
+      "app/src/tvfirst008/res/values/strings.xml": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "5559754586807bef37f2f2fb820a5152afd80c117f6d50b351aee47aa99a76f0",
+        "bytes": 2175
+      },
+      "docs/tv-first-008-local-profile.md": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "b94bfd0b3317db1af8bb97ee7bcf96e9db3da77976bcbe022507f283b8f2ea59",
+        "bytes": 5946
+      },
+      "qualification/tvfirst008/README.md": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "e2d552a0a1334418c8aceadd64f7a780b9773d35956ec9a57300096f0c431e60",
+        "bytes": 2534
+      },
+      "qualification/tvfirst008/collect_historical.py": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "b9a2155c7d1b85feaf8b69121ea31e3305d8be1e00d9d1f8939e46bff5468770",
+        "bytes": 1122
+      },
+      "qualification/tvfirst008/gate.py": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "b8d1a45e25c0a25d150fbbcad309a1ba24aa69ec2cb68bb26d6380aa0ef28279",
+        "bytes": 11593
+      },
+      "qualification/tvfirst008/test_gate.py": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "b7fff0e51733914fc3d888f8415b418df25649d006d664a4c94a7bb516854dd0",
+        "bytes": 3783
+      }
+    }
+  },
+  "cloud": {
+    "base": "d062ba4c34a00729bfe2512723ae0c356f8ecc60",
+    "baseTree": "553e5f6e34e6c632b3ce076996f52b9c2ad252f3",
+    "files": {
+      "apps/web/app/api/v1/device-activations/[activationId]/route.ts": {
+        "status": "modified",
+        "baseBlob": "0432a2f9726c1a5939cfb586dbfd81ce80fee2a8",
+        "sha256": "593e5aba60de76455f03a2e1eff7e3e21d860363ccfed3d0328c8e36fed48ddc",
+        "bytes": 969
+      },
+      "apps/web/app/api/v1/device-activations/claim/route.ts": {
+        "status": "modified",
+        "baseBlob": "3cabfaa5b39ef51a84485b7c70973bc01c867bea",
+        "sha256": "95c617aee73c03b6fa532fb761fecc3bd632f33e1f4acd89623e2ddf15936946",
+        "bytes": 968
+      },
+      "apps/web/app/api/v1/device-activations/route.ts": {
+        "status": "modified",
+        "baseBlob": "18aaf4fa5e88aefc153fb0e904902f329b1dbfeb",
+        "sha256": "410644b3deecc3103d52fabafe90e2fff61ce3a51bb7cf3188b26f45bec6b160",
+        "bytes": 632
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/ack/route.ts": {
+        "status": "modified",
+        "baseBlob": "4c54f10a371e9b5b795261fd6877af02971b72e2",
+        "sha256": "e87e4fd8422dc8ec45016b1b9df33ce659ffacffb67d502b1b9f3af1c5ee9120",
+        "bytes": 941
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/assignment-status/route.ts": {
+        "status": "modified",
+        "baseBlob": "7bf31105190803af1f1aa0898a1384e2f22114be",
+        "sha256": "38244ef0a70d25d495197f1683092b2946bb72e88b86c3008a70a537f2b54e08",
+        "bytes": 911
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/assignment/route.ts": {
+        "status": "modified",
+        "baseBlob": "98ff4933d82f69b24a11ffccc99482c424069e0f",
+        "sha256": "dc090d8c16b4f163be38dcbd6338866c65c18f26a34b4a877c75342b0b1c1d83",
+        "bytes": 1729
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/association/route.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "ab3b791ffa5c8a7d6cfbb02821eed6375df2a2bb47e909e6dffc9df4a2cba081",
+        "bytes": 519
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/consent/route.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "a055592ddb47a82a5e5f7b3f9ec1a2171cf750cd2acdea73d1620ea65bc1d7c3",
+        "bytes": 709
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/library/[trackId]/route.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "3f679a271d89b6b64d289568aa69bcd74946fb4d40eddfb00fc0c92120a9457e",
+        "bytes": 522
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/library/route.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "b8588201592eebe488bceafa12aa3110ad0f0b60aaf0e7ff3d771eb412294c4f",
+        "bytes": 499
+      },
+      "apps/web/app/api/v1/devices/[deviceId]/track-intentions/route.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "024dc8713b995342e31490429972a963f2a26c02dc1c192f29b5a4fd858ad8d9",
+        "bytes": 495
+      },
+      "apps/web/app/api/v1/tvfirst008/owned-devices/route.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "a3233d4b09cafffbb8b3d85f19bf3153b220449e79a70df97dca150c45556caa",
+        "bytes": 636
+      },
+      "apps/web/app/layout.tsx": {
+        "status": "modified",
+        "baseBlob": "935a75019130dabb51a94c9b4c40e87eb6c2449a",
+        "sha256": "b3539166c5b6bc0213fc51baa46deba87c9e2f157e02ae5059e3cf6b4c135128",
+        "bytes": 2379
+      },
+      "apps/web/app/tv/page.tsx": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "bfffc0957e64b1008c9235d075a3eeb3fcb71d0c68304b6855c06091384d9708",
+        "bytes": 2843
+      },
+      "apps/web/app/tv/tv-association.tsx": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "d3516645b09233b12cf4eb5595bbc9ce1fd92805457e0524e8cb6875977197c3",
+        "bytes": 10122
+      },
+      "apps/web/lib/clerk-configuration.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "be1a1aad1cb2c949e4f448c9689d309a158647d580fd80280c00796597b59cda",
+        "bytes": 628
+      },
+      "apps/web/proxy.ts": {
+        "status": "modified",
+        "baseBlob": "30a7a610af6a1c6fc44ccd3dbd7e80bdfdf2c38d",
+        "sha256": "2fb3980d344c80929fae0577bf5f4656dc21a1dd01eaec4c9994731dc390db8f",
+        "bytes": 2198
+      },
+      "backend-tests/tvfirst008-android-peer.test.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "c545a2ecc9ccc3e6c42bf3a62a42b568d7c3472d9eadab57b3fbf6490b708c3f",
+        "bytes": 7249
+      },
+      "backend-tests/tvfirst008-delivery.test.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "9ba5c7b7249bf80ee482c42292fc31d729e388b8c1726c57306a2dcb14152662",
+        "bytes": 26429
+      },
+      "backend-tests/tvfirst008-jsdom.d.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "71d66da7ea17675d5b01823a9d8b9c4098d1d6706914ef59b4443b1595311414",
+        "bytes": 377
+      },
+      "backend-tests/tvfirst008-routes.test.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "c9107e9b6c680b5774fcd96092a5e8c748d8de0c492a06066c28206352c349f5",
+        "bytes": 5063
+      },
+      "backend-tests/tvfirst008-web.test.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "3a803adeacd7f91f4eaa7212d5c9be29b57ba49878010290e56901fbc9d69c6c",
+        "bytes": 6939
+      },
+      "docs/tv-first-008-cache-contract.md": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "e5a8618b753204e7bcc7cc2ea8a5b5403862c84cab7332f3376858221bf6f7ee",
+        "bytes": 9548
+      },
+      "packages/cloud/migrations/0008_tvfirst008_delivery_only.sql": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "eeadc4234d978f34c4a8229a7e8731541eb61fa0117b1c4539148cb873a46558",
+        "bytes": 2716
+      },
+      "packages/cloud/src/index.ts": {
+        "status": "modified",
+        "baseBlob": "2f0ca71052f44c00ad18883b1b36e98580937c04",
+        "sha256": "0e73a4b19173ba94cb5b29001573914b61fbf0014fbe7486144691edc39d9819",
+        "bytes": 14439
+      },
+      "packages/cloud/src/tvfirst008/contract.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "c250e855d6d926215982abcf1f8a66a86ee04e9f20fad2747ed2b0e93e159624",
+        "bytes": 4986
+      },
+      "packages/cloud/src/tvfirst008/http.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "99bc27d1c70b559150753208a1c2fc13ce0f66e66bb9e44db5b41f402816ecfb",
+        "bytes": 5611
+      },
+      "packages/cloud/src/tvfirst008/service.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "a1d0dc21f25abca18a3e067f460404a89779076db9ceab51ac0babe66c662f35",
+        "bytes": 25478
+      },
+      "packages/cloud/src/tvfirst008/transaction-pool.ts": {
+        "status": "added",
+        "baseBlob": null,
+        "sha256": "fce8fde6ada1feba23442563e5c9d5941ecc818d6ff6a31a1b7d0e78ccd7febc",
+        "bytes": 1320
+      }
+    }
+  }
+}
