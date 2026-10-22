@@ -37,6 +37,21 @@ public final class MainActivity extends Activity {
     private TextView pairingStatus;
     private TextView cloudStatus;
     private Button autostartButton;
+    /**
+     * AUDIO 002 (experimental LOCAL dev) independent controls. These live ONLY in this
+     * navigable Activity, never in the passive overlay (incident 0.2.1). They forward the
+     * user's choices to {@link OverlayService} via explicit actions. TEXT and AUDIO are
+     * fully independent; the SceneVibe volume is a LOCAL stream gain forwarded to the
+     * audio renderer/port only (never a system/global volume change).
+     */
+    private Button textToggleButton;
+    private Button audioToggleButton;
+    private Button audioVolumeButton;
+    /** Local UI state mirrors the service toggles; defaults match the service defaults. */
+    private boolean textEnabled = true;
+    private boolean audioEnabled = true;
+    /** SceneVibe LOCAL gain in {@code [0.0,1.0]}; stepped in 0.2 increments by the UI. */
+    private float audioGain = 0.8f;
     private TvShellController presentation;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
@@ -141,6 +156,12 @@ public final class MainActivity extends Activity {
             addButton(controls, "Disconnect Cloud", this::disconnectCloud);
             addButton(controls, "Diagnostics", this::openDiagnostics);
         }
+
+        // AUDIO 002 experimental LOCAL controls (both modes). Independent TEXT/AUDIO
+        // toggles and a stepwise SceneVibe LOCAL volume, all D-pad navigable via addButton.
+        textToggleButton = addButton(controls, textToggleLabel(), this::toggleText);
+        audioToggleButton = addButton(controls, audioToggleLabel(), this::toggleAudio);
+        audioVolumeButton = addButton(controls, audioVolumeLabel(), this::stepAudioVolume);
 
         TextView instruction = new TextView(this);
         instruction.setText(BuildConfig.ENABLE_LAN_DEV
@@ -329,6 +350,76 @@ public final class MainActivity extends Activity {
         return AutostartPreference.isEnabled(this)
                 ? "Start SceneVibe with TV: On"
                 : "Start SceneVibe with TV: Off";
+    }
+
+    // ----- AUDIO 002 experimental LOCAL controls (navigable Activity only) -----
+
+    /**
+     * Toggle the TEXT comment restitution independently of AUDIO. Forwards the choice to
+     * the running {@link OverlayService}; the TEXT path's own classes are untouched.
+     */
+    private void toggleText() {
+        textEnabled = !textEnabled;
+        if (textToggleButton != null) textToggleButton.setText(textToggleLabel());
+        sendAudioControl(textEnabled ? OverlayService.ACTION_TEXT_ON : OverlayService.ACTION_TEXT_OFF, null);
+    }
+
+    /**
+     * Toggle the SceneVibe AUDIO comment restitution independently of TEXT. Turning AUDIO
+     * OFF asks the service's renderer to stop+release immediately.
+     */
+    private void toggleAudio() {
+        audioEnabled = !audioEnabled;
+        if (audioToggleButton != null) audioToggleButton.setText(audioToggleLabel());
+        sendAudioControl(audioEnabled ? OverlayService.ACTION_AUDIO_ON : OverlayService.ACTION_AUDIO_OFF, null);
+    }
+
+    /**
+     * Step the SceneVibe LOCAL volume (gain) in 0.2 increments, wrapping 1.0 -> 0.0. The
+     * gain is a LOCAL stream gain forwarded to the audio renderer/port only; it NEVER
+     * changes the system or Prime volume.
+     */
+    private void stepAudioVolume() {
+        audioGain = Math.round((audioGain + 0.2f) * 10f) / 10f;
+        if (audioGain > 1.0f) audioGain = 0.0f;
+        if (audioVolumeButton != null) audioVolumeButton.setText(audioVolumeLabel());
+        sendAudioControl(OverlayService.ACTION_AUDIO_GAIN, audioGain);
+    }
+
+    /** Reflect the independent TEXT toggle on its button label. */
+    private String textToggleLabel() {
+        return textEnabled ? "SceneVibe TEXT: On" : "SceneVibe TEXT: Off";
+    }
+
+    /** Reflect the independent AUDIO toggle on its button label. */
+    private String audioToggleLabel() {
+        return audioEnabled ? "SceneVibe AUDIO: On" : "SceneVibe AUDIO: Off";
+    }
+
+    /** Reflect the current SceneVibe LOCAL volume on its button label. */
+    private String audioVolumeLabel() {
+        return "SceneVibe volume: " + Math.round(audioGain * 100) + "%";
+    }
+
+    /**
+     * Forward an experimental AUDIO 002 control to the already user-started foreground
+     * service. If the service is not running these controls are inert (the toggle state is
+     * remembered locally and applied the next time the service starts). The overlay stays
+     * passive; controls never live there.
+     */
+    private void sendAudioControl(String action, Float gain) {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Grant Display over other apps and start SceneVibe first.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            Intent intent = new Intent(this, OverlayService.class).setAction(action);
+            if (gain != null) intent.putExtra(OverlayService.EXTRA_AUDIO_GAIN, gain.floatValue());
+            startForegroundService(intent);
+        } catch (RuntimeException error) {
+            Log.e(TAG, "Could not forward AUDIO 002 control", error);
+        }
     }
 
     /** Make each control keyboard and TV D-pad accessible. */

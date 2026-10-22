@@ -12,6 +12,11 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort;
+import com.scenevibe.tvcompanionpoc.audio.AudioEvent;
+import com.scenevibe.tvcompanionpoc.audio.DemoAudioTrack;
+import com.scenevibe.tvcompanionpoc.audio.LocalAudioPort;
+import com.scenevibe.tvcompanionpoc.audio.SceneVibeAudioRenderer;
 import com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler;
 import com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackend;
 import com.scenevibe.tvcompanionpoc.installation.InstallationHandler;
@@ -46,6 +51,19 @@ public final class OverlayService extends Service {
      * survives a reset.
      */
     public static final String ACTION_CLOUD_RESET = "com.scenevibe.tvcompanionpoc.CLOUD_RESET";
+    /**
+     * AUDIO 002 (experimental, LOCAL dev only) UI control plane. These actions carry
+     * the user's independent TEXT/AUDIO toggles and the SceneVibe LOCAL volume from the
+     * NAVIGABLE {@link MainActivity} into the service (the overlay stays passive and owns
+     * no controls, per incident 0.2.1). They never alter the TEXT path's own classes.
+     */
+    public static final String ACTION_AUDIO_ON = "com.scenevibe.tvcompanionpoc.AUDIO_ON";
+    public static final String ACTION_AUDIO_OFF = "com.scenevibe.tvcompanionpoc.AUDIO_OFF";
+    public static final String ACTION_TEXT_ON = "com.scenevibe.tvcompanionpoc.TEXT_ON";
+    public static final String ACTION_TEXT_OFF = "com.scenevibe.tvcompanionpoc.TEXT_OFF";
+    public static final String ACTION_AUDIO_GAIN = "com.scenevibe.tvcompanionpoc.AUDIO_GAIN";
+    /** Intent extra (float in {@code [0.0,1.0]}) carried with {@link #ACTION_AUDIO_GAIN}. */
+    public static final String EXTRA_AUDIO_GAIN = "com.scenevibe.tvcompanionpoc.EXTRA_AUDIO_GAIN";
     /** Bounded observational block code: the projected media identity no longer matches. */
     static final String BLOCK_CODE_MEDIA_IDENTITY = "MEDIA_IDENTITY_BLOCKED";
     /** Bounded observational block code: no active/authorized MediaSession is available. */
@@ -60,6 +78,21 @@ public final class OverlayService extends Service {
     private CommentaryServer commentaryServer;
     private MediaSessionProbe mediaSessionProbe;
     private MediaCalendarScheduler trackScheduler;
+    /**
+     * AUDIO 002 experimental LOCAL audio restitution. The {@link SceneVibeAudioRenderer}
+     * is the Android-free CORE wired on the SAME scheduler callback seam that drives TEXT
+     * (single media-time authority, no second clock); the {@link LocalAudioPort} is the
+     * Android {@link AndroidLocalAudioPort} player adapter. Both are created lazily beside
+     * the existing scheduler and never touch the TEXT path's classes.
+     */
+    private SceneVibeAudioRenderer audioRenderer;
+    private LocalAudioPort audioPort;
+    /** AUDIO ON/OFF UI toggle (independent of TEXT). Default on; applied to the renderer. */
+    private boolean audioEnabled = true;
+    /** TEXT ON/OFF UI toggle (independent of AUDIO). Default on; gates only legacy TEXT draw. */
+    private boolean textEnabled = true;
+    /** SceneVibe LOCAL gain in {@code [0.0,1.0]} applied to the audio renderer's own stream only. */
+    private float audioGain = 0.8f;
     /** Publish the owner's current instance for Cloud io's pre-ACK lifetime rechecks. */
     private volatile CloudControlClient cloudClient;
     /** One service-owned generic stack serializes every live assignment through the owner gate. */
@@ -130,6 +163,24 @@ public final class OverlayService extends Service {
             return START_NOT_STICKY;
         }
         String action = intent == null ? null : intent.getAction();
+        // AUDIO 002 experimental LOCAL control plane: apply the independent TEXT/AUDIO
+        // toggles and the SceneVibe LOCAL gain carried from the navigable MainActivity.
+        // These never show the overlay and never touch the TEXT path's own classes; the
+        // reconcile at the end of this method pushes the state onto a live audio renderer.
+        if (ACTION_AUDIO_OFF.equals(action)) {
+            audioEnabled = false;
+        } else if (ACTION_AUDIO_ON.equals(action)) {
+            audioEnabled = true;
+        } else if (ACTION_TEXT_OFF.equals(action)) {
+            textEnabled = false;
+        } else if (ACTION_TEXT_ON.equals(action)) {
+            textEnabled = true;
+        } else if (ACTION_AUDIO_GAIN.equals(action) && intent != null) {
+            float requested = intent.getFloatExtra(EXTRA_AUDIO_GAIN, audioGain);
+            if (!Float.isNaN(requested) && requested >= 0.0f && requested <= 1.0f) {
+                audioGain = requested;
+            }
+        }
         // "armed != visible": in Consumer Mode (ENABLE_LAN_DEV false) EVERY entry path (Start
         // SceneVibe / ACTION_TOP, ACTION_BOTTOM, ACTION_CLOUD_CONNECT, ACTION_BOOT_PREPARE and
         // a START_STICKY restart with a null Intent) is ARM-only: it primes the scheduler,
@@ -155,6 +206,10 @@ public final class OverlayService extends Service {
             }
 
             if (trackScheduler == null) {
+                // AUDIO 002 (experimental LOCAL dev): the SceneVibe audio renderer is created
+                // beside the scheduler and fed from the SAME callback stream below. It owns no
+                // clock, requests no audio focus, mutates no system volume and sends no transport.
+                ensureAudioRenderer();
                 // Regie (Case B) created beside the legacy path. It draws nothing itself; the
                 // SceneSink below delegates to a lazily created SceneRenderer and is the ONLY
                 // bridge between the Android-free controller and the overlay window.
@@ -163,18 +218,30 @@ public final class OverlayService extends Service {
                     /** Route only callbacks bearing the immutable active activation token. */
                     @Override public void onDue(String token,String eventId) {
                         if(videoRuntimePorts!=null)videoRuntimePorts.onDue(token,eventId);
+                        if(audioRenderer!=null)audioRenderer.onDue(token,eventId);
                     }
                     /** Legacy display countdown remains freeze-aware and owns its own visual expiry. */
                     @Override public void onExpire(String token,String eventId) {
                         if(videoRuntimePorts!=null)videoRuntimePorts.onExpire(token,eventId);
+                        if(audioRenderer!=null)audioRenderer.onExpire(token,eventId);
                     }
                     /** Preserve every passive playback callback without acquiring a second clock. */
                     @Override public void onPlayback(String token,boolean playing,boolean freeze) {
                         if(videoRuntimePorts!=null)videoRuntimePorts.onPlayback(token,playing,freeze);
+                        if(audioRenderer!=null)audioRenderer.onPlayback(token,playing,freeze);
                     }
                     /** Preserve old-binding load invalidation before any new activation becomes active. */
                     @Override public void onEligibility(String token,boolean eligible) {
                         if(videoRuntimePorts!=null)videoRuntimePorts.onEligibility(token,eligible);
+                        // AUDIO 002B C1: when an activation becomes eligible, bind the audio
+                        // catalog to the REAL activation token and the REAL event ids the
+                        // scheduler will carry on onDue. bindAudioCatalog maps the active
+                        // track's SceneEvent ids to AUDIO cues (DemoAudioTrack.catalogForCalendar)
+                        // and calls audioRenderer.setCatalog(token, mapped) so catalog.get(eventId)
+                        // resolves and AUDIO actually starts end to end. This replaces the old
+                        // demo-token preload, which never matched the live token/eventIds.
+                        if(eligible)bindAudioCatalog(token);
+                        if(audioRenderer!=null)audioRenderer.onEligibility(token,eligible);
                     }
                 });
                 installationStore = new InstallationStore(new AndroidInstallationBackend(this));
@@ -190,6 +257,10 @@ public final class OverlayService extends Service {
                             /** Create the legacy window lazily using the exact prepared payload. */
                             @Override public void due(ScheduledTrack.Event event) {
                                 if (BuildConfig.TVFIRST_OBSERVATION_ONLY) return;
+                                // AUDIO 002: the independent TEXT ON/OFF toggle gates only the TEXT
+                                // draw. The TEXT path's own classes are untouched; when TEXT is OFF
+                                // the legacy renderer simply is not shown for this due comment.
+                                if (!textEnabled) return;
                                 showRenderer();
                                 if(renderer!=null)renderer.showTrackedCommentary(event.text,event.durationMs,event.mediaBitmap);
                             }
@@ -298,6 +369,11 @@ public final class OverlayService extends Service {
                 Log.i(TAG, "Cloud reset requested via runtime");
             }
 
+            // AUDIO 002: push the current independent toggle/gain state onto the live
+            // audio renderer. AUDIO OFF makes the renderer stop+release immediately; the
+            // SceneVibe gain is a LOCAL stream gain only (no system-volume mutation).
+            reconcileAudioControls();
+
             String visibility = showOnEntry
                     ? "visible; position=" + (bottom ? "bottom" : "top")
                     : "armed (no overlay shown)";
@@ -330,6 +406,64 @@ public final class OverlayService extends Service {
             renderer = new OverlayRenderer(this, this::onPermissionLost, BuildConfig.ENABLE_LAN_DEV);
         }
         renderer.show(bottomPosition);
+    }
+
+    /**
+     * Lazily create the experimental LOCAL audio renderer + Android player adapter and
+     * load the demonstration AUDIO track catalog for both demo tokens. AUDIO 002 is a
+     * LOCAL dev/demo feature; the catalog is a code fixture, NOT a Cloud contract. The
+     * renderer is purely reactive and is fed from the SAME scheduler callbacks as TEXT.
+     */
+    private void ensureAudioRenderer() {
+        if (audioRenderer != null) {
+            return;
+        }
+        audioPort = new AndroidLocalAudioPort(this);
+        audioRenderer = new SceneVibeAudioRenderer(audioPort);
+        // AUDIO 002B C1: the catalog is NO LONGER preloaded under the never-matching demo
+        // token (DEMO_TOKEN + demo-audio-1/2/3). Instead it is bound lazily to the REAL
+        // activation token and the REAL event ids via bindAudioCatalog(token) the moment the
+        // scheduler reports an activation eligible, so onDue(token,eventId) actually resolves.
+    }
+
+    /**
+     * AUDIO 002B C1 catalog binding. Map the ACTIVE activation's media-calendar event ids to
+     * demo AUDIO cues and register them under the SAME token the scheduler emits on
+     * {@code onDue}. This is the fix that makes AUDIO triggerable end to end: the renderer's
+     * catalog token now equals the scheduler's activation token and its keys equal the exact
+     * eventIds {@code onDue} carries. It only READS the active calendar's TEXT event ids (via
+     * {@link LiveVideoRuntimePorts#activeAudioCalendar()}); it never mutates a TEXT eventId or
+     * touches the TEXT draw path. No-op when the renderer is absent, no activation is active,
+     * or the eligible token is not the active token (a stale eligibility callback).
+     */
+    private void bindAudioCatalog(String token) {
+        if (audioRenderer == null || videoRuntimePorts == null || token == null) {
+            return;
+        }
+        if (!token.equals(videoRuntimePorts.activeAudioToken())) {
+            return;
+        }
+        com.scenevibe.tvcompanionpoc.calendar.MediaCalendar calendar =
+                videoRuntimePorts.activeAudioCalendar();
+        if (calendar == null) {
+            return;
+        }
+        audioRenderer.setCatalog(token, DemoAudioTrack.catalogForCalendar(calendar));
+        // Re-apply the current LOCAL gain / AUDIO toggle after a fresh catalog binding.
+        reconcileAudioControls();
+    }
+
+    /**
+     * Reconcile the live audio renderer with the current independent UI toggles and the
+     * SceneVibe LOCAL gain. AUDIO OFF triggers an immediate stop+release inside the
+     * renderer. The gain is forwarded only to the renderer/port's own stream.
+     */
+    private void reconcileAudioControls() {
+        if (audioRenderer == null) {
+            return;
+        }
+        audioRenderer.setGain(audioGain);
+        audioRenderer.setAudioEnabled(audioEnabled);
     }
 
     /**
@@ -504,6 +638,25 @@ public final class OverlayService extends Service {
             SceneRuntimeController runtime=controller.get();if(runtime==null||runtime.hasActiveManifest())return false;
             selection.accept(0);active=pending;pending=null;return true;
         }
+        /**
+         * AUDIO 002B C1: expose the ACTIVE activation's token so the audio catalog can be
+         * keyed to the SAME opaque token the scheduler emits on {@code onDue}. Android-free
+         * (returns the already-minted String); null when no activation is active.
+         */
+        String activeAudioToken() {
+            return active == null ? null : active.token;
+        }
+
+        /**
+         * AUDIO 002B C1: expose the ACTIVE activation's media calendar so the audio path can
+         * map the REAL event ids to AUDIO cues (see {@code DemoAudioTrack.catalogForCalendar}).
+         * This only READS the calendar/event ids; it never touches the TEXT draw path and
+         * never mutates a TEXT eventId. Android-free; null when no activation is active.
+         */
+        com.scenevibe.tvcompanionpoc.calendar.MediaCalendar activeAudioCalendar() {
+            return active == null ? null : active.state.calendar;
+        }
+
         /** Project only the active prepared track through the qualified C observation adapter. */
         void onSnapshot(MediaSessionProbe.Snapshot snapshot) {
             if(!isOwnerThread()||active==null)return;
@@ -672,6 +825,16 @@ public final class OverlayService extends Service {
             mediaSessionProbe = null;
         }
         if (videoRuntimePorts != null) videoRuntimePorts.abortActivation();
+        // AUDIO 002: stop+release the experimental audio renderer before dropping the
+        // scheduler so no cue outlives the service. The renderer owns no clock/thread.
+        if (audioRenderer != null) {
+            audioRenderer.setAudioEnabled(false);
+            audioRenderer = null;
+        }
+        if (audioPort != null) {
+            audioPort.release();
+            audioPort = null;
+        }
         if (trackScheduler != null) {
             trackScheduler.clear();
             trackScheduler = null;
