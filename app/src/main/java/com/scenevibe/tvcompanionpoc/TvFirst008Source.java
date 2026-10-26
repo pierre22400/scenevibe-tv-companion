@@ -28,6 +28,7 @@ public final class TvFirst008Source implements TvAccountSource {
     private final TvFirst008State state;
     private final TvFirst008HttpPort http;
     private final String address;
+    private final String multimediaOrigin;
     private final ExecutorService worker;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Object lock = new Object();
@@ -50,7 +51,7 @@ public final class TvFirst008Source implements TvAccountSource {
     /** Bind real state/cache and an injectable HTTP boundary for local software qualification. */
     TvFirst008Source(Context context, TvFirst008State state, TvFirst008HttpPort http, String origin, ExecutorService worker) {
         this.context = context.getApplicationContext(); this.state = state; this.http = http; this.worker = worker;
-        address = http == null ? "" : origin + "/tv";
+        address = http == null ? "" : origin + "/tv"; multimediaOrigin = origin;
         stage = http == null ? AccountStage.UNCONFIGURED : AccountStage.UNASSOCIATED;
         message = http == null ? "Le service de qualification n’est pas configuré pour cette APK. Association indisponible."
                 : "Crée ton compte ou connecte-toi depuis un téléphone ou un ordinateur, puis associe cette TV.";
@@ -84,9 +85,13 @@ public final class TvFirst008Source implements TvAccountSource {
     private boolean valid(long ticket) { return active && epoch == ticket; }
     /** Execute one operation without implicit fallback, reset or new request identifiers. */
     private void work(Operation operation) {
+        work(operation,false);
+    }
+    /** Local verified-cache reads need Activity ownership, but never require a configured network transport. */
+    private void work(Operation operation,boolean localOnly) {
         final long ticket;
         synchronized (lock) {
-            if (!active || busy || http == null) return;
+            if (!active || busy || http == null && !localOnly) return;
             ticket = epoch; busy = true;
         }
         changed(ticket);
@@ -126,6 +131,121 @@ public final class TvFirst008Source implements TvAccountSource {
         TvFirst008Wire.uuid(identity.optString("deviceId")); TvFirst008Wire.uuid(identity.optString("generation"));
         return identity;
     }
+
+    /** Lease the existing encrypted generation only to the multimedia transport, never to presentation data. */
+    MultimediaCloudClient.Session multimediaSession() {
+        synchronized(lock) {
+            if(!active || accountStage()!=AccountStage.ASSOCIATED)throw new IllegalStateException("ASSOCIATION_NOT_READY");
+            final JSONObject captured=identity();
+            final long capturedEpoch=epoch;
+            final String device=captured.optString("deviceId"),generation=captured.optString("generation");
+            return new MultimediaCloudClient.Session() {
+                /** Preserve the selected stable device without accepting a caller account. */
+                @Override public String deviceId(){return device;}
+                /** Preserve the selected consent generation. */
+                @Override public String generation(){return generation;}
+                /** Resolve the existing keystore credential only while its generation remains current. */
+                @Override public String token(){synchronized(lock){if(!current())throw new IllegalStateException("STALE_GENERATION");return state.token(identity());}}
+                /** Cancel leases when association, consent or Activity task ownership ends. */
+                @Override public boolean current(){synchronized(lock){try {JSONObject now=identity();return valid(capturedEpoch) && accountStage()==AccountStage.ASSOCIATED
+                        && device.equals(now.optString("deviceId")) && generation.equals(now.optString("generation"));}catch(RuntimeException failed){return false;}}}
+            };
+        }
+    }
+
+    /** Read only the durable generation for inert offline cache restoration; this grants no consent or MEDIA. */
+    String multimediaCachedGeneration() {synchronized(lock){return TvFirst008Wire.uuid(identity().optString("generation"));}}
+
+    /** Persist a distinct multimedia retry identity before an explicit selection; historical Video pending state stays intact. */
+    JSONObject pendingMultimedia(String publicationId,long osRevision) throws Exception {
+        synchronized(lock) {
+            MultimediaCloudClient.Session session=multimediaSession();TvFirst008Wire.uuid(publicationId);
+            JSONObject previous=state.read("multimediaPending");
+            if(previous!=null) {
+                if(!publicationId.equals(previous.optString("publicationId")) || !session.generation().equals(previous.optString("generation")))throw new IllegalStateException("PENDING_MULTIMEDIA_INTENTION");
+                return new JSONObject(previous.toString());
+            }
+            JSONObject command=new JSONObject().put("profile",MultimediaDeliveryProfile.PROFILE).put("generation",session.generation())
+                    .put("intentionId",java.util.UUID.randomUUID().toString()).put("publicationId",publicationId).put("expectedRevision",osRevision).put("confirmed",true);
+            state.write("multimediaPending",command);return new JSONObject(command.toString());
+        }
+    }
+
+    /** Retire only the exact successful retry record, preserving account and historical cache/ACK metadata. */
+    void multimediaCached(MultimediaCloudClient.Binding binding) throws Exception {
+        synchronized(lock) {
+            JSONObject pending=state.read("multimediaPending");
+            JSONObject current=identity();
+            if(!active || accountStage()!=AccountStage.ASSOCIATED || pending==null || !binding.intention.equals(pending.optString("intentionId"))
+                    || !binding.generation.equals(current.optString("generation")) || !binding.device.equals(current.optString("deviceId"))
+                    || !binding.publication.equals(pending.optString("publicationId")))throw new IllegalStateException("STALE_MULTIMEDIA_INTENTION");
+            state.write("multimediaPending",null);
+        }
+    }
+
+    /** Serialize the inert runtime handoff with the exact captured lease and lifecycle cancellation. */
+    void multimediaCached(MultimediaCloudClient.Binding binding,MultimediaCloudClient.Session lease,Runnable offer) throws Exception {
+        synchronized(lock) {
+            if(lease==null || !lease.current())throw new IllegalStateException("STALE_MULTIMEDIA_LEASE");
+            multimediaCached(binding);offer.run();
+        }
+    }
+
+    /** Explicit caller action only: run the HTTPS multimedia bridge on this existing owner's serial worker. */
+    void prepareMultimedia(String publicationId,StudioMultimediaRuntime runtime,Runnable onPrepared) {
+        prepareMultimedia(publicationId,runtime,onPrepared,new MultimediaHttpsPort(multimediaOrigin));
+    }
+
+    /** Inject only the network seam for native qualification; cache, decoder and lifecycle remain genuine. */
+    void prepareMultimedia(String publicationId,StudioMultimediaRuntime runtime,Runnable onPrepared,MultimediaCloudClient.Port port) {
+        TvFirst008Wire.uuid(publicationId);
+        if(runtime==null || onPrepared==null || port==null)throw new IllegalArgumentException("MULTIMEDIA_OWNER_PORTS_REQUIRED");
+        work(ticket -> {
+            new MultimediaAndroidBridge(context,this,port).prepare(publicationId,runtime);
+            main.post(() -> {synchronized(lock){if(valid(ticket) && accountStage()==AccountStage.ASSOCIATED)onPrepared.run();}});
+        });
+    }
+    /** Discover only multimedia publications authorized for this encrypted account/device association. */
+    void listMultimedia(java.util.function.Consumer<JSONObject> result) {
+        multimediaWork(()->new MultimediaCloudClient(multimediaSession(),new MultimediaHttpsPort(multimediaOrigin)).publications(),result);
+    }
+
+    /** Run an explicit confirmed selection on the existing serial worker, preserving durable retry ids. */
+    void downloadMultimedia(String publicationId,java.util.function.Consumer<MultimediaPrivateCache.Prepared> result) {
+        downloadMultimedia(publicationId,result,new MultimediaHttpsPort(multimediaOrigin));
+    }
+
+    /** Exercise the exact TV selection callback with a test-local trusted TLS boundary on Android. */
+    void downloadMultimedia(String publicationId,java.util.function.Consumer<MultimediaPrivateCache.Prepared> result,MultimediaCloudClient.Port port) {
+        TvFirst008Wire.uuid(publicationId);
+        multimediaWork(()->new MultimediaAndroidBridge(context,this,port).fetch(publicationId),result);
+    }
+
+    /** Restore verified inert files on the worker; process restart never restores playback permission. */
+    void restoreMultimedia(java.util.function.Consumer<MultimediaPrivateCache.Prepared> result) {
+        multimediaWork(()->MultimediaAndroidBridge.restoreCache(context,this),result,true);
+    }
+
+    /** Marshal immutable results to the current Activity epoch after work completes; no stale callbacks. */
+    private <T> void multimediaWork(MultimediaOperation<T> operation,java.util.function.Consumer<T> result) {
+        multimediaWork(operation,result,false);
+    }
+
+    /** Preserve the exact same epoch checks for explicit offline restoration and authenticated downloads. */
+    private <T> void multimediaWork(MultimediaOperation<T> operation,java.util.function.Consumer<T> result,boolean localOnly) {
+        if(result==null)throw new IllegalArgumentException("MULTIMEDIA_CALLBACK_REQUIRED");
+        work(ticket->{
+            T value=operation.run();
+            main.post(()->{synchronized(lock){if(valid(ticket))result.accept(value);}});
+        },localOnly);
+    }
+
+    /** Carry only a worker operation; all existing lifecycle checks remain source-owned. */
+    private interface MultimediaOperation<T> {
+        /** Perform bounded disk or authenticated network work away from the Android UI thread. */
+        T run() throws Exception;
+    }
+
     /** Use the current generation token for exactly one authenticated device operation. */
     private JSONObject deviceRequest(JSONObject id, String method, String suffix, JSONObject body) throws Exception {
         return http.request(method, route("devices/" + id.getString("deviceId") + "/" + suffix), state.token(id), body);

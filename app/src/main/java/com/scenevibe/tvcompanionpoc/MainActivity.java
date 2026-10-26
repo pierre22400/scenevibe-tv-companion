@@ -40,6 +40,7 @@ public final class MainActivity extends Activity {
     private TvShellController presentation;
     private TextView textQualificationStatus;
     private Button textActivateButton,textStopButton;
+    private CloudMultimediaControls cloudMultimedia;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
      * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
@@ -50,6 +51,7 @@ public final class MainActivity extends Activity {
         @Override public void run() {
             if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
                 refreshTextQualification();
+                if (cloudMultimedia!=null) cloudMultimedia.refresh();
                 if (presentation!=null) presentation.refreshRuntime();
                 handler.postDelayed(this,1000L);return;
             }
@@ -88,6 +90,10 @@ public final class MainActivity extends Activity {
         controls.setBackgroundColor(0xFF17130F);
 
         if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
+            if (BuildConfig.CLOUD_MULTIMEDIA_EXPERIMENTAL) {
+                cloudMultimedia=new CloudMultimediaControls(this,this::textQualificationSource);
+                controls.addView(cloudMultimedia.view());
+            }
             textQualificationStatus=new TextView(this);
             textQualificationStatus.setTextColor(0xFFFFFFFF);textQualificationStatus.setTextSize(17);
             controls.addView(textQualificationStatus);

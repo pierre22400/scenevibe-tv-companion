@@ -5,3 +5,6 @@ app/build/
 local.properties
 *.iml
 
+# Generated per run: public test CA and short-lived synthetic device credentials.
+app/src/androidTest/assets/cloudandroid001/
+

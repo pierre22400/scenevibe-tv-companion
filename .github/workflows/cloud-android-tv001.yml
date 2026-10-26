@@ -1,0 +1,48 @@
+name: Cloud Android TV 001 experimental Companion
+on:
+  push:
+    branches:
+      - work/scenevibe-cloud-android-tv-001
+    paths:
+      - app/**
+      - qualification/**
+      - .github/workflows/cloud-android-tv001.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experimental-companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android 35
+        run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
+      - name: Regress shared runtime and qualified TEXT owners
+        run: |
+          gradle --no-daemon --max-workers=2 testDebugUnitTest
+          gradle --no-daemon --max-workers=2 testTvfirst008UnitTest --tests '*TvFirst008BoundaryTest' --tests '*TvFirst008CacheTest' --tests '*TvFirst008HttpTest' --tests '*TvFirst008IdentityTest' --tests '*TvFirst009ClosedBoundaryTest'
+      - name: Build unsigned experimental Companion without a presumed staging API
+        run: gradle --no-daemon --max-workers=2 assembleCloudandroid001 lintCloudandroid001 assembleTvfirst013sony
+      - name: Fingerprint experimental APK
+        run: sha256sum app/build/outputs/apk/cloudandroid001/*.apk > cloud-android-tv001-sha256.txt
+      - name: Upload APK and actual reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-cloud-android-tv001-${{ github.run_id }}
+          path: |
+            app/build/outputs/apk/cloudandroid001/*.apk
+            cloud-android-tv001-sha256.txt
+            app/build/test-results/**/*.xml
+            app/build/reports/lint-results-cloudandroid001.*
+          if-no-files-found: error
+          retention-days: 14

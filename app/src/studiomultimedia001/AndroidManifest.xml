@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+>
+  <!-- Repeat inherited TV metadata for the variant lint model; merged APK values stay unchanged. -->
+  <uses-feature
+    android:name="android.software.leanback"
+    android:required="true"
+  />
+  <uses-feature
+    android:name="android.hardware.touchscreen"
+    android:required="false"
+  />
+  <uses-permission
+    android:name="android.permission.INTERNET"
+    tools:node="remove"
+  />
+  <uses-permission
+    android:name="android.permission.RECEIVE_BOOT_COMPLETED"
+    tools:node="remove"
+  />
+  <application
+    android:banner="@drawable/tv_banner"
+  >
+    <activity
+      android:name=".MainActivity"
+      android:enabled="false"
+      tools:replace="android:enabled"
+    />
+    <activity
+      android:name=".StudioMultimediaQualificationActivity"
+      android:exported="true"
+      android:label="SceneVibe — qualification locale"
+    >
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+      </intent-filter>
+    </activity>
+    <service
+      android:name=".OverlayService"
+      android:enabled="false"
+      tools:replace="android:enabled"
+    />
+    <service
+      android:name=".MediaSessionAccessService"
+      android:enabled="false"
+      tools:replace="android:enabled"
+    />
+    <receiver
+      android:name=".BootReceiver"
+      android:enabled="false"
+      tools:replace="android:enabled"
+    />
+  </application>
+</manifest>

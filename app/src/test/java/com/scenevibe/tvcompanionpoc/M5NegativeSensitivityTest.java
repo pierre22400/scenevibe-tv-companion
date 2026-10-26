@@ -40,5 +40,5 @@ public final class M5NegativeSensitivityTest {
     /** Changing strict greater-than to greater-or-equal must fail at exactly +5000. */
     @Test public void rejectsInclusiveForwardThreshold() throws Exception {rejects("deltaMs > FORWARD_SEEK_THRESHOLD_MS","deltaMs >= FORWARD_SEEK_THRESHOLD_MS","forward-5000-state-3");}
     /** Removing the first-DUE return must expose the second callback in the same input. */
-    @Test public void rejectsMultipleDuePerObservation() throws Exception {rejects("sink.onDue(token, event.eventId());\n            return;","sink.onDue(token, event.eventId());","stable-equal-starts");}
+    @Test public void rejectsMultipleDuePerObservation() throws Exception {rejects("if (!audioIds.contains(event.eventId())) return;","","stable-equal-starts");}
 }

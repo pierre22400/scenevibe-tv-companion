@@ -1,0 +1,30 @@
+{
+  "snapshotSha256": "7d206682eaf441426b411fcc4c2ee3599c024a4936794167fd4c6a7003c11351",
+  "runtimeSha256": "061ae038ee56e528d4a05531579d06c82c89c630f93ab31d0e0f3848b361468c",
+  "manifestSha256": "9b034c30a6d68a8f822dd39696fe95cc8435450ba3c1deaeb0ce910bffb71554",
+  "resources": [
+    {
+      "byteLength": 48945,
+      "durationMs": 3000,
+      "mime": "audio/mpeg",
+      "resourceId": "resource:17ed1562-e806-4111-9ead-1948f6be29ef",
+      "sha256": "2f940c78abae4ec0d03f920eb1416ed955b277220c8334dce839a6f4c2e6071e"
+    },
+    {
+      "byteLength": 48945,
+      "durationMs": 3000,
+      "mime": "audio/mpeg",
+      "resourceId": "resource:97de04b3-c7ea-460e-82f5-5cf96d144254",
+      "sha256": "2f940c78abae4ec0d03f920eb1416ed955b277220c8334dce839a6f4c2e6071e"
+    },
+    {
+      "byteLength": 48945,
+      "durationMs": 3000,
+      "mime": "audio/mpeg",
+      "resourceId": "resource:b69a804b-4bc6-4a0b-a773-73d7a8b375f1",
+      "sha256": "2f940c78abae4ec0d03f920eb1416ed955b277220c8334dce839a6f4c2e6071e"
+    }
+  ],
+  "mediaAdmissionAuthorized": false,
+  "provenance": "003-D actual preparation/publication services; memory repositories and local HTTP ObjectStore"
+}
