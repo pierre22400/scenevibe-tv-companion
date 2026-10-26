@@ -134,11 +134,11 @@ public final class CloudAndroid002JourneyTest {
     private PlaybackState state(int value,long position){return new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY|PlaybackState.ACTION_PAUSE|PlaybackState.ACTION_SEEK_TO)
             .setState(value,position,value==PlaybackState.STATE_PLAYING?1f:0f,SystemClock.elapsedRealtime()).build();}
 
-    /** Pause at an actual editorial coordinate before starting continuous playback across its window. */
-    private void arrive(long start) throws Exception {
+    /** Pause at the original coordinate and return the elapsed time immediately before requesting native playback. */
+    private long arrive(long start) throws Exception {
         long before=Math.max(0,start-1000);main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PAUSED,before)));
         await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code) && TvFirst009TextServiceOwner.status().positionMs==before,"Native paused observation missing",10000);
-        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,before)));
+        long requested=SystemClock.elapsedRealtime();main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,before)));return requested;
     }
 
     /** Prove selection, actual HTTPS pairing/download and all nineteen events through the real background service. */
@@ -155,11 +155,14 @@ public final class CloudAndroid002JourneyTest {
         await(()->displayed("Cache privé vérifié : 16 TEXT + 3 AUDIO"),"Staging download/cache not verified",300000);
         long downloadMs=SystemClock.elapsedRealtime()-downloadStart;
         assertFalse(TvFirst009TextServiceOwner.status().active);restore();media();
-        UiDevice.getInstance(instrumentation).pressHome();int texts=0,audios=0;
+        UiDevice.getInstance(instrumentation).pressHome();int texts=0,audios=0;org.json.JSONArray audioObservations=new org.json.JSONArray();
         for(SceneEvent event:prepared.track.calendar.events()){
-            arrive(event.startMs());
+            long playbackRequested=arrive(event.startMs());
             if(prepared.track.audio.containsKey(event.eventId())){final int count=++audios;
                 await(()->TvFirst009TextServiceOwner.multimediaAudioStarted()>=count,"Native MP3 resource not STARTED",10000);
+                audioObservations.put(new JSONObject().put("eventId",event.eventId()).put("scheduledStartMs",event.startMs())
+                        .put("observedStartedAfterPlayingRequestMs",SystemClock.elapsedRealtime()-playbackRequested)
+                        .put("scheduledAfterPlayingRequestMs",1000));
             }else{final int count=++texts;await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>=count,"Real TEXT window not attached",10000);
                 if(count==1)UiDevice.getInstance(instrumentation).takeScreenshot(new File(target.getFilesDir(),"cloudandroid002-screen.png"));}
         }
@@ -168,6 +171,8 @@ public final class CloudAndroid002JourneyTest {
                 .put("service","OverlayService").put("clock","OWN_ANDROID_MEDIASESSION_FIXTURE").put("httpsStaging",BuildConfig.CLOUD_ORIGIN)
                 .put("sonyTested",false).put("primeTested",false).put("pid",android.os.Process.myPid());
         proof.put("downloadAndAndroidVerificationMs",downloadMs);
+        proof.put("binding",prepared.binding.json()).put("audioObservations",audioObservations)
+                .put("audioObservationMethod","Elapsed time to the test observing distinct native STARTED; includes polling, not acoustic latency");
         Files.write(new File(target.getFilesDir(),"cloudandroid002-journey.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
     }
 
@@ -214,8 +219,11 @@ public final class CloudAndroid002JourneyTest {
         await(()->!TvFirst009TextServiceOwner.status().active,"Previous activation survived a new confirmed intention",15000);
         await(()->displayed("Cache privé vérifié : 16 TEXT + 3 AUDIO"),"Replacement cache not verified",300000);
         assertFalse(TvFirst009TextServiceOwner.status().active);
-        Files.write(new File(target.getFilesDir(),"cloudandroid002-replacement.json").toPath(),new JSONObject().put("oldActivationRetired",true)
-                .put("eventsRetained",19).put("replacementAutoStarted",false).toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject replacement=new JSONObject().put("oldActivationRetired",true).put("eventsRetained",19).put("replacementAutoStarted",false);
+        TvFirst008Source readback=new TvFirst008Source(target);
+        try{MultimediaPrivateCache.Prepared actual=MultimediaAndroidBridge.restoreCache(target,readback);assertNotNull(actual);
+            replacement.put("binding",actual.binding.json());}finally{readback.close();}
+        Files.write(new File(target.getFilesDir(),"cloudandroid002-replacement.json").toPath(),replacement.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     /** An already-playing native session cannot outrun switches disabled before explicit activation. */
