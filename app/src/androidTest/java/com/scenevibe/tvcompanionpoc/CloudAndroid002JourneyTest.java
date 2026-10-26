@@ -197,4 +197,15 @@ public final class CloudAndroid002JourneyTest {
                 && !TvFirst009TextServiceOwner.controlBusy(),"Forged service request retained ownership",15000);
         assertNull(CloudMultimediaAdmission.admit(null,true));assertNull(CloudMultimediaAdmission.admit(null,false));
     }
+
+    /** A newly confirmed selection invalidates the running permit before provider I/O and never auto-starts its replacement. */
+    @Test public void d_newSelectionRetiresOldActivation() throws Exception {
+        restore();media();arrive(90000);await(()->"STARTED".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Initial MP3 missing",10000);
+        click("Charger le catalogue multimédia privé");click("Télécharger : Columbo");confirm();
+        await(()->!TvFirst009TextServiceOwner.status().active,"Previous activation survived a new confirmed intention",15000);
+        await(()->displayed("Cache privé vérifié : 16 TEXT + 3 AUDIO"),"Replacement cache not verified",300000);
+        assertFalse(TvFirst009TextServiceOwner.status().active);
+        Files.write(new File(target.getFilesDir(),"cloudandroid002-replacement.json").toPath(),new JSONObject().put("oldActivationRetired",true)
+                .put("eventsRetained",19).put("replacementAutoStarted",false).toString().getBytes(StandardCharsets.UTF_8));
+    }
 }

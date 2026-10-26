@@ -31,7 +31,9 @@ public final class TvFirst008Source implements TvAccountSource {
     private final String multimediaOrigin;
     private final ExecutorService worker;
     private final Handler main = new Handler(Looper.getMainLooper());
-    private final Object lock = new Object();
+    private static final Object MULTIMEDIA_SOURCE_MONITOR=new Object();
+    private static long multimediaAuthorityEpoch;
+    private final Object lock = BuildConfig.CLOUD_MULTIMEDIA_SERVICE?MULTIMEDIA_SOURCE_MONITOR:new Object();
     private final Map<String, TvOffer> entries = new LinkedHashMap<>();
     private volatile AccountStage stage;
     private volatile String message, verification = "", next, selected;
@@ -109,6 +111,10 @@ public final class TvFirst008Source implements TvAccountSource {
         if (error instanceof SecretStore.Unavailable) message = "Identifiants ou écriture locale indisponibles. Rien n’a été réinitialisé. Une récupération explicite est nécessaire.";
         else if (error instanceof TvFirst008Http.Failure) {
             int code = ((TvFirst008Http.Failure) error).status;
+            if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE && (code==401 || code==403)) {
+                ++multimediaAuthorityEpoch;
+                try{state.write("multimediaReceipt",null);}catch(Exception unavailable){/* The in-memory epoch already revoked every live permit. */}
+            }
             message = code == 401 || code == 403 ? "Association ou consentement indisponible. Reconnecte ton compte et choisis explicitement une récupération."
                     : code == 409 ? "La sélection a changé. Actualise, puis confirme à nouveau ton choix."
                     : code == 410 ? "Ce code a expiré. Annule ce code avant d’en demander un nouveau."
@@ -167,7 +173,9 @@ public final class TvFirst008Source implements TvAccountSource {
             }
             JSONObject command=new JSONObject().put("profile",MultimediaDeliveryProfile.PROFILE).put("generation",session.generation())
                     .put("intentionId",java.util.UUID.randomUUID().toString()).put("publicationId",publicationId).put("expectedRevision",osRevision).put("confirmed",true);
-            state.write("multimediaPending",command);return new JSONObject(command.toString());
+            state.write("multimediaPending",command);
+            if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){++multimediaAuthorityEpoch;state.write("multimediaBinding",null);}
+            return new JSONObject(command.toString());
         }
     }
 
@@ -556,6 +564,7 @@ public final class TvFirst008Source implements TvAccountSource {
         private final Object monitor;
         private final TvFirst008State metadata;
         private final long issuedAt=android.os.SystemClock.elapsedRealtime(),expiresAt;
+        private final long authorityEpoch=multimediaAuthorityEpoch;
         private final java.util.function.BooleanSupplier associated;
         /** Retain the exact receipt and the original monotonic consent deadline. */
         private MultimediaReference(Object monitor,TvFirst008State metadata,MultimediaPrivateCache.Prepared prepared,
@@ -572,7 +581,7 @@ public final class TvFirst008Source implements TvAccountSource {
                 try {
                     MultimediaCloudClient.Binding binding=prepared.binding;
                     JSONObject identity=metadata.read("identity");
-                    boolean valid=now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
+                    boolean valid=authorityEpoch==multimediaAuthorityEpoch && now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
                             && binding.device.equals(identity.optString("deviceId")) && binding.generation.equals(identity.optString("generation"))
                             && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaBinding")))
                             && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaReceipt")));

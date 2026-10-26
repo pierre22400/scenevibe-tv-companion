@@ -27,6 +27,8 @@ jobs:
       - name: Android toolchain
         run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
       - name: Regress historical runtime and TEXT service
+        env:
+          SCENEVIBE_CLOUD_ORIGIN: ''
         run: |
           gradle --no-daemon --max-workers=2 testDebugUnitTest
           gradle --no-daemon --max-workers=2 testTvfirst008UnitTest --tests '*TvFirst008BoundaryTest' --tests '*TvFirst008CacheTest' --tests '*TvFirst008HttpTest' --tests '*TvFirst008IdentityTest' --tests '*TvFirst009ClosedBoundaryTest'
