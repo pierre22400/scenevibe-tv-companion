@@ -74,7 +74,7 @@ final class CloudMultimediaSession {
             @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot){observe(snapshot);}
             /** A disappearing session cannot leave either type of comment active. */
             @Override public void onUnavailable(){unavailable("SESSION_UNAVAILABLE");}
-        });
+        },null,250L);
         try{probe.start();main.postDelayed(watchdog,250);}
         catch(RuntimeException refused){close();throw refused;}
     }

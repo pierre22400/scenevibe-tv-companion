@@ -75,7 +75,8 @@ public final class CloudAndroid002JourneyTest {
         long end=SystemClock.elapsedRealtime()+timeout;
         while(SystemClock.elapsedRealtime()<end){AtomicBoolean ready=new AtomicBoolean(),refused=new AtomicBoolean();
             main(()->{ready.set(check.getAsBoolean());refused.set(!ready.get() &&
-                    (displayed("Connexion ou preuve de cache indisponible") || displayed("Service indisponible. Tu peux réessayer")));});
+                    (displayed("Connexion ou preuve de cache indisponible") || displayed("Service indisponible. Tu peux réessayer")
+                            || displayed("Identifiants ou écriture locale indisponibles") || displayed("Association ou consentement indisponible")));});
             if(ready.get())return;if(refused.get())throw new AssertionError(message+"; actual UI reports a closed network/cache refusal; service="+TvFirst009TextServiceOwner.status().code);
             Thread.sleep(100);}
         throw new AssertionError(message+"; service="+TvFirst009TextServiceOwner.status().code);
@@ -102,6 +103,18 @@ public final class CloudAndroid002JourneyTest {
     /** Confirm the actual foreground AlertDialog rather than calling its callback or service directly. */
     private void confirm() throws Exception {await(()->activity.hasWindowFocus()==false,"Dialog did not open",10000);
         UiDevice device=UiDevice.getInstance(instrumentation);assertTrue(device.findObject(new androidx.test.uiautomator.UiSelector().resourceId("android:id/button1")).click());}
+
+    /** Accept real automatic polling, or press the actual confirmation button while it is still needed. */
+    private void confirmAssociation() throws Exception {
+        await(()->displayed("Compte associé") || find(activity.getWindow().getDecorView(),view->view instanceof Button
+                && ((Button)view).getText().toString().startsWith("Vérifier la confirmation") && view.isEnabled())!=null,
+                "Neither automatic association nor manual confirmation available",30000);
+        main(()->{if(displayed("Compte associé"))return;
+            View button=find(activity.getWindow().getDecorView(),view->view instanceof Button
+                    && ((Button)view).getText().toString().startsWith("Vérifier la confirmation") && view.isEnabled());
+            if(button!=null)assertTrue(button.performClick());});
+        await(()->displayed("Compte associé"),"Association not confirmed by Android",30000);
+    }
 
     /** Claim the displayed challenge with a signed, expiring isolated actor; Android retains the possession secret itself. */
     private int claim(String code,String bearer,String origin) throws Exception {
@@ -150,7 +163,7 @@ public final class CloudAndroid002JourneyTest {
         assertEquals(403,claim(code.get(),config.getString("actorToken"),"https://wrong-origin.invalid"));
         assertEquals(401,claim(code.get(),"not-a-signed-identity",BuildConfig.CLOUD_ORIGIN));
         assertEquals(200,claim(code.get(),config.getString("actorToken"),BuildConfig.CLOUD_ORIGIN));
-        click("Vérifier la confirmation");await(()->displayed("Compte associé"),"Association not confirmed by Android",30000);
+        confirmAssociation();
         click("Réglages");click("Charger le catalogue multimédia privé");click("Télécharger : Columbo");long downloadStart=SystemClock.elapsedRealtime();confirm();
         await(()->displayed("Cache privé vérifié : 16 TEXT + 3 AUDIO"),"Staging download/cache not verified",300000);
         long downloadMs=SystemClock.elapsedRealtime()-downloadStart;
