@@ -35,6 +35,7 @@ android {
         buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "false"
         buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "false"
         buildConfigField "boolean", "CLOUD_MULTIMEDIA_EXPERIMENTAL", "false"
+        buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "false"
     }
 
     buildTypes {
@@ -108,7 +109,18 @@ android {
         }
     }
 
+    buildTypes.create("cloudandroid002") {
+        initWith buildTypes.cloudandroid001
+        versionNameSuffix "-cloud-android-tv002"
+        buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "true"
+        signingConfig null
+    }
     sourceSets.studiomultimedia001.java.srcDir "src/release/java"
+    sourceSets.cloudandroid002 {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvfirst009sony/AndroidManifest.xml"
+    }
     sourceSets.cloudandroid001 {
         java.srcDir "src/tvfirst008/java"
         res.srcDir "src/tvfirst008/res"
@@ -164,9 +176,19 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+    if (providers.gradleProperty("scenevibeCloudAndroid002NativeQualification").orElse("false").get() == "true") {
+        testBuildType "cloudandroid002"
+        buildTypes.cloudandroid002 {
+            debuggable true
+            signingConfig signingConfigs.debug
+        }
+    }
 }
 
 androidComponents {
+    onVariants(selector().withBuildType("cloudandroid002")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(17) }
+    }
     onVariants(selector().withBuildType("cloudandroid001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(16) }
     }
@@ -185,6 +207,7 @@ androidComponents {
 }
 
 dependencies {
+    androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0"
     androidTestImplementation "androidx.test:runner:1.6.2"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"
     testImplementation "junit:junit:4.13.2"

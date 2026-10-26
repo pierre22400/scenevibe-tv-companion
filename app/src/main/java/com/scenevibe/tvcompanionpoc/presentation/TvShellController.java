@@ -371,7 +371,8 @@ public final class TvShellController {
         RuntimeStatus status = runtime.read();
         String cloud = source instanceof TvAccountSource ? ((TvAccountSource) source).accountMessage() : status.cloud;
         if (source instanceof TvAccountSource) connection.setText(((TvAccountSource) source).accountStage() == TvAccountSource.AccountStage.ASSOCIATED
-                ? (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION ? "Compte associé · Qualification TEXT" : "Compte associé · Cache uniquement") : "Compte non confirmé");
+                ? (BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"Compte associé · Qualification TEXT + AUDIO":
+                    BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION ? "Compte associé · Qualification TEXT" : "Compte associé · Cache uniquement") : "Compte non confirmé");
         if (accountStatus != null) accountStatus.setText(cloud);
         if (diagnosticConnection != null) diagnosticConnection.setText(cloud);
         if (diagnosticService != null) diagnosticService.setText(status.service + "\n" + status.permissions);
@@ -657,7 +658,9 @@ public final class TvShellController {
             action(page, R.string.tv_diag_details, false, "account-diagnostics", openTechnicalDiagnostics);
             defaultFocus = "account-diagnostics";
         }
-        paragraph(page, "Ce profil consulte et prépare le cache. Aucun rendu de commentaire, overlay ou MEDIA n’est autorisé.", 13, 16);
+        paragraph(page, BuildConfig.CLOUD_MULTIMEDIA_SERVICE?
+                "L'association autorise le téléchargement privé. Les commentaires nécessitent ensuite une activation locale explicite.":
+                "Ce profil consulte et prépare le cache. Aucun rendu de commentaire, overlay ou MEDIA n’est autorisé.", 13, 16);
         return true;
     }
 

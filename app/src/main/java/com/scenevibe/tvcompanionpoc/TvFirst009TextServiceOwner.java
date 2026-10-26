@@ -25,6 +25,7 @@ import java.util.UUID;
 final class TvFirst009TextServiceOwner {
     static final String START="com.scenevibe.tvcompanionpoc.TEXT_QUALIFICATION_START";
     static final String STOP="com.scenevibe.tvcompanionpoc.TEXT_QUALIFICATION_STOP";
+    static final String MULTIMEDIA_START="com.scenevibe.tvcompanionpoc.CLOUD_MULTIMEDIA_START";
     private static final String EXTRA="text_qualification_request";
     private static final String DIGEST="4b3208760f8356d2b00aa223f5103f9d3a1ff2d7b2429ce58c1cb414bf2e818c";
     private static final String CHANNEL="scenevibe_text_qualification";
@@ -32,11 +33,14 @@ final class TvFirst009TextServiceOwner {
     private static final int NOTIFICATION=1009;
     private static Pending pending;
     private static long nextOwner,liveOwner;
+    private static TvFirst009TextServiceOwner liveInstance;
+    private static boolean multimediaTextPreference=true,multimediaAudioPreference=true;
     private static Status latest=new Status("STOPPED",-1,false,0,-1);
     private final OverlayService service;
     private final Handler main=new Handler(Looper.getMainLooper());
     private final long owner=++nextOwner;
     private TvFirst009TextSession session;
+    private CloudMultimediaSession multimedia;
     private boolean foreground,closing;
     private Runnable watch;
 
@@ -87,8 +91,11 @@ final class TvFirst009TextServiceOwner {
         final String nonce=UUID.randomUUID().toString();
         final long deadline=SystemClock.elapsedRealtime()+5000;
         final TvFirst008Source.ConfirmedCacheReference reference;
+        final CloudMultimediaAdmission multimedia;
         /** Capture only the existing confirmed cache authority from the user's explicit action. */
-        Pending(TvFirst008Source.ConfirmedCacheReference reference) { this.reference=reference; }
+        Pending(TvFirst008Source.ConfirmedCacheReference reference) { this.reference=reference;this.multimedia=null; }
+        /** Carry a current explicit multimedia permit in memory for the same five-second handoff. */
+        Pending(CloudMultimediaAdmission multimedia) {this.reference=null;this.multimedia=multimedia;}
     }
 
     /** Bind the existing service; construction alone creates no probe, cache or renderer. */
@@ -133,6 +140,33 @@ final class TvFirst009TextServiceOwner {
         if (liveOwner==0) record("STOPPED",-1,false);
     }
 
+    /** Explicit local confirmation only; cache restoration and receipt callbacks never call this method. */
+    static boolean requestMultimediaStart(Activity activity,TvFirst008Source source,MultimediaPrivateCache.Prepared prepared,
+            boolean ownerConfirmedReferenceEdition) {
+        if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || Looper.myLooper()!=Looper.getMainLooper() || controlBusy())return false;
+        if(!Settings.canDrawOverlays(activity) || !NotificationAccess.isGranted(activity)){
+            record("PERMISSION_REQUIRED",-1,false);return false;
+        }
+        CloudMultimediaAdmission admitted=CloudMultimediaAdmission.admit(source==null?null:source.confirmedMultimediaReference(prepared),ownerConfirmedReferenceEdition);
+        if(admitted==null){record("MEDIA_IDENTITY_BLOCKED",-1,false);return false;}
+        Pending request=new Pending(admitted);pending=request;record("START_REQUESTED",-1,false);
+        try{activity.startForegroundService(new Intent(activity,OverlayService.class).setAction(MULTIMEDIA_START).putExtra(EXTRA,request.nonce));return true;}
+        catch(RuntimeException refused){pending=null;record("SERVICE_START_FAILED",-1,false);return false;}
+    }
+
+    /** Route a visual preference only to the current multimedia lifetime. */
+    static void setMultimediaTextEnabled(boolean enabled){multimediaTextPreference=enabled;if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setTextEnabled(enabled);}
+    /** Route an audio preference only to SceneVibe's current local MP3 port. */
+    static void setMultimediaAudioEnabled(boolean enabled){multimediaAudioPreference=enabled;if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAudioEnabled(enabled);}
+    /** Expose actual distinct native STARTED resources as bounded process-local diagnostics. */
+    static int multimediaAudioStarted(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.audioResourcesStarted();}
+    /** Expose original TEXT windows requested by the real service, without claiming physical display. */
+    static int multimediaTextRequested(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.textWindowsRequested();}
+    /** Report native preparation count for diagnostics; a resumed MP3 should not be prepared again. */
+    static int multimediaAudioPreparations(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.audioPreparations();}
+    /** Report only the local comment-player lifecycle, never the platform player's transport object. */
+    static String multimediaAudioState(){return liveInstance==null || liveInstance.multimedia==null?"IDLE":liveInstance.multimedia.audioState();}
+
     /** Enter foreground promptly, reusing the historical Android service/notification mechanism. */
     @android.annotation.SuppressLint("ForegroundServiceType")
     void create() {
@@ -142,7 +176,7 @@ final class TvFirst009TextServiceOwner {
             PendingIntent open=PendingIntent.getActivity(service,0,new Intent(service,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
             PendingIntent stop=PendingIntent.getService(service,9,new Intent(service,OverlayService.class).setAction(STOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
             Notification notification=new Notification.Builder(service,CHANNEL).setSmallIcon(R.drawable.ic_launcher)
-                    .setContentTitle("SceneVibe TV — TEXT").setContentText("Qualification sans publicité · arrêt dans SceneVibe TV")
+                    .setContentTitle(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"SceneVibe TV — TEXT + AUDIO":"SceneVibe TV — TEXT").setContentText("Qualification sans publicité · arrêt dans SceneVibe TV")
                     .setContentIntent(open).addAction(new Notification.Action.Builder(null,"Arrêter TEXT",stop).build()).setOngoing(true).build();
             service.startForeground(NOTIFICATION,notification);foreground=true;
         } catch (RuntimeException failed) { fail("FOREGROUND_SERVICE_FAILED"); }
@@ -153,25 +187,29 @@ final class TvFirst009TextServiceOwner {
         if (intent!=null && STOP.equals(intent.getAction())) {
             record("STOPPED",-1,false);destroy();service.stopSelf();return Service.START_NOT_STICKY;
         }
-        if (!foreground || intent==null || !START.equals(intent.getAction()) || session!=null) {
+        boolean multimediaRequest=BuildConfig.CLOUD_MULTIMEDIA_SERVICE && intent!=null && MULTIMEDIA_START.equals(intent.getAction());
+        if (!foreground || intent==null || (!START.equals(intent.getAction()) && !multimediaRequest) || session!=null || multimedia!=null) {
             fail("EXPLICIT_START_REQUIRED");return Service.START_NOT_STICKY;
         }
         Pending request=pending;pending=null;
         if (request==null || !request.nonce.equals(intent.getStringExtra(EXTRA))
-                || SystemClock.elapsedRealtime()>=request.deadline || !request.reference.isCurrent(SystemClock.elapsedRealtime())
-                || !DIGEST.equals(request.reference.binding.digest)) {
+                || SystemClock.elapsedRealtime()>=request.deadline
+                || (multimediaRequest?(request.multimedia==null || !request.multimedia.current()):
+                    (request.reference==null || !request.reference.isCurrent(SystemClock.elapsedRealtime()) || !DIGEST.equals(request.reference.binding.digest)))) {
             fail("START_PROOF_INVALID");return Service.START_NOT_STICKY;
         }
-        liveOwner=owner;latest=new Status("WAITING_MEDIA",-1,true,0,-1);
-        session=TvFirst009TextSession.openConfirmed(service,request.reference,
-                TvFirst009TextRuntime.Decision.OWNER_LOCAL_AD_FREE_QUALIFICATION,this::observed);
-        if (session==null) { fail("CACHE_OR_PERMISSION_UNAVAILABLE");return Service.START_NOT_STICKY; }
+        liveOwner=owner;liveInstance=this;latest=new Status("WAITING_MEDIA",-1,true,0,-1);
+        if(multimediaRequest)multimedia=CloudMultimediaSession.open(service,request.multimedia,this::observed);
+        else session=TvFirst009TextSession.openConfirmed(service,request.reference,
+                    TvFirst009TextRuntime.Decision.OWNER_LOCAL_AD_FREE_QUALIFICATION,this::observed);
+        if (session==null && multimedia==null) { fail("CACHE_OR_PERMISSION_UNAVAILABLE");return Service.START_NOT_STICKY; }
+        if(multimedia!=null){multimedia.setTextEnabled(multimediaTextPreference);multimedia.setAudioEnabled(multimediaAudioPreference);}
         watch=new Runnable() {
             /** Retire notification/probe after permission loss or self-closing consent/cache authority. */
             @Override public void run() {
-                if (closing || liveOwner!=owner || session==null) return;
+                if (closing || liveOwner!=owner || (session==null && multimedia==null)) return;
                 if (!Settings.canDrawOverlays(service) || !NotificationAccess.isGranted(service)) { fail("PERMISSION_REQUIRED");return; }
-                if (!session.isActive()) { destroy();service.stopSelf();return; }
+                if (!(session!=null?session.isActive():multimedia.isActive())) { destroy();service.stopSelf();return; }
                 main.postDelayed(this,250);
             }
         };
@@ -205,6 +243,8 @@ final class TvFirst009TextServiceOwner {
         closing=true;
         if (watch!=null) main.removeCallbacks(watch);
         if (session!=null) { session.close();session=null; }
+        if (multimedia!=null) { multimedia.close();multimedia=null; }
+        if (liveInstance==this)liveInstance=null;
         if (liveOwner==owner) {
             if (latest.active) record("STOPPED",-1,false);
             liveOwner=0;

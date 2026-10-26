@@ -180,6 +180,10 @@ public final class TvFirst008Source implements TvAccountSource {
                     || !binding.generation.equals(current.optString("generation")) || !binding.device.equals(current.optString("deviceId"))
                     || !binding.publication.equals(pending.optString("publicationId")))throw new IllegalStateException("STALE_MULTIMEDIA_INTENTION");
             state.write("multimediaPending",null);
+            if (BuildConfig.CLOUD_MULTIMEDIA_SERVICE) {
+                state.write("multimediaBinding",binding.json());
+                state.write("multimediaReceipt",binding.json());
+            }
         }
     }
 
@@ -533,6 +537,46 @@ public final class TvFirst008Source implements TvAccountSource {
             }
         }
     }
+    /** Capture a current verified multimedia receipt; Activity pause never renews this consent. */
+    MultimediaReference confirmedMultimediaReference(MultimediaPrivateCache.Prepared prepared) {
+        synchronized(lock) {
+            if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || !active || busy || prepared==null
+                    || accountStage()!=AccountStage.ASSOCIATED)return null;
+            try {
+                MultimediaReference ref=new MultimediaReference(lock,state,prepared,consentDeadline,
+                        ()->accountStage()==AccountStage.ASSOCIATED);
+                return ref.current(android.os.SystemClock.elapsedRealtime())?ref:null;
+            }catch(RuntimeException refused){return null;}
+        }
+    }
+
+    /** One immutable, read-only cache/consent reference; neither a bearer nor a persisted ARM token. */
+    static final class MultimediaReference {
+        final MultimediaPrivateCache.Prepared prepared;
+        private final Object monitor;
+        private final TvFirst008State metadata;
+        private final long issuedAt=android.os.SystemClock.elapsedRealtime(),expiresAt;
+        private final java.util.function.BooleanSupplier associated;
+        /** Retain the exact receipt and the original monotonic consent deadline. */
+        private MultimediaReference(Object monitor,TvFirst008State metadata,MultimediaPrivateCache.Prepared prepared,
+                long expiresAt,java.util.function.BooleanSupplier associated) {
+            this.monitor=monitor;this.metadata=metadata;this.prepared=prepared;this.expiresAt=expiresAt;this.associated=associated;
+        }
+        /** Recheck identity, receipt and current selection before every local effect. */
+        boolean current(long now) {
+            synchronized(monitor) {
+                try {
+                    MultimediaCloudClient.Binding binding=prepared.binding;
+                    JSONObject identity=metadata.read("identity");
+                    return now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
+                            && binding.device.equals(identity.optString("deviceId")) && binding.generation.equals(identity.optString("generation"))
+                            && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaBinding")))
+                            && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaReceipt")));
+                }catch(Exception refused){return false;}
+            }
+        }
+    }
+
     /** Cancel an intention locally without clearing identity or any committed cache. */
     @Override public void cancel(String offerId) {
         synchronized (lock) {

@@ -23,6 +23,9 @@ final class CloudMultimediaControls {
     private final TextView status;
     private final Button catalogue,restore;
     private String result="Aucun paquet multimédia vérifié dans cette session.";
+    private MultimediaPrivateCache.Prepared preparedCache;
+    private Button activate,stop,textToggle,audioToggle;
+    private boolean textEnabled=true,audioEnabled=true;
 
     /** Attach only view controls; constructing the screen never performs network I/O or starts playback. */
     CloudMultimediaControls(Activity activity,Supplier<TvFirst008Source> owner) {
@@ -32,6 +35,12 @@ final class CloudMultimediaControls {
         catalogue=button("Charger le catalogue multimédia privé",this::catalogue);
         restore=button("Relire le cache multimédia local",this::restore);
         items=new LinearLayout(activity);items.setOrientation(LinearLayout.VERTICAL);root.addView(items);
+        if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){
+            activate=button("Activer TEXT + AUDIO depuis le cache",this::confirmActivation);
+            stop=button("Arrêter les commentaires",()->{TvFirst009TextServiceOwner.requestStop(activity);refresh();});
+            textToggle=button("Commentaires écrits : ON",()->{textEnabled=!textEnabled;TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
+            audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!audioEnabled;TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});
+        }
         refresh();
     }
 
@@ -46,7 +55,14 @@ final class CloudMultimediaControls {
         for(int i=0;i<items.getChildCount();i++)items.getChildAt(i).setEnabled(catalogue.isEnabled());
         String state=source==null?"Association disponible dans le parcours Compte.":source.accountMessage();
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
-                +"\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier.");
+                +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"\nAdmission locale explicite requise. "+TvFirst009TextServiceOwner.status().code:
+                    "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
+        if(activate!=null){
+            activate.setEnabled(ready && preparedCache!=null && !TvFirst009TextServiceOwner.controlBusy());
+            stop.setEnabled(TvFirst009TextServiceOwner.controlBusy());
+            textToggle.setText("Commentaires écrits : "+(textEnabled?"ON":"OFF"));
+            audioToggle.setText("Commentaires audio : "+(audioEnabled?"ON":"OFF"));
+        }
     }
 
     /** Ask the current account/device authority for its closed, private multimedia catalogue. */
@@ -101,6 +117,7 @@ final class CloudMultimediaControls {
 
     /** Display counts taken from the verified shared calendar rather than assuming Columbo or nineteen events. */
     private void prepared(MultimediaPrivateCache.Prepared prepared) {
+        preparedCache=prepared;
         if(prepared==null)result="Aucun cache multimédia local pour cette association.";
         else {
             int audio=prepared.track.audio.size(),total=prepared.track.calendar.events().size();
@@ -108,6 +125,18 @@ final class CloudMultimediaControls {
                     +"\nRelu après commit ; aucune restitution automatique.";
         }
         refresh();
+    }
+
+    /** Require a fresh owner decision; UNKNOWN is never silently converted into editorial evidence. */
+    private void confirmActivation(){
+        if(preparedCache==null || activate==null || !activate.isEnabled())return;
+        new AlertDialog.Builder(activity).setTitle("Admission locale TEXT + AUDIO")
+                .setMessage("Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
+                .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
+                    boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
+                    if(started){TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);}
+                    result=started?"Démarrage du service demandé ; attente d'une identité MEDIA compatible.":"Admission refusée : vérifie compte, permissions et mapping de référence.";refresh();
+                }).show();
     }
 
     /** Create one remote-focusable action using the existing Android widget toolkit. */

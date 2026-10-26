@@ -31,6 +31,8 @@ import java.util.List;
  * local asset cache supplied through {@link AssetResolver}.</p>
  */
 final class SceneRenderer {
+    /** Read actual WindowManager attachment for local diagnostics; a request alone is not display proof. */
+    boolean isWindowAttached(){return root!=null && root.isAttachedToWindow();}
     /** Local-only asset seam. Implementations must never fetch a network URL here. */
     interface AssetResolver {
         Bitmap resolve(String assetRef);

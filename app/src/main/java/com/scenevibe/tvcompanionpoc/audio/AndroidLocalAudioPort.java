@@ -16,6 +16,7 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
     /** Resolve only a resource id already verified in the local package. */
     public interface Resources { File resolve(String id) throws IOException; }
     private final Resources resources;
+    private final java.util.function.BooleanSupplier playbackAllowed;
     private MediaPlayer player;
     private State state=State.IDLE;
     private float gain=1f;
@@ -26,8 +27,13 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
 
     /** Bind the verified resolver without opening a file or player. */
     public AndroidLocalAudioPort(Resources resources) {
-        if(resources==null) throw new IllegalArgumentException("VERIFIED_RESOURCES_REQUIRED");
-        this.resources=resources;
+        this(resources,()->true);
+    }
+
+    /** Recheck the owner's current admission before every synchronous or deferred audible start. */
+    public AndroidLocalAudioPort(Resources resources,java.util.function.BooleanSupplier playbackAllowed) {
+        if(resources==null || playbackAllowed==null) throw new IllegalArgumentException("VERIFIED_RESOURCES_REQUIRED");
+        this.resources=resources;this.playbackAllowed=playbackAllowed;
     }
 
     /** Prepare one actual local MP3 while retaining silent PREPARED state. */
@@ -63,6 +69,7 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
 
     /** Start after native offset application, never before preparation. */
     @Override public void start() {
+        if(!playbackAllowed.getAsBoolean()){release();return;}
         if(player==null || state==State.ERROR || state==State.IDLE) return;
         startRequested=true;
         if(seekPending) return;

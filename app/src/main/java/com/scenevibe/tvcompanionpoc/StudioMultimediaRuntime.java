@@ -70,6 +70,17 @@ final class StudioMultimediaRuntime {
 
     /** Explicit JVM/software admission only; this entry is never wired to Sony. */
     void loadForSoftwareQualification(StudioMultimediaPackage next,String activation) {
+        load(next,activation);
+    }
+
+    /** Native service entry requires a current, explicit cache/edition admission rather than a software label. */
+    void loadAdmittedCloud(CloudMultimediaAdmission admission) {
+        if(admission==null || !admission.current())throw new IllegalStateException("CURRENT_NATIVE_ADMISSION_REQUIRED");
+        load(admission.reference.prepared.track,admission.activation);
+    }
+
+    /** Share the already-qualified scheduler/renderers after the caller's distinct admission boundary. */
+    private void load(StudioMultimediaPackage next,String activation) {
         if(next==null || activation==null || activation.isEmpty()) throw new IllegalArgumentException("ACTIVATION_REQUIRED");
         String revisionKey=next.trackId+"#"+next.revision;
         String previous=revisionDigests.get(revisionKey);
