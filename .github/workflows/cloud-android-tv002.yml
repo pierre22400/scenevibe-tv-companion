@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 40
     env:
       SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app
+      SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -43,6 +44,31 @@ jobs:
         run: |
           gradle --no-daemon --max-workers=2 assembleCloudandroid002
           sha256sum app/build/outputs/apk/cloudandroid002/*unsigned.apk > cloud-android-tv002-sha256.txt
+      - name: Sign experimental APK with the existing repository stable key when available
+        if: env.SIGNING_ENABLED == 'true'
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p cloud-android-tv002-signed
+          printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/scenevibe002-stable.jks"
+          scenevibe_tools="$ANDROID_HOME/build-tools/34.0.0"
+          "$scenevibe_tools/aapt" dump badging app/build/outputs/apk/cloudandroid002/app-cloudandroid002-unsigned.apk > cloud-android-tv002-signed/apk-badging.txt
+          if rg 'application-debuggable' cloud-android-tv002-signed/apk-badging.txt; then exit 1; fi
+          "$scenevibe_tools/zipalign" -f 4 app/build/outputs/apk/cloudandroid002/app-cloudandroid002-unsigned.apk "$RUNNER_TEMP/scenevibe002-aligned.apk"
+          "$scenevibe_tools/apksigner" sign --ks "$RUNNER_TEMP/scenevibe002-stable.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD --out cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk "$RUNNER_TEMP/scenevibe002-aligned.apk"
+          "$scenevibe_tools/apksigner" verify --verbose --print-certs cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk > cloud-android-tv002-signed/apksigner-verify.txt
+          "$scenevibe_tools/zipalign" -c 4 cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk
+          sha256sum cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk > cloud-android-tv002-signed/sha256.txt
+          # The existing key is reused; equality with the Sony-installed M5
+          # certificate still requires its known reference, never a guessed digest.
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/scenevibe002-stable.jks" "$RUNNER_TEMP/scenevibe002-aligned.apk"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -50,6 +76,7 @@ jobs:
           path: |
             app/build/outputs/apk/cloudandroid002/*unsigned.apk
             cloud-android-tv002-sha256.txt
+            cloud-android-tv002-signed/
             app/build/test-results/**/*.xml
             app/build/reports/lint-results-cloudandroid002.*
           if-no-files-found: error

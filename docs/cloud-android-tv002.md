@@ -6,8 +6,10 @@ Le mapping technique compare les SHA-256 exacts du snapshot Studio, du runtime T
 
 Le service utilise SceneRenderer, AndroidLocalAudioPort et le calendrier M5 existants, avec une seule sonde MediaSession passive. Les contrôles TEXT/AUDIO sont indépendants. Les starts MP3 différés revalident le permis avant de devenir audibles. Un changement de cache, génération ou consentement invalide le permis. Aucune commande n'est envoyée à Prime.
 
-Les tests instrumentés 002 cliquent les véritables boutons du Companion et utilisent le staging HTTPS. Leur horloge est une MediaSession appartenant à SceneVibe : un garde debug exclusif adapte le package attendu à cette fixture. Le candidat non debuggable refuse ce garde. Ces tests ne sont jamais une preuve de lecture Prime ou de rendu Sony.
+Les tests instrumentés 002 cliquent les véritables boutons du Companion. Deux bancs sont distingués : staging HTTPS Neon/R2, et repli HTTPS loopback PostgreSQL 16 + ObjectStore HTTP sans secrets. Leur horloge est une MediaSession appartenant à SceneVibe : un garde debug exclusif adapte le package attendu à cette fixture. Le candidat non debuggable refuse ce garde. Le banc local ne prouve pas le staging. Aucun de ces tests n'est une preuve de lecture Prime ou de rendu Sony.
 
 Staging prévu : `https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app`, projet Vercel dédié, target preview, branche Neon dédiée et nouveau préfixe R2. Son état opérationnel doit être prouvé par les résultats de qualification ; une URL configurée ne suffit pas.
 
-STOP avant installation Sony. La signature M5 reste une opération de préparation distincte : employer la clé existante, comparer le certificat au candidat Sony précédent et recalculer le SHA du fichier signé. Ne jamais générer une nouvelle clé pour contourner une absence de clé.
+Le workflow peut signer avec les quatre secrets de signature stable déjà employés par android-release.yml, sans les modifier. Il ne crée aucune nouvelle clé. Ce certificat CI doit encore être comparé à la référence M5 installée sur Sony ; une signature valide ne suffit pas à prouver cette égalité. Si la référence diffère, employer la clé M5 existante sur le PC propriétaire, puis recalculer le SHA du fichier signé.
+
+STOP avant installation Sony. La préparation et la comparaison des certificats sont autorisées ; aucune commande d'installation physique n'est exécutée par cette mission.
