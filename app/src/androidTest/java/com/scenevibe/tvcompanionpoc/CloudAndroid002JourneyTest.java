@@ -60,6 +60,7 @@ public final class CloudAndroid002JourneyTest {
         assertEquals(BuildConfig.CLOUD_ORIGIN,config.getString("origin"));
         activity=(MainActivity)instrumentation.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
         main(()->CloudMultimediaAdmission.useOwnedMediaSessionFixture(true));
+        main(()->{TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);});
     }
 
     /** Stop the real service and release only the test's own MediaSession and Activity. */
@@ -207,5 +208,18 @@ public final class CloudAndroid002JourneyTest {
         assertFalse(TvFirst009TextServiceOwner.status().active);
         Files.write(new File(target.getFilesDir(),"cloudandroid002-replacement.json").toPath(),new JSONObject().put("oldActivationRetired",true)
                 .put("eventsRetained",19).put("replacementAutoStarted",false).toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** An already-playing native session cannot outrun switches disabled before explicit activation. */
+    @Test public void e_disabledSwitchesApplyBeforeFirstSnapshot() throws Exception {
+        restore();click("Commentaires écrits : ON");click("Commentaires audio : ON");
+        main(()->{fixture=new MediaSession(target,"SceneVibe002 OWN preexisting session");
+            fixture.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
+                    .putString(MediaMetadata.METADATA_KEY_TITLE,"Columbo — Eaux troubles").putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());
+            fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,90000));fixture.setActive(true);});
+        click("Activer TEXT + AUDIO depuis le cache");confirm();
+        await(()->TvFirst009TextServiceOwner.status().active,"Service refused disabled-switch activation",15000);
+        Thread.sleep(1500);main(()->{assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPreparations());
+            assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioStarted());assertEquals(0,TvFirst009TextServiceOwner.multimediaTextRequested());});
     }
 }

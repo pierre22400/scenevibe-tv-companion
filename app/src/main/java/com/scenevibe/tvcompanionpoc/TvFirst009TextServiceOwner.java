@@ -199,11 +199,11 @@ final class TvFirst009TextServiceOwner {
             fail("START_PROOF_INVALID");return Service.START_NOT_STICKY;
         }
         liveOwner=owner;liveInstance=this;latest=new Status("WAITING_MEDIA",-1,true,0,-1);
-        if(multimediaRequest)multimedia=CloudMultimediaSession.open(service,request.multimedia,this::observed);
+        if(multimediaRequest)multimedia=CloudMultimediaSession.open(service,request.multimedia,this::observed,
+                multimediaTextPreference,multimediaAudioPreference);
         else session=TvFirst009TextSession.openConfirmed(service,request.reference,
                     TvFirst009TextRuntime.Decision.OWNER_LOCAL_AD_FREE_QUALIFICATION,this::observed);
         if (session==null && multimedia==null) { fail("CACHE_OR_PERMISSION_UNAVAILABLE");return Service.START_NOT_STICKY; }
-        if(multimedia!=null){multimedia.setTextEnabled(multimediaTextPreference);multimedia.setAudioEnabled(multimediaAudioPreference);}
         watch=new Runnable() {
             /** Retire notification/probe after permission loss or self-closing consent/cache authority. */
             @Override public void run() {

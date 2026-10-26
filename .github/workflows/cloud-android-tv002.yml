@@ -32,7 +32,9 @@ jobs:
         run: |
           gradle --no-daemon --max-workers=2 testDebugUnitTest
           gradle --no-daemon --max-workers=2 testTvfirst008UnitTest --tests '*TvFirst008BoundaryTest' --tests '*TvFirst008CacheTest' --tests '*TvFirst008HttpTest' --tests '*TvFirst008IdentityTest' --tests '*TvFirst009ClosedBoundaryTest'
-          gradle --no-daemon --max-workers=2 testTvfirst009UnitTest testTvfirst009sonyUnitTest
+          # The 009 real Columbo fixture remains in the private Cloud repository.
+          # Its dedicated tests run there with scenevibe009Fixture, never with a
+          # substituted/public fixture or all debug tests under another BuildConfig.
       - name: Compile experimental service, native tests and historical candidate
         run: |
           gradle --no-daemon --max-workers=2 assembleCloudandroid002 lintCloudandroid002 assembleTvfirst013sony

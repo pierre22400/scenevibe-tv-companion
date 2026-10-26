@@ -36,15 +36,17 @@ final class CloudMultimediaSession {
     private int audioPreparations;
 
     /** Compose real application ports only after the owner's separate explicit admission. */
-    static CloudMultimediaSession open(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer) {
+    static CloudMultimediaSession open(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
+            boolean textEnabled,boolean audioEnabled) {
         if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || Looper.myLooper()!=Looper.getMainLooper()
                 || admission==null || !admission.current() || !Settings.canDrawOverlays(context)
                 || !NotificationAccess.isGranted(context))return null;
-        try{return new CloudMultimediaSession(context,admission,observer);}catch(RuntimeException refused){return null;}
+        try{return new CloudMultimediaSession(context,admission,observer,textEnabled,audioEnabled);}catch(RuntimeException refused){return null;}
     }
 
     /** Reuse SceneRenderer and AndroidLocalAudioPort; preparation never starts a second video player. */
-    private CloudMultimediaSession(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer) {
+    private CloudMultimediaSession(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
+            boolean textEnabled,boolean audioEnabled) {
         this.context=context;this.admission=admission;this.observer=observer;
         renderer=new SceneRenderer(context,id->null,()->main.post(this::close));
         audio=new AndroidLocalAudioPort(id->{
@@ -64,6 +66,9 @@ final class CloudMultimediaSession {
             @Override public void hideAll(){renderer.dismissNow();}
         },audio);
         try{runtime.loadAdmittedCloud(admission);}catch(RuntimeException refused){audio.release();renderer.dismissNow();throw refused;}
+        // The probe may synchronously report an already-playing session. Apply the
+        // owner's switches first, so an AUDIO OFF start cannot emit even briefly.
+        runtime.setTextEnabled(textEnabled);runtime.setAudioEnabled(audioEnabled);
         probe=new MediaSessionProbe(context,new MediaSessionProbe.Listener() {
             /** Route actual passive MediaSession observations to the already-qualified calendar. */
             @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot){observe(snapshot);}

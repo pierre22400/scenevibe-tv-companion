@@ -160,6 +160,9 @@ android {
         // A fresh fork per class keeps real Android resource loading independent.
         unitTests.all {
             forkEvery = 1
+            if (providers.gradleProperty("scenevibe009Fixture").isPresent()) {
+                systemProperty "scenevibe009.fixture", providers.gradleProperty("scenevibe009Fixture").get()
+            }
             if (name.toLowerCase().contains("studiomultimedia001")) {
                 systemProperty "scenevibe.multimedia.package", providers.gradleProperty("scenevibeMultimediaPackage").orElse("").get()
                 systemProperty "scenevibe.multimedia.replacement", providers.gradleProperty("scenevibeMultimediaReplacement").orElse("").get()
