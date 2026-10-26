@@ -147,7 +147,9 @@ final class TvFirst009TextServiceOwner {
         if(!Settings.canDrawOverlays(activity) || !NotificationAccess.isGranted(activity)){
             record("PERMISSION_REQUIRED",-1,false);return false;
         }
-        CloudMultimediaAdmission admitted=CloudMultimediaAdmission.admit(source==null?null:source.confirmedMultimediaReference(prepared),ownerConfirmedReferenceEdition);
+        TvFirst008Source.MultimediaReference reference=source==null?null:source.confirmedMultimediaReference(prepared);
+        if(reference==null){record("CACHE_OR_CONSENT_REQUIRED",-1,false);return false;}
+        CloudMultimediaAdmission admitted=CloudMultimediaAdmission.admit(reference,ownerConfirmedReferenceEdition);
         if(admitted==null){record("MEDIA_IDENTITY_BLOCKED",-1,false);return false;}
         Pending request=new Pending(admitted);pending=request;record("START_REQUESTED",-1,false);
         try{activity.startForegroundService(new Intent(activity,OverlayService.class).setAction(MULTIMEDIA_START).putExtra(EXTRA,request.nonce));return true;}
@@ -257,6 +259,7 @@ final class TvFirst009TextServiceOwner {
         Status current=latest;
         String explanation;
         switch(current.code) {
+            case "CACHE_OR_CONSENT_REQUIRED": explanation="Vérifie le compte et la révision du cache avant une nouvelle admission.";break;
             case "MEDIA_IDENTITY_BLOCKED": explanation="Épisode non reconnu : métadonnées absentes ou différentes. Aucun commentaire.";break;
             case "POSITION_UNKNOWN": explanation="Position MEDIA inconnue. Aucun commentaire.";break;
             case "MEDIA_CLOCK_UNUSABLE": explanation="Horloge MEDIA inutilisable. Aucun commentaire.";break;

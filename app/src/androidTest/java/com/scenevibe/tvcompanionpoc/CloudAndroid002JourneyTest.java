@@ -173,13 +173,17 @@ public final class CloudAndroid002JourneyTest {
         AtomicReference<Integer> preparations=new AtomicReference<>();main(()->preparations.set(TvFirst009TextServiceOwner.multimediaAudioPreparations()));
         main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PAUSED,90500)));
         await(()->"PAUSED".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Native MP3 did not pause",10000);
-        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,90500)));
-        await(()->"STARTED".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Native MP3 did not resume",10000);
-        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,91500)));Thread.sleep(1100);
-        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,91000)));Thread.sleep(1100);
+        // Seek while paused so the one-second passive sampler cannot let a
+        // genuine three-second MP3 finish before the next controlled sample.
+        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PAUSED,91500)));
+        await(()->TvFirst009TextServiceOwner.status().positionMs==91500,"Forward seek missing",10000);
         main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PAUSED,91000)));
-        await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code),"Seek landing missing",10000);
+        await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code) && TvFirst009TextServiceOwner.status().positionMs==91000,"Backward seek missing",10000);
+        // A repeated paused snapshot must not prepare a second native player.
+        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PAUSED,91000)));Thread.sleep(1100);
         main(()->assertEquals((int)preparations.get(),TvFirst009TextServiceOwner.multimediaAudioPreparations()));
+        main(()->fixture.setPlaybackState(state(PlaybackState.STATE_PLAYING,91000)));
+        await(()->"STARTED".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Native MP3 did not resume",10000);
         click("Commentaires audio : ON");assertEquals("IDLE",TvFirst009TextServiceOwner.multimediaAudioState());
         arrive(300000);Thread.sleep(1500);main(()->assertEquals((int)preparations.get(),TvFirst009TextServiceOwner.multimediaAudioPreparations()));
         arrive(306665);await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>0,"TEXT was incorrectly disabled by AUDIO OFF",10000);

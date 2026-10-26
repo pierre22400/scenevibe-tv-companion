@@ -191,6 +191,7 @@ public final class TvFirst008Source implements TvAccountSource {
             if (BuildConfig.CLOUD_MULTIMEDIA_SERVICE) {
                 state.write("multimediaBinding",binding.json());
                 state.write("multimediaReceipt",binding.json());
+                recordMultimediaRevision(binding.device,binding.generation,binding.revision);
             }
         }
     }
@@ -273,6 +274,7 @@ public final class TvFirst008Source implements TvAccountSource {
         synchronized (lock) {
             if (!valid(ticket)) return;
             currentRevision = TvFirst008Wire.integer(response, "currentRevision", 0); stage = AccountStage.ASSOCIATED;
+            if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE)recordMultimediaRevision(id.getString("deviceId"),id.getString("generation"),currentRevision);
             consentDeadline = android.os.SystemClock.elapsedRealtime() + remaining;
             message = "Compte associé. Consultation et ajout au cache uniquement ; aucun commentaire ni MEDIA."; verification = "";
         }
@@ -545,6 +547,15 @@ public final class TvFirst008Source implements TvAccountSource {
             }
         }
     }
+    /** Persist observed OS revision metadata; another Activity or failed write cannot retain an older audible permit. */
+    private void recordMultimediaRevision(String device,String generation,long revision) throws Exception {
+        JSONObject previous=state.read("multimediaAuthorityRevision");
+        if(previous==null || !device.equals(previous.optString("deviceId")) || !generation.equals(previous.optString("generation"))
+                || previous.optLong("revision",-1)!=revision)++multimediaAuthorityEpoch;
+        currentRevision=revision;
+        state.write("multimediaAuthorityRevision",new JSONObject().put("deviceId",device).put("generation",generation).put("revision",revision));
+    }
+
     /** Capture a current verified multimedia receipt; Activity pause never renews this consent. */
     MultimediaReference confirmedMultimediaReference(MultimediaPrivateCache.Prepared prepared) {
         synchronized(lock) {
@@ -581,7 +592,10 @@ public final class TvFirst008Source implements TvAccountSource {
                 try {
                     MultimediaCloudClient.Binding binding=prepared.binding;
                     JSONObject identity=metadata.read("identity");
+                    JSONObject observed=metadata.read("multimediaAuthorityRevision");
                     boolean valid=authorityEpoch==multimediaAuthorityEpoch && now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
+                            && observed!=null && binding.device.equals(observed.optString("deviceId")) && binding.generation.equals(observed.optString("generation"))
+                            && binding.revision==observed.optLong("revision",-1)
                             && binding.device.equals(identity.optString("deviceId")) && binding.generation.equals(identity.optString("generation"))
                             && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaBinding")))
                             && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaReceipt")));

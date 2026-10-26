@@ -58,7 +58,8 @@ final class CloudMultimediaControls {
                 +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"\nAdmission locale explicite requise. "+TvFirst009TextServiceOwner.status().code:
                     "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
         if(activate!=null){
-            activate.setEnabled(ready && preparedCache!=null && !TvFirst009TextServiceOwner.controlBusy());
+            activate.setEnabled(ready && preparedCache!=null && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED
+                    && !TvFirst009TextServiceOwner.controlBusy());
             stop.setEnabled(TvFirst009TextServiceOwner.controlBusy());
             textToggle.setText("Commentaires écrits : "+(textEnabled?"ON":"OFF"));
             audioToggle.setText("Commentaires audio : "+(audioEnabled?"ON":"OFF"));
