@@ -24,6 +24,20 @@ Le constructeur HTTPS produit conserve le truststore Android, le contrôle du ho
 
 Les résultats chiffrés, les journaux d'exécution et les empreintes sont fournis dans la livraison de qualification. Les scénarios échoués avant correction et les limites de l'émulateur restent identifiés dans ce bilan.
 
+### Résultats locaux du 26 octobre 2026
+
+- 1 329 tests JVM réussis, zéro échec final ; un test privé optionnel Sony ignoré. Décomposition : 1 168 du socle, 38 TV-FIRST008, 38 d'intégration TEXT, 56 du service TEXT en Robolectric, 3 frontières HTTPS et 26 du calendrier multimédia.
+- 10/10 tests natifs HTTPS/cache réussis, dont le vrai callback du source utilisé par l'écran du Companion et le décodage MP3 Android.
+- 8/8 tests natifs de restitution réussis : 16 fenêtres TEXT réellement attachées par SceneRenderer et 3 MP3 démarrés par AndroidLocalAudioPort ; PAUSE/RESUME, SEEK, absence de doublon, interrupteurs et interruption contrôlés. La timeline injectée est synthétique.
+- 1/1 test natif de reprise réussi : processus différent après force-stop, pont réseau local supprimé et relecture des 19 événements par le callback de restauration hors réseau de l'écran.
+- Compilation et lint du candidat et de TV-FIRST013 réussis. Aucun credential de tests ou certificat de qualification dans l'APK cible ; ils appartiennent exclusivement à l'APK d'instrumentation.
+
+La cible réellement exécutée est Android 12/API31 AOSP x86_64, avec profil d'écran TV. L'image Android TV x86 n'a pas terminé son démarrage sur cet hôte sans KVM ; aucun PASS propre à cette image ou à une Sony n'est revendiqué.
+
+Les premiers tests ont permis de corriger des défauts du banc : namespace de cache de test non admis, observations de lecture trop espacées assimilées à des SEEK et assertion d'attachement appelée avant la traversée asynchrone WindowManager. La politique M5 et le renderer produit n'ont pas été assouplis pour ces corrections. Le mutant M5 a aussi reçu une ancre adaptée à l'ajout AUDIO, et les mutations JSON du banc JVM acceptent désormais les exceptions déclarées par l'API JSON Android.
+
+**Verdict produit : PARTIEL FONCTIONNEL.** Transport et cache dans l'application, restitution logicielle Android et reprise sont qualifiés dans les périmètres indiqués. L'activation multimédia dans le service réel et le parcours Prime/Sony restent ouverts selon les limites ci-dessous.
+
 ## Limites produit encore ouvertes
 
 Le reçu `CACHE_CONFIRMED` ne vaut pas admission MEDIA. Le document de qualification conserve une édition et un mapping UNKNOWN. Le garde `requireNativeIdentityEvidence()` reste fermé. Le service natif Sony conserve son parcours TEXT historique ; le cache multimédia n'est pas encore raccordé à son activation réelle. Les tests du runtime utilisent exclusivement son entrée de qualification logicielle, même lorsqu'ils exécutent les vrais widgets et MediaPlayer sur Android.

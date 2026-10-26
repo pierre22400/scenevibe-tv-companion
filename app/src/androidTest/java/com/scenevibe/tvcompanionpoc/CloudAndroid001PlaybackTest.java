@@ -31,6 +31,7 @@ public final class CloudAndroid001PlaybackTest {
     private SceneRenderer renderer;
     private CountingAudio audio;
     private final Set<String> scenes=new HashSet<>();
+    private volatile String pendingScene;
     private final String activation="android-software-qualification-"+java.util.UUID.randomUUID();
 
     /** Reopen the real target cache and compose the unchanged SceneVibe rendering ports on Android's UI thread. */
@@ -44,11 +45,7 @@ public final class CloudAndroid001PlaybackTest {
             audio=new CountingAudio(new AndroidLocalAudioPort(id->{try{return prepared.resource(id);}catch(Exception error){throw new java.io.IOException("VERIFIED_RESOURCE_UNAVAILABLE",error);}}));
             runtime=new StudioMultimediaRuntime(new SceneRuntimeController.SceneSink() {
                 /** Keep the genuine Android renderer's exact preflight. */ @Override public boolean preflight(OverlayManifest.Scene scene){return renderer.preflight(scene);}
-                /** Render original TEXT scenes and prove attachment of their actual Android overlay window. */ @Override public void show(OverlayManifest.Scene scene){
-                    renderer.render(scene);scenes.add(scene.id);
-                    try{var field=SceneRenderer.class.getDeclaredField("root");field.setAccessible(true);assertTrue(((android.view.View)field.get(renderer)).isAttachedToWindow());}
-                    catch(ReflectiveOperationException error){throw new AssertionError(error);}
-                }
+                /** Render original TEXT; attachment is checked after the main Looper processes WindowManager's traversal. */ @Override public void show(OverlayManifest.Scene scene){renderer.render(scene);pendingScene=scene.id;}
                 /** Use the existing synchronous dismissal on event expiration. */ @Override public void hide(OverlayManifest.Scene scene){renderer.dismissNow();}
                 /** Eligibility loss removes every Android window immediately. */ @Override public void hideAll(){renderer.dismissNow();}
             },audio);
@@ -64,7 +61,25 @@ public final class CloudAndroid001PlaybackTest {
     private static void main(Runnable work){InstrumentationRegistry.getInstrumentation().runOnMainSync(work);}
 
     /** Supply one explicitly synthetic selected content-time observation to the single M5 calendar. */
-    private void observe(long position,boolean playing){main(()->runtime.observe(activation,new MediaObservation(true,position,playing)));}
+    private void observe(long position,boolean playing){
+        main(()->runtime.observe(activation,new MediaObservation(true,position,playing)));
+        if(pendingScene!=null)awaitWindow();
+    }
+
+    /** Prove actual attachment after Android's asynchronous addView traversal, without blocking its UI thread. */
+    private void awaitWindow(){
+        String scene=pendingScene;long end=android.os.SystemClock.elapsedRealtime()+30000;
+        while(android.os.SystemClock.elapsedRealtime()<end){
+            java.util.concurrent.atomic.AtomicBoolean attached=new java.util.concurrent.atomic.AtomicBoolean();
+            main(()->{
+                try{var field=SceneRenderer.class.getDeclaredField("root");field.setAccessible(true);var view=(android.view.View)field.get(renderer);attached.set(view!=null && view.isAttachedToWindow());}
+                catch(ReflectiveOperationException error){throw new AssertionError(error);}
+            });
+            if(attached.get()){scenes.add(scene);pendingScene=null;return;}
+            android.os.SystemClock.sleep(20);
+        }
+        fail("Native TEXT window never attached");
+    }
 
     /** Model continuous playback without turning a sparse fixture jump into M5's deliberate forward-SEEK policy. */
     private void advance(long from,long to){
