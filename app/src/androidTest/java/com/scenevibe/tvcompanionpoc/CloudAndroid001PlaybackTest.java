@@ -66,6 +66,13 @@ public final class CloudAndroid001PlaybackTest {
     /** Supply one explicitly synthetic selected content-time observation to the single M5 calendar. */
     private void observe(long position,boolean playing){main(()->runtime.observe(activation,new MediaObservation(true,position,playing)));}
 
+    /** Model continuous playback without turning a sparse fixture jump into M5's deliberate forward-SEEK policy. */
+    private void advance(long from,long to){
+        long position=from;
+        while(to-position>5000){position+=5000;observe(position,true);}
+        observe(to,true);
+    }
+
     /** Await asynchronous native seek completion and start without blocking Android's main Looper. */
     private void state(LocalAudioPort.State expected) throws Exception {
         long end=android.os.SystemClock.elapsedRealtime()+30000;
@@ -76,8 +83,9 @@ public final class CloudAndroid001PlaybackTest {
     /** Dispatch all nineteen original events; each MP3 reaches Android STARTED and every TEXT window is attached. */
     @Test public void rendersSixteenTextsAndStartsThreeNativeMp3() throws Exception {
         observe(0,true);
+        long previous=0;
         for(var event:prepared.track.calendar.events()) {
-            observe(event.startMs(),true);
+            advance(previous,event.startMs());previous=event.startMs();
             if(prepared.track.audio.containsKey(event.eventId())){state(LocalAudioPort.State.STARTED);observe(event.startMs(),true);}
         }
         assertEquals(16,scenes.size());assertEquals(3,audio.starts);assertEquals(3,audio.resources.size());
@@ -119,7 +127,7 @@ public final class CloudAndroid001PlaybackTest {
     /** AUDIO OFF releases native sound immediately while subsequent TEXT windows remain renderable. */
     @Test public void audioOffKeepsTextIndependent() throws Exception {
         observe(90000,true);state(LocalAudioPort.State.STARTED);main(()->runtime.setAudioEnabled(false));state(LocalAudioPort.State.IDLE);
-        observe(105532,true);assertEquals(1,scenes.size());assertEquals(1,audio.starts);
+        advance(90000,105532);assertEquals(1,scenes.size());assertEquals(1,audio.starts);
     }
 
     /** Loss of a selected session removes sound and display; the former activation cannot leak into a replacement. */
