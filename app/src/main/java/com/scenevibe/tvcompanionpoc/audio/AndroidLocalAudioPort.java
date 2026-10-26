@@ -15,8 +15,10 @@ import java.io.IOException;
 public final class AndroidLocalAudioPort implements LocalAudioPort {
     /** Resolve only a resource id already verified in the local package. */
     public interface Resources { File resolve(String id) throws IOException; }
+    /** Execute one audible effect under the service's current cache/consent fence. */
+    public interface StartGate { /** Return false when the current owner no longer authorizes the effect. */ boolean run(Runnable audibleEffect); }
     private final Resources resources;
-    private final java.util.function.BooleanSupplier playbackAllowed;
+    private final StartGate startGate;
     private MediaPlayer player;
     private State state=State.IDLE;
     private float gain=1f;
@@ -27,13 +29,13 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
 
     /** Bind the verified resolver without opening a file or player. */
     public AndroidLocalAudioPort(Resources resources) {
-        this(resources,()->true);
+        this(resources,effect->{effect.run();return true;});
     }
 
     /** Recheck the owner's current admission before every synchronous or deferred audible start. */
-    public AndroidLocalAudioPort(Resources resources,java.util.function.BooleanSupplier playbackAllowed) {
-        if(resources==null || playbackAllowed==null) throw new IllegalArgumentException("VERIFIED_RESOURCES_REQUIRED");
-        this.resources=resources;this.playbackAllowed=playbackAllowed;
+    public AndroidLocalAudioPort(Resources resources,StartGate startGate) {
+        if(resources==null || startGate==null) throw new IllegalArgumentException("VERIFIED_RESOURCES_REQUIRED");
+        this.resources=resources;this.startGate=startGate;
     }
 
     /** Prepare one actual local MP3 while retaining silent PREPARED state. */
@@ -69,11 +71,10 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
 
     /** Start after native offset application, never before preparation. */
     @Override public void start() {
-        if(!playbackAllowed.getAsBoolean()){release();return;}
         if(player==null || state==State.ERROR || state==State.IDLE) return;
         startRequested=true;
         if(seekPending) return;
-        try { player.setVolume(gain,gain); player.start(); state=State.STARTED; }
+        try { if(!startGate.run(()->{player.setVolume(gain,gain);player.start();state=State.STARTED;}))release(); }
         catch(RuntimeException refused) { fail(); }
     }
 

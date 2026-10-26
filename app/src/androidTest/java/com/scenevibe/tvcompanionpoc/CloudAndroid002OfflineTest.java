@@ -29,6 +29,11 @@ public final class CloudAndroid002OfflineTest {
     /** Read the persisted cache through its real screen button; a restart must not restore any MEDIA permit. */
     @Test public void offlineUiRestorationDoesNotStartService() throws Exception {
         var instrumentation=InstrumentationRegistry.getInstrumentation();var target=instrumentation.getTargetContext();
+        boolean unreachable=false;
+        try{var connection=(javax.net.ssl.HttpsURLConnection)new java.net.URL(BuildConfig.CLOUD_ORIGIN+"/health").openConnection();
+            connection.setConnectTimeout(3000);connection.setReadTimeout(3000);try{connection.getResponseCode();}finally{connection.disconnect();}
+        }catch(java.io.IOException expected){unreachable=true;}
+        assertTrue("Harness did not block the target app's real HTTPS access",unreachable);
         MainActivity activity=(MainActivity)instrumentation.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
         try{
             instrumentation.runOnMainSync(()->{View button=find(activity.getWindow().getDecorView(),view->view instanceof Button && ((Button)view).getText().toString().equals("Réglages"));assertNotNull(button);button.performClick();});

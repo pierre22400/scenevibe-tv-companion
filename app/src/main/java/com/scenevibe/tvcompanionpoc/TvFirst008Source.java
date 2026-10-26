@@ -564,15 +564,21 @@ public final class TvFirst008Source implements TvAccountSource {
         }
         /** Recheck identity, receipt and current selection before every local effect. */
         boolean current(long now) {
+            return whileCurrent(now,()->{});
+        }
+        /** Serialize a local effect with the source's exact metadata mutation boundary. */
+        boolean whileCurrent(long now,Runnable action) {
             synchronized(monitor) {
                 try {
                     MultimediaCloudClient.Binding binding=prepared.binding;
                     JSONObject identity=metadata.read("identity");
-                    return now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
+                    boolean valid=now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
                             && binding.device.equals(identity.optString("deviceId")) && binding.generation.equals(identity.optString("generation"))
                             && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaBinding")))
                             && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaReceipt")));
+                    if(!valid)return false;
                 }catch(Exception refused){return false;}
+                action.run();return true;
             }
         }
     }

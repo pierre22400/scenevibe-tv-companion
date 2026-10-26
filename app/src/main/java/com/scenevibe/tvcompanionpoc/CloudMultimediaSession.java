@@ -51,12 +51,13 @@ final class CloudMultimediaSession {
             if(!current())throw new java.io.IOException("CURRENT_ADMISSION_REQUIRED");
             try{preparingResource=id;audioPreparations++;return admission.reference.prepared.resource(id);}
             catch(Exception refused){throw new java.io.IOException("VERIFIED_RESOURCE_UNAVAILABLE");}
-        },this::current);
+        },effect->admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{if(current())effect.run();}));
         runtime=new StudioMultimediaRuntime(new SceneRuntimeController.SceneSink() {
             /** Permissions and the exact receipt remain necessary immediately before SHOW. */
             @Override public boolean preflight(OverlayManifest.Scene scene){return current() && renderer.preflight(scene);}
             /** Request the original TEXT window through the physically qualified renderer. */
-            @Override public void show(OverlayManifest.Scene scene){if(current()){renderer.render(scene);pendingScene=scene.id;publish("TEXT_RENDER_REQUESTED");}}
+            @Override public void show(OverlayManifest.Scene scene){admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{
+                if(current()){renderer.render(scene);pendingScene=scene.id;publish("TEXT_RENDER_REQUESTED");}});}
             /** Expiration removes only SceneVibe's current visual window. */
             @Override public void hide(OverlayManifest.Scene scene){renderer.dismissNow();}
             /** Identity loss or teardown removes all SceneVibe visuals synchronously. */
