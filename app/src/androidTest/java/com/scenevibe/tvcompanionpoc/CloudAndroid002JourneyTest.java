@@ -70,10 +70,14 @@ public final class CloudAndroid002JourneyTest {
     /** Execute the genuine Android owner Looper, never a Robolectric shadow or direct runtime observation. */
     private void main(Runnable work){instrumentation.runOnMainSync(work);}
 
-    /** Await a bounded observable UI/service condition without taking over the application's state machine. */
+    /** Await the real UI/service, failing promptly on its explicit refusal instead of waiting through a known error. */
     private void await(BooleanSupplier check,String message,long timeout) throws Exception {
         long end=SystemClock.elapsedRealtime()+timeout;
-        while(SystemClock.elapsedRealtime()<end){AtomicBoolean ready=new AtomicBoolean();main(()->ready.set(check.getAsBoolean()));if(ready.get())return;Thread.sleep(100);}
+        while(SystemClock.elapsedRealtime()<end){AtomicBoolean ready=new AtomicBoolean(),refused=new AtomicBoolean();
+            main(()->{ready.set(check.getAsBoolean());refused.set(!ready.get() &&
+                    (displayed("Connexion ou preuve de cache indisponible") || displayed("Service indisponible. Tu peux réessayer")));});
+            if(ready.get())return;if(refused.get())throw new AssertionError(message+"; actual UI reports a closed network/cache refusal; service="+TvFirst009TextServiceOwner.status().code);
+            Thread.sleep(100);}
         throw new AssertionError(message+"; service="+TvFirst009TextServiceOwner.status().code);
     }
 
