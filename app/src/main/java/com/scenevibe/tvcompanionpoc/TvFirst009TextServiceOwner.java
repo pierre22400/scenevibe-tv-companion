@@ -199,9 +199,13 @@ final class TvFirst009TextServiceOwner {
     }
     /** Issue a one-use handoff only for a genuinely attached prepared window. */
     static String beginDeveloperHandoff() {
+        return beginDeveloperHandoff(false);
+    }
+    /** Opt in to input focus only for the explicitly labelled experiment, not the normal viewer launch. */
+    static String beginDeveloperHandoff(boolean interactive) {
         if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || liveInstance==null || liveInstance.controlPanel==null
                 || !liveInstance.controlPanel.isPrepared())return null;
-        return developer.begin(SystemClock.elapsedRealtime());
+        return developer.begin(SystemClock.elapsedRealtime(),interactive);
     }
     /** A failed normal Activity launch never causes delayed focus acquisition. */
     static void cancelDeveloperHandoff(String ticket){developer.cancel(ticket);}
@@ -213,7 +217,7 @@ final class TvFirst009TextServiceOwner {
             if(!developer.waitForPlayer(ticket,now))return false;
             liveInstance.showDeveloperWhenMediaReady();return true;
         }
-        if(!liveInstance.controlPanel.activatePrepared()){developer.closed();return false;}
+        if(!liveInstance.controlPanel.presentPrepared(developer.focusRequested())){developer.closed();return false;}
         return developer.commit(ticket,now);
     }
     /** Returning to the normal application parks its service window instead of obstructing the Activity. */
@@ -236,6 +240,7 @@ final class TvFirst009TextServiceOwner {
             case PREPARED:return "Panneau préparé sans focus. Ouvre Prime avec le bouton ci-dessous.";
             case HANDOFF:return "Ouverture du lecteur demandée · commandes encore non interactives.";
             case WAITING_PLAYER:return "Touches libres · lance le film dans Prime. Attente du média compatible en lecture.";
+            case MONITORING:return "Affichage passif · touches au lecteur. Commandes dans l’onglet Développeur.";
             case INTERACTIVE:return developerHasFocus()?"Panneau interactif · ferme avec Back ou ×.":"Panneau affiché · attente du focus Android.";
             default:return "État Développeur indisponible.";
         }
@@ -244,7 +249,7 @@ final class TvFirst009TextServiceOwner {
     private void showDeveloperWhenMediaReady() {
         if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || !developer.awaitingPlayer(SystemClock.elapsedRealtime())
                 || multimedia==null || !multimedia.developerMediaReady(developer.playerWaitStarted()) || controlPanel==null)return;
-        if(controlPanel.activatePrepared())developer.shown();else developer.closed();
+        if(controlPanel.presentPrepared(developer.focusRequested()))developer.shown();else developer.closed();
     }
     /** Retain one window component inside this existing service, with UI-only lifecycle callbacks. */
     private void ensureControlPanel() {
@@ -351,7 +356,10 @@ final class TvFirst009TextServiceOwner {
             if(foreground && Settings.canDrawOverlays(service)) {
                 // This UI-only service lifetime grants no multimedia admission.
                 if(BuildConfig.TVUX_DEVELOPER_OVERLAY && !developer.enabled())return Service.START_NOT_STICKY;
-                ensureControlPanel();if(controlPanel.open() && BuildConfig.TVUX_DEVELOPER_OVERLAY)developer.shown();
+                ensureControlPanel();
+                if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
+                    if(controlPanel.prepare()){developer.prepared();if(controlPanel.presentPrepared(false))developer.shown();}
+                }else controlPanel.open();
             }
             return Service.START_NOT_STICKY;
         }

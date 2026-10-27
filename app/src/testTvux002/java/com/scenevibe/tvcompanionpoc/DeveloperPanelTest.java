@@ -1,6 +1,9 @@
 package com.scenevibe.tvcompanionpoc;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,7 +75,7 @@ public final class DeveloperPanelTest {
     @Test public void activeTrackCanWaitForThePlayer(){
         var state=new DeveloperOverlayState();state.enable();state.prepared();String token=state.begin(100);
         assertTrue(state.waitForPlayer(token,200));assertTrue(state.awaitingPlayer(5000));assertEquals(DeveloperOverlayState.Stage.WAITING_PLAYER,state.stage());
-        state.shown();assertEquals(DeveloperOverlayState.Stage.INTERACTIVE,state.stage());
+        state.shown();assertEquals(DeveloperOverlayState.Stage.MONITORING,state.stage());
     }
     /** Waiting for an unknown/absent player expires to a passive state only. */
     @Test public void absentPlayerCannotTriggerLateFocus(){
@@ -97,6 +100,52 @@ public final class DeveloperPanelTest {
     @Test public void mediaWaitOriginIsBoundToThisLaunch(){
         var state=new DeveloperOverlayState();state.enable();state.prepared();String token=state.begin(100);state.waitForPlayer(token,200);
         assertEquals(200,state.playerWaitStarted());state.prepared();assertEquals(Long.MAX_VALUE,state.playerWaitStarted());
+    }
+    /** Visibility alone must keep both no-input flags and the exact original root. */
+    @Test public void passiveExpansionDoesNotRequestInput(){
+        panel.prepare();View root=host.view;assertTrue(panel.presentPrepared(false));assertTrue(panel.isMonitoring());assertSame(root,host.view);
+        assertNotEquals(0,host.params.flags & WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        assertNotEquals(0,host.params.flags & WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+        assertFalse(button(root,"AD-SYNC").isEnabled());assertTrue(actions.text && actions.audio);
+    }
+    /** Returning to the Activity parks an expanded monitor without replacing its window. */
+    @Test public void monitorCanParkWithoutChangingTheTrack(){panel.prepare();panel.presentPrepared(false);View root=host.view;panel.standby();assertTrue(panel.isPrepared());assertFalse(panel.isMonitoring());assertSame(root,host.view);assertTrue(actions.text && actions.audio);assertEquals(0,actions.suspends);}
+    /** An UP belonging to the old window cannot close this panel or click its first switch. */
+    @Test public void orphanReleasesDoNotCloseOrToggle(){panel.prepare();panel.activatePrepared();host.view.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_BACK));host.view.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_CENTER));assertTrue(panel.isOpen());assertTrue(actions.text);}
+    /** Platform transport fallback is blocked while interacting with SceneVibe, for both event halves. */
+    @Test public void transportKeysAreConsumedByThePanel(){panel.prepare();panel.activatePrepared();for(int code:new int[]{KeyEvent.KEYCODE_MEDIA_PLAY,KeyEvent.KEYCODE_MEDIA_PAUSE,KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,KeyEvent.KEYCODE_MEDIA_REWIND,KeyEvent.KEYCODE_MEDIA_FAST_FORWARD})for(int action:new int[]{KeyEvent.ACTION_DOWN,KeyEvent.ACTION_UP})assertTrue(host.view.dispatchKeyEvent(new KeyEvent(action,code)));assertTrue(actions.text && actions.audio);assertTrue(panel.isOpen());}
+    /** Render the actual drawable independently of text rasterization to inspect visible activation/focus marks. */
+    private Bitmap appearance(Button button){Bitmap result=Bitmap.createBitmap(512,128,Bitmap.Config.ARGB_8888);button.getBackground().setBounds(0,0,512,128);button.getBackground().draw(new Canvas(result));return result;}
+    /** Count exact border/fill pixels rather than asserting the implementation's drawable hierarchy. */
+    private int pixels(Bitmap bitmap,int color){int count=0;for(int y=0;y<bitmap.getHeight();y++)for(int x=0;x<bitmap.getWidth();x++)if(bitmap.getPixel(x,y)==color)count++;return count;}
+    /** Each TEXT/AUDIO/AD-SYNC switch advertises and draws its actual ON/OFF state. */
+    @Test public void threeSwitchesExposeCheckedAndVisibleRedOnOnly(){
+        panel.prepare();panel.activatePrepared();
+        for(String title:new String[]{"Commentaires écrits","Commentaires audio","AD-SYNC"}){
+            DeveloperButton item=(DeveloperButton)button(host.view,title);boolean initial=item.isChecked();
+            if(!initial)item.performClick();assertTrue(item.isChecked());assertTrue(pixels(appearance(item),DeveloperButton.ON_BORDER)>0);
+            var info=item.createAccessibilityNodeInfo();assertTrue(info.isCheckable());assertTrue(info.isChecked());info.recycle();
+            item.performClick();assertFalse(item.isChecked());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(item.getText().toString().contains("OFF"));
+        }
+    }
+    /** D-pad focus adds a separate black outline and never changes the switch value/red border. */
+    @Test public void focusIsIndependentFromActivation(){
+        DeveloperButton item=new DeveloperButton(activity);item.setText("TEXT : ON");item.switchState(true);activity.setContentView(item);item.clearFocus();
+        Bitmap on=appearance(item);item.requestFocus();Bitmap focused=appearance(item);assertTrue(item.isChecked());assertTrue(pixels(on,DeveloperButton.ON_BORDER)>0);assertTrue(pixels(focused,DeveloperButton.ON_BORDER)>0);assertTrue(pixels(focused,Color.BLACK)>0);
+        item.switchState(false);assertTrue(item.isFocused());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(pixels(appearance(item),Color.BLACK)>0);
+    }
+    /** Unavailable ON is distinct from available OFF and cannot invoke its click handler remotely. */
+    @Test public void unavailableIsNeitherOffNorActionable(){
+        DeveloperButton item=new DeveloperButton(activity);item.switchState(true);item.setEnabled(false);
+        assertTrue(item.isChecked());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(pixels(appearance(item),DeveloperButton.UNAVAILABLE_FILL)>0);assertTrue(item.getStateDescription().toString().contains("indisponible"));assertFalse(item.isEnabled());
+        item.setEnabled(true);item.switchState(false);assertTrue(pixels(appearance(item),DeveloperButton.OFF_FILL)>0);assertEquals("OFF",item.getStateDescription());
+    }
+    /** Suspend/resume/calibrate/close remain actions, without an invented persistent ON border. */
+    @Test public void commandsAreNotAccessibleSwitches(){panel.prepare();panel.activatePrepared();for(String title:new String[]{"Suspendre","Reprendre","Recaler","× Fermer"}){Button item=button(host.view,title);var info=item.createAccessibilityNodeInfo();assertFalse(info.isCheckable());info.recycle();assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));}}
+    /** Both surfaces draw the same checked projection, regardless of the window that contains them. */
+    @Test public void embeddedAndOverlayDrawTheSameSwitchState(){
+        var embedded=new CompanionControlPanel(activity,actions,new Host(),()->true);View app=embedded.embeddedView(()->{});panel.prepare();panel.activatePrepared();
+        assertTrue(appearance(button(app,"Commentaires écrits")).sameAs(appearance(button(host.view,"Commentaires écrits"))));embedded.pauseEmbedded();
     }
 
     /** Record the same root while native WindowManager behavior is tested separately. */

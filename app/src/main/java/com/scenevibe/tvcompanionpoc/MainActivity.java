@@ -245,6 +245,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)Log.i("SceneVibeControls","event=ACTIVITY_RESUMED");
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
             if(developerHandoff!=null){TvFirst009TextServiceOwner.cancelDeveloperHandoff(developerHandoff);developerHandoff=null;}
             TvFirst009TextServiceOwner.parkDeveloperPanel();if(developerTab!=null)developerTab.resume();
@@ -272,6 +273,7 @@ public final class MainActivity extends Activity {
 
     /** Pause only UI refresh and remember focus; the foreground service keeps its lifetime. */
     @Override protected void onPause() {
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)Log.i("SceneVibeControls","event=ACTIVITY_PAUSED");
         if(developerTab!=null)developerTab.pause();
         if (presentation != null) presentation.pause();
         handler.removeCallbacks(statusRefresh);
@@ -281,6 +283,7 @@ public final class MainActivity extends Activity {
     /** Transfer input only after this normal Activity is no longer visible, never on a countdown. */
     @Override protected void onStop() {
         super.onStop();
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)Log.i("SceneVibeControls","event=ACTIVITY_STOPPED handoff="+(developerHandoff!=null));
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY && developerHandoff!=null){
             String ticket=developerHandoff;developerHandoff=null;
             if(isChangingConfigurations())TvFirst009TextServiceOwner.cancelDeveloperHandoff(ticket);
@@ -297,13 +300,19 @@ public final class MainActivity extends Activity {
     boolean developerPrimeAvailable(){return BuildConfig.TVUX_DEVELOPER_OVERLAY && developerPrimeIntent()!=null;}
     /** This is a normal, explicit user-selected application launch, not video control. */
     boolean launchDeveloperPrime(){return launchDeveloperDestination(developerPrimeIntent());}
+    /** Explicit diagnostic action, separated from the safe passive normal launch. */
+    boolean launchDeveloperPrimeInteractive(){return launchDeveloperDestination(developerPrimeIntent(),true);}
     /** Shared normal launch seam lets instrumentation substitute an OWN viewer, never a fake Prime package. */
     boolean launchDeveloperDestination(Intent destination) {
+        return launchDeveloperDestination(destination,false);
+    }
+    /** Bind the user's explicit focus choice to this single Activity launch only. */
+    boolean launchDeveloperDestination(Intent destination,boolean interactive) {
         if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || destination==null || !hasWindowFocus() || isFinishing())return false;
-        String ticket=TvFirst009TextServiceOwner.beginDeveloperHandoff();if(ticket==null)return false;
+        String ticket=TvFirst009TextServiceOwner.beginDeveloperHandoff(interactive);if(ticket==null)return false;
         developerHandoff=ticket;
-        try{startActivity(destination);return true;}
-        catch(RuntimeException refused){developerHandoff=null;TvFirst009TextServiceOwner.cancelDeveloperHandoff(ticket);return false;}
+        try{Log.i("SceneVibeControls","event=NORMAL_LAUNCH_REQUEST focusExperiment="+interactive);startActivity(destination);return true;}
+        catch(RuntimeException refused){Log.i("SceneVibeControls","event=NORMAL_LAUNCH_REFUSED");developerHandoff=null;TvFirst009TextServiceOwner.cancelDeveloperHandoff(ticket);return false;}
     }
 
     /** Release Activity-owned 008 work; historical service lifetime remains independent. */

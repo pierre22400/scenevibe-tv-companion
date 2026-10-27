@@ -9,6 +9,8 @@ import android.graphics.drawable.StateListDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -29,6 +31,9 @@ import java.util.function.BooleanSupplier;
  * without a transport command, a playback permit or a change to either toggle.
  * A system-owned notification PendingIntent invokes it; this is not a global
  * key listener and cannot establish which Sony remote opens notifications.
+ * TV-UX 002-A keeps automatic visibility passive. An explicit focus experiment
+ * is separate; public Android cannot give this D-pad window input focus while
+ * promising that the covered application retains the same window focus.
  */
 final class CompanionControlPanel {
     /** Read the existing service's state and route every mutation back to that same owner. */
@@ -91,7 +96,7 @@ final class CompanionControlPanel {
     private WindowManager.LayoutParams params;
     private Button text,audio,adToggle,suspend,resume,recalibrate;
     private TextView status,message,time,timing;
-    private boolean embedded,embeddedPaused,passive;
+    private boolean embedded,embeddedPaused,passive,monitoring;
     private Runnable closed=()->{},parked=()->{},embeddedDismiss=()->{};
     private long lastTimingUpdate=-1;
     private boolean calibration,closing;
@@ -145,30 +150,36 @@ final class CompanionControlPanel {
     /** Attach once, using an explicit input policy rather than a delayed global shortcut. */
     private boolean attach(boolean prepared) {
         if(!BuildConfig.TVUX_CONTROL_PANEL || !permission.getAsBoolean())return false;
-        passive=prepared;root=new PanelRoot(context);
+        passive=prepared;monitoring=false;root=new PanelRoot(context);
         root.setBackground(background(Color.WHITE,Color.BLACK,2));root.setPadding(dp(12),dp(8),dp(12),dp(8));
         params=new WindowManager.LayoutParams(-2,-2,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL|WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,PixelFormat.TRANSLUCENT);
         params.gravity=Gravity.END|Gravity.CENTER_VERTICAL;params.setTitle("SceneVibe companion controls");
         configureSize(prepared);
         if(prepared)showPrepared();else showMain();
-        try{host.add(root,params);if(!prepared)root.post(()->{if(root!=null && !passive)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
+        try{host.add(root,params);trace("ATTACHED",-1,-1);if(!prepared)root.post(()->{if(root!=null && !passive)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
         catch(RuntimeException refused){close();return false;}
     }
 
     /** Promote only the already-prepared window after the source Activity has stopped. */
     boolean activatePrepared() {
+        return presentPrepared(true);
+    }
+
+    /** Expand the same window; normal presentation keeps both no-input flags and never requests focus. */
+    boolean presentPrepared(boolean interactive) {
         if(root==null || !passive || !permission.getAsBoolean())return false;
-        passive=false;root.hadFocus=false;configureSize(false);showMain();
-        try{host.update(root,params);root.post(()->{if(root!=null && !passive)text.requestFocus();});return true;}
+        passive=!interactive;monitoring=!interactive;root.hadFocus=false;root.held.clear();configureSize(false);showMain();
+        try{host.update(root,params);trace(interactive?"EXPLICIT_FOCUS_REQUEST":"PASSIVE_EXPANDED",-1,-1);
+            if(interactive)root.post(()->{if(root!=null && !passive)text.requestFocus();});return true;}
         catch(RuntimeException refused){close();return false;}
     }
 
     /** Release focus while retaining the same window and every business switch. */
     void standby() {
-        if(root==null || embedded || passive)return;
-        passive=true;configureSize(true);root.clearFocus();showPrepared();
-        try{host.update(root,params);parked.run();}catch(RuntimeException refused){close();}
+        if(root==null || embedded || (passive && !monitoring))return;
+        passive=true;monitoring=false;root.held.clear();configureSize(true);root.clearFocus();showPrepared();
+        try{host.update(root,params);trace("PARKED",-1,-1);parked.run();}catch(RuntimeException refused){close();}
     }
 
     /** Size and focus are independent from the passive editorial overlays. */
@@ -176,7 +187,8 @@ final class CompanionControlPanel {
         var display=context.getResources().getDisplayMetrics();
         params.width=prepared?Math.min(dp(320),(int)(display.widthPixels*.4f)):Math.min(dp(440),(int)(display.widthPixels*.48f));
         params.height=prepared?dp(76):(int)(display.heightPixels*.9f);
-        if(prepared)params.flags|=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        root.setDescendantFocusability(passive?android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS:android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS);
+        if(passive)params.flags|=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
         else params.flags&=~(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
     }
 
@@ -203,7 +215,9 @@ final class CompanionControlPanel {
     /** Read an opaque public WindowId for owned lifecycle qualification; it is never logged or serialized. */
     Object windowIdentity(){return root==null || embedded?null:root.getWindowId();}
     /** Report passive preparation independently of developer mode and multimedia lifetime. */
-    boolean isPrepared(){return root!=null && passive;}
+    boolean isPrepared(){return root!=null && passive && !monitoring;}
+    /** Expose visible passive monitoring separately from the compact prepared badge. */
+    boolean isMonitoring(){return root!=null && passive && monitoring;}
     /** Notify the existing service owner of UI-only close/standby events. */
     void onLifecycle(Runnable closed,Runnable parked){this.closed=closed;this.parked=parked;}
 
@@ -211,7 +225,7 @@ final class CompanionControlPanel {
     void close() {
         if(root==null || closing)return;
         closing=true;handler.removeCallbacks(refresh);
-        PanelRoot retiring=root;root=null;
+        PanelRoot retiring=root;trace("CLOSING",-1,-1);retiring.held.clear();root=null;
         if(embedded){root=retiring;retiring.clearFocus();closing=false;embeddedDismiss.run();return;}
         retiring.clearFocus();retiring.setVisibility(View.GONE);
         try{host.releaseFocus(retiring,params);}catch(RuntimeException refused){/* Removal remains mandatory. */}finally{
@@ -233,6 +247,7 @@ final class CompanionControlPanel {
         LinearLayout heading=new LinearLayout(context);heading.setGravity(Gravity.CENTER_VERTICAL);
         TextView caption=label(title,24);heading.addView(caption,new LinearLayout.LayoutParams(0,dp(52),1));
         Button cross=button("× Fermer",dismiss);cross.setContentDescription("Fermer "+title);
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY && passive)cross.setEnabled(false);
         heading.addView(cross,new LinearLayout.LayoutParams(dp(132),dp(52)));content.addView(heading);
         ScrollView scroll=new ScrollView(context);scroll.setFillViewport(false);
         page=new LinearLayout(context);page.setOrientation(LinearLayout.VERTICAL);
@@ -242,7 +257,7 @@ final class CompanionControlPanel {
 
     /** Render requested switches from the same owner used by the main application's Settings. */
     private void showMain() {
-        calibration=false;shell(BuildConfig.TVUX_DEVELOPER_OVERLAY?"Développeur":"SceneVibe",this::close);
+        calibration=false;shell(BuildConfig.TVUX_DEVELOPER_OVERLAY?(monitoring?"Développeur · passif":"Développeur"):"SceneVibe",this::close);
         status=label("",19);page.addView(status);
         text=action("Commentaires écrits",()->{commands.text(!commands.snapshot().text);update();});
         audio=action("Commentaires audio",()->{commands.audio(!commands.snapshot().audio);update();});
@@ -252,9 +267,9 @@ final class CompanionControlPanel {
         recalibrate=action("Recaler sur le temps du film",this::showCalibration);
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){timing=label("",15);page.addView(timing);}
         message=label(feedback,17);page.addView(message);
-        page.addView(label("Back ou × : fermer sans arrêter les commentaires.",17));
+        page.addView(label(monitoring?"Affichage passif : touches au lecteur. Commandes et fermeture dans SceneVibe.":"Back ou × : fermer sans arrêter les commentaires.",17));
         update();
-        text.requestFocus();
+        if(!passive)text.requestFocus();
     }
 
     /** Provide an on-screen D-pad keypad; no IME, mouse or physical keyboard is required. */
@@ -301,21 +316,39 @@ final class CompanionControlPanel {
 
     /** Refresh state without claiming that a requested resume has already produced a MEDIA observation. */
     private void update() {
-        if(root==null || calibration || passive)return;
+        if(root==null || calibration || (passive && !monitoring))return;
         Snapshot state=commands.snapshot();
-        setTextIfChanged(text,"Commentaires écrits : "+(state.text?"ON":"OFF"));text.setEnabled(state.active);
-        setTextIfChanged(audio,"Commentaires audio : "+(state.audio?"ON":"OFF"));audio.setEnabled(state.active);
-        if(adToggle!=null){setTextIfChanged(adToggle,"AD-SYNC : "+(state.adSync?"ON":"OFF"));adToggle.setEnabled(state.adSyncSupported);}
+        boolean available=state.active && !passive;
+        presentSwitch(text,"Commentaires écrits",state.text,available);
+        presentSwitch(audio,"Commentaires audio",state.audio,available);
+        if(adToggle!=null)presentSwitch(adToggle,"AD-SYNC",state.adSync,state.adSyncSupported && !passive);
         if(timing!=null && (lastTimingUpdate<0 || android.os.SystemClock.elapsedRealtime()-lastTimingUpdate>=1000)){
             lastTimingUpdate=android.os.SystemClock.elapsedRealtime();setTextIfChanged(timing,state.timing);
         }
-        suspend.setEnabled(state.active);resume.setEnabled(state.active);recalibrate.setEnabled(state.active);
+        presentAction(suspend,"Suspendre les commentaires",available);presentAction(resume,"Reprendre les commentaires",available);
+        presentAction(recalibrate,"Recaler sur le temps du film",available);
         setTextIfChanged(status,(state.active?"Session Companion active":"Session Companion inactive")+"\n"+state.synchronization);
         setTextIfChanged(message,feedback);
     }
 
     /** Avoid repeated layout/accessibility events while the service state has not changed. */
     private void setTextIfChanged(TextView view,String value){if(!value.contentEquals(view.getText()))view.setText(value);}
+
+    /** Project ON/OFF and availability independently, identically in the tab and interactive overlay. */
+    private void presentSwitch(Button button,String title,boolean checked,boolean available) {
+        setTextIfChanged(button,title+" : "+(checked?"ON":"OFF")+(BuildConfig.TVUX_DEVELOPER_OVERLAY && !available?" · indisponible":""));
+        button.setEnabled(available);if(button instanceof DeveloperButton)((DeveloperButton)button).switchState(checked);
+    }
+    /** Actions have availability, never a fictitious permanent ON/OFF state. */
+    private void presentAction(Button button,String title,boolean available) {
+        setTextIfChanged(button,title+(BuildConfig.TVUX_DEVELOPER_OVERLAY && !available?" · indisponible":""));button.setEnabled(available);
+    }
+
+    /** Log only SceneVibe window policy and remote key codes; no account, content, session or third-party tree. */
+    private void trace(String event,int key,int action) {
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY && !embedded)Log.i("SceneVibeControls","event="+event+" mode="+(passive?"PASSIVE":"INTERACTIVE")
+                +" focus="+hasInputFocus()+" flags="+(params==null?0:params.flags)+" key="+key+" action="+action);
+    }
 
     /** Close on permission loss; refreshing a view never starts/restarts the commentary service. */
     private void tick() {
@@ -332,9 +365,11 @@ final class CompanionControlPanel {
 
     /** Make focus visible through outline, inversion and contrast, rather than a color-only state. */
     private Button button(String title,Runnable work) {
-        Button result=new Button(context);result.setId(View.generateViewId());result.setText(title);result.setTextSize(18);
+        Button result=BuildConfig.TVUX_DEVELOPER_OVERLAY?new DeveloperButton(context):new Button(context);
+        result.setId(View.generateViewId());result.setText(title);result.setTextSize(18);
         result.setAllCaps(false);result.setFocusable(true);result.setMinHeight(0);result.setMinimumHeight(0);
         result.setOnClickListener(view->work.run());
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)return result;
         StateListDrawable states=new StateListDrawable();
         states.addState(new int[]{android.R.attr.state_focused},background(Color.BLACK,Color.WHITE,4));
         states.addState(new int[]{android.R.attr.state_pressed},background(Color.BLACK,Color.WHITE,4));
@@ -361,10 +396,25 @@ final class CompanionControlPanel {
     /** Consume Back only while this visible, explicitly opened control window owns input. */
     private final class PanelRoot extends FrameLayout {
         private boolean hadFocus;
+        private final SparseBooleanArray held=new SparseBooleanArray();
         /** This root is separate from every passive editorial window. */
         PanelRoot(Context context){super(context);}
         /** Consume both halves of Back so its release cannot navigate the application underneath. */
         @Override public boolean dispatchKeyEvent(KeyEvent event) {
+            if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
+                int key=event.getKeyCode(),action=event.getAction();trace("KEY_RECEIVED",key,action);
+                if(passive && !embedded){trace("PASSIVE_KEY_REFUSED",key,action);return true;}
+                if(transportKey(key)){trace("TRANSPORT_CONSUMED",key,action);return true;}
+                boolean tracked=key==KeyEvent.KEYCODE_BACK || key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER
+                        || key==KeyEvent.KEYCODE_NUMPAD_ENTER || key==KeyEvent.KEYCODE_SPACE;
+                if(tracked){
+                    if(action==KeyEvent.ACTION_DOWN && event.getRepeatCount()==0)held.put(key,true);
+                    else if(action==KeyEvent.ACTION_UP){
+                        boolean owned=held.get(key);held.delete(key);
+                        if(!owned || event.isCanceled()){trace("ORPHAN_OR_CANCELED_UP_CONSUMED",key,action);return true;}
+                    }
+                }
+            }
             if(event.getKeyCode()==KeyEvent.KEYCODE_BACK) {
                 if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled())back();
                 return true;
@@ -374,9 +424,20 @@ final class CompanionControlPanel {
         /** Unexpected system-window focus loss closes the panel rather than keeping an invisible input owner. */
         @Override public void onWindowFocusChanged(boolean focused) {
             super.onWindowFocusChanged(focused);
+            trace(focused?"WINDOW_FOCUS_GAINED":"WINDOW_FOCUS_LOST",-1,-1);if(!focused)held.clear();
             if(embedded)return;
             if(focused)hadFocus=true;else if(hadFocus && root==this && !passive){
                 if(BuildConfig.TVUX_DEVELOPER_OVERLAY)standby();else close();
+            }
+        }
+        /** Block platform media fallback while this explicit interactive window owns the remote. */
+        private boolean transportKey(int key) {
+            switch(key){
+                case KeyEvent.KEYCODE_MEDIA_PLAY:case KeyEvent.KEYCODE_MEDIA_PAUSE:case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+                case KeyEvent.KEYCODE_MEDIA_STOP:case KeyEvent.KEYCODE_MEDIA_NEXT:case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                case KeyEvent.KEYCODE_MEDIA_REWIND:case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD:case KeyEvent.KEYCODE_MEDIA_RECORD:
+                case KeyEvent.KEYCODE_HEADSETHOOK:return true;
+                default:return false;
             }
         }
         /** Resume only ordinary view polling on reattachment; no window or service is started. */

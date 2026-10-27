@@ -3,9 +3,13 @@ package com.scenevibe.tvcompanionpoc;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.SystemClock;
+import android.view.KeyEvent;
 import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -76,7 +80,7 @@ public final class DeveloperOverlayAndroidTest {
     }
     /** Substitute only the public launch destination; onStop and service promotion remain real. */
     private void handoff() throws Exception {
-        main(()->assertTrue(application.launchDeveloperDestination(new Intent(application,DeveloperViewerFixtureActivity.class))));
+        main(()->assertTrue(application.launchDeveloperDestination(new Intent(application,DeveloperViewerFixtureActivity.class),true)));
         await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.resumed,"Own viewer did not resume");
         viewer=DeveloperViewerFixtureActivity.current;
         await(()->TvFirst009TextServiceOwner.developerHasFocus(),"Service panel did not acquire input after app stopped");
@@ -145,7 +149,8 @@ public final class DeveloperOverlayAndroidTest {
     }
     /** Every shared command and the numeric form work with only a TV remote; runtime semantics are qualified separately. */
     @Test public void remoteControlsAndKeypadReachTheSharedPort() throws Exception {
-        Actions actions=recordingPanel();remote.pressDPadCenter();visible("Commentaires écrits : OFF");assertFalse(actions.text);
+        Actions actions=recordingPanel();remote.takeScreenshot(new File(target.getFilesDir(),"tvux002-on-focus.png"));remote.pressDPadCenter();visible("Commentaires écrits : OFF");assertFalse(actions.text);
+        remote.takeScreenshot(new File(target.getFilesDir(),"tvux002-off-focus.png"));
         remote.pressDPadDown();remote.pressDPadCenter();visible("Commentaires audio : OFF");assertFalse(actions.audio);
         remote.pressDPadDown();remote.pressDPadCenter();visible("AD-SYNC : ON");assertTrue(actions.adSync);
         remote.pressDPadDown();remote.pressDPadCenter();remote.waitForIdle();assertEquals(1,actions.suspends);
@@ -155,6 +160,61 @@ public final class DeveloperOverlayAndroidTest {
         remote.pressDPadUp();remote.pressDPadUp();remote.pressDPadUp();remote.pressDPadRight();remote.pressDPadRight();remote.pressDPadCenter(); // 3
         remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadLeft();remote.pressDPadCenter(); // 0
         focus("Confirmer le temps",true);remote.pressDPadCenter();visible("Recalage accepté ; prochaine observation MEDIA attendue.");assertEquals(90000,actions.calibrated);assertFalse(actions.seek);
+    }
+    /** The real source onStop now expands passively, leaving the destination's window input intact. */
+    @Test public void normalLaunchNeverTakesTheViewersFocus() throws Exception {
+        prepare();Object window=TvFirst009TextServiceOwner.developerWindowIdentity();
+        main(()->assertTrue(application.launchDeveloperDestination(new Intent(application,DeveloperViewerFixtureActivity.class))));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.hasWindowFocus()
+                && TvFirst009TextServiceOwner.developerStage()==DeveloperOverlayState.Stage.MONITORING,"Normal launch did not preserve viewer input");
+        viewer=DeveloperViewerFixtureActivity.current;assertEquals(window,TvFirst009TextServiceOwner.developerWindowIdentity());assertFalse(TvFirst009TextServiceOwner.developerHasFocus());assertTrue(serviceRunning());
+        main(()->viewer.simulatePlayback(true));long start=viewer.simulatedPosition();await(()->viewer.simulatedPosition()>start+300,"Owned playback stopped under passive monitor");
+        assertEquals(0,viewer.focusLosses);assertFalse(viewer.episodeDetails);assertEquals(0,viewer.backCount);assertEquals(0,viewer.transportKeys);
+        remote.takeScreenshot(new File(target.getFilesDir(),"tvux002-monitor.png"));main(TvFirst009TextServiceOwner::closeDeveloperPanel);
+        await(()->viewer.hasWindowFocus(),"Passive close disturbed playback");assertTrue(viewer.simulatedPlaying);
+    }
+    /** Put a sensitive OWN playback model behind the already-prepared real service window. */
+    private void playingViewerBehindBadge() throws Exception {
+        prepare();main(()->application.startActivity(new Intent(application,DeveloperViewerFixtureActivity.class)));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Owned playback viewer missing");
+        viewer=DeveloperViewerFixtureActivity.current;main(()->viewer.simulatePlayback(true));
+    }
+    /** Model a ready MEDIA callback while the viewer is already playing; visibility must not steal focus. */
+    @Test public void passiveExpansionPreservesASensitivePlaybackModel() throws Exception {
+        playingViewerBehindBadge();Object window=TvFirst009TextServiceOwner.developerWindowIdentity();
+        main(()->{String ticket=TvFirst009TextServiceOwner.beginDeveloperHandoff();assertNotNull(ticket);assertTrue(TvFirst009TextServiceOwner.completeDeveloperHandoff(ticket));});
+        await(()->TvFirst009TextServiceOwner.developerStage()==DeveloperOverlayState.Stage.MONITORING,"Passive monitor not expanded");
+        assertEquals(window,TvFirst009TextServiceOwner.developerWindowIdentity());assertTrue(viewer.hasWindowFocus());assertTrue(viewer.simulatedPlaying);
+        assertFalse(viewer.episodeDetails);assertEquals(0,viewer.focusLosses);assertEquals(0,viewer.lifecyclePauses);assertEquals(0,viewer.backCount);assertEquals(0,viewer.transportKeys);
+        System.out.println("TVUX002A_PASSIVE_EXPANSION_PASS; OWN_SENSITIVE_PLAYBACK_CONTINUES; NO_WINDOW_FOCUS_LOSS; NO_BACK_OR_TRANSPORT; NO_CLOUD_ADMISSION");
+    }
+    /** Characterization only: focus acquisition can disturb a sensitive viewer without any outgoing key. */
+    @Test public void explicitFocusCharacterizesTheRemainingCompatibilityRisk() throws Exception {
+        playingViewerBehindBadge();main(()->{String ticket=TvFirst009TextServiceOwner.beginDeveloperHandoff(true);assertNotNull(ticket);assertTrue(TvFirst009TextServiceOwner.completeDeveloperHandoff(ticket));});
+        await(()->TvFirst009TextServiceOwner.developerHasFocus() && viewer.episodeDetails,"Sensitive focus model did not observe the explicit experiment");
+        assertTrue(viewer.resumed);assertEquals(0,viewer.lifecyclePauses);assertEquals(1,viewer.focusLosses);assertEquals(0,viewer.backCount);assertEquals(0,viewer.transportKeys);assertTrue(serviceRunning());
+        remote.pressBack();await(()->viewer.hasWindowFocus(),"Explicit experiment did not release input");assertEquals(0,viewer.backCount);assertTrue(viewer.episodeDetails);
+        System.out.println("TVUX002A_EXPLICIT_FOCUS_RISK_CHARACTERIZED; OWN_MODEL_ONLY_NOT_PRIME_CAUSALITY; NO_BACK_TRANSPORT_OR_ACTIVITY_PAUSE");
+    }
+    /** Physical media-key events on the emulator must not fall through this interactive control window. */
+    @Test public void mediaKeysAreConsumedWithoutCallingTheViewerSession() throws Exception {
+        recordingPanel();AtomicInteger callbacks=new AtomicInteger();MediaSession[] clock={null};
+        try{main(()->{clock[0]=new MediaSession(target,"SceneVibe OWN input fallback fixture");
+            clock[0].setCallback(new MediaSession.Callback(){
+                /** Count an unintended fallback PLAY into the owned session. */
+                @Override public void onPlay(){callbacks.incrementAndGet();}
+                /** Count an unintended fallback PAUSE into the owned session. */
+                @Override public void onPause(){callbacks.incrementAndGet();}
+                /** Count an unintended fallback SEEK into the owned session. */
+                @Override public void onSeekTo(long position){callbacks.incrementAndGet();}
+                /** Count an unintended fallback fast-forward. */
+                @Override public void onFastForward(){callbacks.incrementAndGet();}
+                /** Count an unintended fallback rewind. */
+                @Override public void onRewind(){callbacks.incrementAndGet();}
+            });clock[0].setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY|PlaybackState.ACTION_PAUSE|PlaybackState.ACTION_PLAY_PAUSE|PlaybackState.ACTION_FAST_FORWARD|PlaybackState.ACTION_REWIND|PlaybackState.ACTION_SEEK_TO).setState(PlaybackState.STATE_PLAYING,1000,1f,SystemClock.elapsedRealtime()).build());clock[0].setActive(true);});
+            for(int key:new int[]{KeyEvent.KEYCODE_MEDIA_PLAY,KeyEvent.KEYCODE_MEDIA_PAUSE,KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,KeyEvent.KEYCODE_MEDIA_REWIND,KeyEvent.KEYCODE_MEDIA_FAST_FORWARD})remote.executeShellCommand("input keyevent "+key);
+            remote.waitForIdle();assertEquals(0,callbacks.get());assertEquals(0,viewer.transportKeys);assertEquals(0,viewer.backCount);assertTrue(direct.isOpen());
+        }finally{main(()->{if(clock[0]!=null)clock[0].release();});}
     }
     /** Active command recorder has no MediaSession, provider identity or native playback authority. */
     private static final class Actions implements CompanionControlPanel.Commands {

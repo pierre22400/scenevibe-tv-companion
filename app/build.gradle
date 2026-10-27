@@ -134,7 +134,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix "-tvux002-developer-overlay"
+        versionNameSuffix "-tvux002a-focus-safe"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
     }
     sourceSets.tvux002 {
@@ -280,7 +280,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(20) }
+        variant.outputs.each { output -> output.versionCode.set(21) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }

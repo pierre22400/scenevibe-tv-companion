@@ -1,5 +1,7 @@
 # TV-UX 002 — onglet Développeur et fenêtre de service
 
+> Historique du v20. L'observation physique Sony a révélé une sortie de lecture lors de la prise de focus. [TV-UX 002-A](tv-ux002a-focus-and-buttons.md) remplace ce transfert automatique par une politique passive par défaut ; le parcours interactif décrit ci-dessous ne vaut pas validation Sony.
+
 Cette décision remplace le raccourci de notification comme condition du parcours TV-UX 001. Le PASS physique Cloud → Android TV 002 reste acquis. Les corrections v19 de reprise/recalage sont conservées ; leur validation Sony n'est pas acquise.
 
 ## Architecture et parcours
