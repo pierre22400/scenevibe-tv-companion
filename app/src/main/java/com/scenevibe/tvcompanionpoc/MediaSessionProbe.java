@@ -51,6 +51,8 @@ public final class MediaSessionProbe {
         public final String title;
         public final String subtitle;
         public final long durationMs;
+        public final Object sessionKey;
+        public final long capturedAtMs, updatedAtMs;
 
         Snapshot(
                 String packageName,
@@ -64,6 +66,15 @@ public final class MediaSessionProbe {
                 String title,
                 String subtitle,
                 long durationMs) {
+            this(packageName,state,stateName,positionMs,estimatedPositionMs,speed,updateAgeMs,
+                    mediaId,title,subtitle,durationMs,null,-1L,-1L);
+        }
+
+        /** Retain a nonserialized session token and raw observation anchors for opt-in interruption guards. */
+        Snapshot(String packageName,int state,String stateName,long positionMs,long estimatedPositionMs,
+                float speed,long updateAgeMs,String mediaId,String title,String subtitle,long durationMs,
+                Object sessionKey,long capturedAtMs,long updatedAtMs) {
+            this.sessionKey=sessionKey;this.capturedAtMs=capturedAtMs;this.updatedAtMs=updatedAtMs;
             this.packageName = packageName;
             this.state = state;
             this.stateName = stateName;
@@ -203,8 +214,9 @@ public final class MediaSessionProbe {
         long positionMs = state == null ? -1L : state.getPosition();
         float speed = state == null ? 0f : state.getPlaybackSpeed();
         long updatedAtMs = state == null ? -1L : state.getLastPositionUpdateTime();
+        long capturedAtMs=SystemClock.elapsedRealtime();
         long updateAgeMs = updatedAtMs <= 0L ? -1L
-                : Math.max(0L, SystemClock.elapsedRealtime() - updatedAtMs);
+                : Math.max(0L, capturedAtMs - updatedAtMs);
         long estimatedPositionMs = estimatePositionMs(state, positionMs, speed, updateAgeMs);
 
         String mediaId = metadataText(metadata, MediaMetadata.METADATA_KEY_MEDIA_ID);
@@ -217,7 +229,7 @@ public final class MediaSessionProbe {
                 ? -1L : metadata.getLong(MediaMetadata.METADATA_KEY_DURATION);
         String readableState = stateName(state);
 
-        Log.i(TAG,
+        if(!BuildConfig.ADSYNC_PROTOTYPE)Log.i(TAG,
                 "SESSION index=" + index
                 + " package=" + controller.getPackageName()
                 + " state=" + readableState
@@ -241,7 +253,7 @@ public final class MediaSessionProbe {
                 mediaId,
                 title,
                 subtitle,
-                durationMs);
+                durationMs,controller.getSessionToken(),capturedAtMs,updatedAtMs);
     }
 
     /** Preserve the historic estimate; the independent observation reader retains the raw anchor. */

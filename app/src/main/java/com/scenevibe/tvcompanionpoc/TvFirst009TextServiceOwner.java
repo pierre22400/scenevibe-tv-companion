@@ -35,6 +35,7 @@ final class TvFirst009TextServiceOwner {
     private static long nextOwner,liveOwner;
     private static TvFirst009TextServiceOwner liveInstance;
     private static boolean multimediaTextPreference=true,multimediaAudioPreference=true;
+    private static boolean adSyncPreference;
     private static Status latest=new Status("STOPPED",-1,false,0,-1);
     private final OverlayService service;
     private final Handler main=new Handler(Looper.getMainLooper());
@@ -169,6 +170,23 @@ final class TvFirst009TextServiceOwner {
     /** Report only the local comment-player lifecycle, never the platform player's transport object. */
     static String multimediaAudioState(){return liveInstance==null || liveInstance.multimedia==null?"IDLE":liveInstance.multimedia.audioState();}
 
+    /** Return whether a multimedia service already owns a current admitted lifetime. */
+    static boolean multimediaActive(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.isActive();}
+    /** Read only the explicit process-local AD-SYNC opt-in; it never arms a service. */
+    static boolean adSyncEnabled(){return BuildConfig.ADSYNC_PROTOTYPE && adSyncPreference;}
+    /** Route a local guard toggle through the same current multimedia service owner. */
+    static void setAdSyncEnabled(boolean enabled){adSyncPreference=BuildConfig.ADSYNC_PROTOTYPE && enabled;
+        if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAdSyncEnabled(adSyncPreference);}
+    /** Suspend only existing admitted SceneVibe effects; absent service means a harmless no-op. */
+    static void suspendMultimediaComments(){if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.suspendComments();}
+    /** Resume remains conditional on fresh public MEDIA facts, never a newly granted activation. */
+    static void resumeMultimediaComments(){if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.resumeComments();}
+    /** Forward a user-confirmed film position without creating a Cloud or service capability. */
+    static boolean calibrateMultimediaComments(long contentMs){return liveInstance!=null && liveInstance.multimedia!=null
+        && liveInstance.multimedia.calibrateComments(contentMs);}
+    /** Read only finite diagnostics from the current service lifetime. */
+    static String adSyncStatus(){return liveInstance==null || liveInstance.multimedia==null?"Service inactif · aucune détection publicitaire":liveInstance.multimedia.adSyncStatus();}
+
     /** Enter foreground promptly, reusing the historical Android service/notification mechanism. */
     @android.annotation.SuppressLint("ForegroundServiceType")
     void create() {
@@ -177,10 +195,16 @@ final class TvFirst009TextServiceOwner {
             manager.createNotificationChannel(new NotificationChannel(CHANNEL,"SceneVibe TEXT — qualification",NotificationManager.IMPORTANCE_LOW));
             PendingIntent open=PendingIntent.getActivity(service,0,new Intent(service,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
             PendingIntent stop=PendingIntent.getService(service,9,new Intent(service,OverlayService.class).setAction(STOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-            Notification notification=new Notification.Builder(service,CHANNEL).setSmallIcon(R.drawable.ic_launcher)
+            Notification.Builder builder=new Notification.Builder(service,CHANNEL).setSmallIcon(R.drawable.ic_launcher)
                     .setContentTitle(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"SceneVibe TV — TEXT + AUDIO":"SceneVibe TV — TEXT").setContentText("Qualification sans publicité · arrêt dans SceneVibe TV")
-                    .setContentIntent(open).addAction(new Notification.Action.Builder(null,"Arrêter TEXT",stop).build()).setOngoing(true).build();
-            service.startForeground(NOTIFICATION,notification);foreground=true;
+                    .setContentIntent(open).addAction(new Notification.Action.Builder(null,"Arrêter TEXT",stop).build()).setOngoing(true);
+            if(BuildConfig.ADSYNC_PROTOTYPE) {
+                PendingIntent suspend=PendingIntent.getService(service,18,new Intent(service,OverlayService.class).setAction("SCENEVIBE_COMMENT_SUSPEND"),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent resume=PendingIntent.getService(service,19,new Intent(service,OverlayService.class).setAction("SCENEVIBE_COMMENT_RESUME"),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+                builder.addAction(new Notification.Action.Builder(null,"Suspendre commentaires",suspend).build())
+                    .addAction(new Notification.Action.Builder(null,"Reprendre commentaires",resume).build());
+            }
+            service.startForeground(NOTIFICATION,builder.build());foreground=true;
         } catch (RuntimeException failed) { fail("FOREGROUND_SERVICE_FAILED"); }
     }
 
@@ -188,6 +212,14 @@ final class TvFirst009TextServiceOwner {
     int start(Intent intent) {
         if (intent!=null && STOP.equals(intent.getAction())) {
             record("STOPPED",-1,false);destroy();service.stopSelf();return Service.START_NOT_STICKY;
+        }
+        if(BuildConfig.ADSYNC_PROTOTYPE && intent!=null && ("SCENEVIBE_COMMENT_SUSPEND".equals(intent.getAction())
+                || "SCENEVIBE_COMMENT_RESUME".equals(intent.getAction()))) {
+            if(multimedia!=null && liveOwner==owner) {
+                if("SCENEVIBE_COMMENT_SUSPEND".equals(intent.getAction()))multimedia.suspendComments();
+                else multimedia.resumeComments();
+            } else {destroy();service.stopSelf();}
+            return Service.START_NOT_STICKY;
         }
         boolean multimediaRequest=BuildConfig.CLOUD_MULTIMEDIA_SERVICE && intent!=null && MULTIMEDIA_START.equals(intent.getAction());
         if (!foreground || intent==null || (!START.equals(intent.getAction()) && !multimediaRequest) || session!=null || multimedia!=null) {

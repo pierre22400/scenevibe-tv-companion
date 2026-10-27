@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.util.Log;
 import com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort;
 import com.scenevibe.tvcompanionpoc.audio.LocalAudioPort;
 import com.scenevibe.tvcompanionpoc.calendar.MediaObservation;
@@ -29,6 +30,10 @@ final class CloudMultimediaSession {
     private final MediaSessionProbe probe;
     private final Set<String> shown=new HashSet<>(),started=new HashSet<>();
     private final Runnable watchdog=this::watch;
+    private final AdSyncController adSync=new AdSyncController();
+    private AdSyncController.Sample lastAdSample;
+    private long lastAdLog=-1;
+    private String lastAdState="";
     private boolean active=true;
     private long lastCapture=-1,position=-1;
     private String preparingResource;
@@ -53,13 +58,13 @@ final class CloudMultimediaSession {
             if(!current())throw new java.io.IOException("CURRENT_ADMISSION_REQUIRED");
             try{preparingResource=id;audioPreparations++;return admission.reference.prepared.resource(id);}
             catch(Exception refused){throw new java.io.IOException("VERIFIED_RESOURCE_UNAVAILABLE");}
-        },effect->admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{if(current())effect.run();}));
+        },effect->admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{if(effectsAllowed())effect.run();}));
         runtime=new StudioMultimediaRuntime(new SceneRuntimeController.SceneSink() {
             /** Permissions and the exact receipt remain necessary immediately before SHOW. */
-            @Override public boolean preflight(OverlayManifest.Scene scene){return current() && renderer.preflight(scene);}
+            @Override public boolean preflight(OverlayManifest.Scene scene){return effectsAllowed() && renderer.preflight(scene);}
             /** Request the original TEXT window through the physically qualified renderer. */
             @Override public void show(OverlayManifest.Scene scene){admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{
-                if(current()){renderer.render(scene);pendingScene=scene.id;publish("TEXT_RENDER_REQUESTED");}});}
+                if(effectsAllowed()){renderer.render(scene);pendingScene=scene.id;publish("TEXT_RENDER_REQUESTED");}});}
             /** Expiration removes only SceneVibe's current visual window. */
             @Override public void hide(OverlayManifest.Scene scene){renderer.dismissNow();}
             /** Identity loss or teardown removes all SceneVibe visuals synchronously. */
@@ -69,6 +74,7 @@ final class CloudMultimediaSession {
         // The probe may synchronously report an already-playing session. Apply the
         // owner's switches first, so an AUDIO OFF start cannot emit even briefly.
         runtime.setTextEnabled(textEnabled);runtime.setAudioEnabled(audioEnabled);
+        adSync.setEnabled(BuildConfig.ADSYNC_PROTOTYPE && TvFirst009TextServiceOwner.adSyncEnabled());
         probe=new MediaSessionProbe(context,new MediaSessionProbe.Listener() {
             /** Route actual passive MediaSession observations to the already-qualified calendar. */
             @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot){observe(snapshot);}
@@ -82,6 +88,9 @@ final class CloudMultimediaSession {
     /** Check the same local capability and OS permissions; no network or implicit renewal exists here. */
     private boolean current(){return active && admission.current() && Settings.canDrawOverlays(context) && NotificationAccess.isGranted(context);}
 
+    /** Recheck the interruption gate at every delayed native effect, without retiring the admission itself. */
+    private boolean effectsAllowed(){return current() && (!adSync.enabled() || adSync.status().allow);}
+
     /** Apply the historical native matcher and its established content-time policy without retiming events. */
     private void observe(MediaSessionProbe.Snapshot snapshot) {
         if(!active)return;
@@ -92,12 +101,48 @@ final class CloudMultimediaSession {
                 && snapshot.updateAgeMs>=0 && Float.isFinite(snapshot.speed)
                 && (snapshot.state==PlaybackState.STATE_PLAYING || snapshot.state==PlaybackState.STATE_PAUSED)
                 && (snapshot.state!=PlaybackState.STATE_PLAYING || snapshot.speed>0f);
+        long selectedPosition=usable?(snapshot.state==PlaybackState.STATE_PLAYING?selected.positionMs():snapshot.positionMs):-1;
+        if(adSync.enabled()) {
+            lastAdSample=snapshot==null?null:new AdSyncController.Sample(snapshot.sessionKey,usable,
+                    snapshot.state==PlaybackState.STATE_PLAYING,snapshot.positionMs,selectedPosition,
+                    snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,snapshot.durationMs);
+            AdSyncController.Decision decision=adSync.observe(lastAdSample);logAdSync(decision);
+            if(!decision.allow){runtime.suspendComments();position=-1;publish("ADSYNC_"+decision.state.name());return;}
+            selectedPosition=decision.contentMs;
+        }
         if(!usable){unavailable(selected!=null && !selected.eligible()?"MEDIA_IDENTITY_BLOCKED":"MEDIA_CLOCK_UNUSABLE");return;}
-        position=snapshot.state==PlaybackState.STATE_PLAYING?selected.positionMs():snapshot.positionMs;
+        position=selectedPosition;
         try{runtime.observe(admission.activation,new MediaObservation(true,position,snapshot.state==PlaybackState.STATE_PLAYING));
             auditAudio();publish(snapshot.state==PlaybackState.STATE_PLAYING?"MEDIA_PLAYING":"MEDIA_PAUSED");}
         catch(RuntimeException refused){close();publish("RUNTIME_FAILED");}
     }
+
+    /** Log finite temporal facts only; no metadata, session token, credential or alleged ad classification. */
+    private void logAdSync(AdSyncController.Decision decision) {
+        long now=SystemClock.elapsedRealtime();String state=decision.state.name()+":"+decision.reason.name();
+        if(state.equals(lastAdState) && lastAdLog>=0 && now-lastAdLog<1000)return;
+        lastAdState=state;lastAdLog=now;
+        AdSyncController.Sample sample=lastAdSample;
+        Log.i("SceneVibeAdSync","state="+decision.state+" reason="+decision.reason+" adSignal=UNAVAILABLE"
+                +" rawMs="+(sample==null?-1:sample.rawMs)+" selectedMs="+(sample==null?-1:sample.selectedMs)
+                +" contentMs="+decision.contentMs+" offsetMs="+decision.offsetMs
+                +" playback="+(sample==null?"UNAVAILABLE":sample.playing?"PLAYING":"PAUSED")
+                +" anchorAgeMs="+(sample==null?-1:sample.capturedMs-sample.anchorMs));
+    }
+
+    /** Enable only the experimental local guard; disabling restores the v17 observation route. */
+    void setAdSyncEnabled(boolean enabled){if(active){adSync.setEnabled(BuildConfig.ADSYNC_PROTOTYPE && enabled);logAdSync(adSync.status());}}
+    /** Immediately stop only SceneVibe visuals/audio, retaining the admitted cache and calendar. */
+    void suspendComments(){if(active && adSync.enabled()){adSync.suspend();runtime.suspendComments();logAdSync(adSync.status());}}
+    /** Ask for fresh compatible observations; this never sends PLAY/SEEK to the streaming application. */
+    void resumeComments(){if(active && adSync.enabled()){adSync.requestResume();runtime.suspendComments();logAdSync(adSync.status());}}
+    /** Confirm a local film-time offset without writing the track or granting a new native permit. */
+    boolean calibrateComments(long contentMs){
+        if(!active || !current() || !adSync.calibrate(contentMs,SystemClock.elapsedRealtime()))return false;
+        runtime.suspendComments();logAdSync(adSync.status());return true;
+    }
+    /** Expose only the bounded controller state for the existing Settings screen. */
+    String adSyncStatus(){AdSyncController.Decision d=adSync.status();return d.state+" · "+d.reason+" · publicité non observable";}
 
     /** Diagnose genuine native STARTED state, including a start deferred until seek completion. */
     private void auditAudio(){if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource))publish("AUDIO_RESOURCE_STARTED");}
@@ -112,7 +157,9 @@ final class CloudMultimediaSession {
     }
 
     /** Loss of media eligibility stops both renderers without preserving an audible stale window. */
-    private void unavailable(String code){if(active){position=-1;runtime.unavailable();publish(code);}}
+    private void unavailable(String code){if(active){position=-1;
+        if(adSync.enabled()){adSync.unavailable();lastAdSample=null;runtime.suspendComments();logAdSync(adSync.status());}
+        else runtime.unavailable();publish(code);}}
 
     /** Diagnostics never expose credentials, editorial text or native MediaController objects. */
     private void publish(String code){if(observer!=null)observer.changed(code,position,active);}

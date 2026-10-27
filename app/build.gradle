@@ -36,6 +36,7 @@ android {
         buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "false"
         buildConfigField "boolean", "CLOUD_MULTIMEDIA_EXPERIMENTAL", "false"
         buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "false"
+        buildConfigField "boolean", "ADSYNC_PROTOTYPE", "false"
     }
 
     buildTypes {
@@ -115,6 +116,18 @@ android {
         buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "true"
         signingConfig null
     }
+    // Same Companion, ports and private cache; only this experimental v18 opts in to AD-SYNC controls.
+    buildTypes.create("adsync001") {
+        initWith buildTypes.cloudandroid002
+        versionNameSuffix "-ad-sync001"
+        buildConfigField "boolean", "ADSYNC_PROTOTYPE", "true"
+        signingConfig null
+    }
+    sourceSets.adsync001 {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvfirst009sony/AndroidManifest.xml"
+    }
     sourceSets.studiomultimedia001.java.srcDir "src/release/java"
     sourceSets.cloudandroid002 {
         java.srcDir "src/tvfirst008/java"
@@ -173,7 +186,10 @@ android {
     // Select their source families before compilation, rather than compiling every
     // historical and Cloud fixture into an unrelated instrumentation APK.
     sourceSets.androidTest.java {
-        if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
+        if (providers.gradleProperty("scenevibeAdSyncNativeQualification").orElse("false").get() == "true") {
+            srcDir "src/test/java"
+            include "**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java"
+        } else if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
             include "**/CloudBridge003e*.java", "**/Native003eFixture.java"
         } else if (providers.gradleProperty("scenevibeCloudAndroidNativeQualification").orElse("false").get() == "true") {
             include "**/CloudAndroid001*.java"
@@ -182,6 +198,13 @@ android {
         } else {
             // M4/M5 init scripts inject only their own platform-native runners.
             setSrcDirs([])
+        }
+    }
+    if (providers.gradleProperty("scenevibeAdSyncNativeQualification").orElse("false").get() == "true") {
+        testBuildType "adsync001"
+        buildTypes.adsync001 {
+            debuggable true
+            signingConfig signingConfigs.debug
         }
     }
     if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
@@ -204,6 +227,9 @@ android {
 }
 
 androidComponents {
+    onVariants(selector().withBuildType("adsync001")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(18) }
+    }
     onVariants(selector().withBuildType("cloudandroid002")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(17) }
     }

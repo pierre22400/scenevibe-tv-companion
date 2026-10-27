@@ -117,6 +117,9 @@ final class StudioMultimediaRuntime {
     /** Apply gain exclusively through the local SceneVibe audio port. */
     void setGain(float gain) { audio.setGain(gain); }
 
+    /** Stop local effects during AD-SYNC without consuming or rearming calendar events. */
+    void suspendComments() { scheduler.onInterruption(); }
+
     /** Lose session/identity without retaining an audible local comment. */
     void unavailable() { scheduler.onUnavailable(); }
 

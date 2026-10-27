@@ -3,6 +3,7 @@ package com.scenevibe.tvcompanionpoc;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
@@ -26,6 +27,8 @@ final class CloudMultimediaControls {
     private MultimediaPrivateCache.Prepared preparedCache;
     private Button activate,stop,textToggle,audioToggle;
     private boolean textEnabled=true,audioEnabled=true;
+    private Button adToggle,adSuspend,adResume,adCalibrate;
+    private TextView adStatus;
 
     /** Attach only view controls; constructing the screen never performs network I/O or starts playback. */
     CloudMultimediaControls(Activity activity,Supplier<TvFirst008Source> owner) {
@@ -40,6 +43,13 @@ final class CloudMultimediaControls {
             stop=button("Arrêter les commentaires",()->{TvFirst009TextServiceOwner.requestStop(activity);refresh();});
             textToggle=button("Commentaires écrits : ON",()->{textEnabled=!textEnabled;TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
             audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!audioEnabled;TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});
+            if(BuildConfig.ADSYNC_PROTOTYPE) {
+                adToggle=button("AD-SYNC : OFF",()->{TvFirst009TextServiceOwner.setAdSyncEnabled(!TvFirst009TextServiceOwner.adSyncEnabled());refresh();});
+                adSuspend=button("Suspendre les commentaires",()->{TvFirst009TextServiceOwner.suspendMultimediaComments();refresh();});
+                adResume=button("Reprendre les commentaires",()->{TvFirst009TextServiceOwner.resumeMultimediaComments();refresh();});
+                adCalibrate=button("Recaler sur le temps du film",this::confirmCalibration);
+                adStatus=new TextView(activity);adStatus.setTextColor(0xFFFFFFFF);adStatus.setTextSize(17);root.addView(adStatus);
+            }
         }
         refresh();
     }
@@ -63,6 +73,13 @@ final class CloudMultimediaControls {
             stop.setEnabled(TvFirst009TextServiceOwner.controlBusy());
             textToggle.setText("Commentaires écrits : "+(textEnabled?"ON":"OFF"));
             audioToggle.setText("Commentaires audio : "+(audioEnabled?"ON":"OFF"));
+            if(adToggle!=null) {
+                boolean enabled=TvFirst009TextServiceOwner.adSyncEnabled(),running=TvFirst009TextServiceOwner.multimediaActive();
+                adToggle.setText("AD-SYNC : "+(enabled?"ON · prudent":"OFF · comportement v17"));
+                adSuspend.setEnabled(enabled && running);adResume.setEnabled(enabled && running);adCalibrate.setEnabled(enabled && running);
+                adStatus.setText("Aucune détection publicitaire Prime garantie. Suspendre manuellement pendant une publicité.\n"
+                        +TvFirst009TextServiceOwner.adSyncStatus());
+            }
         }
     }
 
@@ -132,11 +149,25 @@ final class CloudMultimediaControls {
     private void confirmActivation(){
         if(preparedCache==null || activate==null || !activate.isEnabled())return;
         new AlertDialog.Builder(activity).setTitle("Admission locale TEXT + AUDIO")
-                .setMessage("Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
+                .setMessage(BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
                     boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
                     if(started){TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);}
                     result=started?"Démarrage du service demandé ; attente d'une identité MEDIA compatible.":"Admission refusée : vérifie compte, permissions et mapping de référence.";refresh();
+                }).show();
+    }
+
+    /** Confirm the film's visible time locally; no edit or seek is sent to the platform or Cloud. */
+    private void confirmCalibration() {
+        EditText input=new EditText(activity);input.setSingleLine(true);input.setHint("mm:ss ou hh:mm:ss");
+        input.setInputType(android.text.InputType.TYPE_CLASS_DATETIME | android.text.InputType.TYPE_DATETIME_VARIATION_TIME);
+        new AlertDialog.Builder(activity).setTitle("Temps du film")
+                .setMessage("Confirme que le film a repris, puis saisis son temps actuel. Seuls les commentaires SceneVibe seront recalés (correction limitée à une heure).")
+                .setView(input).setNegativeButton("Annuler",null).setPositiveButton("Confirmer le temps",(dialog,which)->{
+                    try{long time=AdSyncController.parseFilmTime(input.getText().toString());
+                        result=TvFirst009TextServiceOwner.calibrateMultimediaComments(time)?"Recalage local confirmé.":"Recalage refusé : session compatible récente requise et correction limitée à une heure.";
+                    }catch(IllegalArgumentException invalid){result="Saisis un temps valide mm:ss ou hh:mm:ss.";}
+                    refresh();
                 }).show();
     }
 

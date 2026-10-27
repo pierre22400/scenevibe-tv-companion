@@ -40,6 +40,7 @@ public final class MediaCalendarScheduler {
     private String activationToken;
     private long lastPositionMs = -1L;
     private boolean mediaEligible;
+    private boolean interrupted;
     private Set<String> audioIds=Collections.emptySet();
 
     /** Retain the synchronous sink; no collaborator starts background work. */
@@ -66,6 +67,7 @@ public final class MediaCalendarScheduler {
         windowed.clear();
         lastPositionMs = -1L;
         mediaEligible = false;
+        interrupted = false;
     }
 
     /** Invalidate the old binding before clearing it, even when already empty. */
@@ -78,11 +80,23 @@ public final class MediaCalendarScheduler {
         windowed.clear();
         lastPositionMs = -1L;
         mediaEligible = false;
+        interrupted = false;
     }
 
     /** Lose eligibility without expiring windows or erasing consumed identities. */
     public synchronized void onUnavailable() {
         if (calendar == null) return;
+        deactivate(activationToken);
+    }
+
+    /**
+     * Stop only SceneVibe effects, preserving every consumed event identity and
+     * all future timestamps. Unlike session reacquisition, the next observation
+     * must not rearm a phrase already consumed before an interruption.
+     */
+    public synchronized void onInterruption() {
+        if (calendar == null || interrupted) return;
+        interrupted = true;
         deactivate(activationToken);
     }
 
@@ -95,6 +109,23 @@ public final class MediaCalendarScheduler {
             return;
         }
         long positionMs = observation.positionMs();
+        if (interrupted) {
+            if (positionMs < 0L) return;
+            interrupted = false;
+            mediaEligible = true;
+            sink.onEligibility(token, true);
+            sink.onPlayback(token, observation.playing(), calendar.freezeOnPause());
+            lastPositionMs = positionMs;
+            // Skip all expired windows on a confirmed return. Do not call
+            // rearmFrom/renderAudioAtLanding: both deliberately replay on SEEK.
+            for (SceneEvent event : calendar.events()) {
+                if (event.startMs() < positionMs && event.startMs() + event.durationMs() <= positionMs)
+                    consumed.add(event.eventId());
+            }
+            skipTooOld(positionMs);
+            if (observation.playing()) { renderDue(positionMs, token); expireElapsed(positionMs, token); }
+            return;
+        }
         if (!mediaEligible) {
             mediaEligible = true;
             sink.onEligibility(token, true);
