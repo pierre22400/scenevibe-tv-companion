@@ -226,12 +226,15 @@ final class CompanionControlPanel {
     private void update() {
         if(root==null || calibration)return;
         Snapshot state=commands.snapshot();
-        text.setText("Commentaires écrits : "+(state.text?"ON":"OFF"));text.setEnabled(state.active);
-        audio.setText("Commentaires audio : "+(state.audio?"ON":"OFF"));audio.setEnabled(state.active);
+        setTextIfChanged(text,"Commentaires écrits : "+(state.text?"ON":"OFF"));text.setEnabled(state.active);
+        setTextIfChanged(audio,"Commentaires audio : "+(state.audio?"ON":"OFF"));audio.setEnabled(state.active);
         suspend.setEnabled(state.active);resume.setEnabled(state.active);recalibrate.setEnabled(state.active);
-        status.setText((state.active?"Session Companion active":"Session Companion inactive")+"\n"+state.synchronization);
-        message.setText(feedback);
+        setTextIfChanged(status,(state.active?"Session Companion active":"Session Companion inactive")+"\n"+state.synchronization);
+        setTextIfChanged(message,feedback);
     }
+
+    /** Avoid repeated layout/accessibility events while the service state has not changed. */
+    private void setTextIfChanged(TextView view,String value){if(!value.contentEquals(view.getText()))view.setText(value);}
 
     /** Close on permission loss; refreshing a view never starts/restarts the commentary service. */
     private void tick() {

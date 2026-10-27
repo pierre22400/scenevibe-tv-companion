@@ -16,14 +16,17 @@ La meilleure alternative retenue est la **notification SceneVibe** : son action
 même OverlayService non exporté. Ils ne lancent pas MainActivity. L’extension TV
 publique AndroidX Core 1.13.1 porte cette action sur Android 12 (l’extension du SDK
 framework n’est publique que depuis API 35). Cette dépendance ne donne aucun droit
-système ; sa permission de receiver dynamique est interne à l’application.
+système ; sa permission de receiver dynamique est interne à l’application et
+limitée à la variante v19. Les profils historiques gardent leurs permissions.
 
 **Cela ne prouve pas qu’une touche de la télécommande Sony donne accès à cette
 notification pendant Prime.** L’émulateur vérifie la capacité depuis une autre
 Activity possédée par le test, sélectionnée au D-pad, sans détourner une touche
 globale. Cette Activity remplace explicitement le point d’entrée du menu système
 pour le banc ; elle n’est pas livrée dans l’APK signé. Aucun raccourci Sony n’est
-inventé. Le bouton de prévisualisation dans Réglages ne satisfait pas à lui seul
+inventé. Le [guide Sony des réglages rapides](https://helpguide.sony.net/tv/jga1/v1/en-142/01-03_12.html)
+mentionne des notifications BRAVIA et des variations selon le modèle, sans garantir
+l’exposition d’une action SceneVibe. Le bouton de prévisualisation dans Réglages ne satisfait pas à lui seul
 le critère d’invocation depuis Prime.
 
 Tant que cet accès système n’est pas démontré sur la TV, le critère principal est

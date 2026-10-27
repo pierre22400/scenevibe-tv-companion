@@ -167,6 +167,11 @@ android {
         res.srcDir "src/tvfirst008/res"
     }
 
+    // Keep AndroidX notification metadata/permissions out of every historical profile.
+    buildTypes.each { type ->
+        if(type.name!="tvux001") sourceSets.getByName(type.name).java.srcDir "src/passiveControls/java"
+    }
+
     // An explicit qualification-only property prevents even disposable debug signing.
     if (providers.gradleProperty("scenevibeQualificationUnsigned").orElse("false").get() == "true") {
         buildTypes.configureEach { signingConfig null }
@@ -278,7 +283,7 @@ androidComponents {
 
 dependencies {
     // Public TV notification extensions on Android 12; no hidden framework extras or permissions.
-    implementation "androidx.core:core:1.13.1"
+    tvux001Implementation "androidx.core:core:1.13.1"
     androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0"
     androidTestImplementation "androidx.test:runner:1.6.2"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"

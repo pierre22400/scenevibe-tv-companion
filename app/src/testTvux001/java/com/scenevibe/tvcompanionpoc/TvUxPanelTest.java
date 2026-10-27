@@ -116,6 +116,7 @@ public final class TvUxPanelTest {
         AlertDialog dialog=TvCompanionDialogs.builder(activity).setTitle("Test SceneVibe")
                 .setPositiveButton("Valider",(d,w)->accepted[0]++).setOnDismissListener(d->dismissed[0]++).show();
         find(dialog.getWindow().getDecorView(),"× Fermer").performClick();
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
         assertFalse(dialog.isShowing());assertEquals(0,accepted[0]);assertEquals(1,dismissed[0]);
     }
     /** Reading owner preferences after an overlay change keeps the main application's switches truthful. */

@@ -14,7 +14,6 @@ import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 import java.util.UUID;
-import androidx.core.app.NotificationCompat;
 
 /**
  * Explicit 009-004 lifetime inside the existing OverlayService, isolated from its
@@ -255,12 +254,7 @@ final class TvFirst009TextServiceOwner {
             Notification notification=builder.build();
             if(BuildConfig.TVUX_CONTROL_PANEL) {
                 PendingIntent panel=panelIntent(service);
-                notification=new NotificationCompat.Builder(service,CHANNEL).setSmallIcon(R.drawable.ic_launcher)
-                        .setContentTitle("SceneVibe · commandes du Companion")
-                        .setContentText("Ouvrir le panneau sans lancer l’application · disponibilité selon la TV")
-                        .setContentIntent(panel).setOngoing(true).setSilent(true)
-                        .addAction(0,"Ouvrir le panneau",panel).addAction(0,"Arrêter les commentaires",stop)
-                        .extend(new NotificationCompat.TvExtender().setContentIntent(panel).setSuppressShowOverApps(true)).build();
+                notification=CompanionNotification.create(service,CHANNEL,panel,stop);
             }
             service.startForeground(NOTIFICATION,notification);foreground=true;
         } catch (RuntimeException failed) { fail("FOREGROUND_SERVICE_FAILED"); }
