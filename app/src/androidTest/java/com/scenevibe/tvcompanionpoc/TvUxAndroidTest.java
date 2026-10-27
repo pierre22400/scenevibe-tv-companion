@@ -6,6 +6,11 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
+import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
@@ -59,8 +64,9 @@ public final class TvUxAndroidTest {
     /** Navigate only with D-pad events until the expected visible button receives focus. */
     private void focus(String label,boolean down) {
         for(int i=0;i<25;i++){
-            var focused=remote.findObject(By.focused(true));
-            if(focused!=null && label.equals(focused.getText()))return;
+            // The covered Activity can retain a focused View while its WINDOW has
+            // no focus. Match the actual overlay label, not the first focused node.
+            if(remote.hasObject(By.text(label).focused(true)))return;
             if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();
         }
         fail("D-pad could not focus "+label);
@@ -68,7 +74,8 @@ public final class TvUxAndroidTest {
     /** Keep active UI command tests separate from the real, unadmitted service-route test. */
     private Actions activePanel() throws Exception {
         Actions actions=new Actions();main(()->{direct=new CompanionControlPanel(target,actions);assertTrue(direct.open());});
-        visible("Commentaires écrits : ON");return actions;
+        visible("Commentaires écrits : ON");
+        remote.takeScreenshot(new File(target.getFilesDir(),"tvux-panel.png"));return actions;
     }
     /** A system-style PendingIntent opens without MainActivity; Back returns input and preserves the service. */
     @Test public void notificationRouteOverOwnForegroundReturnsFocus() throws Exception {
@@ -85,7 +92,7 @@ public final class TvUxAndroidTest {
     }
     /** Nested Back closes only the keypad; the main cross then removes all input ownership. */
     @Test public void nestedBackAndMainCrossReleaseWindow() throws Exception {
-        activePanel();focus("Recaler sur le temps du film",true);remote.pressDPadCenter();visible("Confirmer le temps");
+        activePanel();focus("Recaler sur le temps du film",true);remote.pressDPadCenter();visible("mm:ss ou hh:mm:ss");
         remote.pressBack();visible("Reprendre les commentaires");assertTrue(direct.isOpen());
         focus("× Fermer",false);remote.pressDPadCenter();
         await(()->!direct.isOpen() && foreground.hasWindowFocus(),"Cross left a residual window");assertEquals(0,foreground.backCount);
@@ -96,7 +103,8 @@ public final class TvUxAndroidTest {
         remote.pressDPadDown();remote.pressDPadCenter();visible("Commentaires audio : OFF");assertFalse(actions.audio);
         remote.pressDPadDown();remote.pressDPadCenter();remote.waitForIdle();assertEquals(1,actions.suspends);
         remote.pressDPadDown();remote.pressDPadCenter();remote.waitForIdle();assertEquals(1,actions.resumes);
-        remote.pressDPadDown();remote.pressDPadCenter();visible("Confirmer le temps");
+        remote.pressDPadDown();remote.pressDPadCenter();visible("mm:ss ou hh:mm:ss");
+        remote.takeScreenshot(new File(target.getFilesDir(),"tvux-keypad.png"));
         remote.pressDPadCenter(); // 1
         remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadCenter(); // :
         remote.pressDPadUp();remote.pressDPadUp();remote.pressDPadUp();remote.pressDPadRight();remote.pressDPadRight();remote.pressDPadCenter(); // 3
@@ -116,6 +124,51 @@ public final class TvUxAndroidTest {
     @Test public void revokedPermissionRemovesWindow() throws Exception {
         activePanel();remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW deny");
         await(()->!direct.isOpen() && foreground.hasWindowFocus(),"Permission loss retained a control window");
+    }
+
+    /** Read the actual public probe across modeled session loss/navigation and an open control overlay. */
+    @Test public void currentPublicProbeResumesAcrossOwnedNavigationAndOverlay() throws Exception {
+        remote.executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(target).flattenToString());
+        MediaSession[] clock={null};MediaSessionProbe[] probe={null};AdSyncController controller=new AdSyncController();
+        AtomicInteger captures=new AtomicInteger();
+        try {
+            main(()->{
+                clock[0]=new MediaSession(target,"SceneVibe owned TV-UX clock");
+                clock[0].setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"tvux-owned-clock")
+                        .putString(MediaMetadata.METADATA_KEY_TITLE,"SceneVibe OWN timing fixture").putLong(MediaMetadata.METADATA_KEY_DURATION,100000).build());
+                clock[0].setPlaybackState(new PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING,1000,1f,SystemClock.elapsedRealtime()-10000).build());
+                clock[0].setActive(true);controller.setEnabled(true);
+                probe[0]=new MediaSessionProbe(target,new MediaSessionProbe.Listener(){
+                    /** Consume only this test's own, currently queried public identity and clock. */
+                    @Override public void onSnapshot(MediaSessionProbe.Snapshot value){
+                        boolean own="tvux-owned-clock".equals(value.mediaId);
+                        if(own)captures.incrementAndGet();
+                        controller.observe(new AdSyncController.Sample(value.sessionKey,own,value.state==PlaybackState.STATE_PLAYING,
+                                value.positionMs,value.estimatedPositionMs,value.updatedAtMs,value.capturedAtMs,value.speed,value.durationMs,own),SystemClock.elapsedRealtime());
+                    }
+                    /** Model unavailable MEDIA honestly, without reusing its prior position. */
+                    @Override public void onUnavailable(){controller.unavailable();}
+                },null,250,value->"tvux-owned-clock".equals(value.mediaId));
+                probe[0].start();
+            });
+            await(()->captures.get()>0 && controller.status().allow,"Public probe did not query owned MEDIA");
+            main(()->{controller.suspend();clock[0].setActive(false);probe[0].captureNow();});
+            Activity application=InstrumentationRegistry.getInstrumentation().startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            try{main(()->{probe[0].captureNow();assertEquals(AdSyncController.Calibration.SESSION_ABSENT,
+                    controller.calibrateResult(15000,SystemClock.elapsedRealtime()));});}finally{main(application::finish);}
+            await(()->foreground.hasWindowFocus(),"Owned viewer did not return after app navigation");
+            int prior=captures.get();main(()->clock[0].setActive(true));await(()->captures.get()>prior,"Owned MEDIA did not return");
+            main(()->assertFalse("Returning alone must not release the hold",controller.status().allow));
+            activePanel();main(()->{controller.requestResume();probe[0].captureNow();});
+            await(()->controller.status().allow,"Fresh public captures did not confirm resume while overlay open");
+            main(()->{controller.suspend();probe[0].captureNow();assertEquals(AdSyncController.Calibration.APPLIED,
+                    controller.calibrateResult(15000,SystemClock.elapsedRealtime()));direct.close();});
+            await(()->foreground.hasWindowFocus(),"Public-clock test left a focused overlay");
+            System.out.println("TVUX_OWN_PUBLIC_PROBE_PASS; MODELED_NAVIGATION_LOSS_REFUSED; OVERLAY_RESUME_AND_CALIBRATION; NO_PRIME_CLAIM");
+        } finally {
+            main(()->{if(probe[0]!=null)probe[0].stop();if(clock[0]!=null)clock[0].release();});
+            remote.executeShellCommand("cmd notification disallow_listener "+NotificationAccess.component(target).flattenToString());
+        }
     }
 
     /** Recording command port: native focus tests do not manufacture a verified Cloud activation. */

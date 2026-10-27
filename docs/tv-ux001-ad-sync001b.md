@@ -97,7 +97,11 @@ Le banc natif TV utilise la vraie WindowManager, l’OverlayService réel pour
 l’invocation et sa conservation, une Activity de premier plan de test et un port
 d’actions explicite pour les commandes actives. Ce dernier n’est pas une admission
 Cloud fabriquée ; le test natif ne prétend pas faire jouer une track Cloud admise
-via le panneau. Les quatre essais natifs AD-SYNC du MP3/session propre sont gardés.
+via le panneau. Un essai natif lit aussi la vraie sonde publique sur une session SceneVibe : perte
+explicitement simulée pendant une navigation, refus sans session, retour sans
+reprise automatique, puis reprise et recalage avec le panneau ouvert. Cela ne
+prouve pas le comportement MEDIA de Prime. Les quatre essais natifs AD-SYNC du
+MP3/session propre sont gardés.
 Les campagnes fournisseurs et la qualification Sony 002 ne sont pas relancées.
 
 ## Sony — essai ultérieur, après nouveau GO
