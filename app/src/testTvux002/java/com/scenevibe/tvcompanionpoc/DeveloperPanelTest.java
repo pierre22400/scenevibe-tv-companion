@@ -18,11 +18,13 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.GraphicsMode;
 import static org.junit.Assert.*;
 
 /** Real shared widgets with recorded window operations; no media admission is manufactured. */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=31)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 public final class DeveloperPanelTest {
     private Activity activity;
     private Host host;
@@ -123,7 +125,7 @@ public final class DeveloperPanelTest {
         panel.prepare();panel.activatePrepared();
         for(String title:new String[]{"Commentaires écrits","Commentaires audio","AD-SYNC"}){
             DeveloperButton item=(DeveloperButton)button(host.view,title);boolean initial=item.isChecked();
-            if(!initial)item.performClick();assertTrue(item.isChecked());assertTrue(pixels(appearance(item),DeveloperButton.ON_BORDER)>0);
+            if(!initial)item.performClick();assertTrue(title+" checked",item.isChecked());assertTrue(title+" visible red ON border",pixels(appearance(item),DeveloperButton.ON_BORDER)>0);
             var info=item.createAccessibilityNodeInfo();assertTrue(info.isCheckable());assertTrue(info.isChecked());info.recycle();
             item.performClick();assertFalse(item.isChecked());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(item.getText().toString().contains("OFF"));
         }
@@ -131,13 +133,13 @@ public final class DeveloperPanelTest {
     /** D-pad focus adds a separate black outline and never changes the switch value/red border. */
     @Test public void focusIsIndependentFromActivation(){
         DeveloperButton item=new DeveloperButton(activity);item.setText("TEXT : ON");item.switchState(true);activity.setContentView(item);item.clearFocus();
-        Bitmap on=appearance(item);item.requestFocus();Bitmap focused=appearance(item);assertTrue(item.isChecked());assertTrue(pixels(on,DeveloperButton.ON_BORDER)>0);assertTrue(pixels(focused,DeveloperButton.ON_BORDER)>0);assertTrue(pixels(focused,Color.BLACK)>0);
+        Bitmap on=appearance(item);item.requestFocus();Bitmap focused=appearance(item);assertTrue(item.isChecked());assertTrue("Unfocused ON remains red",pixels(on,DeveloperButton.ON_BORDER)>0);assertTrue("Focused ON remains red",pixels(focused,DeveloperButton.ON_BORDER)>0);assertTrue("Focus has a separate black ring",pixels(focused,Color.BLACK)>0);
         item.switchState(false);assertTrue(item.isFocused());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(pixels(appearance(item),Color.BLACK)>0);
     }
     /** Unavailable ON is distinct from available OFF and cannot invoke its click handler remotely. */
     @Test public void unavailableIsNeitherOffNorActionable(){
         DeveloperButton item=new DeveloperButton(activity);item.switchState(true);item.setEnabled(false);
-        assertTrue(item.isChecked());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(pixels(appearance(item),DeveloperButton.UNAVAILABLE_FILL)>0);assertTrue(item.getStateDescription().toString().contains("indisponible"));assertFalse(item.isEnabled());
+        assertTrue(item.isChecked());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue("Disabled fill is distinct",pixels(appearance(item),DeveloperButton.UNAVAILABLE_FILL)>0);assertTrue(item.getStateDescription().toString().contains("indisponible"));assertFalse(item.isEnabled());
         item.setEnabled(true);item.switchState(false);assertTrue(pixels(appearance(item),DeveloperButton.OFF_FILL)>0);assertEquals("OFF",item.getStateDescription());
     }
     /** Suspend/resume/calibrate/close remain actions, without an invented persistent ON border. */
