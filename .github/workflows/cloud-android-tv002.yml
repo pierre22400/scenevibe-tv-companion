@@ -1,0 +1,94 @@
+name: Cloud Android TV 002 Companion
+on:
+  push:
+    branches: [main]
+    paths: [app/**, docs/cloud-android-tv002.md, .github/workflows/cloud-android-tv002.yml]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  companion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app
+      SIGNING_ENABLED: ${{ github.event_name == 'workflow_dispatch' && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Android toolchain
+        run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+      - name: Regress historical runtime and TEXT service
+        # The normal PR debug job executes all common JVM tests and validates
+        # frozen M4/M5 characterization. Manual/push runs remain self-contained.
+        env:
+          SCENEVIBE_CLOUD_ORIGIN: ''
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            gradle --no-daemon --max-workers=2 testDebugUnitTest
+          fi
+          gradle --no-daemon --max-workers=2 testTvfirst008UnitTest --tests '*TvFirst008BoundaryTest' --tests '*TvFirst008CacheTest' --tests '*TvFirst008HttpTest' --tests '*TvFirst008IdentityTest' --tests '*TvFirst009ClosedBoundaryTest'
+          # The 009 real Columbo fixture remains in the private Cloud repository.
+          # Its dedicated tests run there with scenevibe009Fixture, never with a
+          # substituted/public fixture or all debug tests under another BuildConfig.
+      - name: Compile experimental service, native tests and historical candidate
+        run: |
+          gradle --no-daemon --max-workers=2 assembleCloudandroid002 lintCloudandroid002 assembleTvfirst013sony
+          # Each native family must compile against its own application variant.
+          # These are compile checks, not reruns of the qualified provider journey.
+          gradle --no-daemon --max-workers=2 -Pscenevibe003eNativeQualification=true assembleStudiomultimedia001AndroidTest
+          gradle --no-daemon --max-workers=2 -PscenevibeCloudAndroidNativeQualification=true assembleCloudandroid001AndroidTest
+          gradle --no-daemon --max-workers=2 -PscenevibeCloudAndroid002NativeQualification=true assembleCloudandroid002AndroidTest
+      - name: Rebuild unsigned candidate after native test compilation
+        run: |
+          gradle --no-daemon --max-workers=2 assembleCloudandroid002
+          sha256sum app/build/outputs/apk/cloudandroid002/*unsigned.apk > cloud-android-tv002-sha256.txt
+      - name: Sign experimental APK with the existing repository stable key when available
+        if: env.SIGNING_ENABLED == 'true'
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p cloud-android-tv002-signed
+          printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/scenevibe002-stable.jks"
+          scenevibe_tools="$ANDROID_HOME/build-tools/34.0.0"
+          "$scenevibe_tools/aapt" dump badging app/build/outputs/apk/cloudandroid002/app-cloudandroid002-unsigned.apk > cloud-android-tv002-signed/apk-badging.txt
+          test -s cloud-android-tv002-signed/apk-badging.txt
+          if grep -q 'application-debuggable' cloud-android-tv002-signed/apk-badging.txt; then exit 1; fi
+          "$scenevibe_tools/zipalign" -f 4 app/build/outputs/apk/cloudandroid002/app-cloudandroid002-unsigned.apk "$RUNNER_TEMP/scenevibe002-aligned.apk"
+          "$scenevibe_tools/apksigner" sign --ks "$RUNNER_TEMP/scenevibe002-stable.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD --out cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk "$RUNNER_TEMP/scenevibe002-aligned.apk"
+          "$scenevibe_tools/apksigner" verify --verbose --print-certs cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk > cloud-android-tv002-signed/apksigner-verify.txt
+          "$scenevibe_tools/zipalign" -c 4 cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk
+          sha256sum cloud-android-tv002-signed/scenevibe-cloud-android-tv002-stable.apk > cloud-android-tv002-signed/sha256.txt
+          # The existing key is reused; equality with the Sony-installed M5
+          # certificate still requires its known reference, never a guessed digest.
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/scenevibe002-stable.jks" "$RUNNER_TEMP/scenevibe002-aligned.apk"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-cloud-android-tv002-${{ github.run_id }}
+          path: |
+            app/build/outputs/apk/cloudandroid002/*unsigned.apk
+            cloud-android-tv002-sha256.txt
+            cloud-android-tv002-signed/
+            app/build/test-results/**/*.xml
+            app/build/reports/lint-results-cloudandroid002.*
+          if-no-files-found: error
+          retention-days: 14

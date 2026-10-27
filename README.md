@@ -723,3 +723,8 @@ The device credential remains in app-private Android storage and is distinct fro
 Each cloud revision uses the same track parser as LAN; the TV commits the validated text-only runtime JSON and revision before loading its MediaSession scheduler and sending a correlated ACK with the envelope `finalTrackId`. At service restart, it restores the cached track before any network request, even with the desktop offline. The TV never controls Prime Video. That earlier candidate had no boot receiver; the merged 0.8 runtime has one. There is no phone or cloud playback timer.
 
 The subsequent 0.8 Sony qualification passed real Cloud assignment and ACK, Prime playback, media identity fail-closed behavior, and PC-off cache restoration. See the [final 0.8 qualification record](docs/pr-0.8.0-tv-hardening.md) for the exact observed scope and remaining limits.
+
+## Cloud → Android TV 002
+
+La qualification physique Sony TEXT + AUDIO est **CLOSED — PASS** (26 octobre 2026).
+Voir [les preuves, limites acceptées et contrôles CI actuels](docs/cloud-android-tv002.md).

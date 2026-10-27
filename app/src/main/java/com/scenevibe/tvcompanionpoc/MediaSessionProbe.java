@@ -20,6 +20,8 @@ import com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReader;
  *
  * It reads only published session metadata/playback state and never sends
  * transport controls or interacts with the streaming application's UI.
+ * Existing constructors retain one second. Multimedia can explicitly request
+ * a bounded shorter interval on this same passive probe.
  */
 public final class MediaSessionProbe {
     /** Independent observation sink; it cannot receive a scheduling or rendering command. */
@@ -82,6 +84,7 @@ public final class MediaSessionProbe {
     private final Listener listener;
     private final Observer observer;
     private final PassiveMediaReader observationReader;
+    private final long sampleIntervalMs;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
 
@@ -90,7 +93,7 @@ public final class MediaSessionProbe {
         public void run() {
             if (!started) return;
             sample();
-            handler.postDelayed(this, SAMPLE_INTERVAL_MS);
+            handler.postDelayed(this, sampleIntervalMs);
         }
     };
 
@@ -106,7 +109,14 @@ public final class MediaSessionProbe {
 
     /** Select a passive observation branch without constructing a second probe or transport. */
     public MediaSessionProbe(Context context, Listener listener, Observer observer) {
+        this(context,listener,observer,SAMPLE_INTERVAL_MS);
+    }
+
+    /** Bound an explicit multimedia cadence while keeping every historical constructor at one second. */
+    public MediaSessionProbe(Context context, Listener listener, Observer observer,long sampleIntervalMs) {
+        if(sampleIntervalMs<250L || sampleIntervalMs>SAMPLE_INTERVAL_MS)throw new IllegalArgumentException("SAMPLE_INTERVAL_OUT_OF_POLICY");
         if (listener != null && observer != null) throw new IllegalArgumentException("One probe mode only");
+        this.sampleIntervalMs=sampleIntervalMs;
         this.context = context;
         this.listener = listener;
         this.observer = observer;
@@ -115,11 +125,11 @@ public final class MediaSessionProbe {
         listenerComponent = NotificationAccess.component(context);
     }
 
-    /** Start the existing one-second sampler once for this probe lifetime. */
+    /** Start the existing sampler once; historical constructors retain the one-second cadence. */
     public void start() {
         if (started) return;
         started = true;
-        Log.i(TAG, "Passive MediaSession probe started; intervalMs=" + SAMPLE_INTERVAL_MS);
+        Log.i(TAG, "Passive MediaSession probe started; intervalMs=" + sampleIntervalMs);
         sampler.run();
     }
 

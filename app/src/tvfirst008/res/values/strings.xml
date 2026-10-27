@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SceneVibe TV</string>
+    <string name="tv_home_intro">Retrouve les Tracks privées accessibles à ton compte et prépare leur cache sur cette TV.</string>
+    <string name="tv_home_section_intro">Mes Tracks accessibles</string>
+    <string name="tv_empty_real">Aucune Track dans la page chargée. Actualise Mes Tracks après un ajout sur ton compte.</string>
+    <string name="tv_tracks_intro">Les références de ta bibliothèque sont vérifiées lors de l’ajout au cache. Aucun commentaire ne démarre.</string>
+    <string name="tv_stage_ready_detail">Cache durable et reçu Cloud concordants. Rendu et MEDIA interdits.</string>
+    <string name="tv_runtime_controls_intro">Ce profil ne propose aucun démarrage de service ni changement de permission.</string>
+    <string name="tv_settings_intro">Association du compte et préparation du cache uniquement.</string>
+    <string name="tv_runtime_controls">Informations du profil</string>
+    <string name="tv_settings_format_detail">FinalTrack V1, à valider lors de l’ajout. Aucun rendu.</string>
+    <string name="tv_diagnostics_intro">Les preuves de compte, affectation, cache et reçu restent distinctes. Aucun diagnostic MEDIA actif.</string>
+    <string name="tv_no_program_detail">Aucune admission MEDIA. Le cache ne permet aucun commentaire ou overlay.</string>
+    <string name="tv_stage_requested">Intention enregistrée localement</string>
+    <string name="tv_stage_requested_detail">La demande attend sa confirmation par le service.</string>
+    <string name="tv_stage_waiting">Confirmation du cache en attente</string>
+    <string name="tv_stage_waiting_detail">Le cache et le reçu du service doivent encore être vérifiés.</string>
+    <string name="tv_stage_preparing">Affectation confirmée · cache en préparation</string>
+    <string name="tv_stage_preparing_detail">Transfert, validation et relecture des octets, sans armement.</string>
+    <string name="tv_ready">Cache confirmé</string>
+    <string name="tv_no_activation">L’ajout prépare seulement le cache de l’affectation courante.</string>
+</resources>

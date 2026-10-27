@@ -1,20 +1,32 @@
-// Test-only shared sources are copied byte-for-byte; no production build configuration changes.
+/**
+ * Compile only the M5 runner and its unchanged shared oracle helpers. Finalize the
+ * test DSL after app/build.gradle, so its default AndroidJUnitRunner cannot
+ * overwrite this platform-native runner. Production variants are unchanged.
+ */
 gradle.beforeProject { project ->
     if (project.path == ":app") {
         project.plugins.withId("com.android.application") {
-            def shared = new File(project.buildDir, "generated/m5c-shared")
-            project.copy {
-                from new File(project.projectDir, "src/test/java")
-                include "com/scenevibe/tvcompanionpoc/M5TemporalJournal.java"
-                include "com/scenevibe/tvcompanionpoc/M5VideoTestProjection.java"
-                include "com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java"
-                into shared
+            project.androidComponents.finalizeDsl { android ->
+                def shared = new File(project.buildDir, "generated/m5c-shared")
+                project.copy {
+                    from new File(project.projectDir, "src/test/java")
+                    include "com/scenevibe/tvcompanionpoc/M5TemporalJournal.java"
+                    include "com/scenevibe/tvcompanionpoc/M5VideoTestProjection.java"
+                    include "com/scenevibe/tvcompanionpoc/M5CDifferentialHarness.java"
+                    into shared
+                }
+                android.defaultConfig.testInstrumentationRunner =
+                    "com.scenevibe.tvcompanionpoc.M5MediaDifferentialInstrumentation"
+                android.sourceSets.androidTest.java.setSrcDirs([
+                    new File(project.projectDir, "src/androidTest/java"), shared
+                ])
+                android.sourceSets.androidTest.java.setIncludes([
+                    "**/M5MediaDifferentialInstrumentation.java", "**/M5TemporalJournal.java",
+                    "**/M5VideoTestProjection.java", "**/M5CDifferentialHarness.java"
+                ])
+                android.sourceSets.androidTest.assets.srcDirs =
+                    [new File(project.projectDir, "src/test/resources/m5-phase-b")]
             }
-            project.android.defaultConfig.testInstrumentationRunner =
-                "com.scenevibe.tvcompanionpoc.M5MediaDifferentialInstrumentation"
-            project.android.sourceSets.androidTest.java.srcDirs += [shared]
-            project.android.sourceSets.androidTest.assets.srcDirs =
-                [new File(project.projectDir, "src/test/resources/m5-phase-b")]
         }
     }
 }

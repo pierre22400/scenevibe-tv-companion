@@ -1,6 +1,7 @@
 package com.scenevibe.tvcompanionpoc.calendar;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +29,8 @@ public final class MediaCalendarScheduler {
         void onDue(String token, String eventId);
         /** Identify an expired event after removing its window. */
         void onExpire(String token, String eventId);
+        /** Supply a native AUDIO offset from this same selected media observation. */
+        default void onAudioPosition(String token, String eventId, long offsetMs, boolean discontinuity) {}
     }
 
     private final Sink sink;
@@ -37,6 +40,7 @@ public final class MediaCalendarScheduler {
     private String activationToken;
     private long lastPositionMs = -1L;
     private boolean mediaEligible;
+    private Set<String> audioIds=Collections.emptySet();
 
     /** Retain the synchronous sink; no collaborator starts background work. */
     public MediaCalendarScheduler(Sink sink) {
@@ -45,6 +49,16 @@ public final class MediaCalendarScheduler {
 
     /** Emit invalidation for the previous binding before replacing and resetting state. */
     public synchronized void load(MediaCalendar next, String token) {
+        load(next,token,Collections.emptySet());
+    }
+
+    /** Attach typed routing externally; the qualified immutable temporal values stay unchanged. */
+    public synchronized void load(MediaCalendar next,String token,Set<String> audioEventIds) {
+        if(audioEventIds==null) throw new IllegalArgumentException("AUDIO_IDS_REQUIRED");
+        Set<String> known=new HashSet<>();
+        if(next!=null) for(SceneEvent event:next.events()) known.add(event.eventId());
+        if(!known.containsAll(audioEventIds)) throw new IllegalArgumentException("AUDIO_EVENT_NOT_IN_CALENDAR");
+        this.audioIds=Collections.unmodifiableSet(new HashSet<>(audioEventIds));
         sink.onEligibility(activationToken, false);
         calendar = next;
         activationToken = token;
@@ -58,6 +72,7 @@ public final class MediaCalendarScheduler {
     public synchronized void clear() {
         sink.onEligibility(activationToken, false);
         calendar = null;
+        audioIds=Collections.emptySet();
         activationToken = null;
         consumed.clear();
         windowed.clear();
@@ -92,6 +107,7 @@ public final class MediaCalendarScheduler {
             lastPositionMs = positionMs;
             skipTooOld(positionMs);
             if (observation.playing()) {
+                renderAudioAtLanding(positionMs, token, true);
                 renderDue(positionMs, token);
                 expireElapsed(positionMs, token);
             }
@@ -102,14 +118,20 @@ public final class MediaCalendarScheduler {
             skipThrough(positionMs);
             lastPositionMs = positionMs;
             expireElapsed(positionMs, token);
+            reconcileAudio(positionMs, token, true);
+            if (observation.playing()) renderAudioAtLanding(positionMs, token, true);
             return;
         }
         if (deltaMs < -BACKWARD_SEEK_THRESHOLD_MS) {
             rearmFrom(positionMs, token);
             lastPositionMs = positionMs;
+            reconcileAudio(positionMs, token, true);
+            if (observation.playing()) renderAudioAtLanding(positionMs, token, true);
             return;
         }
         lastPositionMs = positionMs;
+        reconcileAudio(positionMs, token, deltaMs < 0L);
+        if (observation.playing() && deltaMs < 0L) renderAudioAtLanding(positionMs, token, true);
         if (observation.playing()) {
             renderDue(positionMs, token);
             expireElapsed(positionMs, token);
@@ -129,14 +151,18 @@ public final class MediaCalendarScheduler {
     private void skipTooOld(long positionMs) {
         long cutoff = Math.max(0L, positionMs - MAX_LATE_MS);
         for (SceneEvent event : calendar.events()) {
-            if (event.startMs() < cutoff) consumed.add(event.eventId());
+            if (event.startMs() < cutoff && (!audioIds.contains(event.eventId())
+                    || event.startMs() + event.durationMs() <= positionMs)) consumed.add(event.eventId());
         }
     }
 
     /** A forward seek consumes even the event exactly at the landing position. */
     private void skipThrough(long positionMs) {
         for (SceneEvent event : calendar.events()) {
-            if (event.startMs() <= positionMs) consumed.add(event.eventId());
+            if (event.startMs() <= positionMs) {
+                if (audioIds.contains(event.eventId()) && positionMs < event.startMs() + event.durationMs()) consumed.remove(event.eventId());
+                else consumed.add(event.eventId());
+            }
         }
     }
 
@@ -157,9 +183,34 @@ public final class MediaCalendarScheduler {
             if (consumed.contains(event.eventId())) continue;
             if (event.startMs() > positionMs) break;
             consumed.add(event.eventId());
+            if (audioIds.contains(event.eventId()) && positionMs >= event.startMs() + event.durationMs()) continue;
             if (event.durationMs() > 0L) windowed.put(event.eventId(), event);
+            if (audioIds.contains(event.eventId())) sink.onAudioPosition(token,event.eventId(),positionMs-event.startMs(),false);
             sink.onDue(token, event.eventId());
-            return;
+            if (!audioIds.contains(event.eventId())) return;
+        }
+    }
+
+    /** Reconcile only AUDIO windows; every TEXT branch retains its existing admission. */
+    private void reconcileAudio(long positionMs, String token, boolean discontinuity) {
+        for (SceneEvent event : calendar.events()) {
+            if (!audioIds.contains(event.eventId()) || !windowed.containsKey(event.eventId())) continue;
+            if (positionMs < event.startMs() || positionMs >= event.startMs() + event.durationMs()) {
+                windowed.remove(event.eventId()); sink.onExpire(token,event.eventId());
+                if (positionMs < event.startMs()) consumed.remove(event.eventId());
+            } else sink.onAudioPosition(token,event.eventId(),positionMs-event.startMs(),discontinuity);
+        }
+    }
+
+    /** Admit a seek landing inside AUDIO from the single calendar, never from a renderer clock. */
+    private void renderAudioAtLanding(long positionMs, String token, boolean discontinuity) {
+        for (SceneEvent event : calendar.events()) {
+            if (!audioIds.contains(event.eventId()) || positionMs < event.startMs()
+                    || positionMs >= event.startMs() + event.durationMs()) continue;
+            if (windowed.containsKey(event.eventId())) continue;
+            consumed.add(event.eventId()); windowed.put(event.eventId(),event);
+            sink.onAudioPosition(token,event.eventId(),positionMs-event.startMs(),discontinuity);
+            sink.onDue(token,event.eventId());
         }
     }
 

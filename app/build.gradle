@@ -21,6 +21,8 @@ android {
     compileSdk 35
 
     defaultConfig {
+        // 003-E instrumentation targets only the explicit local qualification variant.
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         applicationId "com.scenevibe.tvcompanionpoc"
         minSdk 26
         targetSdk 35
@@ -29,6 +31,11 @@ android {
         buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
         buildConfigField "boolean", "ENABLE_LAN_DEV", "${enableLanDevLiteral}"
         buildConfigField "boolean", "TVFIRST_OBSERVATION_ONLY", "false"
+        buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "false"
+        buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "false"
+        buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "false"
+        buildConfigField "boolean", "CLOUD_MULTIMEDIA_EXPERIMENTAL", "false"
+        buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "false"
     }
 
     buildTypes {
@@ -52,9 +59,88 @@ android {
             buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
             signingConfig null
         }
+        tvfirst008 {
+            initWith release
+            versionNameSuffix "-tvfirst008-cache-only"
+            buildConfigField "boolean", "TVFIRST_OBSERVATION_ONLY", "true"
+            buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "true"
+            buildConfigField "String", "CLOUD_ORIGIN", "\"${cloudOrigin}\""
+            buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
+            signingConfig null
+        }
+        // Software-only composition: preserve 008's disabled entry points and permissions.
+        tvfirst009 {
+            initWith tvfirst008
+            versionNameSuffix "-tvfirst009-local-text-software"
+            buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "true"
+            buildConfigField "String", "CLOUD_ORIGIN", '""'
+            signingConfig null
+        }
+        // Explicit user-started TEXT qualification; 008 and historical profiles stay closed to this entry.
+        tvfirst009sony {
+            initWith tvfirst008
+            versionNameSuffix "-tvfirst009-text-qualification"
+            buildConfigField "boolean", "TVFIRST_TEXT_LOCAL_QUALIFICATION", "true"
+            buildConfigField "boolean", "TVFIRST_TEXT_SONY_QUALIFICATION", "true"
+            signingConfig null
+        }
+        // Local file qualification only. Stable package, Cloud, boot and overlay stay isolated.
+        studiomultimedia001 {
+            initWith debug
+            applicationIdSuffix ".studiomultimedia001"
+            versionNameSuffix "-studio-multimedia001-local"
+            buildConfigField "String", "CLOUD_ORIGIN", '""'
+            buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
+            buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "true"
+            signingConfig signingConfigs.debug
+        }
+        // Distinct unsigned v15 candidate; the qualified v14 variant remains unchanged.
+        tvfirst013sony {
+            initWith tvfirst009sony
+            versionNameSuffix "-tvfirst013-text-diagnostics"
+            signingConfig null
+        }
+        // Same Companion and launcher. Only this experimental build exposes multimedia delivery.
+        cloudandroid001 {
+            initWith tvfirst013sony
+            versionNameSuffix "-cloud-android-tv001"
+            buildConfigField "boolean", "CLOUD_MULTIMEDIA_EXPERIMENTAL", "true"
+            signingConfig null
+        }
     }
 
+    buildTypes.create("cloudandroid002") {
+        initWith buildTypes.cloudandroid001
+        versionNameSuffix "-cloud-android-tv002"
+        buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "true"
+        signingConfig null
+    }
+    sourceSets.studiomultimedia001.java.srcDir "src/release/java"
+    sourceSets.cloudandroid002 {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvfirst009sony/AndroidManifest.xml"
+    }
+    sourceSets.cloudandroid001 {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvfirst009sony/AndroidManifest.xml"
+    }
+    sourceSets.testStudiomultimedia001.java.srcDir "../qualification/studiomultimedia001/oracle"
+    sourceSets.tvfirst013sony {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+    }
     sourceSets.observation.java.srcDir "src/release/java"
+    sourceSets.tvfirst009 {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvfirst008/AndroidManifest.xml"
+    }
+    sourceSets.tvfirst009sony {
+        java.srcDir "src/tvfirst008/java"
+        res.srcDir "src/tvfirst008/res"
+    }
 
     // An explicit qualification-only property prevents even disposable debug signing.
     if (providers.gradleProperty("scenevibeQualificationUnsigned").orElse("false").get() == "true") {
@@ -72,11 +158,76 @@ android {
         unitTests.includeAndroidResources = true
         // Historical HTTPS fixtures install a JVM-global URLStreamHandlerFactory.
         // A fresh fork per class keeps real Android resource loading independent.
-        unitTests.all { forkEvery = 1 }
+        unitTests.all {
+            forkEvery = 1
+            if (providers.gradleProperty("scenevibe009Fixture").isPresent()) {
+                systemProperty "scenevibe009.fixture", providers.gradleProperty("scenevibe009Fixture").get()
+            }
+            if (name.toLowerCase().contains("studiomultimedia001")) {
+                systemProperty "scenevibe.multimedia.package", providers.gradleProperty("scenevibeMultimediaPackage").orElse("").get()
+                systemProperty "scenevibe.multimedia.replacement", providers.gradleProperty("scenevibeMultimediaReplacement").orElse("").get()
+            }
+        }
+    }
+    // Native fixtures require the matching application variant and external test assets.
+    // Select their source families before compilation, rather than compiling every
+    // historical and Cloud fixture into an unrelated instrumentation APK.
+    sourceSets.androidTest.java {
+        if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
+            include "**/CloudBridge003e*.java", "**/Native003eFixture.java"
+        } else if (providers.gradleProperty("scenevibeCloudAndroidNativeQualification").orElse("false").get() == "true") {
+            include "**/CloudAndroid001*.java"
+        } else if (providers.gradleProperty("scenevibeCloudAndroid002NativeQualification").orElse("false").get() == "true") {
+            include "**/CloudAndroid002*.java"
+        } else {
+            // M4/M5 init scripts inject only their own platform-native runners.
+            setSrcDirs([])
+        }
+    }
+    if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
+        testBuildType "studiomultimedia001"
+    }
+    if (providers.gradleProperty("scenevibeCloudAndroidNativeQualification").orElse("false").get() == "true") {
+        testBuildType "cloudandroid001"
+        buildTypes.cloudandroid001 {
+            debuggable true
+            signingConfig signingConfigs.debug
+        }
+    }
+    if (providers.gradleProperty("scenevibeCloudAndroid002NativeQualification").orElse("false").get() == "true") {
+        testBuildType "cloudandroid002"
+        buildTypes.cloudandroid002 {
+            debuggable true
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("cloudandroid002")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(17) }
+    }
+    onVariants(selector().withBuildType("cloudandroid001")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(16) }
+    }
+    onVariants(selector().withBuildType("studiomultimedia001")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(1) }
+    }
+    onVariants(selector().withBuildType("tvfirst008")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(13) }
+    }
+    onVariants(selector().withBuildType("tvfirst009sony")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(14) }
+    }
+    onVariants(selector().withBuildType("tvfirst013sony")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(15) }
     }
 }
 
 dependencies {
+    androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.json:json:20240303"
     testImplementation "org.robolectric:robolectric:4.14.1"

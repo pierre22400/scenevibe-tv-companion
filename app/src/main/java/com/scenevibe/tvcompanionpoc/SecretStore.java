@@ -113,11 +113,12 @@ interface SecretStore {
         @Override public String get(String name) {
             String ciphertext = prefs.getString(name + CIPHERTEXT_SUFFIX, null);
             String iv = prefs.getString(name + IV_SUFFIX, null);
-            if (ciphertext == null || iv == null) return null;
+            if (ciphertext == null && iv == null) return null;
+            if (ciphertext == null || iv == null) throw new Unavailable("Incomplete encrypted secret");
             try {
                 Base64.Decoder decoder = Base64.getDecoder();
                 Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-                cipher.init(Cipher.DECRYPT_MODE, key(),
+                cipher.init(Cipher.DECRYPT_MODE, existingKey(),
                         new GCMParameterSpec(GCM_TAG_BITS, decoder.decode(iv)));
                 byte[] plaintext = cipher.doFinal(decoder.decode(ciphertext));
                 return new String(plaintext, StandardCharsets.UTF_8);
@@ -152,6 +153,15 @@ interface SecretStore {
                     // decrypt the credential without biometric or PIN.
                     .build());
             return generator.generateKey();
+        }
+
+        /** A read must not create or replace a missing key before a decryption failure. */
+        private SecretKey existingKey() throws Exception {
+            KeyStore keyStore = KeyStore.getInstance(PROVIDER);
+            keyStore.load(null);
+            KeyStore.Entry entry = keyStore.getEntry(KEY_ALIAS, null);
+            if (!(entry instanceof KeyStore.SecretKeyEntry)) throw new Unavailable("Secret key unavailable");
+            return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
         }
     }
 

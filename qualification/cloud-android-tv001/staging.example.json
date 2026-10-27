@@ -1,0 +1,19 @@
+{
+  "status": "CONFIGURATION_ONLY_NOT_DEPLOYED",
+  "cloudCommit": "42c2b94aa436a2dbacf2bb082dc6737457602cee",
+  "androidBuildType": "cloudandroid001",
+  "androidApplicationId": "com.scenevibe.tvcompanionpoc",
+  "httpsOrigin": "https://replace-with-approved-staging.example",
+  "pairingProfile": "tvfirst008-cache-v1",
+  "multimediaProfile": "tvfirst-multimedia-cache-v1",
+  "providerScope": {
+    "neonBranch": "EXPLICIT_DISPOSABLE_BRANCH_REQUIRED",
+    "r2Prefix": "EXPLICIT_ISOLATED_PREFIX_REQUIRED"
+  },
+  "apkCredentials": "ENCRYPTED_DEVICE_DELEGATION_ONLY",
+  "providerCredentials": "SERVER_ONLY_EXISTING_SECRETS_UNCHANGED",
+  "qualificationControlRoutes": false,
+  "nativeMediaAdmission": "NOT_GRANTED_BY_CACHE_RECEIPT",
+  "deployAuthorized": false,
+  "sonyInstallAuthorized": false
+}
