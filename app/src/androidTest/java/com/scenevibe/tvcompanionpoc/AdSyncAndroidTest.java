@@ -15,7 +15,7 @@ import com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort;
 import com.scenevibe.tvcompanionpoc.audio.LocalAudioPort;
 import com.scenevibe.tvcompanionpoc.calendar.MediaObservation;
 import java.io.File;
-import java.nio.file.Files;
+import java.io.FileOutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,7 +63,12 @@ public final class AdSyncAndroidTest {
     /** Existing MP3 bytes decode natively, stop on interruption, and are not replayed by return within the consumed window. */
     @Test public void nativeAudioStopsWithoutReplayAndRetainsFuture() throws Exception {
         var instrument=InstrumentationRegistry.getInstrumentation();var target=instrument.getTargetContext();File file=new File(target.getCacheDir(),"ad-sync-existing-test.mp3");
-        try(var input=instrument.getContext().getAssets().open("cloudbridge003e/2f940c78abae4ec0d03f920eb1416ed955b277220c8334dce839a6f4c2e6071e.mp3")){Files.write(file.toPath(),input.readAllBytes());}
+        try(var input=instrument.getContext().getAssets().open("cloudbridge003e/2f940c78abae4ec0d03f920eb1416ed955b277220c8334dce839a6f4c2e6071e.mp3");
+            var output=new FileOutputStream(file)) {
+            // InputStream.readAllBytes is not available on the Android TV 31 runtime.
+            byte[] buffer=new byte[8192];
+            for(int count;(count=input.read(buffer))!=-1;)output.write(buffer,0,count);
+        }
         AtomicInteger preparations=new AtomicInteger();AndroidLocalAudioPort[] port={null};StudioMultimediaRuntime[] runtime={null};TextView[] text={null};
         try{main(()->{port[0]=new AndroidLocalAudioPort(id->{preparations.incrementAndGet();return file;});text[0]=new TextView(target);
             try{runtime[0]=AdSyncTestFixture.runtime(new SceneRuntimeController.SceneSink(){
