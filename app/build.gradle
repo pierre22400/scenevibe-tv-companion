@@ -169,6 +169,21 @@ android {
             }
         }
     }
+    // Native fixtures require the matching application variant and external test assets.
+    // Select their source families before compilation, rather than compiling every
+    // historical and Cloud fixture into an unrelated instrumentation APK.
+    sourceSets.androidTest.java {
+        if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
+            include "**/CloudBridge003e*.java", "**/Native003eFixture.java"
+        } else if (providers.gradleProperty("scenevibeCloudAndroidNativeQualification").orElse("false").get() == "true") {
+            include "**/CloudAndroid001*.java"
+        } else if (providers.gradleProperty("scenevibeCloudAndroid002NativeQualification").orElse("false").get() == "true") {
+            include "**/CloudAndroid002*.java"
+        } else {
+            // M4/M5 init scripts inject only their own platform-native runners.
+            setSrcDirs([])
+        }
+    }
     if (providers.gradleProperty("scenevibe003eNativeQualification").orElse("false").get() == "true") {
         testBuildType "studiomultimedia001"
     }

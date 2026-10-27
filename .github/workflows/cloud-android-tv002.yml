@@ -1,8 +1,10 @@
-name: Cloud Android TV 002 experimental service
+name: Cloud Android TV 002 Companion
 on:
   push:
-    branches: [work/scenevibe-cloud-android-tv-002]
+    branches: [main]
     paths: [app/**, docs/cloud-android-tv002.md, .github/workflows/cloud-android-tv002.yml]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,7 +14,7 @@ jobs:
     timeout-minutes: 40
     env:
       SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app
-      SIGNING_ENABLED: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
+      SIGNING_ENABLED: ${{ github.event_name == 'workflow_dispatch' && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -28,10 +30,14 @@ jobs:
       - name: Android toolchain
         run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
       - name: Regress historical runtime and TEXT service
+        # The normal PR debug job executes all common JVM tests and validates
+        # frozen M4/M5 characterization. Manual/push runs remain self-contained.
         env:
           SCENEVIBE_CLOUD_ORIGIN: ''
         run: |
-          gradle --no-daemon --max-workers=2 testDebugUnitTest
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            gradle --no-daemon --max-workers=2 testDebugUnitTest
+          fi
           gradle --no-daemon --max-workers=2 testTvfirst008UnitTest --tests '*TvFirst008BoundaryTest' --tests '*TvFirst008CacheTest' --tests '*TvFirst008HttpTest' --tests '*TvFirst008IdentityTest' --tests '*TvFirst009ClosedBoundaryTest'
           # The 009 real Columbo fixture remains in the private Cloud repository.
           # Its dedicated tests run there with scenevibe009Fixture, never with a
@@ -39,6 +45,10 @@ jobs:
       - name: Compile experimental service, native tests and historical candidate
         run: |
           gradle --no-daemon --max-workers=2 assembleCloudandroid002 lintCloudandroid002 assembleTvfirst013sony
+          # Each native family must compile against its own application variant.
+          # These are compile checks, not reruns of the qualified provider journey.
+          gradle --no-daemon --max-workers=2 -Pscenevibe003eNativeQualification=true assembleStudiomultimedia001AndroidTest
+          gradle --no-daemon --max-workers=2 -PscenevibeCloudAndroidNativeQualification=true assembleCloudandroid001AndroidTest
           gradle --no-daemon --max-workers=2 -PscenevibeCloudAndroid002NativeQualification=true assembleCloudandroid002AndroidTest
       - name: Rebuild unsigned candidate after native test compilation
         run: |

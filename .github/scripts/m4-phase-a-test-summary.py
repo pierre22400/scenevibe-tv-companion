@@ -21,7 +21,7 @@ The Sony corrective cycle adds its own executed bucket; native disk/process evid
 
 
 def summarize(root):
-    """Check retained suites and fixtures, then summarize actual Gradle JUnit XML."""
+    """Require every frozen suite and fixture, accept additive suites, and reject failures or new skips."""
     baseline = json.loads((root / '.github/scripts/m4-phase-a-baseline.json').read_text(encoding='utf-8'))
     phase_b_path = root / '.github/scripts/m4-phase-b-baseline.json'
     phase_b = json.loads(phase_b_path.read_text(encoding='utf-8')) if phase_b_path.exists() else {'phaseBSuites': {}}
@@ -59,8 +59,11 @@ def summarize(root):
             else:
                 counts['PASS'] += 1
     expected = {**baseline['existingSuites'], **baseline['phaseASuites'], **phase_b['phaseBSuites'], **phase_c['phaseCSuites'], **phase_d['phaseDSuites'], **phase_e['phaseESuites'], **phase_f['phaseFSuites'], **phase_g['phaseGSuites'], **sony['phaseGCorrectiveSuites'], **m5_phase_b['m5PhaseBSuites'], **m5_phase_c['m5PhaseCSuites'], **m5_phase_d['m5PhaseDSuites']}
-    if suites != expected:
-        raise ValueError('Executed suite names/counts differ from the Phase A/B/C/D/E/F/G inventory')
+    # Historical suites keep their exact case counts, while later reviewed
+    # features may add suites. A global equality check rejected all TV-FIRST
+    # additions even though none of the retained characterization was removed.
+    if any(suites.get(name) != count for name, count in expected.items()):
+        raise ValueError('A retained Phase A/B/C/D/E/F/G suite is missing or changed')
     if any(name not in baseline['allowedOptInSkips'] for name in skipped):
         raise ValueError('An unexpected JVM case was skipped')
     for path, digest in baseline['fixtureSha256'].items():
@@ -86,6 +89,7 @@ def summarize(root):
     summary = {
         'referenceHead': baseline['referenceHead'],
         'jvm': counts,
+        'additionalSuites': {name: count for name, count in suites.items() if name not in expected},
         'retainedCases': sum(baseline['existingSuites'].values()),
         'phaseACases': sum(baseline['phaseASuites'].values()),
         'phaseBCases': sum(phase_b['phaseBSuites'].values()),
