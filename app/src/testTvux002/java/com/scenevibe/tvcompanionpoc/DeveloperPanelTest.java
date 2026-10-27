@@ -119,7 +119,7 @@ public final class DeveloperPanelTest {
     /** Render the actual drawable independently of text rasterization to inspect visible activation/focus marks. */
     private Bitmap appearance(Button button){Bitmap result=Bitmap.createBitmap(512,128,Bitmap.Config.ARGB_8888);button.getBackground().setBounds(0,0,512,128);button.getBackground().draw(new Canvas(result));return result;}
     /** Count exact border/fill pixels rather than asserting the implementation's drawable hierarchy. */
-    private int pixels(Bitmap bitmap,int color){int count=0;for(int y=0;y<bitmap.getHeight();y++)for(int x=0;x<bitmap.getWidth();x++)if(bitmap.getPixel(x,y)==color)count++;return count;}
+    private int pixels(Bitmap bitmap,int color){int[] values=new int[bitmap.getWidth()*bitmap.getHeight()];bitmap.getPixels(values,0,bitmap.getWidth(),0,0,bitmap.getWidth(),bitmap.getHeight());int count=0;for(int value:values)if(value==color)count++;return count;}
     /** Each TEXT/AUDIO/AD-SYNC switch advertises and draws its actual ON/OFF state. */
     @Test public void threeSwitchesExposeCheckedAndVisibleRedOnOnly(){
         panel.prepare();panel.activatePrepared();
@@ -132,8 +132,13 @@ public final class DeveloperPanelTest {
     }
     /** D-pad focus adds a separate black outline and never changes the switch value/red border. */
     @Test public void focusIsIndependentFromActivation(){
-        DeveloperButton item=new DeveloperButton(activity);item.setText("TEXT : ON");item.switchState(true);activity.setContentView(item);item.clearFocus();
-        Bitmap on=appearance(item);item.requestFocus();Bitmap focused=appearance(item);assertTrue(item.isChecked());assertTrue("Unfocused ON remains red",pixels(on,DeveloperButton.ON_BORDER)>0);assertTrue("Focused ON remains red",pixels(focused,DeveloperButton.ON_BORDER)>0);assertTrue("Focus has a separate black ring",pixels(focused,Color.BLACK)>0);
+        DeveloperButton item=new DeveloperButton(activity);item.setText("TEXT : ON");item.switchState(true);item.setFocusableInTouchMode(true);
+        DeveloperButton other=new DeveloperButton(activity);other.setText("Autre action");other.setFocusableInTouchMode(true);
+        var content=new android.widget.LinearLayout(activity);content.setOrientation(android.widget.LinearLayout.VERTICAL);content.addView(item);content.addView(other);activity.setContentView(content);
+        content.measure(View.MeasureSpec.makeMeasureSpec(512,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(256,View.MeasureSpec.EXACTLY));content.layout(0,0,512,256);
+        assertTrue("Establish another focused view before measuring ON without focus",other.requestFocus());assertFalse(item.isFocused());Bitmap on=appearance(item);
+        assertTrue("Acquire actual local view focus before measuring its outline",item.requestFocus());assertTrue(item.isFocused());Bitmap focused=appearance(item);
+        assertTrue(item.isChecked());assertTrue("Unfocused ON remains red",pixels(on,DeveloperButton.ON_BORDER)>0);assertTrue("Focused ON remains red",pixels(focused,DeveloperButton.ON_BORDER)>0);assertTrue("Focus has a separate black ring",pixels(focused,Color.BLACK)>0);
         item.switchState(false);assertTrue(item.isFocused());assertEquals(0,pixels(appearance(item),DeveloperButton.ON_BORDER));assertTrue(pixels(appearance(item),Color.BLACK)>0);
     }
     /** Unavailable ON is distinct from available OFF and cannot invoke its click handler remotely. */

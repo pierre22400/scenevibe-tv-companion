@@ -69,7 +69,12 @@ public final class DeveloperOverlayAndroidTest {
     }
     /** Enter the sidebar and the real Developer page with the remote. */
     private void developerTab() {
-        remote.pressDPadLeft();remote.waitForIdle();focus("Développeur",true);remote.pressDPadCenter();visible("Mode Développeur : OFF");
+        // Finish the first layout/focus restoration before sending directional
+        // input. Normalize to the sidebar's first item instead of assuming which
+        // home-page button Android chose on this emulator frame.
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();remote.waitForIdle();visible("Accueil");
+        remote.pressDPadLeft();remote.waitForIdle();remote.pressDPadLeft();remote.waitForIdle();
+        focus("Accueil",false);focus("Développeur",true);remote.pressDPadCenter();visible("Mode Développeur : OFF");
     }
     /** Separate mode activation from preparation, checking both states in the actual service. */
     private void prepare() throws Exception {
