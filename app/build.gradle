@@ -38,6 +38,7 @@ android {
         buildConfigField "boolean", "CLOUD_MULTIMEDIA_SERVICE", "false"
         buildConfigField "boolean", "ADSYNC_PROTOTYPE", "false"
         buildConfigField "boolean", "TVUX_CONTROL_PANEL", "false"
+        buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "false"
     }
 
     buildTypes {
@@ -130,6 +131,18 @@ android {
         versionNameSuffix "-tvux001-ad-sync001b"
         buildConfigField "boolean", "TVUX_CONTROL_PANEL", "true"
     }
+    // Same Activity/service, with a passive preparation and explicit normal Activity launch.
+    buildTypes.create("tvux002") {
+        initWith buildTypes.tvux001
+        versionNameSuffix "-tvux002-developer-overlay"
+        buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
+    }
+    sourceSets.tvux002 {
+        java.srcDir "src/tvfirst008/java"
+        java.srcDir "src/tvux001/java"
+        res.srcDir "src/tvfirst008/res"
+        manifest.srcFile "src/tvux002/AndroidManifest.xml"
+    }
     sourceSets.tvux001 {
         java.srcDir "src/tvfirst008/java"
         res.srcDir "src/tvfirst008/res"
@@ -169,7 +182,7 @@ android {
 
     // Keep AndroidX notification metadata/permissions out of every historical profile.
     buildTypes.each { type ->
-        if(type.name!="tvux001") sourceSets.getByName(type.name).java.srcDir "src/passiveControls/java"
+        if(type.name!="tvux001" && type.name!="tvux002") sourceSets.getByName(type.name).java.srcDir "src/passiveControls/java"
     }
 
     // An explicit qualification-only property prevents even disposable debug signing.
@@ -203,7 +216,10 @@ android {
     // Select their source families before compilation, rather than compiling every
     // historical and Cloud fixture into an unrelated instrumentation APK.
     sourceSets.androidTest.java {
-        if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
+        if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
+            srcDir "src/test/java"
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java"])
+        } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
         } else if (providers.gradleProperty("scenevibeAdSyncNativeQualification").orElse("false").get() == "true") {
@@ -218,6 +234,14 @@ android {
         } else {
             // M4/M5 init scripts inject only their own platform-native runners.
             setSrcDirs([])
+        }
+    }
+    if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
+        testBuildType "tvux002"
+        buildTypes.tvux002 { debuggable true; signingConfig signingConfigs.debug }
+        sourceSets.tvux002 {
+            java.srcDir "src/tvux002Qualification/java"
+            manifest.srcFile "src/tvux002Qualification/AndroidManifest.xml"
         }
     }
     if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
@@ -255,6 +279,9 @@ android {
 }
 
 androidComponents {
+    onVariants(selector().withBuildType("tvux002")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(20) }
+    }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }
     }
@@ -284,6 +311,7 @@ androidComponents {
 dependencies {
     // Public TV notification extensions on Android 12; no hidden framework extras or permissions.
     tvux001Implementation "androidx.core:core:1.13.1"
+    tvux002Implementation "androidx.core:core:1.13.1"
     androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0"
     androidTestImplementation "androidx.test:runner:1.6.2"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"

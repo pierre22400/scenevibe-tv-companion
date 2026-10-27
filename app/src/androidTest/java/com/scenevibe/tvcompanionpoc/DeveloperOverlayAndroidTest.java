@@ -1,0 +1,177 @@
+package com.scenevibe.tvcompanionpoc;
+
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.SystemClock;
+import java.io.File;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.Until;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import static org.junit.Assert.*;
+
+/**
+ * Native Android TV focus/lifecycle qualification on OWN Activities, no Cloud or
+ * Prime. Real tab, real OverlayService and real WindowManager are used. An active
+ * recording command port is explicitly limited to keypad/UI action tests; it
+ * cannot issue a Cloud admission or prove Sony/Prime behavior.
+ */
+@RunWith(AndroidJUnit4.class)
+public final class DeveloperOverlayAndroidTest {
+    private Context target;
+    private UiDevice remote;
+    private MainActivity application;
+    private DeveloperViewerFixtureActivity viewer;
+    private CompanionControlPanel direct;
+    /** Start the real application on an isolated landscape TV, with no provider origin. */
+    @Before public void before() throws Exception {
+        assertTrue(BuildConfig.DEBUG && BuildConfig.TVUX_DEVELOPER_OVERLAY);assertTrue(BuildConfig.CLOUD_ORIGIN.isEmpty());
+        target=InstrumentationRegistry.getInstrumentation().getTargetContext();remote=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        assertEquals(android.content.res.Configuration.UI_MODE_TYPE_TELEVISION,target.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_TYPE_MASK);
+        var display=target.getResources().getDisplayMetrics();assertTrue(display.widthPixels>display.heightPixels);
+        remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+        main(()->{TvFirst009TextServiceOwner.setDeveloperMode(target,false);TvFirst009TextServiceOwner.setAdSyncEnabled(false);DeveloperViewerFixtureActivity.current=null;});
+        application=(MainActivity)InstrumentationRegistry.getInstrumentation().startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        await(()->application.hasWindowFocus(),"Normal app did not acquire input");
+    }
+    /** Stop only the fixture service and its UI, without a Cloud or physical-device operation. */
+    @After public void after() throws Exception {
+        main(()->{if(direct!=null)direct.close();TvFirst009TextServiceOwner.setDeveloperMode(target,false);
+            TvFirst009TextServiceOwner.setAdSyncEnabled(false);target.stopService(new Intent(target,OverlayService.class));
+            if(viewer!=null)viewer.finish();if(application!=null)application.finish();});
+        remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+    }
+    /** Serialize native View/service observations on their actual owner thread. */
+    private void main(Runnable work){InstrumentationRegistry.getInstrumentation().runOnMainSync(work);}
+    /** Bound asynchronous lifecycle/focus waits without creating a media clock. */
+    private void await(BooleanSupplier check,String message) throws Exception {
+        long end=SystemClock.elapsedRealtime()+10000;
+        while(SystemClock.elapsedRealtime()<end){AtomicBoolean ready=new AtomicBoolean();main(()->ready.set(check.getAsBoolean()));if(ready.get())return;Thread.sleep(50);}fail(message);
+    }
+    /** Wait for actual SceneVibe UI, never a platform third-party tree. */
+    private void visible(String label){assertNotNull(label,remote.wait(Until.findObject(By.text(label)),10000));}
+    /** Drive only the D-pad and match the particular visible node's focus. */
+    private void focus(String label,boolean down) {
+        for(int i=0;i<30;i++){if(remote.hasObject(By.text(label).focused(true)))return;
+            if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}fail("D-pad could not focus "+label);
+    }
+    /** Enter the sidebar and the real Developer page with the remote. */
+    private void developerTab() {
+        remote.pressDPadLeft();remote.waitForIdle();focus("Développeur",true);remote.pressDPadCenter();visible("Mode Développeur : OFF");
+    }
+    /** Separate mode activation from preparation, checking both states in the actual service. */
+    private void prepare() throws Exception {
+        developerTab();focus("Mode Développeur : OFF",false);remote.pressDPadCenter();visible("Mode Développeur : ON");
+        await(()->TvFirst009TextServiceOwner.developerStage()==DeveloperOverlayState.Stage.ENABLED,"Mode did not enable separately");
+        focus("Afficher les commandes en overlay",true);remote.pressDPadCenter();
+        await(()->TvFirst009TextServiceOwner.developerStage()==DeveloperOverlayState.Stage.PREPARED && TvFirst009TextServiceOwner.developerWindowIdentity()!=null,"Prepared window not attached");
+    }
+    /** Substitute only the public launch destination; onStop and service promotion remain real. */
+    private void handoff() throws Exception {
+        main(()->assertTrue(application.launchDeveloperDestination(new Intent(application,DeveloperViewerFixtureActivity.class))));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.resumed,"Own viewer did not resume");
+        viewer=DeveloperViewerFixtureActivity.current;
+        await(()->TvFirst009TextServiceOwner.developerHasFocus(),"Service panel did not acquire input after app stopped");
+    }
+    /** Locate the real running service independently of its UI projection. */
+    private boolean serviceRunning(){return target.getSystemService(ActivityManager.class).getRunningServices(100).stream().anyMatch(value->value.service.getClassName().equals(OverlayService.class.getName()));}
+    /** Pure mode activation/preparation is not a track activation or a focus-taking timer. */
+    @Test public void realDeveloperTabPreparesWithoutTakingInput() throws Exception {
+        prepare();assertTrue(application.hasWindowFocus());assertFalse(TvFirst009TextServiceOwner.developerHasFocus());
+        assertFalse(TvFirst009TextServiceOwner.multimediaActive());assertTrue(serviceRunning());
+        remote.pressDPadUp();remote.waitForIdle();assertTrue(application.hasWindowFocus());
+        remote.takeScreenshot(new File(target.getFilesDir(),"tvux002-prepared.png"));
+    }
+    /** A normal Activity launch promotes the SAME service window and survives source destruction. */
+    @Test public void handoffSurvivesActivityAndBackReturnsPlayerKeys() throws Exception {
+        prepare();Object window=TvFirst009TextServiceOwner.developerWindowIdentity();handoff();
+        assertEquals(window,TvFirst009TextServiceOwner.developerWindowIdentity());assertTrue(viewer.resumed);assertFalse(application.hasWindowFocus());
+        main(application::finish);await(()->application.isDestroyed(),"Source did not finish");assertTrue(TvFirst009TextServiceOwner.developerHasFocus());
+        remote.takeScreenshot(new File(target.getFilesDir(),"tvux002-panel.png"));remote.pressBack();
+        await(()->viewer.hasWindowFocus(),"Back did not return viewer input");assertEquals(0,viewer.backCount);
+        assertEquals(DeveloperOverlayState.Stage.ENABLED,TvFirst009TextServiceOwner.developerStage());assertTrue(serviceRunning());
+        assertFalse(TvFirst009TextServiceOwner.multimediaActive());remote.pressDPadDown();remote.pressBack();
+        await(()->viewer.backCount==1 && viewer.remoteKeys>0,"Closed panel retained remote input");assertEquals(0,viewer.transportKeys);
+        System.out.println("TVUX002_REAL_TAB_HANDOFF_PASS; SAME_SERVICE_WINDOW; SOURCE_DESTROYED; OWN_VIEWER_ONLY; NO_ADMISSION");
+    }
+    /** Both tab and service panel read/write one real AD-SYNC owner, with inactive effects still refused. */
+    @Test public void tabAndOverlayShareTheExistingBusinessOwner() throws Exception {
+        prepare();focus("AD-SYNC : OFF",true);remote.pressDPadCenter();visible("AD-SYNC : ON");assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());
+        handoff();visible("AD-SYNC : ON");focus("AD-SYNC : ON",true);remote.pressDPadCenter();visible("AD-SYNC : OFF");
+        assertFalse(TvFirst009TextServiceOwner.adSyncEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaActive());
+        remote.pressBack();await(()->viewer.hasWindowFocus(),"Panel failed to close");main(viewer::finish);
+        await(()->application.hasWindowFocus(),"Normal app did not return");visible("AD-SYNC : OFF");
+    }
+    /** A user choosing HOME/another app without the explicit launch never gets a delayed key trap. */
+    @Test public void unrelatedActivityLaunchLeavesPreparationPassive() throws Exception {
+        prepare();main(()->application.startActivity(new Intent(application,DeveloperViewerFixtureActivity.class)));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Passive window blocked viewer navigation");
+        viewer=DeveloperViewerFixtureActivity.current;assertEquals(DeveloperOverlayState.Stage.PREPARED,TvFirst009TextServiceOwner.developerStage());
+        assertFalse(TvFirst009TextServiceOwner.developerHasFocus());remote.pressBack();await(()->viewer.backCount==1,"Passive window captured Back");
+    }
+    /** Failed/absent destinations leave the already-attached passive window and app input intact. */
+    @Test public void failedLaunchDoesNotStealFocusLater() throws Exception {
+        prepare();Object window=TvFirst009TextServiceOwner.developerWindowIdentity();
+        main(()->assertFalse(application.launchDeveloperDestination(new Intent().setClassName(target.getPackageName(),target.getPackageName()+".AbsentOwnedDestination"))));
+        assertEquals(DeveloperOverlayState.Stage.PREPARED,TvFirst009TextServiceOwner.developerStage());assertEquals(window,TvFirst009TextServiceOwner.developerWindowIdentity());assertTrue(application.hasWindowFocus());
+    }
+    /** Losing the existing overlay permission removes passive windows too, without disabling business preferences. */
+    @Test public void revokedPermissionRemovesPreparedWindow() throws Exception {
+        prepare();remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW deny");
+        await(()->TvFirst009TextServiceOwner.developerWindowIdentity()==null,"Permission loss retained a window");assertTrue(application.hasWindowFocus());
+        assertEquals(DeveloperOverlayState.Stage.ENABLED,TvFirst009TextServiceOwner.developerStage());assertFalse(TvFirst009TextServiceOwner.multimediaActive());
+    }
+    /** Create active widgets only through a declared recorder, never through a counterfeit Cloud permit. */
+    private Actions recordingPanel() throws Exception {
+        main(()->application.startActivity(new Intent(application,DeveloperViewerFixtureActivity.class)));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Own recording viewer missing");viewer=DeveloperViewerFixtureActivity.current;
+        Actions actions=new Actions();main(()->{direct=new CompanionControlPanel(target,actions);assertTrue(direct.open());});visible("Commentaires écrits : ON");return actions;
+    }
+    /** Nested Back/cross and full cross closure are usable remotely and leave the viewer/service alone. */
+    @Test public void nestedBackAndCrossCloseOnlyTheirOwnUi() throws Exception {
+        Actions actions=recordingPanel();focus("Recaler sur le temps du film",true);remote.pressDPadCenter();visible("mm:ss ou hh:mm:ss");
+        remote.pressBack();visible("Reprendre les commentaires");assertTrue(direct.isOpen());
+        focus("Recaler sur le temps du film",true);remote.pressDPadCenter();visible("mm:ss ou hh:mm:ss");focus("× Fermer",false);remote.pressDPadCenter();visible("Reprendre les commentaires");assertTrue(direct.isOpen());
+        focus("× Fermer",false);remote.pressDPadCenter();await(()->!direct.isOpen() && viewer.hasWindowFocus(),"Cross retained overlay input");
+        assertTrue(actions.text && actions.audio);assertEquals(0,actions.suspends);assertEquals(0,viewer.backCount);
+    }
+    /** Every shared command and the numeric form work with only a TV remote; runtime semantics are qualified separately. */
+    @Test public void remoteControlsAndKeypadReachTheSharedPort() throws Exception {
+        Actions actions=recordingPanel();remote.pressDPadCenter();visible("Commentaires écrits : OFF");assertFalse(actions.text);
+        remote.pressDPadDown();remote.pressDPadCenter();visible("Commentaires audio : OFF");assertFalse(actions.audio);
+        remote.pressDPadDown();remote.pressDPadCenter();visible("AD-SYNC : ON");assertTrue(actions.adSync);
+        remote.pressDPadDown();remote.pressDPadCenter();remote.waitForIdle();assertEquals(1,actions.suspends);
+        remote.pressDPadDown();remote.pressDPadCenter();remote.waitForIdle();assertEquals(1,actions.resumes);
+        remote.pressDPadDown();remote.pressDPadCenter();visible("mm:ss ou hh:mm:ss");remote.takeScreenshot(new File(target.getFilesDir(),"tvux002-keypad.png"));
+        remote.pressDPadCenter();remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadCenter(); // 1:
+        remote.pressDPadUp();remote.pressDPadUp();remote.pressDPadUp();remote.pressDPadRight();remote.pressDPadRight();remote.pressDPadCenter(); // 3
+        remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadDown();remote.pressDPadLeft();remote.pressDPadCenter(); // 0
+        focus("Confirmer le temps",true);remote.pressDPadCenter();visible("Recalage accepté ; prochaine observation MEDIA attendue.");assertEquals(90000,actions.calibrated);assertFalse(actions.seek);
+    }
+    /** Active command recorder has no MediaSession, provider identity or native playback authority. */
+    private static final class Actions implements CompanionControlPanel.Commands {
+        volatile boolean text=true,audio=true,adSync,seek;volatile int suspends,resumes;volatile long calibrated=-1;
+        /** Project the single owned recording state for actual window widgets. */
+        @Override public CompanionControlPanel.Snapshot snapshot(){return new CompanionControlPanel.Snapshot(true,text,audio,adSync,true,"Confirmation MEDIA attendue","brut 1000 ms · local 1000 ms");}
+        /** Toggle only the recorder's TEXT preference. */
+        @Override public void text(boolean value){text=value;}
+        /** Toggle only its independent AUDIO preference. */
+        @Override public void audio(boolean value){audio=value;}
+        /** Exercise the real AD-SYNC widget's routing. */
+        @Override public void adSync(boolean value){adSync=value;}
+        /** Record the explicit user action without a playback effect. */
+        @Override public void suspend(){suspends++;}
+        /** Record resume intent without pretending to observe a film. */
+        @Override public void resume(){resumes++;}
+        /** Return a parsed value to prove keypad reachability; actual guard refusals are tested separately. */
+        @Override public AdSyncController.Calibration calibrate(long value,boolean seek){calibrated=value;this.seek=seek;return AdSyncController.Calibration.APPLIED;}
+    }
+}

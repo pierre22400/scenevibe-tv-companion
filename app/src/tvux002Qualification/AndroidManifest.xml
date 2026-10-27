@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Same production visibility, plus one OWN viewer only in disposable native qualification. -->
+    <queries><package android:name="com.amazon.amazonvideo.livingroom" /></queries>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <application android:usesCleartextTraffic="false">
+        <receiver android:name=".BootReceiver" android:enabled="false" />
+        <activity android:name=".DeveloperViewerFixtureActivity" android:exported="false" />
+    </application>
+</manifest>

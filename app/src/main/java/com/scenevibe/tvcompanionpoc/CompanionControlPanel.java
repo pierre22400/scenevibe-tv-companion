@@ -39,6 +39,8 @@ final class CompanionControlPanel {
         void text(boolean enabled);
         /** Change only the existing AUDIO preference. */
         void audio(boolean enabled);
+        /** Older recording ports expose no AD-SYNC toggle; unsupported commands fail closed. */
+        default void adSync(boolean enabled){throw new UnsupportedOperationException("ADSYNC_CONTROL_UNAVAILABLE");}
         /** Explicitly suspend only SceneVibe effects. */
         void suspend();
         /** Request confirmation without claiming that MEDIA has resumed yet. */
@@ -53,10 +55,16 @@ final class CompanionControlPanel {
     /** These are requested switches and observed synchronization, not acoustic/display proof. */
     static final class Snapshot {
         final boolean active,text,audio;
-        final String synchronization;
+        final String synchronization,timing;
+        final boolean adSync,adSyncSupported;
         /** Project only service-owned switches and bounded diagnostic text. */
         Snapshot(boolean active,boolean text,boolean audio,String synchronization) {
-            this.active=active;this.text=text;this.audio=audio;this.synchronization=synchronization;
+            this(active,text,audio,false,false,synchronization,"");
+        }
+        /** Read switches, current synchronization and sanitized temporal diagnostics from the one owner. */
+        Snapshot(boolean active,boolean text,boolean audio,boolean adSync,boolean supported,String synchronization,String timing) {
+            this.active=active;this.text=text;this.audio=audio;this.adSync=adSync;adSyncSupported=supported;
+            this.synchronization=synchronization;this.timing=timing;
         }
     }
 
@@ -68,6 +76,8 @@ final class CompanionControlPanel {
         void releaseFocus(View view,WindowManager.LayoutParams params);
         /** Remove the window synchronously; no detached root may retain input. */
         void remove(View view);
+        /** Change only this window's size/input policy without replacing its root. */
+        default void update(View view,WindowManager.LayoutParams params){throw new UnsupportedOperationException("WINDOW_UPDATE_UNAVAILABLE");}
     }
 
     private final Context context;
@@ -79,8 +89,11 @@ final class CompanionControlPanel {
     private PanelRoot root;
     private LinearLayout page;
     private WindowManager.LayoutParams params;
-    private Button text,audio,suspend,resume,recalibrate;
-    private TextView status,message,time;
+    private Button text,audio,adToggle,suspend,resume,recalibrate;
+    private TextView status,message,time,timing;
+    private boolean embedded,embeddedPaused,passive;
+    private Runnable closed=()->{},parked=()->{},embeddedDismiss=()->{};
+    private long lastTimingUpdate=-1;
     private boolean calibration,closing;
     private String digits="";
     private CheckBox replay;
@@ -111,37 +124,99 @@ final class CompanionControlPanel {
             }
             /** Remove synchronously rather than leaving focus to a later animation. */
             @Override public void remove(View view){manager.removeViewImmediate(view);}
+            /** Prepared and interactive are two input policies of the very same window. */
+            @Override public void update(View view,WindowManager.LayoutParams params){manager.updateViewLayout(view,params);}
         };
     }
 
     /** Show a single temporary window; any partial add failure is cleaned up and releases input. */
     boolean open() {
-        if(root!=null)return true;
+        if(root!=null)return passive?activatePrepared():true;
+        return attach(false);
+    }
+
+    /** Keep the prepared window visible but unable to intercept any key or touch. */
+    boolean prepare() {
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY)return false;
+        if(root!=null){standby();return true;}
+        return attach(true);
+    }
+
+    /** Attach once, using an explicit input policy rather than a delayed global shortcut. */
+    private boolean attach(boolean prepared) {
         if(!BuildConfig.TVUX_CONTROL_PANEL || !permission.getAsBoolean())return false;
-        root=new PanelRoot(context);
-        root.setBackground(background(Color.WHITE,Color.BLACK,2));
-        root.setPadding(dp(12),dp(8),dp(12),dp(8));
-        android.util.DisplayMetrics display=context.getResources().getDisplayMetrics();
-        params=new WindowManager.LayoutParams(Math.min(dp(440),(int)(display.widthPixels*.48f)),
-                (int)(display.heightPixels*.9f),WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL|WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
-                PixelFormat.TRANSLUCENT);
-        params.gravity=Gravity.END|Gravity.CENTER_VERTICAL;
-        params.setTitle("SceneVibe companion controls");
-        showMain();
-        try{host.add(root,params);root.post(()->{if(root!=null)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
+        passive=prepared;root=new PanelRoot(context);
+        root.setBackground(background(Color.WHITE,Color.BLACK,2));root.setPadding(dp(12),dp(8),dp(12),dp(8));
+        params=new WindowManager.LayoutParams(-2,-2,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL|WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,PixelFormat.TRANSLUCENT);
+        params.gravity=Gravity.END|Gravity.CENTER_VERTICAL;params.setTitle("SceneVibe companion controls");
+        configureSize(prepared);
+        if(prepared)showPrepared();else showMain();
+        try{host.add(root,params);if(!prepared)root.post(()->{if(root!=null && !passive)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
         catch(RuntimeException refused){close();return false;}
     }
+
+    /** Promote only the already-prepared window after the source Activity has stopped. */
+    boolean activatePrepared() {
+        if(root==null || !passive || !permission.getAsBoolean())return false;
+        passive=false;root.hadFocus=false;configureSize(false);showMain();
+        try{host.update(root,params);root.post(()->{if(root!=null && !passive)text.requestFocus();});return true;}
+        catch(RuntimeException refused){close();return false;}
+    }
+
+    /** Release focus while retaining the same window and every business switch. */
+    void standby() {
+        if(root==null || embedded || passive)return;
+        passive=true;configureSize(true);root.clearFocus();showPrepared();
+        try{host.update(root,params);parked.run();}catch(RuntimeException refused){close();}
+    }
+
+    /** Size and focus are independent from the passive editorial overlays. */
+    private void configureSize(boolean prepared) {
+        var display=context.getResources().getDisplayMetrics();
+        params.width=prepared?Math.min(dp(320),(int)(display.widthPixels*.4f)):Math.min(dp(440),(int)(display.widthPixels*.48f));
+        params.height=prepared?dp(76):(int)(display.heightPixels*.9f);
+        if(prepared)params.flags|=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        else params.flags&=~(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+    }
+
+    /** Explain the prepared state without adding a focusable handle or a fake global key. */
+    private void showPrepared() {
+        root.removeAllViews();root.addView(label("Développeur · touches libres\nLance le film dans le lecteur.",17));
+    }
+
+    /** The Activity embeds these same widgets as ordinary Views; no WindowManager add occurs here. */
+    View embeddedView(Runnable dismiss) {
+        embedded=true;embeddedDismiss=dismiss;root=new PanelRoot(context);
+        root.setBackground(background(Color.WHITE,Color.BLACK,2));root.setPadding(dp(12),dp(8),dp(12),dp(8));
+        root.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(630)));showMain();handler.postDelayed(refresh,250);return root;
+    }
+
+    /** Pause only presentation polling when the normal Activity leaves the foreground. */
+    void pauseEmbedded(){if(embedded){embeddedPaused=true;handler.removeCallbacks(refresh);}}
+    /** Refresh the ordinary Activity widgets on return, without changing the service window. */
+    void resumeEmbedded(){if(embedded && root!=null){embeddedPaused=false;handler.removeCallbacks(refresh);tick();}}
+    /** Back from the application sidebar can first dismiss an open local recalage form. */
+    boolean closeChild(){if(root!=null && calibration){showMain();return true;}return false;}
+    /** Observe actual input ownership rather than equating a requested window with gained focus. */
+    boolean hasInputFocus(){return root!=null && !passive && root.hasWindowFocus();}
+    /** Read an opaque public WindowId for owned lifecycle qualification; it is never logged or serialized. */
+    Object windowIdentity(){return root==null || embedded?null:root.getWindowId();}
+    /** Report passive preparation independently of developer mode and multimedia lifetime. */
+    boolean isPrepared(){return root!=null && passive;}
+    /** Notify the existing service owner of UI-only close/standby events. */
+    void onLifecycle(Runnable closed,Runnable parked){this.closed=closed;this.parked=parked;}
 
     /** Back and every close cross remove only this window, preserving service/session and switches. */
     void close() {
         if(root==null || closing)return;
         closing=true;handler.removeCallbacks(refresh);
         PanelRoot retiring=root;root=null;
+        if(embedded){root=retiring;retiring.clearFocus();closing=false;embeddedDismiss.run();return;}
         retiring.clearFocus();retiring.setVisibility(View.GONE);
         try{host.releaseFocus(retiring,params);}catch(RuntimeException refused){/* Removal remains mandatory. */}finally{
             try{host.remove(retiring);}catch(RuntimeException alreadyDetached){/* Focus was released first. */}
-            closing=false;
+            closing=false;closed.run();
         }
     }
 
@@ -167,13 +242,15 @@ final class CompanionControlPanel {
 
     /** Render requested switches from the same owner used by the main application's Settings. */
     private void showMain() {
-        calibration=false;shell("SceneVibe",this::close);
+        calibration=false;shell(BuildConfig.TVUX_DEVELOPER_OVERLAY?"Développeur":"SceneVibe",this::close);
         status=label("",19);page.addView(status);
         text=action("Commentaires écrits",()->{commands.text(!commands.snapshot().text);update();});
         audio=action("Commentaires audio",()->{commands.audio(!commands.snapshot().audio);update();});
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)adToggle=action("AD-SYNC",()->{commands.adSync(!commands.snapshot().adSync);update();});
         suspend=action("Suspendre les commentaires",()->{commands.suspend();feedback="Suspension demandée.";update();});
         resume=action("Reprendre les commentaires",()->{commands.resume();feedback="Reprise demandée ; confirmation MEDIA attendue.";update();});
         recalibrate=action("Recaler sur le temps du film",this::showCalibration);
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY){timing=label("",15);page.addView(timing);}
         message=label(feedback,17);page.addView(message);
         page.addView(label("Back ou × : fermer sans arrêter les commentaires.",17));
         update();
@@ -224,10 +301,14 @@ final class CompanionControlPanel {
 
     /** Refresh state without claiming that a requested resume has already produced a MEDIA observation. */
     private void update() {
-        if(root==null || calibration)return;
+        if(root==null || calibration || passive)return;
         Snapshot state=commands.snapshot();
         setTextIfChanged(text,"Commentaires écrits : "+(state.text?"ON":"OFF"));text.setEnabled(state.active);
         setTextIfChanged(audio,"Commentaires audio : "+(state.audio?"ON":"OFF"));audio.setEnabled(state.active);
+        if(adToggle!=null){setTextIfChanged(adToggle,"AD-SYNC : "+(state.adSync?"ON":"OFF"));adToggle.setEnabled(state.adSyncSupported);}
+        if(timing!=null && (lastTimingUpdate<0 || android.os.SystemClock.elapsedRealtime()-lastTimingUpdate>=1000)){
+            lastTimingUpdate=android.os.SystemClock.elapsedRealtime();setTextIfChanged(timing,state.timing);
+        }
         suspend.setEnabled(state.active);resume.setEnabled(state.active);recalibrate.setEnabled(state.active);
         setTextIfChanged(status,(state.active?"Session Companion active":"Session Companion inactive")+"\n"+state.synchronization);
         setTextIfChanged(message,feedback);
@@ -239,7 +320,8 @@ final class CompanionControlPanel {
     /** Close on permission loss; refreshing a view never starts/restarts the commentary service. */
     private void tick() {
         if(root==null)return;
-        if(!permission.getAsBoolean()){close();return;}
+        if(embedded && embeddedPaused)return;
+        if(!embedded && !permission.getAsBoolean()){close();return;}
         update();handler.postDelayed(refresh,250);
     }
 
@@ -292,12 +374,17 @@ final class CompanionControlPanel {
         /** Unexpected system-window focus loss closes the panel rather than keeping an invisible input owner. */
         @Override public void onWindowFocusChanged(boolean focused) {
             super.onWindowFocusChanged(focused);
-            if(focused)hadFocus=true;else if(hadFocus && root==this)close();
+            if(embedded)return;
+            if(focused)hadFocus=true;else if(hadFocus && root==this && !passive){
+                if(BuildConfig.TVUX_DEVELOPER_OVERLAY)standby();else close();
+            }
         }
+        /** Resume only ordinary view polling on reattachment; no window or service is started. */
+        @Override protected void onAttachedToWindow(){super.onAttachedToWindow();if(embedded && !embeddedPaused){handler.removeCallbacks(refresh);handler.postDelayed(refresh,250);}}
         /** Remove polling and ownership even if Android detaches the window unexpectedly. */
         @Override protected void onDetachedFromWindow() {
             super.onDetachedFromWindow();
-            if(root==this)close();
+            if(root==this){if(embedded)handler.removeCallbacks(refresh);else close();}
         }
     }
 }

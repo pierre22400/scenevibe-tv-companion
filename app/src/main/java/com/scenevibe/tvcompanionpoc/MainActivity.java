@@ -41,6 +41,8 @@ public final class MainActivity extends Activity {
     private TextView textQualificationStatus;
     private Button textActivateButton,textStopButton;
     private CloudMultimediaControls cloudMultimedia;
+    private DeveloperTab developerTab;
+    private String developerHandoff;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
      * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
@@ -75,6 +77,10 @@ public final class MainActivity extends Activity {
         LinearLayout controls = createRuntimeControls();
         presentation = new TvShellController(this, controls, this::presentationStatus,
                 this::openDiagnostics, savedInstanceState);
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
+            developerTab=new DeveloperTab(this,()->presentation.back());
+            presentation.setDeveloperPage(developerTab.view());
+        }
         setContentView(presentation.view());
     }
 
@@ -93,6 +99,11 @@ public final class MainActivity extends Activity {
             if (BuildConfig.CLOUD_MULTIMEDIA_EXPERIMENTAL) {
                 cloudMultimedia=new CloudMultimediaControls(this,this::textQualificationSource);
                 controls.addView(cloudMultimedia.view());
+            }
+            if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
+                addButton(controls,"Autorisation de superposition",this::openPermissionSettings);
+                addButton(controls,"Accès aux sessions MEDIA",this::openMediaSessionAccessSettings);
+                return controls;
             }
             textQualificationStatus=new TextView(this);
             textQualificationStatus.setTextColor(0xFFFFFFFF);textQualificationStatus.setTextSize(17);
@@ -226,6 +237,7 @@ public final class MainActivity extends Activity {
 
     /** Pop one native presentation visit, then let Android leave the launcher root normally. */
     @Override public void onBackPressed() {
+        if(developerTab!=null && developerTab.closeChild())return;
         if (presentation == null || !presentation.back()) super.onBackPressed();
     }
 
@@ -233,6 +245,10 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
+            if(developerHandoff!=null){TvFirst009TextServiceOwner.cancelDeveloperHandoff(developerHandoff);developerHandoff=null;}
+            TvFirst009TextServiceOwner.parkDeveloperPanel();if(developerTab!=null)developerTab.resume();
+        }
         if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
             handler.removeCallbacks(statusRefresh);
             if (presentation!=null) presentation.resume();
@@ -256,13 +272,43 @@ public final class MainActivity extends Activity {
 
     /** Pause only UI refresh and remember focus; the foreground service keeps its lifetime. */
     @Override protected void onPause() {
+        if(developerTab!=null)developerTab.pause();
         if (presentation != null) presentation.pause();
         handler.removeCallbacks(statusRefresh);
         super.onPause();
     }
 
+    /** Transfer input only after this normal Activity is no longer visible, never on a countdown. */
+    @Override protected void onStop() {
+        super.onStop();
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY && developerHandoff!=null){
+            String ticket=developerHandoff;developerHandoff=null;
+            if(isChangingConfigurations())TvFirst009TextServiceOwner.cancelDeveloperHandoff(ticket);
+            else TvFirst009TextServiceOwner.completeDeveloperHandoff(ticket);
+        }
+    }
+
+    /** Resolve only the installed public launcher entry; no deep link, transport command or Prime internals. */
+    private Intent developerPrimeIntent() {
+        Intent launch=getPackageManager().getLeanbackLaunchIntentForPackage("com.amazon.amazonvideo.livingroom");
+        return launch!=null?launch:getPackageManager().getLaunchIntentForPackage("com.amazon.amazonvideo.livingroom");
+    }
+    /** Let the Developer tab clearly disable a destination that is not installed. */
+    boolean developerPrimeAvailable(){return BuildConfig.TVUX_DEVELOPER_OVERLAY && developerPrimeIntent()!=null;}
+    /** This is a normal, explicit user-selected application launch, not video control. */
+    boolean launchDeveloperPrime(){return launchDeveloperDestination(developerPrimeIntent());}
+    /** Shared normal launch seam lets instrumentation substitute an OWN viewer, never a fake Prime package. */
+    boolean launchDeveloperDestination(Intent destination) {
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || destination==null || !hasWindowFocus() || isFinishing())return false;
+        String ticket=TvFirst009TextServiceOwner.beginDeveloperHandoff();if(ticket==null)return false;
+        developerHandoff=ticket;
+        try{startActivity(destination);return true;}
+        catch(RuntimeException refused){developerHandoff=null;TvFirst009TextServiceOwner.cancelDeveloperHandoff(ticket);return false;}
+    }
+
     /** Release Activity-owned 008 work; historical service lifetime remains independent. */
     @Override protected void onDestroy() {
+        if(developerTab!=null)developerTab.close();
         if (presentation != null) presentation.close();
         super.onDestroy();
     }

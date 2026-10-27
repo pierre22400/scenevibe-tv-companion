@@ -102,11 +102,13 @@ final class CloudMultimediaSession {
                 && (snapshot.state==PlaybackState.STATE_PLAYING || snapshot.state==PlaybackState.STATE_PAUSED)
                 && (snapshot.state!=PlaybackState.STATE_PLAYING || snapshot.speed>0f);
         long selectedPosition=usable?(snapshot.state==PlaybackState.STATE_PLAYING?selected.positionMs():snapshot.positionMs):-1;
-        if(adSync.enabled()) {
+        if(adSync.enabled() || BuildConfig.TVUX_DEVELOPER_OVERLAY) {
             lastAdSample=snapshot==null?null:new AdSyncController.Sample(snapshot.sessionKey,usable,
                     snapshot.state==PlaybackState.STATE_PLAYING,snapshot.positionMs,selectedPosition,
                     snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,snapshot.durationMs,
                     selected!=null && selected.eligible());
+        }
+        if(adSync.enabled()) {
             AdSyncController.Decision decision=adSync.observe(lastAdSample,SystemClock.elapsedRealtime());logAdSync(decision);
             if(!decision.allow){runtime.suspendComments();position=-1;publish("ADSYNC_"+decision.state.name());return;}
             selectedPosition=decision.contentMs;
@@ -158,6 +160,24 @@ final class CloudMultimediaSession {
         return (lastAdSample!=null && !lastAdSample.playing?"Film en pause · commentaires en attente":"Suivi MEDIA compatible")
                 +" · "+d.reason+" · publicité non observable";}
 
+    /** A prepared Developer window waits for the already-admitted track to be PLAYING, even if its comments are held. */
+    boolean developerMediaReady(long after) {
+        return current() && developerMediaReady(lastAdSample,SystemClock.elapsedRealtime(),after);
+    }
+    /** Qualify only a compatible current PLAYING capture obtained after this explicit handoff. */
+    static boolean developerMediaReady(AdSyncController.Sample sample,long now,long after) {
+        return sample!=null && sample.valid() && sample.playing && sample.capturedMs>=after
+                && now>=sample.capturedMs && now-sample.capturedMs<=2500;
+    }
+    /** Developer-only numeric observations; no identity, token, title or second clock is exposed. */
+    String temporalDiagnostics() {
+        AdSyncController.Sample sample=lastAdSample;
+        if(sample==null)return "Aucune capture MEDIA actuelle.";
+        long age=Math.max(0,SystemClock.elapsedRealtime()-sample.capturedMs);
+        return "MEDIA brut "+sample.rawMs+" ms · suivi "+sample.selectedMs+" ms · local "+position+" ms\n"
+                +"Âge capture "+age+" ms · âge ancre "+(sample.capturedMs-sample.anchorMs)+" ms";
+    }
+
     /** Diagnose genuine native STARTED state, including a start deferred until seek completion. */
     private void auditAudio(){if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource))publish("AUDIO_RESOURCE_STARTED");}
 
@@ -173,7 +193,7 @@ final class CloudMultimediaSession {
     /** Loss of media eligibility stops both renderers without preserving an audible stale window. */
     private void unavailable(String code){if(active){position=-1;
         if(adSync.enabled()){adSync.unavailable();lastAdSample=null;runtime.suspendComments();logAdSync(adSync.status());}
-        else runtime.unavailable();publish(code);}}
+        else {if(BuildConfig.TVUX_DEVELOPER_OVERLAY)lastAdSample=null;runtime.unavailable();}publish(code);}}
 
     /** Diagnostics never expose credentials, editorial text or native MediaController objects. */
     private void publish(String code){if(observer!=null)observer.changed(code,position,active);}

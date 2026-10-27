@@ -62,6 +62,7 @@ public final class TvShellController {
     private TextView accountStatus, diagnosticConnection, diagnosticService, diagnosticDevice;
     private boolean restoring;
     private String defaultFocus;
+    private View developerPage;
 
     /** Builds one shell and reuses the real control View tree instead of static placeholders. */
     public TvShellController(Activity activity, LinearLayout runtimeControls, RuntimeReader runtime,
@@ -107,10 +108,13 @@ public final class TvShellController {
                 d(R.dimen.tv_sidebar_end), d(R.dimen.tv_safe_y));
         sidebar.setBackgroundColor(ui.color(R.color.scenevibe_sidebar));
         body.addView(sidebar, new LinearLayout.LayoutParams(d(R.dimen.tv_sidebar_width), -1));
-        TvNavigation.Screen[] sections = {TvNavigation.Screen.HOME, TvNavigation.Screen.TRACKS,
-                TvNavigation.Screen.SETTINGS, TvNavigation.Screen.DIAGNOSTICS};
-        int[] labels = {R.string.tv_home, R.string.tv_tracks, R.string.tv_settings, R.string.tv_diagnostics};
-        String[] icons = {"house", "bookmark", "settings", "activity"};
+        TvNavigation.Screen[] sections = BuildConfig.TVUX_DEVELOPER_OVERLAY
+                ?new TvNavigation.Screen[]{TvNavigation.Screen.HOME,TvNavigation.Screen.TRACKS,TvNavigation.Screen.SETTINGS,TvNavigation.Screen.DEVELOPER,TvNavigation.Screen.DIAGNOSTICS}
+                :new TvNavigation.Screen[]{TvNavigation.Screen.HOME,TvNavigation.Screen.TRACKS,TvNavigation.Screen.SETTINGS,TvNavigation.Screen.DIAGNOSTICS};
+        int[] labels = BuildConfig.TVUX_DEVELOPER_OVERLAY
+                ?new int[]{R.string.tv_home,R.string.tv_tracks,R.string.tv_settings,R.string.tv_developer,R.string.tv_diagnostics}
+                :new int[]{R.string.tv_home,R.string.tv_tracks,R.string.tv_settings,R.string.tv_diagnostics};
+        String[] icons = BuildConfig.TVUX_DEVELOPER_OVERLAY?new String[]{"house","bookmark","settings","settings","activity"}:new String[]{"house","bookmark","settings","activity"};
         for (int i = 0; i < sections.length; i++) {
             TvNavigation.Screen section = sections[i];
             Button button = ui.button(s(labels[i]), false, () -> {
@@ -391,6 +395,7 @@ public final class TvShellController {
     /** Rebuilds only presentation Views; no service or durable store is owned or cleared here. */
     private void render() {
         restoring = true;
+        if(developerPage!=null && developerPage.getParent() instanceof ViewGroup)((ViewGroup)developerPage.getParent()).removeView(developerPage);
         if (runtimeControls.getParent() instanceof ViewGroup) ((ViewGroup) runtimeControls.getParent()).removeView(runtimeControls);
         page.removeAllViews(); targets.clear();
         accountStatus = null; diagnosticConnection = null; diagnosticService = null; diagnosticDevice = null;
@@ -410,6 +415,7 @@ public final class TvShellController {
             case PREPARE: prepare(); break;
             case SETTINGS: settings(); break;
             case DIAGNOSTICS: diagnostics(); break;
+            case DEVELOPER: developer(); break;
         }
         refreshRuntime();
         root.post(() -> restoreFocus(false));
@@ -941,6 +947,24 @@ public final class TvShellController {
             ViewGroup group = (ViewGroup) view; group.setClipChildren(false); group.setClipToPadding(false);
             for (int i = 0; i < group.getChildCount(); i++) styleRuntimeControls(group.getChildAt(i), buttonIndex);
         }
+    }
+
+    /** Attach only normal Activity views; the shared service owns every overlay window. */
+    public void setDeveloperPage(View page){developerPage=page;if(navigation.current().screen==TvNavigation.Screen.DEVELOPER)render();}
+
+    /** Show the dedicated tab without relocating the whole application into an overlay. */
+    private void developer() {
+        introduction("Développeur","Commandes techniques","Prépare la fenêtre sans focus, puis ouvre le lecteur par son lancement Android normal.");
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY && developerPage!=null){
+            block(page,developerPage,8);registerDeveloperTargets(developerPage,new int[]{0});defaultFocus="developer-native-0";
+        }
+    }
+
+    /** Register focus memory while leaving the common keypad's native D-pad navigation intact. */
+    private void registerDeveloperTargets(View view,int[] index) {
+        if(view instanceof Button){String key="developer-native-"+(index[0]++);if(view.getId()==View.NO_ID)view.setId(View.generateViewId());
+            view.setTag(key);targets.put(key,view);view.setOnFocusChangeListener((focused,hasFocus)->{if(hasFocus && !restoring)ensureVisible(focused);});}
+        if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)registerDeveloperTargets(((ViewGroup)view).getChildAt(i),index);
     }
 
     /** Preserves every actual Companion action; no Cloud action is executed by entering this screen. */

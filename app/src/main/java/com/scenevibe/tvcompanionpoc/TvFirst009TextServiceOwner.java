@@ -45,6 +45,9 @@ final class TvFirst009TextServiceOwner {
     private boolean foreground,closing;
     private Runnable watch;
     private CompanionControlPanel controlPanel;
+    private static final DeveloperOverlayState developer=new DeveloperOverlayState();
+    private static final String DEV_ENABLE="com.scenevibe.tvcompanionpoc.DEVELOPER_ENABLE";
+    private static final String DEV_PREPARE="com.scenevibe.tvcompanionpoc.DEVELOPER_PREPARE";
     static final String SHOW_CONTROLS="com.scenevibe.tvcompanionpoc.SHOW_COMPANION_CONTROLS";
 
     /** Only sanitized process-local facts; a render request is not physical display evidence. */
@@ -177,16 +180,91 @@ final class TvFirst009TextServiceOwner {
         catch(RuntimeException refused){return false;}
     }
 
+    /** Mode activation never arms a track or opens a focusable window. */
+    static boolean setDeveloperMode(Context context,boolean enabled) {
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY)return false;
+        if(!enabled){if(liveInstance!=null && liveInstance.controlPanel!=null)liveInstance.controlPanel.close();developer.disable();return true;}
+        developer.enable();
+        try{context.startForegroundService(new Intent(context,OverlayService.class).setAction(DEV_ENABLE));return true;}
+        catch(RuntimeException refused){developer.disable();return false;}
+    }
+
+    /** Read the one service-owned mode, distinct from visible-window and media activation states. */
+    static DeveloperOverlayState.Stage developerStage(){developer.expire(SystemClock.elapsedRealtime());return developer.stage();}
+    /** Attach only a passive window; the normal application must retain D-pad focus. */
+    static boolean prepareDeveloperPanel(Context context) {
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || !developer.enabled() || !Settings.canDrawOverlays(context))return false;
+        try{context.startForegroundService(new Intent(context,OverlayService.class).setAction(DEV_PREPARE));return true;}
+        catch(RuntimeException refused){return false;}
+    }
+    /** Issue a one-use handoff only for a genuinely attached prepared window. */
+    static String beginDeveloperHandoff() {
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || liveInstance==null || liveInstance.controlPanel==null
+                || !liveInstance.controlPanel.isPrepared())return null;
+        return developer.begin(SystemClock.elapsedRealtime());
+    }
+    /** A failed normal Activity launch never causes delayed focus acquisition. */
+    static void cancelDeveloperHandoff(String ticket){developer.cancel(ticket);}
+    /** The source Activity calls this only from onStop after a successful explicit launch. */
+    static boolean completeDeveloperHandoff(String ticket) {
+        long now=SystemClock.elapsedRealtime();
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || !developer.accepts(ticket,now) || liveInstance==null || liveInstance.controlPanel==null)return false;
+        if(liveInstance.multimedia!=null && liveInstance.multimedia.isActive()){
+            if(!developer.waitForPlayer(ticket,now))return false;
+            liveInstance.showDeveloperWhenMediaReady();return true;
+        }
+        if(!liveInstance.controlPanel.activatePrepared()){developer.closed();return false;}
+        return developer.commit(ticket,now);
+    }
+    /** Returning to the normal application parks its service window instead of obstructing the Activity. */
+    static void parkDeveloperPanel() {
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY && liveInstance!=null && liveInstance.controlPanel!=null && liveInstance.controlPanel.isOpen()){
+            liveInstance.controlPanel.standby();if(developer.enabled() && liveInstance.controlPanel.isPrepared())developer.prepared();
+        }
+    }
+    /** Closing does not disable the mode or change any commentary preference. */
+    static void closeDeveloperPanel(){if(liveInstance!=null && liveInstance.controlPanel!=null)liveInstance.controlPanel.close();}
+    /** Expose actual OS focus separately from the requested interactive stage. */
+    static boolean developerHasFocus(){return liveInstance!=null && liveInstance.controlPanel!=null && liveInstance.controlPanel.hasInputFocus();}
+    /** Read only the current service window identity, with no capability to a platform player. */
+    static Object developerWindowIdentity(){return liveInstance==null || liveInstance.controlPanel==null?null:liveInstance.controlPanel.windowIdentity();}
+    /** Give actionable UI status without treating mode activation as multimedia or display proof. */
+    static String developerStatus() {
+        switch(developerStage()) {
+            case OFF:return "Mode Développeur désactivé.";
+            case ENABLED:return "Mode actif · panneau fermé. Reviens ici pour le rouvrir.";
+            case PREPARED:return "Panneau préparé sans focus. Ouvre Prime avec le bouton ci-dessous.";
+            case HANDOFF:return "Ouverture du lecteur demandée · commandes encore non interactives.";
+            case WAITING_PLAYER:return "Touches libres · lance le film dans Prime. Attente du média compatible en lecture.";
+            case INTERACTIVE:return developerHasFocus()?"Panneau interactif · ferme avec Back ou ×.":"Panneau affiché · attente du focus Android.";
+            default:return "État Développeur indisponible.";
+        }
+    }
+    /** Use only the existing admitted public MEDIA observation, never a foreground-app spy or timer. */
+    private void showDeveloperWhenMediaReady() {
+        if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || !developer.awaitingPlayer(SystemClock.elapsedRealtime())
+                || multimedia==null || !multimedia.developerMediaReady(developer.playerWaitStarted()) || controlPanel==null)return;
+        if(controlPanel.activatePrepared())developer.shown();else developer.closed();
+    }
+    /** Retain one window component inside this existing service, with UI-only lifecycle callbacks. */
+    private void ensureControlPanel() {
+        if(controlPanel==null)controlPanel=new CompanionControlPanel(service,panelCommands());
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)controlPanel.onLifecycle(developer::closed,developer::prepared);
+    }
+
     /** Project the current multimedia owner; no cache or playback permit is created by these controls. */
     static CompanionControlPanel.Commands panelCommands() {
         return new CompanionControlPanel.Commands() {
             /** Read actual service state each time, including changes made by the application. */
             @Override public CompanionControlPanel.Snapshot snapshot(){return new CompanionControlPanel.Snapshot(multimediaActive(),
-                    multimediaTextEnabled(),multimediaAudioEnabled(),adSyncStatus());}
+                    multimediaTextEnabled(),multimediaAudioEnabled(),adSyncEnabled(),BuildConfig.ADSYNC_PROTOTYPE,adSyncStatus(),
+                    liveInstance==null || liveInstance.multimedia==null?"Aucune capture MEDIA active.":liveInstance.multimedia.temporalDiagnostics());}
             /** Route TEXT through the one existing owner. */
             @Override public void text(boolean enabled){setMultimediaTextEnabled(enabled);}
             /** Route AUDIO through the one existing owner. */
             @Override public void audio(boolean enabled){setMultimediaAudioEnabled(enabled);}
+            /** Route AD-SYNC through the same guard, without activating comments. */
+            @Override public void adSync(boolean enabled){setAdSyncEnabled(enabled);}
             /** This explicit action also opts into the local interruption guard. */
             @Override public void suspend(){if(multimediaActive()){if(!adSyncEnabled())setAdSyncEnabled(true);suspendMultimediaComments();}}
             /** Preserve an already-enabled guard rather than clearing its offset or consumed identities. */
@@ -237,6 +315,7 @@ final class TvFirst009TextServiceOwner {
     /** Enter foreground promptly, reusing the historical Android service/notification mechanism. */
     @android.annotation.SuppressLint("ForegroundServiceType")
     void create() {
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY)liveInstance=this;
         try {
             NotificationManager manager=service.getSystemService(NotificationManager.class);
             manager.createNotificationChannel(new NotificationChannel(CHANNEL,"SceneVibe TEXT — qualification",NotificationManager.IMPORTANCE_LOW));
@@ -262,11 +341,17 @@ final class TvFirst009TextServiceOwner {
 
     /** Reject null, boot, replacement, legacy, replayed and expired requests; never restore a permit from disk. */
     int start(Intent intent) {
+        if(BuildConfig.TVUX_DEVELOPER_OVERLAY && intent!=null && (DEV_ENABLE.equals(intent.getAction()) || DEV_PREPARE.equals(intent.getAction()))) {
+            if(foreground && developer.enabled() && DEV_PREPARE.equals(intent.getAction())) {
+                ensureControlPanel();if(controlPanel.prepare())developer.prepared();
+            }
+            return Service.START_NOT_STICKY;
+        }
         if(BuildConfig.TVUX_CONTROL_PANEL && intent!=null && SHOW_CONTROLS.equals(intent.getAction())) {
             if(foreground && Settings.canDrawOverlays(service)) {
                 // This UI-only service lifetime grants no multimedia admission.
-                if(controlPanel==null)controlPanel=new CompanionControlPanel(service,panelCommands());
-                controlPanel.open();
+                if(BuildConfig.TVUX_DEVELOPER_OVERLAY && !developer.enabled())return Service.START_NOT_STICKY;
+                ensureControlPanel();if(controlPanel.open() && BuildConfig.TVUX_DEVELOPER_OVERLAY)developer.shown();
             }
             return Service.START_NOT_STICKY;
         }
@@ -313,7 +398,7 @@ final class TvFirst009TextServiceOwner {
 
     /** Accept only this service lifetime's bounded observation, never an old instance's callback. */
     private void observed(String code,long position,boolean active) {
-        if (!closing && liveOwner==owner) record(code,position,active);
+        if (!closing && liveOwner==owner){record(code,position,active);showDeveloperWhenMediaReady();}
     }
 
     /** Keep errors actionable without logging an identity, payload, credential or exception. */
@@ -339,7 +424,7 @@ final class TvFirst009TextServiceOwner {
         if (watch!=null) main.removeCallbacks(watch);
         if (session!=null) { session.close();session=null; }
         if (multimedia!=null) { multimedia.close();multimedia=null; }
-        if (liveInstance==this)liveInstance=null;
+        if (liveInstance==this){liveInstance=null;if(BuildConfig.TVUX_DEVELOPER_OVERLAY)developer.disable();}
         if (liveOwner==owner) {
             if (latest.active) record("STOPPED",-1,false);
             liveOwner=0;

@@ -53,7 +53,7 @@ public final class AdSyncAndroidTest {
     @Test public void realSettingsRequireAdmission(){var instrument=InstrumentationRegistry.getInstrumentation();var target=instrument.getTargetContext();
         assertTrue("Native test build must have no Cloud origin",BuildConfig.CLOUD_ORIGIN.isEmpty());
         Activity activity=instrument.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
-        try{main(()->{TvFirst009TextServiceOwner.setAdSyncEnabled(false);Button settings=button(activity.getWindow().getDecorView(),"Réglages");assertNotNull(settings);settings.performClick();
+        try{main(()->{TvFirst009TextServiceOwner.setAdSyncEnabled(false);Button settings=button(activity.getWindow().getDecorView(),BuildConfig.TVUX_DEVELOPER_OVERLAY?"Développeur":"Réglages");assertNotNull(settings);settings.performClick();
             Button toggle=button(activity.getWindow().getDecorView(),"AD-SYNC");assertNotNull(toggle);toggle.performClick();assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());
             assertFalse(button(activity.getWindow().getDecorView(),"Suspendre les commentaires").isEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaActive());});
         }finally{main(()->{TvFirst009TextServiceOwner.setAdSyncEnabled(false);activity.finish();});}}

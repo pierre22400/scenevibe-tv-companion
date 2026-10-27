@@ -8,7 +8,7 @@ import java.util.List;
  * It contains no Android service, preferences, cache, tokens or preparation authority.
  */
 public final class TvNavigation {
-    public enum Screen { HOME, TRACKS, TRACK, PREPARE, SETTINGS, DIAGNOSTICS }
+    public enum Screen { HOME, TRACKS, TRACK, PREPARE, SETTINGS, DIAGNOSTICS, DEVELOPER }
     private final List<Visit> stack = new ArrayList<>();
 
     /** Starts at the existing launcher home surface. */
