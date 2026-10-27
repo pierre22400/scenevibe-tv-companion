@@ -137,9 +137,9 @@ final class CloudMultimediaSession {
     /** Ask for fresh compatible observations; this never sends PLAY/SEEK to the streaming application. */
     void resumeComments(){if(active && adSync.enabled()){adSync.requestResume();runtime.suspendComments();logAdSync(adSync.status());}}
     /** Confirm a local film-time offset without writing the track or granting a new native permit. */
-    boolean calibrateComments(long contentMs){
+    boolean calibrateComments(long contentMs,boolean confirmedSeek){
         if(!active || !current() || !adSync.calibrate(contentMs,SystemClock.elapsedRealtime()))return false;
-        runtime.suspendComments();logAdSync(adSync.status());return true;
+        if(confirmedSeek)runtime.confirmSeek();else runtime.suspendComments();logAdSync(adSync.status());return true;
     }
     /** Expose only the bounded controller state for the existing Settings screen. */
     String adSyncStatus(){AdSyncController.Decision d=adSync.status();return d.state+" · "+d.reason+" · publicité non observable";}

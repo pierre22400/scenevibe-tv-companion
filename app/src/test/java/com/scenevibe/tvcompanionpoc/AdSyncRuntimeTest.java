@@ -56,6 +56,9 @@ public final class AdSyncRuntimeTest {
     @Test public void staleActivationCannotResume(){at(1750);runtime.suspendComments();runtime.observe("wrong-activation",new MediaObservation(true,2000,true));assertEquals(0,port.starts);at(2000);assertEquals(1,port.starts);}
     /** Eligibility loss during a hold cannot erase its replay protection. */
     @Test public void unavailableWhileHeldPreservesConsumed(){at(2000);runtime.suspendComments();runtime.unavailable();at(2250);assertEquals(1,port.starts);}
+    /** Explicit owner-confirmed SEEK, unlike an interruption return, authorizes replay at the new landing. */
+    @Test public void confirmedSeekCanReplayInsideConsumedWindow(){at(2000);runtime.suspendComments();at(2250);assertEquals(1,port.starts);
+        runtime.confirmSeek();at(2250);assertEquals(2,port.starts);}
     /** Local ports have no networking capability, so the held calendar remains usable offline. */
     @Test public void localResumeHasNoNetworkDependency(){at(1750);runtime.suspendComments();at(1750);at(2000);at(6000);at(6250);assertEquals(2,port.starts);}
     /** Paused confirmation anchors the same calendar without prematurely dispatching due comments. */

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
@@ -161,11 +162,13 @@ final class CloudMultimediaControls {
     private void confirmCalibration() {
         EditText input=new EditText(activity);input.setSingleLine(true);input.setHint("mm:ss ou hh:mm:ss");
         input.setInputType(android.text.InputType.TYPE_CLASS_DATETIME | android.text.InputType.TYPE_DATETIME_VARIATION_TIME);
+        CheckBox replay=new CheckBox(activity);replay.setText("J'ai déplacé le film : autoriser la relecture");replay.setChecked(false);
+        LinearLayout form=new LinearLayout(activity);form.setOrientation(LinearLayout.VERTICAL);form.addView(input);form.addView(replay);
         new AlertDialog.Builder(activity).setTitle("Temps du film")
                 .setMessage("Confirme que le film a repris, puis saisis son temps actuel. Seuls les commentaires SceneVibe seront recalés (correction limitée à une heure).")
-                .setView(input).setNegativeButton("Annuler",null).setPositiveButton("Confirmer le temps",(dialog,which)->{
+                .setView(form).setNegativeButton("Annuler",null).setPositiveButton("Confirmer le temps",(dialog,which)->{
                     try{long time=AdSyncController.parseFilmTime(input.getText().toString());
-                        result=TvFirst009TextServiceOwner.calibrateMultimediaComments(time)?"Recalage local confirmé.":"Recalage refusé : session compatible récente requise et correction limitée à une heure.";
+                        result=TvFirst009TextServiceOwner.calibrateMultimediaComments(time,replay.isChecked())?"Recalage local confirmé.":"Recalage refusé : session compatible récente requise et correction limitée à une heure.";
                     }catch(IllegalArgumentException invalid){result="Saisis un temps valide mm:ss ou hh:mm:ss.";}
                     refresh();
                 }).show();

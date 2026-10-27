@@ -182,8 +182,10 @@ final class TvFirst009TextServiceOwner {
     /** Resume remains conditional on fresh public MEDIA facts, never a newly granted activation. */
     static void resumeMultimediaComments(){if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.resumeComments();}
     /** Forward a user-confirmed film position without creating a Cloud or service capability. */
-    static boolean calibrateMultimediaComments(long contentMs){return liveInstance!=null && liveInstance.multimedia!=null
-        && liveInstance.multimedia.calibrateComments(contentMs);}
+    static boolean calibrateMultimediaComments(long contentMs){return calibrateMultimediaComments(contentMs,false);}
+    /** Only an explicit local SEEK confirmation may request rearming of consumed comments. */
+    static boolean calibrateMultimediaComments(long contentMs,boolean confirmedSeek){return liveInstance!=null && liveInstance.multimedia!=null
+        && liveInstance.multimedia.calibrateComments(contentMs,confirmedSeek);}
     /** Read only finite diagnostics from the current service lifetime. */
     static String adSyncStatus(){return liveInstance==null || liveInstance.multimedia==null?"Service inactif · aucune détection publicitaire":liveInstance.multimedia.adSyncStatus();}
 

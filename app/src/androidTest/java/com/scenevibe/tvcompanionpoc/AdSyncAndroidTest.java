@@ -36,16 +36,16 @@ public final class AdSyncAndroidTest {
                 p.getPosition(),p.getPosition(),p.getLastPositionUpdateTime(),now,p.getPlaybackSpeed(),100000);}
     /** Public playback anchors are observable, but carry no verified third-party ad flag. */
     @Test public void ownPublicMediaSessionSupportsManualHold(){var context=InstrumentationRegistry.getInstrumentation().getTargetContext();
-        MediaSession session=new MediaSession(context,"SceneVibe OWN AD-SYNC fixture");
+        main(()->{MediaSession session=new MediaSession(context,"SceneVibe OWN AD-SYNC fixture");
         try{session.setPlaybackState(new PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING,1000,1f,SystemClock.elapsedRealtime()).build());
             AdSyncController c=new AdSyncController();c.setEnabled(true);assertTrue(c.observe(sample(session)).allow);c.suspend();assertFalse(c.observe(sample(session)).allow);
             assertEquals(AdSyncController.State.SUSPENDED,c.status().state);
-        }finally{session.release();}}
+        }finally{session.release();}}); }
     /** An actual replacement Android token cannot inherit the accepted clock silently. */
-    @Test public void nativeSessionReplacementIsUncertain(){var context=InstrumentationRegistry.getInstrumentation().getTargetContext();MediaSession a=new MediaSession(context,"OWN A"),b=new MediaSession(context,"OWN B");
+    @Test public void nativeSessionReplacementIsUncertain(){var context=InstrumentationRegistry.getInstrumentation().getTargetContext();main(()->{MediaSession a=new MediaSession(context,"OWN A"),b=new MediaSession(context,"OWN B");
         try{PlaybackState p=new PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING,1000,1f,SystemClock.elapsedRealtime()).build();a.setPlaybackState(p);b.setPlaybackState(p);
             AdSyncController c=new AdSyncController();c.setEnabled(true);assertTrue(c.observe(sample(a)).allow);assertFalse(c.observe(sample(b)).allow);assertEquals(AdSyncController.Reason.SESSION_CHANGED,c.status().reason);
-        }finally{a.release();b.release();}}
+        }finally{a.release();b.release();}}); }
     /** Find only SceneVibe's own remote-focusable widgets; no third-party tree is examined. */
     private Button button(View root,String prefix){if(root instanceof Button && ((Button)root).getText().toString().startsWith(prefix))return (Button)root;
         if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){Button b=button(((ViewGroup)root).getChildAt(i),prefix);if(b!=null)return b;}return null;}

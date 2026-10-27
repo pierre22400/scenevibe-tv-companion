@@ -120,6 +120,9 @@ final class StudioMultimediaRuntime {
     /** Stop local effects during AD-SYNC without consuming or rearming calendar events. */
     void suspendComments() { scheduler.onInterruption(); }
 
+    /** An explicit local owner decision preserves the historical replay policy after an actual seek. */
+    void confirmSeek() { scheduler.onConfirmedSeek(); }
+
     /** Lose session/identity without retaining an audible local comment. */
     void unavailable() { scheduler.onUnavailable(); }
 

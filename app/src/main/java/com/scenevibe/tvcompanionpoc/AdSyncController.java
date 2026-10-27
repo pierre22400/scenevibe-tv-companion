@@ -28,7 +28,7 @@ final class AdSyncController {
         }
         /** Reject missing, future, stale-by-capture and nonfinite temporal facts before any manual admission. */
         boolean valid(){return usable && session!=null && rawMs>=0 && selectedMs>=0 && capturedMs>=0
-                && anchorMs>0 && anchorMs<=capturedMs && Float.isFinite(speed) && (!playing || speed>0f);}
+                && anchorMs>0 && anchorMs<=capturedMs && durationMs>=-1 && durationMs<=43_200_000L && Float.isFinite(speed) && (!playing || speed>0f);}
     }
 
     /** A decision authorizes only SceneVibe effects; ad status is deliberately unavailable. */

@@ -100,6 +100,13 @@ public final class MediaCalendarScheduler {
         deactivate(activationToken);
     }
 
+    /** Explicit owner-confirmed SEEK may rearm the historical calendar; ordinary interruption return never does. */
+    public synchronized void onConfirmedSeek() {
+        if (calendar == null) return;
+        interrupted = false;
+        deactivate(activationToken);
+    }
+
     /** Apply one already-selected observation with the exact historical branch order. */
     public synchronized void onObservation(MediaObservation observation) {
         if (calendar == null || observation == null) return;

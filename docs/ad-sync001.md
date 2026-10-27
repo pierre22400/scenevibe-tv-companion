@@ -38,9 +38,10 @@ existantes restent nécessaires.
 - Une interruption arrête le MP3 en cours ; il n'est pas repris/rejoué automatiquement.
   Le calendrier conserve les identités consommées au retour, saute les fenêtres
   expirées et conserve les événements futurs. Un SEEK ultérieur à cette reprise
-  garde le comportement historique du calendrier. Un SEEK ambigu pendant une
-  interruption attend la confirmation/recalage, sans relecture automatique d'une
-  phrase déjà consommée.
+  garde le comportement historique du calendrier après confirmation. Un SEEK
+  ambigu attend la confirmation/recalage ; la case **J'ai déplacé le film :
+  autoriser la relecture**, décochée par défaut, autorise explicitement la
+  relecture. Un simple retour d'interruption ne réarme jamais une phrase consommée.
 - Les interrupteurs TEXT/AUDIO restent indépendants. OFF rétablit le chemin v17.
   Les commandes sont dans Réglages et la notification de SceneVibe, pas dans Prime.
 
