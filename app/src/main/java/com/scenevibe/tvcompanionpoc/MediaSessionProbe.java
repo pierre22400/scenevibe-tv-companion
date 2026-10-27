@@ -12,6 +12,7 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.List;
+import java.util.function.Predicate;
 import com.scenevibe.tvcompanionpoc.tvfirst.MediaEvidence;
 import com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReader;
 
@@ -98,6 +99,7 @@ public final class MediaSessionProbe {
     private final long sampleIntervalMs;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
+    private final Predicate<Snapshot> preferred;
 
     private final Runnable sampler = new Runnable() {
         @Override
@@ -125,6 +127,12 @@ public final class MediaSessionProbe {
 
     /** Bound an explicit multimedia cadence while keeping every historical constructor at one second. */
     public MediaSessionProbe(Context context, Listener listener, Observer observer,long sampleIntervalMs) {
+        this(context,listener,observer,sampleIntervalMs,null);
+    }
+
+    /** Prefer an already-admitted identity while leaving historical session selection unchanged by default. */
+    public MediaSessionProbe(Context context,Listener listener,Observer observer,long sampleIntervalMs,Predicate<Snapshot> preferred) {
+        this.preferred=preferred;
         if(sampleIntervalMs<250L || sampleIntervalMs>SAMPLE_INTERVAL_MS)throw new IllegalArgumentException("SAMPLE_INTERVAL_OUT_OF_POLICY");
         if (listener != null && observer != null) throw new IllegalArgumentException("One probe mode only");
         this.sampleIntervalMs=sampleIntervalMs;
@@ -143,6 +151,9 @@ public final class MediaSessionProbe {
         Log.i(TAG, "Passive MediaSession probe started; intervalMs=" + sampleIntervalMs);
         sampler.run();
     }
+
+    /** Query currently published public MEDIA facts synchronously; never reuse a cached application observation. */
+    public void captureNow() { if(started)sample(); }
 
     /** Stop future sampling; the captured service writer also rejects late callbacks. */
     public void stop() {
@@ -189,14 +200,18 @@ public final class MediaSessionProbe {
         }
 
         Snapshot primary = null;
+        Snapshot compatible = null;
         for (int index = 0; index < controllers.size(); index++) {
             Snapshot snapshot = snapshotController(index, controllers.get(index));
+            if(preferred!=null && preferred.test(snapshot) && (compatible==null
+                    || compatible.state!=PlaybackState.STATE_PLAYING && snapshot.state==PlaybackState.STATE_PLAYING))compatible=snapshot;
             if (primary == null
                     || (primary.state != PlaybackState.STATE_PLAYING
                         && snapshot.state == PlaybackState.STATE_PLAYING)) {
                 primary = snapshot;
             }
         }
+        if(compatible!=null)primary=compatible;
         if (listener != null && primary != null) listener.onSnapshot(primary);
     }
 

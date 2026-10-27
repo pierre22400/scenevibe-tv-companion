@@ -1,0 +1,115 @@
+name: TV-UX 001 and AD-SYNC 001-B
+
+# No provider calls, deployment, platform modification or physical device access.
+on:
+  push:
+    branches: [work/scenevibe-ad-sync-001]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  software:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app
+      SIGNING_ENABLED: ${{ github.ref == 'refs/heads/work/scenevibe-ad-sync-001' && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Toolchain
+        run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+      - name: Deterministic guard and actual shared runtime
+        env:
+          SCENEVIBE_CLOUD_ORIGIN: ''
+        run: gradle --no-daemon --max-workers=2 testDebugUnitTest --tests '*AdSyncControllerTest' --tests '*AdSyncRuntimeTest' --tests '*AdSyncFreshCaptureTest'
+      - name: Control windows and application modals under Robolectric
+        env:
+          SCENEVIBE_CLOUD_ORIGIN: ''
+        run: gradle --no-daemon --max-workers=2 testTvux001UnitTest --tests '*TvUxPanelTest'
+      - name: Compile and lint experimental v19 plus retained v18/v17
+        run: gradle --no-daemon --max-workers=2 assembleTvux001 lintTvux001 assembleAdsync001 assembleCloudandroid002
+      - name: Sign candidate with the existing M5 key when present
+        if: env.SIGNING_ENABLED == 'true'
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p tv-ux001-signed
+          printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/tvux-stable.jks"
+          tools="$ANDROID_HOME/build-tools/34.0.0"
+          "$tools/aapt" dump badging app/build/outputs/apk/tvux001/app-tvux001-unsigned.apk > tv-ux001-signed/apk-badging.txt
+          if grep -q application-debuggable tv-ux001-signed/apk-badging.txt; then exit 1; fi
+          "$tools/zipalign" -f 4 app/build/outputs/apk/tvux001/app-tvux001-unsigned.apk "$RUNNER_TEMP/tvux-aligned.apk"
+          "$tools/apksigner" sign --ks "$RUNNER_TEMP/tvux-stable.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD --out tv-ux001-signed/scenevibe-tv-ux001-stable.apk "$RUNNER_TEMP/tvux-aligned.apk"
+          "$tools/apksigner" verify --verbose --print-certs tv-ux001-signed/scenevibe-tv-ux001-stable.apk > tv-ux001-signed/apksigner-verify.txt
+          sha256sum tv-ux001-signed/scenevibe-tv-ux001-stable.apk > tv-ux001-signed/sha256.txt
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/tvux-stable.jks" "$RUNNER_TEMP/tvux-aligned.apk"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-tv-ux001-${{ github.run_id }}
+          path: |
+            tv-ux001-signed/
+            app/build/outputs/apk/tvux001/*unsigned.apk
+            app/build/test-results/**/*.xml
+            app/build/reports/lint-results-tvux001.*
+          if-no-files-found: error
+          retention-days: 14
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile isolated native fixtures with no Cloud origin
+        run: gradle --no-daemon --max-workers=2 -PscenevibeTvUxNativeQualification=true assembleTvux001 assembleTvux001AndroidTest
+      - name: Owned emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Native Android TV local fixture, never Prime or Sony
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: bash .github/scripts/tv-ux001-native.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-tv-ux001-native-${{ github.run_id }}
+          path: tv-ux001-native/
+          if-no-files-found: error
+          retention-days: 14

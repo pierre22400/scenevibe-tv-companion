@@ -14,6 +14,7 @@ import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 import java.util.UUID;
+import androidx.core.app.NotificationCompat;
 
 /**
  * Explicit 009-004 lifetime inside the existing OverlayService, isolated from its
@@ -44,6 +45,8 @@ final class TvFirst009TextServiceOwner {
     private CloudMultimediaSession multimedia;
     private boolean foreground,closing;
     private Runnable watch;
+    private CompanionControlPanel controlPanel;
+    static final String SHOW_CONTROLS="com.scenevibe.tvcompanionpoc.SHOW_COMPANION_CONTROLS";
 
     /** Only sanitized process-local facts; a render request is not physical display evidence. */
     static final class Status {
@@ -157,6 +160,50 @@ final class TvFirst009TextServiceOwner {
         catch(RuntimeException refused){pending=null;record("SERVICE_START_FAILED",-1,false);return false;}
     }
 
+    /** Read the same requested switches from either surface; opening a view never resets them. */
+    static boolean multimediaTextEnabled(){return multimediaTextPreference;}
+    /** AUDIO state belongs to the service owner, not a second Settings/panel preference. */
+    static boolean multimediaAudioEnabled(){return multimediaAudioPreference;}
+
+    /** Reuse a system-owned PendingIntent to the non-exported service, without launching MainActivity. */
+    static PendingIntent panelIntent(Context context) {
+        return PendingIntent.getService(context,190,new Intent(context,OverlayService.class).setAction(SHOW_CONTROLS),
+                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    /** Explicit application preview only; cross-app invocation uses the notification's same service capability. */
+    static boolean requestControlPanel(Context context) {
+        if(!BuildConfig.TVUX_CONTROL_PANEL || !Settings.canDrawOverlays(context))return false;
+        try{context.startForegroundService(new Intent(context,OverlayService.class).setAction(SHOW_CONTROLS));return true;}
+        catch(RuntimeException refused){return false;}
+    }
+
+    /** Project the current multimedia owner; no cache or playback permit is created by these controls. */
+    static CompanionControlPanel.Commands panelCommands() {
+        return new CompanionControlPanel.Commands() {
+            /** Read actual service state each time, including changes made by the application. */
+            @Override public CompanionControlPanel.Snapshot snapshot(){return new CompanionControlPanel.Snapshot(multimediaActive(),
+                    multimediaTextEnabled(),multimediaAudioEnabled(),adSyncStatus());}
+            /** Route TEXT through the one existing owner. */
+            @Override public void text(boolean enabled){setMultimediaTextEnabled(enabled);}
+            /** Route AUDIO through the one existing owner. */
+            @Override public void audio(boolean enabled){setMultimediaAudioEnabled(enabled);}
+            /** This explicit action also opts into the local interruption guard. */
+            @Override public void suspend(){if(multimediaActive()){if(!adSyncEnabled())setAdSyncEnabled(true);suspendMultimediaComments();}}
+            /** Preserve an already-enabled guard rather than clearing its offset or consumed identities. */
+            @Override public void resume(){if(multimediaActive()){if(!adSyncEnabled())setAdSyncEnabled(true);resumeMultimediaComments();}}
+            /** Refresh and diagnose using the actual live service, without a new admission. */
+            @Override public AdSyncController.Calibration calibrate(long time,boolean seek){return calibrateMultimediaResult(time,seek);}
+        };
+    }
+
+    /** Explain absent authority separately from an invalid/freshness/offset MEDIA refusal. */
+    static AdSyncController.Calibration calibrateMultimediaResult(long time,boolean seek) {
+        if(!multimediaActive())return AdSyncController.Calibration.COMPANION_INACTIVE;
+        if(BuildConfig.TVUX_CONTROL_PANEL && !adSyncEnabled())setAdSyncEnabled(true);
+        return liveInstance.multimedia.calibrateCommentsResult(time,seek);
+    }
+
     /** Route a visual preference only to the current multimedia lifetime. */
     static void setMultimediaTextEnabled(boolean enabled){multimediaTextPreference=enabled;if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setTextEnabled(enabled);}
     /** Route an audio preference only to SceneVibe's current local MP3 port. */
@@ -184,8 +231,7 @@ final class TvFirst009TextServiceOwner {
     /** Forward a user-confirmed film position without creating a Cloud or service capability. */
     static boolean calibrateMultimediaComments(long contentMs){return calibrateMultimediaComments(contentMs,false);}
     /** Only an explicit local SEEK confirmation may request rearming of consumed comments. */
-    static boolean calibrateMultimediaComments(long contentMs,boolean confirmedSeek){return liveInstance!=null && liveInstance.multimedia!=null
-        && liveInstance.multimedia.calibrateComments(contentMs,confirmedSeek);}
+    static boolean calibrateMultimediaComments(long contentMs,boolean confirmedSeek){return calibrateMultimediaResult(contentMs,confirmedSeek)==AdSyncController.Calibration.APPLIED;}
     /** Read only finite diagnostics from the current service lifetime. */
     static String adSyncStatus(){return liveInstance==null || liveInstance.multimedia==null?"Service inactif · aucune détection publicitaire":liveInstance.multimedia.adSyncStatus();}
 
@@ -206,12 +252,30 @@ final class TvFirst009TextServiceOwner {
                 builder.addAction(new Notification.Action.Builder(null,"Suspendre commentaires",suspend).build())
                     .addAction(new Notification.Action.Builder(null,"Reprendre commentaires",resume).build());
             }
-            service.startForeground(NOTIFICATION,builder.build());foreground=true;
+            Notification notification=builder.build();
+            if(BuildConfig.TVUX_CONTROL_PANEL) {
+                PendingIntent panel=panelIntent(service);
+                notification=new NotificationCompat.Builder(service,CHANNEL).setSmallIcon(R.drawable.ic_launcher)
+                        .setContentTitle("SceneVibe · commandes du Companion")
+                        .setContentText("Ouvrir le panneau sans lancer l’application · disponibilité selon la TV")
+                        .setContentIntent(panel).setOngoing(true).setSilent(true)
+                        .addAction(0,"Ouvrir le panneau",panel).addAction(0,"Arrêter les commentaires",stop)
+                        .extend(new NotificationCompat.TvExtender().setContentIntent(panel).setSuppressShowOverApps(true)).build();
+            }
+            service.startForeground(NOTIFICATION,notification);foreground=true;
         } catch (RuntimeException failed) { fail("FOREGROUND_SERVICE_FAILED"); }
     }
 
     /** Reject null, boot, replacement, legacy, replayed and expired requests; never restore a permit from disk. */
     int start(Intent intent) {
+        if(BuildConfig.TVUX_CONTROL_PANEL && intent!=null && SHOW_CONTROLS.equals(intent.getAction())) {
+            if(foreground && Settings.canDrawOverlays(service)) {
+                // This UI-only service lifetime grants no multimedia admission.
+                if(controlPanel==null)controlPanel=new CompanionControlPanel(service,panelCommands());
+                controlPanel.open();
+            }
+            return Service.START_NOT_STICKY;
+        }
         if (intent!=null && STOP.equals(intent.getAction())) {
             record("STOPPED",-1,false);destroy();service.stopSelf();return Service.START_NOT_STICKY;
         }
@@ -277,6 +341,7 @@ final class TvFirst009TextServiceOwner {
     void destroy() {
         if (closing) return;
         closing=true;
+        if(controlPanel!=null){controlPanel.close();controlPanel=null;}
         if (watch!=null) main.removeCallbacks(watch);
         if (session!=null) { session.close();session=null; }
         if (multimedia!=null) { multimedia.close();multimedia=null; }

@@ -11,18 +11,38 @@ final class AdSyncController {
     enum State { DISABLED, SYNCHRONIZED, SUSPENDED, UNCERTAIN, RESYNCHRONIZING, MANUAL }
     enum Reason { OFF, CONTINUITY_ONLY, USER_SUSPENDED, SESSION_UNAVAILABLE,
         IDENTITY_OR_CLOCK_INVALID, SESSION_CHANGED, DURATION_CHANGED, CLOCK_JUMP,
-        FRESH_POSITION_FROZEN, CONFIRMATION_REQUIRED, FRESH_ANCHOR_REQUIRED, MANUAL_POSITION }
+        FRESH_POSITION_FROZEN, CONFIRMATION_REQUIRED, FRESH_ANCHOR_REQUIRED, MANUAL_POSITION, OBSERVATION_STALE }
+    /** Precise, payload-free outcomes shared by the application and the remote control panel. */
+    enum Calibration {
+        APPLIED("Recalage accepté ; prochaine observation MEDIA attendue."),
+        SESSION_ABSENT("Session MEDIA absente. Attends le retour du film puis réessaie."),
+        IDENTITY_INCOMPATIBLE("Identité MEDIA incompatible avec la track activée."),
+        INVALID_OBSERVATION("Observation MEDIA invalide : position, état ou ancre indisponible."),
+        OBSERVATION_STALE("Observation MEDIA trop ancienne. Réessaie sans quitter le film."),
+        OFFSET_LIMIT("Écart supérieur à une heure. Vérifie le temps saisi et l’édition du film."),
+        FORMAT_INVALID("Format temporel incorrect. Utilise mm:ss ou hh:mm:ss."),
+        COMPANION_INACTIVE("Session Companion inactive. Active d’abord la track dans SceneVibe."),
+        SYNC_DISABLED("La protection des interruptions est désactivée.");
+        final String message;
+        /** Give every closed diagnostic a specific, actionable sentence without private metadata. */
+        Calibration(String message) { this.message=message; }
+    }
     static final long MAX_OFFSET_MS=3_600_000L;
     private static final long FRESH_MS=2500L;
 
     /** Immutable public-session scalars; the opaque session key is never logged or serialized. */
     static final class Sample {
         final Object session;
-        final boolean usable,playing;
+        final boolean usable,playing,identityCompatible;
         final long rawMs,selectedMs,anchorMs,capturedMs,durationMs;
         final float speed;
         /** Retain facts already read by the passive probe, without deriving another media clock. */
         Sample(Object session,boolean usable,boolean playing,long raw,long selected,long anchor,long captured,float speed,long duration) {
+            this(session,usable,playing,raw,selected,anchor,captured,speed,duration,usable);
+        }
+        /** Distinguish identity refusal from an invalid clock without accepting either as usable. */
+        Sample(Object session,boolean usable,boolean playing,long raw,long selected,long anchor,long captured,float speed,long duration,boolean compatible) {
+            identityCompatible=compatible;
             this.session=session;this.usable=usable;this.playing=playing;rawMs=raw;selectedMs=selected;
             anchorMs=anchor;capturedMs=captured;this.speed=speed;durationMs=duration;
         }
@@ -77,7 +97,15 @@ final class AdSyncController {
 
     /** Consume a real captured observation, preserving the historical selected position when disabled. */
     Decision observe(Sample sample) {
+        return observe(sample,sample==null?0:sample.capturedMs);
+    }
+
+    /** Check capture freshness against the caller's current monotonic time, not the age of PlaybackState's anchor. */
+    Decision observe(Sample sample,long nowMs) {
         latest=sample;
+        if(enabled && sample!=null && (nowMs<sample.capturedMs || nowMs-sample.capturedMs>FRESH_MS)) {
+            hold(State.UNCERTAIN,Reason.OBSERVATION_STALE);return decision(false,-1);
+        }
         if(!enabled)return decision(sample!=null && sample.usable,sample==null?-1:sample.selectedMs);
         if(sample==null || !sample.valid()) {
             if(state!=State.SUSPENDED)hold(State.UNCERTAIN,Reason.IDENTITY_OR_CLOCK_INVALID);
@@ -99,13 +127,20 @@ final class AdSyncController {
     }
 
     /** Confirm a user-supplied film time against a recent, still eligible passive session capture. */
-    boolean calibrate(long contentMs,long nowMs) {
-        if(!enabled || latest==null || !latest.valid() || nowMs<latest.capturedMs
-                || nowMs-latest.capturedMs>FRESH_MS || contentMs<0 || contentMs>43_200_000L)return false;
+    boolean calibrate(long contentMs,long nowMs) {return calibrateResult(contentMs,nowMs)==Calibration.APPLIED;}
+
+    /** Explain every refusal before applying an offset to a freshly queried, compatible session only. */
+    Calibration calibrateResult(long contentMs,long nowMs) {
+        if(!enabled)return Calibration.SYNC_DISABLED;
+        if(latest==null || latest.session==null)return Calibration.SESSION_ABSENT;
+        if(!latest.identityCompatible)return Calibration.IDENTITY_INCOMPATIBLE;
+        if(!latest.valid())return Calibration.INVALID_OBSERVATION;
+        if(nowMs<latest.capturedMs || nowMs-latest.capturedMs>FRESH_MS)return Calibration.OBSERVATION_STALE;
+        if(contentMs<0 || contentMs>43_200_000L)return Calibration.FORMAT_INVALID;
         long offset=contentMs-latest.selectedMs;
-        if(offset < -MAX_OFFSET_MS || offset > MAX_OFFSET_MS)return false;
+        if(offset < -MAX_OFFSET_MS || offset > MAX_OFFSET_MS)return Calibration.OFFSET_LIMIT;
         offsetMs=offset;held=false;resumeRequested=false;candidate=null;
-        state=State.MANUAL;reason=Reason.MANUAL_POSITION;accept(latest);return true;
+        state=State.MANUAL;reason=Reason.MANUAL_POSITION;accept(latest);return Calibration.APPLIED;
     }
 
     /** Parse a user-confirmed mm:ss or hh:mm:ss without guessing a unit or accepting negative/overflow input. */
@@ -124,7 +159,9 @@ final class AdSyncController {
 
     /** Require two distinct fresh captures of the same compatible content-time progression after explicit user intent. */
     private void confirmResume(Sample sample) {
-        if(sample.capturedMs-sample.anchorMs>FRESH_MS){candidate=null;reason=Reason.FRESH_ANCHOR_REQUIRED;return;}
+        // A freshly queried PLAYING session may legitimately keep an old update
+        // anchor. Capture age is checked in observe(sample, now); comparing two
+        // current positions still guards progression, session, duration and freeze.
         if(candidate==null || !candidate.session.equals(sample.session) || !continuous(candidate,sample)
                 || candidate.durationMs!=sample.durationMs || frozen(candidate,sample)){
             candidate=sample;reason=Reason.CONFIRMATION_REQUIRED;return;

@@ -28,10 +28,11 @@ public final class AdSyncControllerTest {
     /** Duplicate callbacks cannot satisfy the two-observation confirmation. */
     @Test public void duplicateCaptureDoesNotConfirmResume(){AdSyncController c=enabled();c.suspend();c.requestResume();
         assertFalse(c.observe(sample(1000,100000)).allow);assertFalse(c.observe(sample(1000,100000)).allow);}
-    /** An old raw state extrapolated by the probe is insufficient for automatic resumption. */
-    @Test public void staleAnchorRequiresManualCalibration(){AdSyncController c=enabled();c.suspend();c.requestResume();
+    /** One fresh query with an old raw anchor remains insufficient; a second compatible current capture confirms. */
+    @Test public void oldAnchorStillRequiresTwoCurrentCaptures(){AdSyncController c=enabled();c.suspend();c.requestResume();
         assertFalse(c.observe(frame(SESSION,true,true,1000,6000,95000,100000,1f,1_000_000)).allow);
-        assertEquals(AdSyncController.Reason.FRESH_ANCHOR_REQUIRED,c.status().reason);}
+        assertEquals(AdSyncController.Reason.CONFIRMATION_REQUIRED,c.status().reason);
+        assertTrue(c.observe(frame(SESSION,true,true,1000,6250,95000,100250,1f,1_000_000)).allow);}
     /** Losing a session immediately stops authorization and does not auto-resume when it returns. */
     @Test public void missingSessionRemainsUncertain(){AdSyncController c=enabled();c.observe(sample(1000,100000));c.unavailable();
         assertFalse(c.observe(sample(1250,100250)).allow);assertEquals(AdSyncController.State.UNCERTAIN,c.status().state);}

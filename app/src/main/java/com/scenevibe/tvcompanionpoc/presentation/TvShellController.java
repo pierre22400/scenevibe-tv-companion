@@ -2,6 +2,7 @@ package com.scenevibe.tvcompanionpoc.presentation;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import com.scenevibe.tvcompanionpoc.TvCompanionDialogs;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Rect;
@@ -666,7 +667,7 @@ public final class TvShellController {
 
     /** Require a human confirmation before the trusted adapter may request an assignment. */
     private void confirmSelection(TvOffer offer) {
-        new AlertDialog.Builder(activity).setTitle("Ajouter à ma TV ?")
+        TvCompanionDialogs.builder(activity).setTitle("Ajouter à ma TV ?")
                 .setMessage("Cette sélection remplacera l’affectation courante de cette TV. Seul le cache sera préparé ; aucun commentaire ne démarrera.")
                 .setPositiveButton("Ajouter à ma TV", (dialog, which) -> {
                     try { source.select(offer.id); open(TvNavigation.Screen.PREPARE, offer.id); }
@@ -983,7 +984,7 @@ public final class TvShellController {
         remember();
         List<String> scenarios = source.scenarioNames();
         if (scenarios.isEmpty()) return;
-        new AlertDialog.Builder(activity).setTitle(s(R.string.tv_local_scenarios_title))
+        TvCompanionDialogs.builder(activity).setTitle(s(R.string.tv_local_scenarios_title))
                 .setSingleChoiceItems(scenarios.toArray(new String[0]), source.scenarioIndex(), (dialog, which) -> {
                     source.chooseScenario(which); dialog.dismiss(); render();
                 }).setNegativeButton(s(R.string.tv_close), (dialog, which) -> dialog.dismiss())

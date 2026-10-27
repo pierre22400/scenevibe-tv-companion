@@ -80,7 +80,7 @@ final class CloudMultimediaSession {
             @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot){observe(snapshot);}
             /** A disappearing session cannot leave either type of comment active. */
             @Override public void onUnavailable(){unavailable("SESSION_UNAVAILABLE");}
-        },null,250L);
+        },null,250L,BuildConfig.TVUX_CONTROL_PANEL?snapshot->MediaIdentityMatcher.matches(admission.identity,snapshot):null);
         try{probe.start();main.postDelayed(watchdog,250);}
         catch(RuntimeException refused){close();throw refused;}
     }
@@ -105,8 +105,9 @@ final class CloudMultimediaSession {
         if(adSync.enabled()) {
             lastAdSample=snapshot==null?null:new AdSyncController.Sample(snapshot.sessionKey,usable,
                     snapshot.state==PlaybackState.STATE_PLAYING,snapshot.positionMs,selectedPosition,
-                    snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,snapshot.durationMs);
-            AdSyncController.Decision decision=adSync.observe(lastAdSample);logAdSync(decision);
+                    snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,snapshot.durationMs,
+                    selected!=null && selected.eligible());
+            AdSyncController.Decision decision=adSync.observe(lastAdSample,SystemClock.elapsedRealtime());logAdSync(decision);
             if(!decision.allow){runtime.suspendComments();position=-1;publish("ADSYNC_"+decision.state.name());return;}
             selectedPosition=decision.contentMs;
         }
@@ -135,14 +136,27 @@ final class CloudMultimediaSession {
     /** Immediately stop only SceneVibe visuals/audio, retaining the admitted cache and calendar. */
     void suspendComments(){if(active && adSync.enabled()){adSync.suspend();runtime.suspendComments();logAdSync(adSync.status());}}
     /** Ask for fresh compatible observations; this never sends PLAY/SEEK to the streaming application. */
-    void resumeComments(){if(active && adSync.enabled()){adSync.requestResume();runtime.suspendComments();logAdSync(adSync.status());}}
+    void resumeComments(){if(active && adSync.enabled()){adSync.requestResume();runtime.suspendComments();position=-1;
+        probe.captureNow();logAdSync(adSync.status());}}
     /** Confirm a local film-time offset without writing the track or granting a new native permit. */
     boolean calibrateComments(long contentMs,boolean confirmedSeek){
-        if(!active || !current() || !adSync.calibrate(contentMs,SystemClock.elapsedRealtime()))return false;
-        if(confirmedSeek)runtime.confirmSeek();else runtime.suspendComments();logAdSync(adSync.status());return true;
+        return calibrateCommentsResult(contentMs,confirmedSeek)==AdSyncController.Calibration.APPLIED;
+    }
+    /** Refresh MEDIA behind the closed effect gate, then return the exact local calibration outcome. */
+    AdSyncController.Calibration calibrateCommentsResult(long contentMs,boolean confirmedSeek) {
+        if(!active || !current())return AdSyncController.Calibration.COMPANION_INACTIVE;
+        adSync.suspend();runtime.suspendComments();position=-1;
+        probe.captureNow();
+        AdSyncController.Calibration result=adSync.calibrateResult(contentMs,SystemClock.elapsedRealtime());
+        if(result==AdSyncController.Calibration.APPLIED && confirmedSeek)runtime.confirmSeek();
+        logAdSync(adSync.status());return result;
     }
     /** Expose only the bounded controller state for the existing Settings screen. */
-    String adSyncStatus(){AdSyncController.Decision d=adSync.status();return d.state+" · "+d.reason+" · publicité non observable";}
+    String adSyncStatus(){AdSyncController.Decision d=adSync.status();if(!adSync.enabled())return "AD-SYNC désactivé · comportement de référence";
+        if(!d.allow)return "Commentaires suspendus · "+d.reason+" · reprise/recalage à confirmer";
+        if(position<0)return "Confirmation MEDIA attendue · aucun commentaire relancé";
+        return (lastAdSample!=null && !lastAdSample.playing?"Film en pause · commentaires en attente":"Suivi MEDIA compatible")
+                +" · "+d.reason+" · publicité non observable";}
 
     /** Diagnose genuine native STARTED state, including a start deferred until seek completion. */
     private void auditAudio(){if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource))publish("AUDIO_RESOURCE_STARTED");}

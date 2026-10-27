@@ -42,8 +42,11 @@ final class CloudMultimediaControls {
         if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){
             activate=button("Activer TEXT + AUDIO depuis le cache",this::confirmActivation);
             stop=button("Arrêter les commentaires",()->{TvFirst009TextServiceOwner.requestStop(activity);refresh();});
-            textToggle=button("Commentaires écrits : ON",()->{textEnabled=!textEnabled;TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
-            audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!audioEnabled;TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});
+            textToggle=button("Commentaires écrits : ON",()->{textEnabled=!TvFirst009TextServiceOwner.multimediaTextEnabled();TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
+            audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!TvFirst009TextServiceOwner.multimediaAudioEnabled();TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});
+            if(BuildConfig.TVUX_CONTROL_PANEL)button("Ouvrir le panneau de commandes",()->{
+                result=TvFirst009TextServiceOwner.requestControlPanel(activity)?"Panneau demandé.":"Autorisation de superposition nécessaire.";refresh();
+            });
             if(BuildConfig.ADSYNC_PROTOTYPE) {
                 adToggle=button("AD-SYNC : OFF",()->{TvFirst009TextServiceOwner.setAdSyncEnabled(!TvFirst009TextServiceOwner.adSyncEnabled());refresh();});
                 adSuspend=button("Suspendre les commentaires",()->{TvFirst009TextServiceOwner.suspendMultimediaComments();refresh();});
@@ -60,6 +63,7 @@ final class CloudMultimediaControls {
 
     /** Reflect actual source readiness and failure; retaining a file never implies Cloud authorization. */
     void refresh() {
+        textEnabled=TvFirst009TextServiceOwner.multimediaTextEnabled();audioEnabled=TvFirst009TextServiceOwner.multimediaAudioEnabled();
         TvFirst008Source source=owner.get();boolean ready=source!=null && !source.busy();
         catalogue.setEnabled(ready && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED);
         restore.setEnabled(ready);
@@ -116,7 +120,7 @@ final class CloudMultimediaControls {
 
     /** Separate catalogue discovery from the user's confirmed private assignment and download. */
     private void confirm(String publication,String title) {
-        new AlertDialog.Builder(activity).setTitle("Télécharger cette track ?").setMessage(title
+        TvCompanionDialogs.builder(activity).setTitle("Télécharger cette track ?").setMessage(title
                 +"\nLes fichiers seront vérifiés et conservés dans le cache privé de SceneVibe.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Télécharger",(dialog,which)->download(publication)).show();
     }
@@ -149,7 +153,7 @@ final class CloudMultimediaControls {
     /** Require a fresh owner decision; UNKNOWN is never silently converted into editorial evidence. */
     private void confirmActivation(){
         if(preparedCache==null || activate==null || !activate.isEnabled())return;
-        new AlertDialog.Builder(activity).setTitle("Admission locale TEXT + AUDIO")
+        TvCompanionDialogs.builder(activity).setTitle("Admission locale TEXT + AUDIO")
                 .setMessage(BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
                     boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
@@ -164,11 +168,11 @@ final class CloudMultimediaControls {
         input.setInputType(android.text.InputType.TYPE_CLASS_DATETIME | android.text.InputType.TYPE_DATETIME_VARIATION_TIME);
         CheckBox replay=new CheckBox(activity);replay.setText("J'ai déplacé le film : autoriser la relecture");replay.setChecked(false);
         LinearLayout form=new LinearLayout(activity);form.setOrientation(LinearLayout.VERTICAL);form.addView(input);form.addView(replay);
-        new AlertDialog.Builder(activity).setTitle("Temps du film")
+        TvCompanionDialogs.builder(activity).setTitle("Temps du film")
                 .setMessage("Confirme que le film a repris, puis saisis son temps actuel. Seuls les commentaires SceneVibe seront recalés (correction limitée à une heure).")
                 .setView(form).setNegativeButton("Annuler",null).setPositiveButton("Confirmer le temps",(dialog,which)->{
                     try{long time=AdSyncController.parseFilmTime(input.getText().toString());
-                        result=TvFirst009TextServiceOwner.calibrateMultimediaComments(time,replay.isChecked())?"Recalage local confirmé.":"Recalage refusé : session compatible récente requise et correction limitée à une heure.";
+                        result=TvFirst009TextServiceOwner.calibrateMultimediaResult(time,replay.isChecked()).message;
                     }catch(IllegalArgumentException invalid){result="Saisis un temps valide mm:ss ou hh:mm:ss.";}
                     refresh();
                 }).show();
