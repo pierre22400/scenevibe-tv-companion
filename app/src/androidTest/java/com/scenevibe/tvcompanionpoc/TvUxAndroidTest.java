@@ -40,11 +40,14 @@ public final class TvUxAndroidTest {
     @Before public void before() throws Exception {
         assertTrue(BuildConfig.DEBUG && BuildConfig.TVUX_CONTROL_PANEL);assertTrue(BuildConfig.CLOUD_ORIGIN.isEmpty());
         target=InstrumentationRegistry.getInstrumentation().getTargetContext();remote=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        assertEquals(android.content.res.Configuration.UI_MODE_TYPE_TELEVISION,target.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_TYPE_MASK);
+        var display=target.getResources().getDisplayMetrics();assertTrue("TV qualification requires a landscape TV profile",display.widthPixels>display.heightPixels);
         remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
         foreground=(TvUxForegroundFixtureActivity)InstrumentationRegistry.getInstrumentation().startActivitySync(
                 new Intent(target,TvUxForegroundFixtureActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         .putExtra("panel",TvFirst009TextServiceOwner.panelIntent(target)));
         await(()->foreground.hasWindowFocus(),"Owned foreground did not acquire focus");
+        remote.pressDPadUp();remote.waitForIdle();focus("Action notification SceneVibe",false);
     }
     /** Close owned windows, stop only SceneVibe's test service and finish its foreground fixture. */
     @After public void after() throws Exception {
@@ -129,6 +132,7 @@ public final class TvUxAndroidTest {
     /** Read the actual public probe across modeled session loss/navigation and an open control overlay. */
     @Test public void currentPublicProbeResumesAcrossOwnedNavigationAndOverlay() throws Exception {
         remote.executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(target).flattenToString());
+        await(()->NotificationAccess.isGranted(target),"Existing MEDIA listener authorization not granted on the disposable emulator");
         MediaSession[] clock={null};MediaSessionProbe[] probe={null};AdSyncController controller=new AdSyncController();
         AtomicInteger captures=new AtomicInteger();
         try {
@@ -151,7 +155,9 @@ public final class TvUxAndroidTest {
                 },null,250,value->"tvux-owned-clock".equals(value.mediaId));
                 probe[0].start();
             });
-            await(()->captures.get()>0 && controller.status().allow,"Public probe did not query owned MEDIA");
+            await(()->captures.get()>0,"Public probe did not query owned MEDIA");
+            main(()->{controller.requestResume();probe[0].captureNow();});
+            await(()->controller.status().allow,"Two current public observations did not confirm startup");
             main(()->{controller.suspend();clock[0].setActive(false);probe[0].captureNow();});
             Activity application=InstrumentationRegistry.getInstrumentation().startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             try{main(()->{probe[0].captureNow();assertEquals(AdSyncController.Calibration.SESSION_ABSENT,

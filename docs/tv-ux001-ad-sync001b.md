@@ -93,7 +93,8 @@ Les tests purs reproduisent l’ancre ancienne avec captures actuelles, la captu
 périmée, l’absence, les refus précis et la récupération. Le runtime TEXT/AUDIO
 partagé conserve ses tests de suspension, consommation et événements futurs.
 Robolectric teste les vrais widgets, Back/×, erreurs de fenêtre et perte de droit.
-Le banc natif TV utilise la vraie WindowManager, l’OverlayService réel pour
+Le banc natif TV exige un profil paysage tv_1080p et UI_MODE_TYPE_TELEVISION,
+puis utilise la vraie WindowManager, l’OverlayService réel pour
 l’invocation et sa conservation, une Activity de premier plan de test et un port
 d’actions explicite pour les commandes actives. Ce dernier n’est pas une admission
 Cloud fabriquée ; le test natif ne prétend pas faire jouer une track Cloud admise

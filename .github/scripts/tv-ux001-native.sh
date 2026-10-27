@@ -6,6 +6,9 @@ mkdir -p tv-ux001-native
 scenevibe_serial="$(adb get-serialno)"
 [[ "$scenevibe_serial" == emulator-* ]]
 test "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = 1
+adb shell wm size > tv-ux001-native/environment.txt
+adb shell wm density >> tv-ux001-native/environment.txt
+adb shell getprop ro.build.characteristics >> tv-ux001-native/environment.txt
 adb install -r app/build/outputs/apk/tvux001/app-tvux001.apk
 adb install -r app/build/outputs/apk/androidTest/tvux001/app-tvux001-androidTest.apk
 adb shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW allow
@@ -16,7 +19,7 @@ for image in panel keypad; do
     adb exec-out run-as com.scenevibe.tvcompanionpoc cat "files/tvux-$image.png" > "tv-ux001-native/$image.png"
   fi
 done
-adb logcat -d -v brief -s SceneVibeAdSync:I AndroidRuntime:E > tv-ux001-native/local-diagnostics.log
+adb logcat -d -v brief -s SceneVibeAdSync:I SceneVibeMedia:I AndroidRuntime:E > tv-ux001-native/local-diagnostics.log
 grep -q '^OK (10 tests)' tv-ux001-native/instrumentation.log
 grep -q '^INSTRUMENTATION_CODE: -1$' tv-ux001-native/instrumentation.log
 printf 'OWN_ANDROID_TV_FIXTURE\nREAL_WINDOW_AND_NOTIFICATION_CAPABILITY\nNO_CLOUD_OR_PRIME\nSONY_REMOTE_NOTIFICATION_ENTRY_UNPROVEN\n' > tv-ux001-native/scope.txt
