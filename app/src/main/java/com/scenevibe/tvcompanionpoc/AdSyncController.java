@@ -6,12 +6,15 @@ package com.scenevibe.tvcompanionpoc;
  * here. A compatible continuous session is not proof of absence of advertising.
  * Ambiguous discontinuities close the gate until the user confirms a fresh
  * position; manual calibration adds an offset only to the selected observation.
+ * The opt-in v22 policy instead automatically confirms recovery from two valid
+ * current observations. Manual holds remain explicit; uncertainty is not an ad.
  */
 final class AdSyncController {
     enum State { DISABLED, SYNCHRONIZED, SUSPENDED, UNCERTAIN, RESYNCHRONIZING, MANUAL }
     enum Reason { OFF, CONTINUITY_ONLY, USER_SUSPENDED, SESSION_UNAVAILABLE,
         IDENTITY_OR_CLOCK_INVALID, SESSION_CHANGED, DURATION_CHANGED, CLOCK_JUMP,
-        FRESH_POSITION_FROZEN, CONFIRMATION_REQUIRED, FRESH_ANCHOR_REQUIRED, MANUAL_POSITION, OBSERVATION_STALE }
+        FRESH_POSITION_FROZEN, CONFIRMATION_REQUIRED, FRESH_ANCHOR_REQUIRED, MANUAL_POSITION, OBSERVATION_STALE,
+        AUTO_RECOVERED, MEDIA_IDENTITY_INVALID, MEDIA_CLOCK_INVALID }
     /** Precise, payload-free outcomes shared by the application and the remote control panel. */
     enum Calibration {
         APPLIED("Recalage accepté ; prochaine observation MEDIA attendue."),
@@ -70,12 +73,21 @@ final class AdSyncController {
     private Sample latest,accepted,candidate;
     private Object boundSession;
     private long boundDuration=-1;
+    private final boolean automaticRecovery;
+    private boolean manualHold;
 
     /** Start disabled so the qualified v17 path remains the default. */
-    AdSyncController() {}
+    AdSyncController() {this(false);}
+    /** Select v22's non-destructive policy without rewriting historical qualification profiles. */
+    AdSyncController(boolean automaticRecovery) {this.automaticRecovery=automaticRecovery;}
 
     /** Reset process-local inference on opt-in changes; no preference can activate playback. */
     void setEnabled(boolean enabled) {
+        if(automaticRecovery){
+            this.enabled=enabled;held=manualHold;resumeRequested=false;candidate=null;accepted=null;boundSession=null;boundDuration=-1;
+            state=manualHold?State.SUSPENDED:enabled?(offsetMs==0?State.SYNCHRONIZED:State.MANUAL):State.DISABLED;
+            reason=manualHold?Reason.USER_SUSPENDED:enabled?Reason.CONTINUITY_ONLY:Reason.OFF;return;
+        }
         this.enabled=enabled;held=false;resumeRequested=false;candidate=null;accepted=null;
         boundSession=null;boundDuration=-1;offsetMs=0;
         state=enabled?State.SYNCHRONIZED:State.DISABLED;
@@ -86,14 +98,14 @@ final class AdSyncController {
     boolean enabled(){return enabled;}
 
     /** Stop effects immediately, retaining the scheduler's consumed identities and future events. */
-    void suspend(){if(enabled)hold(State.SUSPENDED,Reason.USER_SUSPENDED);}
+    void suspend(){if(enabled || automaticRecovery){manualHold=true;hold(State.SUSPENDED,Reason.USER_SUSPENDED);}}
 
     /** Request confirmation from two fresh compatible observations, never from a delay alone. */
-    void requestResume(){if(enabled){held=true;resumeRequested=true;candidate=null;
+    void requestResume(){if(enabled || automaticRecovery){held=true;resumeRequested=true;candidate=null;
         state=State.RESYNCHRONIZING;reason=Reason.CONFIRMATION_REQUIRED;}}
 
     /** Loss of a session is uncertainty, never evidence that an advertisement started or ended. */
-    void unavailable(){latest=null;if(enabled && state!=State.SUSPENDED)hold(State.UNCERTAIN,Reason.SESSION_UNAVAILABLE);}
+    void unavailable(){if(automaticRecovery){observeRecovering(null,0);return;}latest=null;if(enabled && state!=State.SUSPENDED)hold(State.UNCERTAIN,Reason.SESSION_UNAVAILABLE);}
 
     /** Consume a real captured observation, preserving the historical selected position when disabled. */
     Decision observe(Sample sample) {
@@ -102,6 +114,7 @@ final class AdSyncController {
 
     /** Check capture freshness against the caller's current monotonic time, not the age of PlaybackState's anchor. */
     Decision observe(Sample sample,long nowMs) {
+        if(automaticRecovery)return observeRecovering(sample,nowMs);
         latest=sample;
         if(enabled && sample!=null && (nowMs<sample.capturedMs || nowMs-sample.capturedMs>FRESH_MS)) {
             hold(State.UNCERTAIN,Reason.OBSERVATION_STALE);return decision(false,-1);
@@ -126,6 +139,41 @@ final class AdSyncController {
         return decision(!held,position);
     }
 
+    /** Keep invalid MEDIA closed, but never latch an unknown advertising suspicion permanently. */
+    private Decision observeRecovering(Sample sample,long nowMs) {
+        latest=sample;
+        Reason invalid=sample==null || sample.session==null?Reason.SESSION_UNAVAILABLE:
+                !sample.identityCompatible?Reason.MEDIA_IDENTITY_INVALID:
+                !sample.valid()?Reason.MEDIA_CLOCK_INVALID:
+                nowMs<sample.capturedMs || nowMs-sample.capturedMs>FRESH_MS?Reason.OBSERVATION_STALE:null;
+        if(invalid!=null){
+            candidate=null;
+            if(manualHold && !resumeRequested){state=State.SUSPENDED;reason=Reason.USER_SUSPENDED;held=true;}
+            else {held=true;state=State.UNCERTAIN;reason=invalid;}
+            return decision(false,-1);
+        }
+        if(manualHold && !resumeRequested){state=State.SUSPENDED;reason=Reason.USER_SUSPENDED;return decision(false,-1);}
+        if(!enabled && !manualHold){held=false;state=State.DISABLED;reason=Reason.OFF;accept(sample);return decision(true,sample.selectedMs);}
+        if(held){
+            boolean explicit=resumeRequested;
+            confirmResume(sample);
+            if(!held){manualHold=false;if(!enabled){state=State.DISABLED;reason=Reason.OFF;}
+                else if(!explicit)reason=Reason.AUTO_RECOVERED;}
+            return decision(!held,translated(sample));
+        }
+        Reason discontinuity=boundSession!=null && !boundSession.equals(sample.session)?Reason.SESSION_CHANGED:
+                accepted!=null && !continuous(accepted,sample)?Reason.CLOCK_JUMP:
+                accepted!=null && frozen(accepted,sample)?Reason.FRESH_POSITION_FROZEN:null;
+        // Duration alone is not an ad signal. The independent native identity
+        // matcher has already established compatibility with this exact track.
+        if(discontinuity!=null){hold(State.UNCERTAIN,discontinuity);candidate=sample;return decision(false,-1);}
+        long position=translated(sample);
+        if(position<0){hold(State.UNCERTAIN,Reason.MEDIA_CLOCK_INVALID);return decision(false,-1);}
+        state=offsetMs==0?State.SYNCHRONIZED:State.MANUAL;
+        if(reason!=Reason.AUTO_RECOVERED)reason=offsetMs==0?Reason.CONTINUITY_ONLY:Reason.MANUAL_POSITION;
+        accept(sample);return decision(true,position);
+    }
+
     /** Confirm a user-supplied film time against a recent, still eligible passive session capture. */
     boolean calibrate(long contentMs,long nowMs) {return calibrateResult(contentMs,nowMs)==Calibration.APPLIED;}
 
@@ -139,7 +187,7 @@ final class AdSyncController {
         if(contentMs<0 || contentMs>43_200_000L)return Calibration.FORMAT_INVALID;
         long offset=contentMs-latest.selectedMs;
         if(offset < -MAX_OFFSET_MS || offset > MAX_OFFSET_MS)return Calibration.OFFSET_LIMIT;
-        offsetMs=offset;held=false;resumeRequested=false;candidate=null;
+        offsetMs=offset;held=false;manualHold=false;resumeRequested=false;candidate=null;
         state=State.MANUAL;reason=Reason.MANUAL_POSITION;accept(latest);return Calibration.APPLIED;
     }
 
@@ -155,7 +203,7 @@ final class AdSyncController {
     }
 
     /** Present the current gate without claiming advertisement observability. */
-    Decision status(){return decision(enabled && !held,latest==null?-1:translated(latest));}
+    Decision status(){return decision((automaticRecovery?latest!=null && latest.valid():enabled) && !held,latest==null?-1:translated(latest));}
 
     /** Require two distinct fresh captures of the same compatible content-time progression after explicit user intent. */
     private void confirmResume(Sample sample) {
@@ -163,7 +211,7 @@ final class AdSyncController {
         // anchor. Capture age is checked in observe(sample, now); comparing two
         // current positions still guards progression, session, duration and freeze.
         if(candidate==null || !candidate.session.equals(sample.session) || !continuous(candidate,sample)
-                || candidate.durationMs!=sample.durationMs || frozen(candidate,sample)){
+                || !automaticRecovery && candidate.durationMs!=sample.durationMs || frozen(candidate,sample)){
             candidate=sample;reason=Reason.CONFIRMATION_REQUIRED;return;
         }
         long elapsed=sample.capturedMs-candidate.capturedMs;

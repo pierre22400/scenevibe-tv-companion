@@ -42,7 +42,7 @@ public final class DeveloperOverlayAndroidTest {
         assertEquals(android.content.res.Configuration.UI_MODE_TYPE_TELEVISION,target.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_TYPE_MASK);
         var display=target.getResources().getDisplayMetrics();assertTrue(display.widthPixels>display.heightPixels);
         remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
-        main(()->{TvFirst009TextServiceOwner.setDeveloperMode(target,false);TvFirst009TextServiceOwner.setAdSyncEnabled(false);DeveloperViewerFixtureActivity.current=null;});
+        main(()->{TvFirst009TextServiceOwner.setDeveloperMode(target,false);TvFirst009TextServiceOwner.setAdSyncEnabled(false);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);DeveloperViewerFixtureActivity.current=null;});
         application=(MainActivity)InstrumentationRegistry.getInstrumentation().startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
         await(()->application.hasWindowFocus(),"Normal app did not acquire input");
     }
@@ -220,6 +220,40 @@ public final class DeveloperOverlayAndroidTest {
             for(int key:new int[]{KeyEvent.KEYCODE_MEDIA_PLAY,KeyEvent.KEYCODE_MEDIA_PAUSE,KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,KeyEvent.KEYCODE_MEDIA_REWIND,KeyEvent.KEYCODE_MEDIA_FAST_FORWARD})remote.executeShellCommand("input keyevent "+key);
             remote.waitForIdle();assertEquals(0,callbacks.get());assertEquals(0,viewer.transportKeys);assertEquals(0,viewer.backCount);assertTrue(direct.isOpen());
         }finally{main(()->{if(clock[0]!=null)clock[0].release();});}
+    }
+    /** Actual Android routing disproves a passive-window 000 shortcut; no counter is installed in the product. */
+    @Test public void numericZerosBelongToTheViewerNotThePassivePanel() throws Exception {
+        playingViewerBehindBadge();int before=TvFirst009TextServiceOwner.developerReceivedKeys();
+        long start=SystemClock.elapsedRealtime();for(int i=0;i<3;i++)remote.pressKeyCode(KeyEvent.KEYCODE_0);
+        long elapsed=SystemClock.elapsedRealtime()-start;await(()->viewer.numericZeros==3,"Viewer did not receive actual KEYCODE_0 events");
+        remote.pressKeyCode(KeyEvent.KEYCODE_0);Thread.sleep(1100);remote.pressKeyCode(KeyEvent.KEYCODE_0);Thread.sleep(1100);remote.pressKeyCode(KeyEvent.KEYCODE_0);
+        for(int i=0;i<3;i++)remote.pressKeyCode(KeyEvent.KEYCODE_NUMPAD_0);
+        await(()->viewer.numericZeros==6 && viewer.numpadZeros==3,"Numeric variants not observed in OWN receiver");
+        assertEquals(before,TvFirst009TextServiceOwner.developerReceivedKeys());assertFalse(TvFirst009TextServiceOwner.developerHasFocus());assertTrue(viewer.simulatedPlaying);
+        System.out.println("NUMERIC_ROUTING_PROOF fastBatchMs="+elapsed+" viewerKeycode0=6 viewerNumpad0=3 passivePanelEvents=0; SONY_HARDWARE_CODES_UNTESTED");
+    }
+    /** An immutable notification capability requests focus without launching MainActivity; Sony menu reachability remains unproved. */
+    @Test public void notificationRequestsAndConfirmsActualWindowFocus() throws Exception {
+        prepare();main(()->application.startActivity(new Intent(application,DeveloperViewerFixtureActivity.class)));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Owned viewer missing");viewer=DeveloperViewerFixtureActivity.current;
+        main(()->{try{TvFirst009TextServiceOwner.panelIntent(target).send();}catch(Exception refused){throw new IllegalStateException(refused);}});
+        await(()->"INTERACTIVE_CONFIRMED".equals(TvFirst009TextServiceOwner.developerFocusStatus()),"Visible/requested window was not confirmed by Android");
+        assertFalse(application.hasWindowFocus());assertTrue(viewer.resumed);remote.pressBack();await(()->viewer.hasWindowFocus() && "CLOSED".equals(TvFirst009TextServiceOwner.developerFocusStatus()),"Focus was not released");assertEquals(0,viewer.backCount);
+    }
+    /** Real TCP commands use the same service state while a focus-sensitive OWN viewer keeps playing. */
+    @Test public void pairedLocalCommandsDoNotStealTheViewersFocus() throws Exception {
+        playingViewerBehindBadge();main(()->assertTrue(TvFirst009TextServiceOwner.setLocalControlEnabled(true)));
+        String info=TvFirst009TextServiceOwner.localControlInfo();var address=java.util.regex.Pattern.compile("http://[^:]+:([0-9]+)").matcher(info);assertTrue(address.find());int port=Integer.parseInt(address.group(1));
+        assertEquals(403,LocalControlTestClient.send(port,"/status",null,new org.json.JSONObject(),null).status);
+        String token=LocalControlTestClient.send(port,"/pair",null,new org.json.JSONObject().put("code",LocalControlTestClient.code(info)),null).json().getString("token");
+        var reply=LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",1).put("command","text").put("value","false"),null);assertEquals(200,reply.status);assertFalse(reply.json().getBoolean("text"));
+        assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());
+        assertEquals(409,LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",1).put("command","text").put("value","false"),null).status);
+        assertEquals(200,LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",2).put("command","panel").put("value","show"),null).status);
+        assertTrue(viewer.hasWindowFocus());assertTrue(viewer.simulatedPlaying);assertEquals(0,viewer.focusLosses);
+        assertEquals(200,LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",3).put("command","panel").put("value","close"),null).status);
+        assertTrue(viewer.hasWindowFocus());assertEquals(0,viewer.backCount);assertEquals(0,viewer.transportKeys);assertTrue(serviceRunning());assertFalse(TvFirst009TextServiceOwner.multimediaActive());
+        main(()->{TvFirst009TextServiceOwner.setLocalControlEnabled(false);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);});assertFalse(TvFirst009TextServiceOwner.localControlEnabled());
     }
     /** Active command recorder has no MediaSession, provider identity or native playback authority. */
     private static final class Actions implements CompanionControlPanel.Commands {

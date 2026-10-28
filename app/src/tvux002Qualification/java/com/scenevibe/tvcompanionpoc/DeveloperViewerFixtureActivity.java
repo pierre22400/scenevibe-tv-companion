@@ -19,6 +19,7 @@ public final class DeveloperViewerFixtureActivity extends Activity {
     static volatile DeveloperViewerFixtureActivity current;
     volatile boolean resumed;
     volatile int backCount,remoteKeys,transportKeys;
+    volatile int numericZeros,numpadZeros;
     volatile boolean simulatedPlaying,episodeDetails;
     volatile int focusLosses,lifecyclePauses;
     private boolean focusSensitive;
@@ -49,6 +50,8 @@ public final class DeveloperViewerFixtureActivity extends Activity {
     @Override public void onBackPressed(){backCount++;}
     /** Verify returned remote input and absence of manufactured transport keys. */
     @Override public boolean onKeyDown(int key,KeyEvent event) {
+        if(key==KeyEvent.KEYCODE_0)numericZeros++;
+        if(key==KeyEvent.KEYCODE_NUMPAD_0)numpadZeros++;
         if(key==KeyEvent.KEYCODE_DPAD_DOWN || key==KeyEvent.KEYCODE_DPAD_UP)remoteKeys++;
         if(key==KeyEvent.KEYCODE_MEDIA_PLAY || key==KeyEvent.KEYCODE_MEDIA_PAUSE || key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
                 || key==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD || key==KeyEvent.KEYCODE_MEDIA_REWIND)transportKeys++;

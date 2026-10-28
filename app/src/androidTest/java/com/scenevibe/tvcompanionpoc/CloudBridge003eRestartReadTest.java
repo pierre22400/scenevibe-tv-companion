@@ -24,6 +24,7 @@ public final class CloudBridge003eRestartReadTest {
     @Test public void restoreAfterTheRealCompanionProcessWasStopped() throws Exception {
         var context=InstrumentationRegistry.getInstrumentation().getTargetContext();File record=new File(context.getFilesDir(),"cloud003e-restart.json");
         JSONObject data=new JSONObject(new String(Files.readAllBytes(record.toPath()),StandardCharsets.UTF_8));
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE){TvFirst009TextServiceOwner.initMultimediaPreferences(context);assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaActive());}
         assertNotEquals("A process restart is mandatory",data.getInt("seedPid"),Process.myPid());
         assertTrue(data.getString("root").matches("cloud003e-[a-f0-9-]{36}"));
         File root=new File(context.getFilesDir(),data.getString("root"));

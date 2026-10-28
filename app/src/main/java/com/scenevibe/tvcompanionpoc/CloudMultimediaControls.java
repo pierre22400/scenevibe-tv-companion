@@ -30,6 +30,7 @@ final class CloudMultimediaControls {
     private boolean textEnabled=true,audioEnabled=true;
     private Button adToggle,adSuspend,adResume,adCalibrate;
     private TextView adStatus;
+    private long restoredEpoch=Long.MIN_VALUE;
 
     /** Attach only view controls; constructing the screen never performs network I/O or starts playback. */
     CloudMultimediaControls(Activity activity,Supplier<TvFirst008Source> owner) {
@@ -67,6 +68,10 @@ final class CloudMultimediaControls {
     void refresh() {
         textEnabled=TvFirst009TextServiceOwner.multimediaTextEnabled();audioEnabled=TvFirst009TextServiceOwner.multimediaAudioEnabled();
         TvFirst008Source source=owner.get();boolean ready=source!=null && !source.busy();
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && ready && source.cacheViewEpoch()>=0 && restoredEpoch!=source.cacheViewEpoch()){
+            restoredEpoch=source.cacheViewEpoch();preparedCache=null;result="Vérification du cache local existant…";
+            source.restoreMultimedia(this::prepared);ready=false;
+        }
         catalogue.setEnabled(ready && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED);
         restore.setEnabled(ready);
         for(int i=0;i<items.getChildCount();i++)items.getChildAt(i).setEnabled(catalogue.isEnabled());
@@ -74,6 +79,7 @@ final class CloudMultimediaControls {
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
                 +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"\nAdmission locale explicite requise. "+TvFirst009TextServiceOwner.status().code:
                     "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)status.append("\n"+(TvFirst009TextServiceOwner.multimediaActive()?"Service actif · activation conservée.":"Service arrêté · nouvelle confirmation requise, sans retéléchargement du cache valide."));
         if(activate!=null){
             activate.setEnabled(ready && preparedCache!=null && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED
                     && !TvFirst009TextServiceOwner.controlBusy());
@@ -82,8 +88,8 @@ final class CloudMultimediaControls {
             if(audioToggle!=null)audioToggle.setText("Commentaires audio : "+(audioEnabled?"ON":"OFF"));
             if(adToggle!=null) {
                 boolean enabled=TvFirst009TextServiceOwner.adSyncEnabled(),running=TvFirst009TextServiceOwner.multimediaActive();
-                adToggle.setText("AD-SYNC : "+(enabled?"ON · prudent":"OFF · comportement v17"));
-                adSuspend.setEnabled(enabled && running);adResume.setEnabled(enabled && running);adCalibrate.setEnabled(enabled && running);
+                adToggle.setText("AD-SYNC : "+(enabled?"ON · consultatif":"OFF · comportement v17"));
+                adSuspend.setEnabled((enabled || BuildConfig.ADSYNC_NONDESTRUCTIVE) && running);adResume.setEnabled((enabled || BuildConfig.ADSYNC_NONDESTRUCTIVE) && running);adCalibrate.setEnabled((enabled || BuildConfig.ADSYNC_NONDESTRUCTIVE) && running);
                 adStatus.setText("Aucune détection publicitaire Prime garantie. Suspendre manuellement pendant une publicité.\n"
                         +TvFirst009TextServiceOwner.adSyncStatus());
             }
@@ -148,6 +154,7 @@ final class CloudMultimediaControls {
             int audio=prepared.track.audio.size(),total=prepared.track.calendar.events().size();
             result="Cache privé vérifié : "+(total-audio)+" TEXT + "+audio+" AUDIO · "+total+" événements."
                     +"\nRelu après commit ; aucune restitution automatique.";
+            if(BuildConfig.ADSYNC_NONDESTRUCTIVE)android.util.Log.i("SceneVibeCache","event=CACHE_RESTORED text="+(total-audio)+" audio="+audio+" events="+total);
         }
         refresh();
     }

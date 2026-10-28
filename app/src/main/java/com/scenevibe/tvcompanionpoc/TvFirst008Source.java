@@ -75,6 +75,8 @@ public final class TvFirst008Source implements TvAccountSource {
     @Override public String verification() { return verification; }
     /** Distinguish active work from a confirmed association. */
     @Override public boolean busy() { return busy; }
+    /** Read-only UI lifecycle marker for one inert cache restoration per Activity epoch. */
+    long cacheViewEpoch(){synchronized(lock){return active?epoch:-1;}}
     /** Keep pagination explicit rather than an unbounded catalogue download. */
     @Override public boolean hasMore() { return next != null; }
     /** Retain a callback only for the Activity which owns this source. */
@@ -563,7 +565,7 @@ public final class TvFirst008Source implements TvAccountSource {
                     || accountStage()!=AccountStage.ASSOCIATED)return null;
             try {
                 MultimediaReference ref=new MultimediaReference(lock,state,prepared,consentDeadline,
-                        ()->accountStage()==AccountStage.ASSOCIATED);
+                        ()->BuildConfig.ADSYNC_NONDESTRUCTIVE || accountStage()==AccountStage.ASSOCIATED);
                 return ref.current(android.os.SystemClock.elapsedRealtime())?ref:null;
             }catch(RuntimeException refused){return null;}
         }
@@ -589,19 +591,28 @@ public final class TvFirst008Source implements TvAccountSource {
         /** Serialize a local effect with the source's exact metadata mutation boundary. */
         boolean whileCurrent(long now,Runnable action) {
             synchronized(monitor) {
+                if(!invalidReason(now).isEmpty())return false;
+                action.run();return true;
+            }
+        }
+        /** Separate real expiry/revocation from a transient Activity CONNECTING presentation state. */
+        String invalidReason(long now) {
+            synchronized(monitor){
                 try {
+                    if(now<issuedAt)return "CONSENT_CLOCK_INVALID";
+                    if(now>=expiresAt)return "CONSENT_EXPIRED";
+                    if(authorityEpoch!=multimediaAuthorityEpoch)return "AUTHORITY_SUPERSEDED";
+                    if(!associated.getAsBoolean())return "UI_ASSOCIATION_UNAVAILABLE";
                     MultimediaCloudClient.Binding binding=prepared.binding;
                     JSONObject identity=metadata.read("identity");
                     JSONObject observed=metadata.read("multimediaAuthorityRevision");
-                    boolean valid=authorityEpoch==multimediaAuthorityEpoch && now>=issuedAt && now<expiresAt && associated.getAsBoolean() && identity!=null
-                            && observed!=null && binding.device.equals(observed.optString("deviceId")) && binding.generation.equals(observed.optString("generation"))
-                            && binding.revision==observed.optLong("revision",-1)
-                            && binding.device.equals(identity.optString("deviceId")) && binding.generation.equals(identity.optString("generation"))
-                            && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaBinding")))
-                            && binding.same(new MultimediaCloudClient.Binding(metadata.read("multimediaReceipt")));
-                    if(!valid)return false;
-                }catch(Exception refused){return false;}
-                action.run();return true;
+                    if(identity==null || !binding.device.equals(identity.optString("deviceId")) || !binding.generation.equals(identity.optString("generation")))return "IDENTITY_CHANGED";
+                    if(observed==null || !binding.device.equals(observed.optString("deviceId")) || !binding.generation.equals(observed.optString("generation")) || binding.revision!=observed.optLong("revision",-1))return "REVISION_CHANGED";
+                    JSONObject cachedBinding=metadata.read("multimediaBinding"),receipt=metadata.read("multimediaReceipt");
+                    if(cachedBinding==null || !binding.same(new MultimediaCloudClient.Binding(cachedBinding)))return "CACHE_BINDING_CHANGED";
+                    if(receipt==null || !binding.same(new MultimediaCloudClient.Binding(receipt)))return "CACHE_RECEIPT_INVALID";
+                    return "";
+                }catch(Exception refused){return "CACHE_METADATA_UNAVAILABLE";}
             }
         }
     }

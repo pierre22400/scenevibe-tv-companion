@@ -91,6 +91,7 @@ final class CompanionControlPanel {
     private final BooleanSupplier permission;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable refresh=this::tick;
+    private final DeveloperFocusState focusState=new DeveloperFocusState();
     private PanelRoot root;
     private LinearLayout page;
     private WindowManager.LayoutParams params;
@@ -100,6 +101,7 @@ final class CompanionControlPanel {
     private Runnable closed=()->{},parked=()->{},embeddedDismiss=()->{};
     private long lastTimingUpdate=-1;
     private boolean calibration,closing;
+    private int receivedKeys;
     private String digits="";
     private CheckBox replay;
     private String feedback="Aucun signal publicitaire Prime garanti.";
@@ -150,7 +152,7 @@ final class CompanionControlPanel {
     /** Attach once, using an explicit input policy rather than a delayed global shortcut. */
     private boolean attach(boolean prepared) {
         if(!BuildConfig.TVUX_CONTROL_PANEL || !permission.getAsBoolean())return false;
-        passive=prepared;monitoring=false;root=new PanelRoot(context);
+        passive=prepared;monitoring=false;root=new PanelRoot(context);if(prepared)focusState.passive();else focusState.request();
         root.setBackground(background(Color.WHITE,Color.BLACK,2));root.setPadding(dp(12),dp(8),dp(12),dp(8));
         params=new WindowManager.LayoutParams(-2,-2,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL|WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,PixelFormat.TRANSLUCENT);
@@ -169,7 +171,7 @@ final class CompanionControlPanel {
     /** Expand the same window; normal presentation keeps both no-input flags and never requests focus. */
     boolean presentPrepared(boolean interactive) {
         if(root==null || !passive || !permission.getAsBoolean())return false;
-        passive=!interactive;monitoring=!interactive;root.hadFocus=false;root.held.clear();configureSize(false);showMain();
+        passive=!interactive;monitoring=!interactive;if(interactive)focusState.request();else focusState.passive();root.hadFocus=false;root.held.clear();configureSize(false);showMain();
         try{host.update(root,params);trace(interactive?"EXPLICIT_FOCUS_REQUEST":"PASSIVE_EXPANDED",-1,-1);
             if(interactive)root.post(()->{if(root!=null && !passive)text.requestFocus();});return true;}
         catch(RuntimeException refused){close();return false;}
@@ -178,7 +180,7 @@ final class CompanionControlPanel {
     /** Release focus while retaining the same window and every business switch. */
     void standby() {
         if(root==null || embedded || (passive && !monitoring))return;
-        passive=true;monitoring=false;root.held.clear();configureSize(true);root.clearFocus();showPrepared();
+        passive=true;monitoring=false;focusState.passive();root.held.clear();configureSize(true);root.clearFocus();showPrepared();
         try{host.update(root,params);trace("PARKED",-1,-1);parked.run();}catch(RuntimeException refused){close();}
     }
 
@@ -212,6 +214,10 @@ final class CompanionControlPanel {
     boolean closeChild(){if(root!=null && calibration){showMain();return true;}return false;}
     /** Observe actual input ownership rather than equating a requested window with gained focus. */
     boolean hasInputFocus(){return root!=null && !passive && root.hasWindowFocus();}
+    /** Distinguish the actual WM callback from a merely requested focusable flag. */
+    DeveloperFocusState.State focusState(){return focusState.state();}
+    /** Count only events actually delivered to this root, never a supposed global shortcut. */
+    int receivedKeys(){return receivedKeys;}
     /** Read an opaque public WindowId for owned lifecycle qualification; it is never logged or serialized. */
     Object windowIdentity(){return root==null || embedded?null:root.getWindowId();}
     /** Report passive preparation independently of developer mode and multimedia lifetime. */
@@ -225,13 +231,20 @@ final class CompanionControlPanel {
     void close() {
         if(root==null || closing)return;
         closing=true;handler.removeCallbacks(refresh);
-        PanelRoot retiring=root;trace("CLOSING",-1,-1);retiring.held.clear();root=null;
+        PanelRoot retiring=root;if(!embedded)focusState.releasing();trace("CLOSING",-1,-1);retiring.held.clear();root=null;
         if(embedded){root=retiring;retiring.clearFocus();closing=false;embeddedDismiss.run();return;}
         retiring.clearFocus();retiring.setVisibility(View.GONE);
         try{host.releaseFocus(retiring,params);}catch(RuntimeException refused){/* Removal remains mandatory. */}finally{
             try{host.remove(retiring);}catch(RuntimeException alreadyDetached){/* Focus was released first. */}
-            closing=false;closed.run();
+            closing=false;confirmRelease(retiring,0);closed.run();
         }
+    }
+    /** Wait only for public detachment/focus evidence; a removal request alone is not CLOSED. */
+    private void confirmRelease(PanelRoot retiring,int attempt){
+        if(root!=null)return;
+        if(retiring.getWindowToken()==null || !retiring.hasWindowFocus()){focusState.released();trace("FOCUS_RELEASED",-1,-1);}
+        else if(attempt<10)handler.postDelayed(()->confirmRelease(retiring,attempt+1),100);
+        else trace("FOCUS_RELEASE_PENDING",-1,-1);
     }
 
     /** Report window ownership, independently of the commentary lifetime. */
@@ -318,10 +331,10 @@ final class CompanionControlPanel {
     private void update() {
         if(root==null || calibration || (passive && !monitoring))return;
         Snapshot state=commands.snapshot();
-        boolean available=state.active && !passive;
-        presentSwitch(text,"Commentaires écrits",state.text,available);
-        presentSwitch(audio,"Commentaires audio",state.audio,available);
-        if(adToggle!=null)presentSwitch(adToggle,"AD-SYNC",state.adSync,state.adSyncSupported && !passive);
+        boolean available=state.active && (BuildConfig.ADSYNC_NONDESTRUCTIVE || !passive);
+        presentSwitch(text,"Commentaires écrits",state.text,BuildConfig.ADSYNC_NONDESTRUCTIVE || available);
+        presentSwitch(audio,"Commentaires audio",state.audio,BuildConfig.ADSYNC_NONDESTRUCTIVE || available);
+        if(adToggle!=null)presentSwitch(adToggle,"AD-SYNC",state.adSync,state.adSyncSupported && (BuildConfig.ADSYNC_NONDESTRUCTIVE || !passive));
         if(timing!=null && (lastTimingUpdate<0 || android.os.SystemClock.elapsedRealtime()-lastTimingUpdate>=1000)){
             lastTimingUpdate=android.os.SystemClock.elapsedRealtime();setTextIfChanged(timing,state.timing);
         }
@@ -401,6 +414,7 @@ final class CompanionControlPanel {
         PanelRoot(Context context){super(context);}
         /** Consume both halves of Back so its release cannot navigate the application underneath. */
         @Override public boolean dispatchKeyEvent(KeyEvent event) {
+            receivedKeys++;
             if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
                 int key=event.getKeyCode(),action=event.getAction();trace("KEY_RECEIVED",key,action);
                 if(passive && !embedded){trace("PASSIVE_KEY_REFUSED",key,action);return true;}
@@ -424,6 +438,7 @@ final class CompanionControlPanel {
         /** Unexpected system-window focus loss closes the panel rather than keeping an invisible input owner. */
         @Override public void onWindowFocusChanged(boolean focused) {
             super.onWindowFocusChanged(focused);
+            if(focused){focusState.gained();trace("FOCUS_GRANTED",-1,-1);}else focusState.lost();
             trace(focused?"WINDOW_FOCUS_GAINED":"WINDOW_FOCUS_LOST",-1,-1);if(!focused)held.clear();
             if(embedded)return;
             if(focused)hadFocus=true;else if(hadFocus && root==this && !passive){

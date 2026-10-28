@@ -45,6 +45,9 @@ final class TvFirst009TextServiceOwner {
     private boolean foreground,closing;
     private Runnable watch;
     private CompanionControlPanel controlPanel;
+    private static Context preferenceContext;
+    private LocalDeveloperServer localControls;
+    private static final String SHOW_INTERACTIVE="com.scenevibe.tvcompanionpoc.SHOW_INTERACTIVE_CONTROLS";
     private static final DeveloperOverlayState developer=new DeveloperOverlayState();
     private static final String DEV_ENABLE="com.scenevibe.tvcompanionpoc.DEVELOPER_ENABLE";
     private static final String DEV_PREPARE="com.scenevibe.tvcompanionpoc.DEVELOPER_PREPARE";
@@ -86,7 +89,10 @@ final class TvFirst009TextServiceOwner {
                 case "FOREGROUND_SERVICE_FAILED": case "EXPLICIT_START_REQUIRED": case "START_PROOF_INVALID":
                 case "CACHE_OR_PERMISSION_UNAVAILABLE": case "MEDIA_IDENTITY_BLOCKED": case "POSITION_UNKNOWN":
                 case "MEDIA_CLOCK_UNUSABLE": case "CACHE_OR_CONSENT_INVALID": case "SESSION_UNAVAILABLE":
-                case "CAPTURE_TIMEOUT": case "RUNTIME_FAILED": return true;
+                case "CAPTURE_TIMEOUT": case "RUNTIME_FAILED": case "MEDIA_UNAVAILABLE": case "MEDIA_CLOCK_INVALID":
+                case "MEDIA_IDENTITY_INVALID": case "CONSENT_CLOCK_INVALID": case "CONSENT_EXPIRED":
+                case "AUTHORITY_SUPERSEDED": case "IDENTITY_CHANGED": case "REVISION_CHANGED":
+                case "CACHE_BINDING_CHANGED": case "CACHE_RECEIPT_INVALID": case "CACHE_METADATA_UNAVAILABLE": return true;
                 default: return false;
             }
         }
@@ -169,7 +175,7 @@ final class TvFirst009TextServiceOwner {
 
     /** Reuse a system-owned PendingIntent to the non-exported service, without launching MainActivity. */
     static PendingIntent panelIntent(Context context) {
-        return PendingIntent.getService(context,190,new Intent(context,OverlayService.class).setAction(SHOW_CONTROLS),
+        return PendingIntent.getService(context,190,new Intent(context,OverlayService.class).setAction(BuildConfig.ADSYNC_NONDESTRUCTIVE?SHOW_INTERACTIVE:SHOW_CONTROLS),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
 
@@ -183,7 +189,7 @@ final class TvFirst009TextServiceOwner {
     /** Mode activation never arms a track or opens a focusable window. */
     static boolean setDeveloperMode(Context context,boolean enabled) {
         if(!BuildConfig.TVUX_DEVELOPER_OVERLAY)return false;
-        if(!enabled){if(liveInstance!=null && liveInstance.controlPanel!=null)liveInstance.controlPanel.close();developer.disable();return true;}
+        if(!enabled){setLocalControlEnabled(false);if(liveInstance!=null && liveInstance.controlPanel!=null)liveInstance.controlPanel.close();developer.disable();return true;}
         developer.enable();
         try{context.startForegroundService(new Intent(context,OverlayService.class).setAction(DEV_ENABLE));return true;}
         catch(RuntimeException refused){developer.disable();return false;}
@@ -241,10 +247,73 @@ final class TvFirst009TextServiceOwner {
             case HANDOFF:return "Ouverture du lecteur demandée · commandes encore non interactives.";
             case WAITING_PLAYER:return "Touches libres · lance le film dans Prime. Attente du média compatible en lecture.";
             case MONITORING:return "Affichage passif · touches au lecteur. Commandes dans l’onglet Développeur.";
-            case INTERACTIVE:return developerHasFocus()?"Panneau interactif · ferme avec Back ou ×.":"Panneau affiché · attente du focus Android.";
+            case INTERACTIVE:return "Commandes : "+developerFocusStatus()+" · Back ou × ferme uniquement SceneVibe.";
             default:return "État Développeur indisponible.";
         }
     }
+    /** Read observed window ownership, not the requested Developer UI stage. */
+    static String developerFocusStatus(){return liveInstance==null || liveInstance.controlPanel==null?DeveloperFocusState.State.CLOSED.name():liveInstance.controlPanel.focusState().name();}
+    /** Read only events delivered to the existing service control root, not keys owned by another application. */
+    static int developerReceivedKeys(){return liveInstance==null || liveInstance.controlPanel==null?0:liveInstance.controlPanel.receivedKeys();}
+    /** Explicit TV opt-in only; this local listener grants no Cloud, MEDIA or playback admission. */
+    static boolean setLocalControlEnabled(boolean enabled){
+        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || liveInstance==null)return false;
+        TvFirst009TextServiceOwner owner=liveInstance;
+        if(owner.localControls!=null){owner.localControls.close();owner.localControls=null;}
+        if(!enabled)return true;if(!developer.enabled() || !owner.foreground)return false;
+        try{owner.localControls=new LocalDeveloperServer(owner::localCommand,filename->{
+            try(java.io.InputStream input=owner.service.getAssets().open("local-controls/"+filename);java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream()){
+                byte[] buffer=new byte[4096];for(int n;(n=input.read(buffer))!=-1;){output.write(buffer,0,n);if(output.size()>65536)throw new java.io.IOException("PAGE_BUDGET");}return output.toByteArray();}
+        });owner.localControls.start();return true;}catch(Exception refused){if(owner.localControls!=null)owner.localControls.close();owner.localControls=null;return false;}
+    }
+    /** Show private pairing instructions only in SceneVibe's own foreground interface, never in logs. */
+    static String localControlInfo(){return liveInstance==null || liveInstance.localControls==null?"Commandes locales arrêtées.":liveInstance.localControls.accessInfo();}
+    /** Read listener lifetime independently of service, playback and panel focus. */
+    static boolean localControlEnabled(){return liveInstance!=null && liveInstance.localControls!=null && liveInstance.localControls.isLive();}
+    /** Transfer a bounded local request to the same main-thread command owner, with no delayed action after timeout. */
+    private JSONObject localCommand(String command,String value) throws Exception {
+        java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);java.util.concurrent.atomic.AtomicBoolean pending=new java.util.concurrent.atomic.AtomicBoolean(true);
+        java.util.concurrent.atomic.AtomicReference<JSONObject> answer=new java.util.concurrent.atomic.AtomicReference<>();
+        LocalDeveloperServer origin=localControls;
+        main.post(()->{if(!pending.compareAndSet(true,false)){done.countDown();return;}
+            try{if(closing || localControls!=origin || origin==null || !origin.isLive())return;answer.set(localCommandNow(command,value));}
+            catch(Exception refused){answer.set(new JSONObject());}finally{done.countDown();}});
+        if(!done.await(2,java.util.concurrent.TimeUnit.SECONDS)){pending.set(false);throw new IllegalStateException("LOCAL_COMMAND_TIMEOUT");}
+        if(answer.get()==null)throw new IllegalStateException("LOCAL_COMMAND_REFUSED");return answer.get();
+    }
+    /** A closed allowlist controls only SceneVibe preferences/effects and passive window visibility. */
+    private JSONObject localCommandNow(String command,String value) throws Exception {
+        CompanionControlPanel.Commands controls=panelCommands();
+        switch(command){
+            case "status":break;
+            case "text":case "audio":case "adsync":
+                if(!"true".equals(value) && !"false".equals(value))throw new IllegalArgumentException("BOOLEAN_REQUIRED");
+                boolean on=Boolean.parseBoolean(value);if("text".equals(command))controls.text(on);else if("audio".equals(command))controls.audio(on);else controls.adSync(on);break;
+            case "suspend":controls.suspend();break;
+            case "resume":controls.resume();break;
+            case "calibrate":return localStatus().put("result",controls.calibrate(AdSyncController.parseFilmTime(value),false).message);
+            case "panel":
+                if("close".equals(value))closeDeveloperPanel();
+                else if("show".equals(value)){ensureControlPanel();if(controlPanel.prepare()){developer.prepared();if(controlPanel.presentPrepared(false))developer.shown();}}
+                else throw new IllegalArgumentException("PASSIVE_PANEL_ACTION_REQUIRED");break;
+            default:throw new IllegalArgumentException("LOCAL_COMMAND_REFUSED");
+        }
+        return localStatus();
+    }
+    /** Return only numeric/state projections, never programme content, identity, code or credential. */
+    private JSONObject localStatus() throws Exception {
+        return new JSONObject().put("text",multimediaTextEnabled()).put("audio",multimediaAudioEnabled()).put("adsync",adSyncEnabled())
+                .put("active",multimediaActive()).put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
+    }
+    /** Restore only requested channel preferences; no cache, consent, mode or playback permit is persisted here. */
+    static void initMultimediaPreferences(Context context){
+        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || preferenceContext!=null)return;
+        preferenceContext=context.getApplicationContext();android.content.SharedPreferences prefs=preferenceContext.getSharedPreferences("multimedia_user_preferences",0);
+        multimediaTextPreference=prefs.getBoolean("text",true);multimediaAudioPreference=prefs.getBoolean("audio",true);adSyncPreference=prefs.getBoolean("adsync",false);
+    }
+    /** Persist a user preference without extending consent or logging a value from private content. */
+    private static void savePreference(String key,boolean value){if(BuildConfig.ADSYNC_NONDESTRUCTIVE && preferenceContext!=null
+            && !preferenceContext.getSharedPreferences("multimedia_user_preferences",0).edit().putBoolean(key,value).commit())Log.i("SceneVibeCache","event=PREFERENCE_WRITE_FAILED");}
     /** Use only the existing admitted public MEDIA observation, never a foreground-app spy or timer. */
     private void showDeveloperWhenMediaReady() {
         if(!BuildConfig.TVUX_DEVELOPER_OVERLAY || !developer.awaitingPlayer(SystemClock.elapsedRealtime())
@@ -262,7 +331,7 @@ final class TvFirst009TextServiceOwner {
         return new CompanionControlPanel.Commands() {
             /** Read actual service state each time, including changes made by the application. */
             @Override public CompanionControlPanel.Snapshot snapshot(){return new CompanionControlPanel.Snapshot(multimediaActive(),
-                    multimediaTextEnabled(),multimediaAudioEnabled(),adSyncEnabled(),BuildConfig.ADSYNC_PROTOTYPE,adSyncStatus(),
+                    multimediaTextEnabled(),multimediaAudioEnabled(),adSyncEnabled(),BuildConfig.ADSYNC_PROTOTYPE,adSyncStatus()+(BuildConfig.ADSYNC_NONDESTRUCTIVE?" · accès "+developerFocusStatus():""),
                     liveInstance==null || liveInstance.multimedia==null?"Aucune capture MEDIA active.":liveInstance.multimedia.temporalDiagnostics());}
             /** Route TEXT through the one existing owner. */
             @Override public void text(boolean enabled){setMultimediaTextEnabled(enabled);}
@@ -271,9 +340,9 @@ final class TvFirst009TextServiceOwner {
             /** Route AD-SYNC through the same guard, without activating comments. */
             @Override public void adSync(boolean enabled){setAdSyncEnabled(enabled);}
             /** This explicit action also opts into the local interruption guard. */
-            @Override public void suspend(){if(multimediaActive()){if(!adSyncEnabled())setAdSyncEnabled(true);suspendMultimediaComments();}}
+            @Override public void suspend(){if(multimediaActive()){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE && !adSyncEnabled())setAdSyncEnabled(true);suspendMultimediaComments();}}
             /** Preserve an already-enabled guard rather than clearing its offset or consumed identities. */
-            @Override public void resume(){if(multimediaActive()){if(!adSyncEnabled())setAdSyncEnabled(true);resumeMultimediaComments();}}
+            @Override public void resume(){if(multimediaActive()){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE && !adSyncEnabled())setAdSyncEnabled(true);resumeMultimediaComments();}}
             /** Refresh and diagnose using the actual live service, without a new admission. */
             @Override public AdSyncController.Calibration calibrate(long time,boolean seek){return calibrateMultimediaResult(time,seek);}
         };
@@ -282,14 +351,14 @@ final class TvFirst009TextServiceOwner {
     /** Explain absent authority separately from an invalid/freshness/offset MEDIA refusal. */
     static AdSyncController.Calibration calibrateMultimediaResult(long time,boolean seek) {
         if(!multimediaActive())return AdSyncController.Calibration.COMPANION_INACTIVE;
-        if(BuildConfig.TVUX_CONTROL_PANEL && !adSyncEnabled())setAdSyncEnabled(true);
+        if(BuildConfig.TVUX_CONTROL_PANEL && !BuildConfig.ADSYNC_NONDESTRUCTIVE && !adSyncEnabled())setAdSyncEnabled(true);
         return liveInstance.multimedia.calibrateCommentsResult(time,seek);
     }
 
     /** Route a visual preference only to the current multimedia lifetime. */
-    static void setMultimediaTextEnabled(boolean enabled){multimediaTextPreference=enabled;if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setTextEnabled(enabled);}
+    static void setMultimediaTextEnabled(boolean enabled){multimediaTextPreference=enabled;savePreference("text",enabled);if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setTextEnabled(enabled);}
     /** Route an audio preference only to SceneVibe's current local MP3 port. */
-    static void setMultimediaAudioEnabled(boolean enabled){multimediaAudioPreference=enabled;if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAudioEnabled(enabled);}
+    static void setMultimediaAudioEnabled(boolean enabled){multimediaAudioPreference=enabled;savePreference("audio",enabled);if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAudioEnabled(enabled);}
     /** Expose actual distinct native STARTED resources as bounded process-local diagnostics. */
     static int multimediaAudioStarted(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.audioResourcesStarted();}
     /** Expose original TEXT windows requested by the real service, without claiming physical display. */
@@ -305,6 +374,7 @@ final class TvFirst009TextServiceOwner {
     static boolean adSyncEnabled(){return BuildConfig.ADSYNC_PROTOTYPE && adSyncPreference;}
     /** Route a local guard toggle through the same current multimedia service owner. */
     static void setAdSyncEnabled(boolean enabled){adSyncPreference=BuildConfig.ADSYNC_PROTOTYPE && enabled;
+        savePreference("adsync",adSyncPreference);
         if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAdSyncEnabled(adSyncPreference);}
     /** Suspend only existing admitted SceneVibe effects; absent service means a harmless no-op. */
     static void suspendMultimediaComments(){if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.suspendComments();}
@@ -320,6 +390,7 @@ final class TvFirst009TextServiceOwner {
     /** Enter foreground promptly, reusing the historical Android service/notification mechanism. */
     @android.annotation.SuppressLint("ForegroundServiceType")
     void create() {
+        initMultimediaPreferences(service);
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY)liveInstance=this;
         try {
             NotificationManager manager=service.getSystemService(NotificationManager.class);
@@ -346,6 +417,13 @@ final class TvFirst009TextServiceOwner {
 
     /** Reject null, boot, replacement, legacy, replayed and expired requests; never restore a permit from disk. */
     int start(Intent intent) {
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && intent!=null && SHOW_INTERACTIVE.equals(intent.getAction())){
+            if(foreground && developer.enabled() && Settings.canDrawOverlays(service)){
+                ensureControlPanel();if(controlPanel.prepare()){developer.prepared();String ticket=developer.begin(SystemClock.elapsedRealtime(),true);
+                    if(ticket!=null && controlPanel.activatePrepared())developer.commit(ticket,SystemClock.elapsedRealtime());}
+            }
+            return Service.START_NOT_STICKY;
+        }
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY && intent!=null && (DEV_ENABLE.equals(intent.getAction()) || DEV_PREPARE.equals(intent.getAction()))) {
             if(foreground && developer.enabled() && DEV_PREPARE.equals(intent.getAction())) {
                 ensureControlPanel();if(controlPanel.prepare())developer.prepared();
@@ -428,6 +506,7 @@ final class TvFirst009TextServiceOwner {
     void destroy() {
         if (closing) return;
         closing=true;
+        if(localControls!=null){localControls.close();localControls=null;}
         if(controlPanel!=null){controlPanel.close();controlPanel=null;}
         if (watch!=null) main.removeCallbacks(watch);
         if (session!=null) { session.close();session=null; }
@@ -446,15 +525,21 @@ final class TvFirst009TextServiceOwner {
         String explanation;
         switch(current.code) {
             case "CACHE_OR_CONSENT_REQUIRED": explanation="Vérifie le compte et la révision du cache avant une nouvelle admission.";break;
-            case "MEDIA_IDENTITY_BLOCKED": explanation="Épisode non reconnu : métadonnées absentes ou différentes. Aucun commentaire.";break;
+            case "MEDIA_IDENTITY_INVALID": case "MEDIA_IDENTITY_BLOCKED": explanation="Épisode non reconnu : métadonnées absentes ou différentes. Aucun commentaire.";break;
             case "POSITION_UNKNOWN": explanation="Position MEDIA inconnue. Aucun commentaire.";break;
-            case "MEDIA_CLOCK_UNUSABLE": explanation="Horloge MEDIA inutilisable. Aucun commentaire.";break;
+            case "MEDIA_CLOCK_INVALID": case "MEDIA_CLOCK_UNUSABLE": explanation="Horloge MEDIA inutilisable. Aucun commentaire.";break;
+            case "CONSENT_EXPIRED": explanation="Consentement réellement expiré. Cache conservé ; nouvelle vérification et confirmation nécessaires.";break;
+            case "CONSENT_CLOCK_INVALID": case "AUTHORITY_SUPERSEDED": case "IDENTITY_CHANGED": case "REVISION_CHANGED":
+            case "CACHE_BINDING_CHANGED": case "CACHE_RECEIPT_INVALID": case "CACHE_METADATA_UNAVAILABLE":
+                explanation="Autorité de restitution invalidée : "+current.code+". Fichiers conservés ; vérifie l’association puis confirme la restitution.";break;
+            case "USER_SUSPENDED": explanation="Commentaires suspendus volontairement. Reprendre conserve la track et attend deux captures MEDIA compatibles.";break;
+            case "CONFIRMATION_REQUIRED": explanation="Confirmation de deux captures MEDIA compatibles en cours. Aucune publicité établie.";break;
             case "CACHE_OR_CONSENT_INVALID": explanation="Consentement ou preuve de cache expiré/invalide. Session fermée.";break;
             case "COLUMBO_CACHE_NOT_READY": explanation="Retrouve Columbo et son cache confirmé dans Mes Tracks. Aucune affectation automatique.";break;
             case "PERMISSION_REQUIRED": explanation="Autorisations de superposition et d’accès MEDIA nécessaires, à accorder manuellement.";break;
             case "MEDIA_PLAYING": explanation="Épisode reconnu par le contrat historique. Lecture MEDIA suivie.";break;
             case "MEDIA_PAUSED": explanation="Lecture en pause : commentaires gelés.";break;
-            case "WAITING_MEDIA": case "SESSION_UNAVAILABLE": case "CAPTURE_TIMEOUT": explanation="En attente d’une session MEDIA reconnue. Aucun commentaire sans identité et position.";break;
+            case "MEDIA_UNAVAILABLE": case "SESSION_CHANGED": case "CLOCK_JUMP": case "FRESH_POSITION_FROZEN": case "OBSERVATION_STALE": case "WAITING_MEDIA": case "SESSION_UNAVAILABLE": case "CAPTURE_TIMEOUT": explanation="En attente d’une session MEDIA reconnue. Aucun commentaire sans identité et position.";break;
             case "START_REQUESTED": explanation="Démarrage TEXT demandé volontairement.";break;
             case "STOPPED": case "STOP_REQUESTED": explanation="Restitution TEXT arrêtée.";break;
             default: explanation="Qualification TEXT indisponible ; consulte le code diagnostic. Aucun secours automatique.";

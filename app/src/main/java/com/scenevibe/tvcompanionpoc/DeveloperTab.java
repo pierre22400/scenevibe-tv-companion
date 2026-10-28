@@ -20,6 +20,8 @@ final class DeveloperTab {
     private final CompanionControlPanel controls;
     private final TextView state,result;
     private final Button mode,prepare,launch,focusExperiment,closeOverlay;
+    private final Button localControl;
+    private final TextView localInfo;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable poll=this::tick;
 
@@ -45,6 +47,11 @@ final class DeveloperTab {
             result.setText(activity.launchDeveloperPrimeInteractive()?"Essai interactif explicite demandé pour ce lancement seulement.":"Essai refusé : Prime indisponible ou panneau non préparé.");refresh();
         });
         closeOverlay=button("Fermer le panneau overlay",()->{TvFirst009TextServiceOwner.closeDeveloperPanel();refresh();});
+        localControl=button("Activer les commandes locales (téléphone)",()->{
+            boolean enabled=TvFirst009TextServiceOwner.localControlEnabled();
+            result.setText(TvFirst009TextServiceOwner.setLocalControlEnabled(!enabled)?"Commandes locales mises à jour. Le téléphone ne remplace pas le D-pad Sony.":"Active d’abord le mode Développeur et attends le service.");refresh();
+        });
+        localInfo=label("");root.addView(localInfo);
         root.addView(result);
         controls=new CompanionControlPanel(activity,TvFirst009TextServiceOwner.panelCommands());
         root.addView(controls.embeddedView(dismiss));
@@ -63,6 +70,9 @@ final class DeveloperTab {
         launch.setEnabled(stage==DeveloperOverlayState.Stage.PREPARED && activity.developerPrimeAvailable());
         focusExperiment.setEnabled(launch.isEnabled());
         closeOverlay.setEnabled(stage==DeveloperOverlayState.Stage.PREPARED || stage==DeveloperOverlayState.Stage.MONITORING || stage==DeveloperOverlayState.Stage.INTERACTIVE);
+        localControl.setEnabled(BuildConfig.ADSYNC_NONDESTRUCTIVE && stage!=DeveloperOverlayState.Stage.OFF);
+        setText(localControl,TvFirst009TextServiceOwner.localControlEnabled()?"Arrêter les commandes locales (téléphone)":"Activer les commandes locales (téléphone)");
+        setText(localInfo,TvFirst009TextServiceOwner.localControlInfo());
     }
     /** The Activity can close a recalage form before changing its normal navigation page. */
     boolean closeChild(){return controls.closeChild();}

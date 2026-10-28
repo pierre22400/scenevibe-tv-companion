@@ -30,7 +30,7 @@ final class CloudMultimediaSession {
     private final MediaSessionProbe probe;
     private final Set<String> shown=new HashSet<>(),started=new HashSet<>();
     private final Runnable watchdog=this::watch;
-    private final AdSyncController adSync=new AdSyncController();
+    private final AdSyncController adSync=new AdSyncController(BuildConfig.ADSYNC_NONDESTRUCTIVE);
     private AdSyncController.Sample lastAdSample;
     private long lastAdLog=-1;
     private String lastAdState="";
@@ -89,12 +89,12 @@ final class CloudMultimediaSession {
     private boolean current(){return active && admission.current() && Settings.canDrawOverlays(context) && NotificationAccess.isGranted(context);}
 
     /** Recheck the interruption gate at every delayed native effect, without retiring the admission itself. */
-    private boolean effectsAllowed(){return current() && (!adSync.enabled() || adSync.status().allow);}
+    private boolean effectsAllowed(){return current() && (BuildConfig.ADSYNC_NONDESTRUCTIVE?adSync.status().allow:(!adSync.enabled() || adSync.status().allow));}
 
     /** Apply the historical native matcher and its established content-time policy without retiming events. */
     private void observe(MediaSessionProbe.Snapshot snapshot) {
         if(!active)return;
-        if(!current()){close();publish("CACHE_OR_CONSENT_INVALID");return;}
+        if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
         boolean usable=snapshot!=null && selected!=null && selected.eligible() && snapshot.positionMs>=0
@@ -108,9 +108,9 @@ final class CloudMultimediaSession {
                     snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,snapshot.durationMs,
                     selected!=null && selected.eligible());
         }
-        if(adSync.enabled()) {
+        if(adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE) {
             AdSyncController.Decision decision=adSync.observe(lastAdSample,SystemClock.elapsedRealtime());logAdSync(decision);
-            if(!decision.allow){runtime.suspendComments();position=-1;publish("ADSYNC_"+decision.state.name());return;}
+            if(!decision.allow){runtime.suspendComments();position=-1;publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?decision.reason.name():"ADSYNC_"+decision.state.name());return;}
             selectedPosition=decision.contentMs;
         }
         if(!usable){unavailable(selected!=null && !selected.eligible()?"MEDIA_IDENTITY_BLOCKED":"MEDIA_CLOCK_UNUSABLE");return;}
@@ -123,7 +123,7 @@ final class CloudMultimediaSession {
     /** Log finite temporal facts only; no metadata, session token, credential or alleged ad classification. */
     private void logAdSync(AdSyncController.Decision decision) {
         long now=SystemClock.elapsedRealtime();String state=decision.state.name()+":"+decision.reason.name();
-        if(state.equals(lastAdState) && lastAdLog>=0 && now-lastAdLog<1000)return;
+        if(state.equals(lastAdState) && (BuildConfig.ADSYNC_NONDESTRUCTIVE || lastAdLog>=0 && now-lastAdLog<1000))return;
         lastAdState=state;lastAdLog=now;
         AdSyncController.Sample sample=lastAdSample;
         Log.i("SceneVibeAdSync","state="+decision.state+" reason="+decision.reason+" adSignal=UNAVAILABLE"
@@ -136,9 +136,9 @@ final class CloudMultimediaSession {
     /** Enable only the experimental local guard; disabling restores the v17 observation route. */
     void setAdSyncEnabled(boolean enabled){if(active){adSync.setEnabled(BuildConfig.ADSYNC_PROTOTYPE && enabled);logAdSync(adSync.status());}}
     /** Immediately stop only SceneVibe visuals/audio, retaining the admitted cache and calendar. */
-    void suspendComments(){if(active && adSync.enabled()){adSync.suspend();runtime.suspendComments();logAdSync(adSync.status());}}
+    void suspendComments(){if(active && (adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE)){adSync.suspend();runtime.suspendComments();logAdSync(adSync.status());}}
     /** Ask for fresh compatible observations; this never sends PLAY/SEEK to the streaming application. */
-    void resumeComments(){if(active && adSync.enabled()){adSync.requestResume();runtime.suspendComments();position=-1;
+    void resumeComments(){if(active && (adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE)){adSync.requestResume();runtime.suspendComments();position=-1;
         probe.captureNow();logAdSync(adSync.status());}}
     /** Confirm a local film-time offset without writing the track or granting a new native permit. */
     boolean calibrateComments(long contentMs,boolean confirmedSeek){
@@ -154,7 +154,13 @@ final class CloudMultimediaSession {
         logAdSync(adSync.status());return result;
     }
     /** Expose only the bounded controller state for the existing Settings screen. */
-    String adSyncStatus(){AdSyncController.Decision d=adSync.status();if(!adSync.enabled())return "AD-SYNC désactivé · comportement de référence";
+    String adSyncStatus(){AdSyncController.Decision d=adSync.status();
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE){
+            if(d.reason==AdSyncController.Reason.USER_SUSPENDED)return "Suspension manuelle conservée · Reprendre pour confirmer deux captures MEDIA";
+            if(!d.allow)return "Commentaires retenus · "+d.reason+" · récupération MEDIA automatique, sauf suspension manuelle";
+            return (adSync.enabled()?"AD-SYNC consultatif ON":"AD-SYNC OFF")+" · MEDIA compatible · publicité non observable";
+        }
+        if(!adSync.enabled())return "AD-SYNC désactivé · comportement de référence";
         if(!d.allow)return "Commentaires suspendus · "+d.reason+" · reprise/recalage à confirmer";
         if(position<0)return "Confirmation MEDIA attendue · aucun commentaire relancé";
         return (lastAdSample!=null && !lastAdSample.playing?"Film en pause · commentaires en attente":"Suivi MEDIA compatible")
@@ -184,7 +190,7 @@ final class CloudMultimediaSession {
     /** Bound stale captures and expired consent while keeping media time exclusively probe-owned. */
     private void watch(){
         if(!active)return;
-        if(!current()){close();publish("CACHE_OR_CONSENT_INVALID");return;}
+        if(!current()){retireInvalidAuthority();return;}
         if(lastCapture<0 || SystemClock.elapsedRealtime()-lastCapture>2500)unavailable("CAPTURE_TIMEOUT");
         auditAudio();if(pendingScene!=null && renderer.isWindowAttached())shown.add(pendingScene);
         if(active)main.postDelayed(watchdog,250);
@@ -192,11 +198,16 @@ final class CloudMultimediaSession {
 
     /** Loss of media eligibility stops both renderers without preserving an audible stale window. */
     private void unavailable(String code){if(active){position=-1;
-        if(adSync.enabled()){adSync.unavailable();lastAdSample=null;runtime.suspendComments();logAdSync(adSync.status());}
-        else {if(BuildConfig.TVUX_DEVELOPER_OVERLAY)lastAdSample=null;runtime.unavailable();}publish(code);}}
+        if(adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE){adSync.unavailable();lastAdSample=null;runtime.suspendComments();logAdSync(adSync.status());}
+        else {if(BuildConfig.TVUX_DEVELOPER_OVERLAY)lastAdSample=null;runtime.unavailable();}publish(BuildConfig.ADSYNC_NONDESTRUCTIVE && ("CAPTURE_TIMEOUT".equals(code) || "SESSION_UNAVAILABLE".equals(code))?"MEDIA_UNAVAILABLE":code);}}
 
     /** Diagnostics never expose credentials, editorial text or native MediaController objects. */
     private void publish(String code){if(observer!=null)observer.changed(code,position,active);}
+
+    /** Identify the exact closed authority boundary without erasing any cached file or logging identities. */
+    private void retireInvalidAuthority(){String reason=BuildConfig.ADSYNC_NONDESTRUCTIVE?admission.reference.invalidReason(SystemClock.elapsedRealtime()):"";
+        if(reason.isEmpty())reason=!Settings.canDrawOverlays(context)?"OVERLAY_PERMISSION_REQUIRED":!NotificationAccess.isGranted(context)?"MEDIA_PERMISSION_REQUIRED":"CACHE_OR_CONSENT_INVALID";
+        close();publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?reason:"CACHE_OR_CONSENT_INVALID");}
 
     /** A TEXT switch affects only the visual regie and keeps the shared calendar intact. */
     void setTextEnabled(boolean enabled){if(active)runtime.setTextEnabled(enabled);}

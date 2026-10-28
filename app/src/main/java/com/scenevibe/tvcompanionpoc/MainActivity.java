@@ -70,6 +70,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        TvFirst009TextServiceOwner.initMultimediaPreferences(this);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
@@ -339,7 +340,7 @@ public final class MainActivity extends Activity {
     private void refreshTextQualification() {
         if (textQualificationStatus==null) return;
         TvFirst008Source source=textQualificationSource();
-        if (source!=null && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ERROR
+        if (!BuildConfig.ADSYNC_NONDESTRUCTIVE && source!=null && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ERROR
                 && TvFirst009TextServiceOwner.status().active) TvFirst009TextServiceOwner.requestStop(this);
         textQualificationStatus.setText(TvFirst009TextServiceOwner.describe()
                 +"\nSuperposition : "+Settings.canDrawOverlays(this)+" · accès MEDIA : "+NotificationAccess.isGranted(this));

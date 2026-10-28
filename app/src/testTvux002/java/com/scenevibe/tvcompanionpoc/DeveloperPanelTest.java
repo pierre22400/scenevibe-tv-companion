@@ -108,7 +108,7 @@ public final class DeveloperPanelTest {
         panel.prepare();View root=host.view;assertTrue(panel.presentPrepared(false));assertTrue(panel.isMonitoring());assertSame(root,host.view);
         assertNotEquals(0,host.params.flags & WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
         assertNotEquals(0,host.params.flags & WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-        assertFalse(button(root,"AD-SYNC").isEnabled());assertTrue(actions.text && actions.audio);
+        assertTrue("Preference availability is independent of passive key routing",button(root,"AD-SYNC").isEnabled());assertTrue(actions.text && actions.audio);
     }
     /** Returning to the Activity parks an expanded monitor without replacing its window. */
     @Test public void monitorCanParkWithoutChangingTheTrack(){panel.prepare();panel.presentPrepared(false);View root=host.view;panel.standby();assertTrue(panel.isPrepared());assertFalse(panel.isMonitoring());assertSame(root,host.view);assertTrue(actions.text && actions.audio);assertEquals(0,actions.suspends);}

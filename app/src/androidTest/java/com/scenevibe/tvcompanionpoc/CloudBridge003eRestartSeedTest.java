@@ -19,7 +19,9 @@ import static org.junit.Assert.*;
 public final class CloudBridge003eRestartSeedTest {
     /** Persist exact cache coordinates, without a credential, ACK, renderer or admission. */
     @Test public void commitBeforeARealApplicationProcessRestart() throws Exception {
-        var fixture=new Native003eFixture();var prepared=fixture.download();assertEquals(19,prepared.track.calendar.events().size());
+        var fixture=new Native003eFixture();
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE){TvFirst009TextServiceOwner.initMultimediaPreferences(fixture.target);TvFirst009TextServiceOwner.setMultimediaTextEnabled(false);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);TvFirst009TextServiceOwner.setAdSyncEnabled(true);}
+        var prepared=fixture.download();assertEquals(19,prepared.track.calendar.events().size());
         JSONObject data=new JSONObject().put("root",fixture.root.getName()).put("namespace",fixture.namespace).put("binding",prepared.binding.json())
             .put("seedPid",Process.myPid()).put("runtimeSha256",MultimediaDeliveryProfile.hash(prepared.profile.runtimeBytes))
             .put("manifestSha256",MultimediaDeliveryProfile.hash(prepared.profile.manifestBytes));

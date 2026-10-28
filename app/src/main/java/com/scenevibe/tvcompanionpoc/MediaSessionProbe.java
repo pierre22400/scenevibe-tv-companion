@@ -163,6 +163,11 @@ public final class MediaSessionProbe {
     }
 
     /** Dispatch one exclusive probe branch; the legacy branch below is retained unchanged. */
+    private String lastProbeState="";
+
+    /** Log v22 state transitions once; no MEDIA payload or repeated 250 ms absence messages. */
+    private void probeState(String code){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !code.equals(lastProbeState)){Log.i(TAG,code);lastProbeState=code;}}
+
     private void sample() {
         if (observer != null) {
             observer.onObservation(observationReader.capture(sessions, listenerComponent,
@@ -170,7 +175,7 @@ public final class MediaSessionProbe {
             return;
         }
         if (!NotificationAccess.isGranted(context)) {
-            Log.i(TAG, "ACCESS_REQUIRED notificationListener=false");
+            probeState("ACCESS_REQUIRED notificationListener=false");
             unavailable();
             return;
         }
@@ -194,11 +199,12 @@ public final class MediaSessionProbe {
         }
 
         if (controllers.isEmpty()) {
-            Log.i(TAG, "NO_ACTIVE_SESSIONS");
+            probeState("NO_ACTIVE_SESSIONS");
             unavailable();
             return;
         }
 
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)probeState("ACTIVE_SESSIONS_AVAILABLE");
         Snapshot primary = null;
         Snapshot compatible = null;
         for (int index = 0; index < controllers.size(); index++) {

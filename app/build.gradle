@@ -39,6 +39,7 @@ android {
         buildConfigField "boolean", "ADSYNC_PROTOTYPE", "false"
         buildConfigField "boolean", "TVUX_CONTROL_PANEL", "false"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "false"
+        buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "false"
     }
 
     buildTypes {
@@ -134,8 +135,9 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix "-tvux002a-focus-safe"
+        versionNameSuffix "-tvux002b-ad-sync001c"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
+        buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "true"
     }
     sourceSets.tvux002 {
         java.srcDir "src/tvfirst008/java"
@@ -218,7 +220,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java"])
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -280,7 +282,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(21) }
+        variant.outputs.each { output -> output.versionCode.set(22) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }
