@@ -292,7 +292,7 @@ final class TvFirst009TextServiceOwner {
                 boolean on=Boolean.parseBoolean(value);if("text".equals(command))controls.text(on);else if("audio".equals(command))controls.audio(on);else controls.adSync(on);break;
             case "suspend":controls.suspend();break;
             case "resume":controls.resume();break;
-            case "calibrate":try{return localStatus().put("result",controls.calibrate(AdSyncController.parseFilmTime(value),false).message);}
+            case "calibrate":try{AdSyncController.Calibration calibrated=controls.calibrate(AdSyncController.parseFilmTime(value),false);return localStatus().put("result",calibrated.message);}
                 catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
                 if("close".equals(value))closeDeveloperPanel();

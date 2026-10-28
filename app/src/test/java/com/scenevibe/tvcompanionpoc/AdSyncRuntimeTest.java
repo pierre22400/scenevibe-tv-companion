@@ -71,7 +71,8 @@ public final class AdSyncRuntimeTest {
         guard.unavailable();runtime.suspendComments();
         assertFalse(guard.observe(new AdSyncController.Sample("own",true,true,1750,1750,2000,2000,1f,100000)).allow);
         var returned=guard.observe(new AdSyncController.Sample("own",true,true,2000,2000,2250,2250,1f,100000));assertTrue(returned.allow);at(returned.contentMs);assertEquals(1,port.starts);
-        var future=guard.observe(new AdSyncController.Sample("own",true,true,6000,6000,3000,3000,1f,100000));assertTrue(future.allow);at(future.contentMs);assertEquals(2,port.starts);
+        for(long position=2250;position<=6250;position+=250){long capture=position+250;var future=guard.observe(new AdSyncController.Sample("own",true,true,position,position,capture,capture,1f,100000));assertTrue(future.allow);at(future.contentMs);}
+        assertEquals(2,port.starts);
     }
 
     /** A recording LOCAL audio port; there is deliberately no interface to a platform player or network. */

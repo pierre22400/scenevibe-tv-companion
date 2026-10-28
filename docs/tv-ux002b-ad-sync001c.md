@@ -73,7 +73,7 @@ Pour un diagnostic futur autorisé, utiliser [le script PowerShell](../scripts/C
 
 ## Qualification et protocole physique
 
-Les résultats définitifs et liens Actions sont ajoutés après exécution. La suite couvre moteur pur, widgets Robolectric, Android TV API31, vrais callbacks focus/touches, commandes TCP, cache/MediaCodec, service de restitution et reprise dans un PID différent. Les réponses fournisseur du nouveau banc sont simulées ; aucune nouvelle preuve Neon/R2 n’est revendiquée.
+Les résultats mesurés, le commit de compilation et les liens Actions figurent dans la description de la [PR #31](https://github.com/pierre22400/scenevibe-tv-companion/pull/31) et la livraison associée. La suite couvre moteur pur, widgets Robolectric, Android TV API31, vrais callbacks focus/touches, commandes TCP, cache/MediaCodec, service de restitution et reprise dans un PID différent. Les réponses fournisseur du nouveau banc sont simulées ; aucune nouvelle preuve Neon/R2 n’est revendiquée.
 
 Après autorisation distincte d’installation uniquement :
 

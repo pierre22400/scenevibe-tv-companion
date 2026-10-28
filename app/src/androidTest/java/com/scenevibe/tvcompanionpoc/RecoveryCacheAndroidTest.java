@@ -50,6 +50,7 @@ public final class RecoveryCacheAndroidTest {
     private volatile long revision;
     private volatile CountDownLatch block;
     private volatile int requests;
+    private volatile Instant consentExpiry;
 
     /** Seed the exact existing 19-event profile through the actual serial worker and Android bridge. */
     @Before public void before() throws Exception {
@@ -81,7 +82,7 @@ public final class RecoveryCacheAndroidTest {
         requests++;CountDownLatch waiting=block;if(waiting!=null && !waiting.await(8,TimeUnit.SECONDS))throw new IllegalStateException("OWN_RESPONSE_BLOCKED");
         if(path.contains("/association"))return new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("deviceId",fixture.binding.device)
                 .put("generation",fixture.generation).put("accountAssociated",true).put("rendering","FORBIDDEN")
-                .put("consentExpiresAt",Instant.now().plusSeconds(3600).toString()).put("currentRevision",revision);
+                .put("consentExpiresAt",(consentExpiry==null?Instant.now().plusSeconds(3600):consentExpiry).toString()).put("currentRevision",revision);
         if(path.contains("/library"))return new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("items",new JSONArray()).put("next",JSONObject.NULL);
         throw new IllegalArgumentException("OWN_RESPONSE_ROUTE_REFUSED");
     }
@@ -117,6 +118,17 @@ public final class RecoveryCacheAndroidTest {
         assertEquals(MultimediaDeliveryProfile.hash(prepared.profile.runtimeBytes),MultimediaDeliveryProfile.hash(restored.profile.runtimeBytes));
         for(var resource:prepared.profile.resources)assertEquals(resource.sha256,MultimediaDeliveryProfile.hash(java.nio.file.Files.readAllBytes(restored.resource(resource.id).toPath())));
         assertEquals(before,requests);assertNull(CloudMultimediaAdmission.admit(ref,true));
+    }
+    /** Let an actual monotonic consent expire, then explicitly re-verify and re-admit the same inert cache. */
+    @Test public void actualConsentExpiryNeedsFreshConfirmationButNoDownload() throws Exception {
+        consentExpiry=Instant.now().plusMillis(2500);main(()->{source.pause();source.resume();});
+        await(()->!source.busy() && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ASSOCIATED,"Short real consent not obtained",10000);
+        var expired=reference();assertTrue(expired.current(SystemClock.elapsedRealtime()));
+        await(()->!expired.current(SystemClock.elapsedRealtime()),"Real consent did not expire",7000);assertEquals("CONSENT_EXPIRED",expired.invalidReason(SystemClock.elapsedRealtime()));
+        int downloads=fixture.port.audioRequests;assertNotNull(MultimediaAndroidBridge.restoreCache(target,source));assertNull(CloudMultimediaAdmission.admit(expired,true));
+        consentExpiry=Instant.now().plusSeconds(3600);main(source::refresh);
+        await(()->!source.busy() && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ASSOCIATED,"Explicit new association verification failed",10000);
+        var renewed=reference();assertNull(CloudMultimediaAdmission.admit(renewed,false));assertNotNull(CloudMultimediaAdmission.admit(renewed,true));assertEquals(downloads,fixture.port.audioRequests);assertFalse(TvFirst009TextServiceOwner.multimediaActive());
     }
     /** Native Activity destruction and return automatically re-read cache without download or activation. */
     @Test public void actualActivityRecreationRestoresInertCacheAndPreferences() throws Exception {
@@ -155,9 +167,27 @@ public final class RecoveryCacheAndroidTest {
             else{final int expected=++texts;await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>=expected,"TEXT not rendered by service",12000);}
         }
         assertEquals(16,texts);assertEquals(3,audios);assertEquals(3,TvFirst009TextServiceOwner.multimediaAudioPreparations());assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());
-        main(()->TvFirst009TextServiceOwner.suspendMultimediaComments());main(()->{TvFirst009TextServiceOwner.setAdSyncEnabled(false);TvFirst009TextServiceOwner.setAdSyncEnabled(true);});
+        main(()->{assertTrue(TvFirst009TextServiceOwner.setDeveloperMode(target,true));assertTrue(TvFirst009TextServiceOwner.setLocalControlEnabled(true));});
+        String instructions=TvFirst009TextServiceOwner.localControlInfo();var address=java.util.regex.Pattern.compile("http://[^:]+:([0-9]+)").matcher(instructions);assertTrue(address.find());int port=Integer.parseInt(address.group(1));
+        String token=LocalControlTestClient.send(port,"/pair",null,new JSONObject().put("code",LocalControlTestClient.code(instructions)),null).json().getString("token");
+        local(port,token,1,"text","false");local(port,token,2,"audio","false");local(port,token,3,"adsync","false");
+        assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaAudioEnabled());
+        var offCalibration=local(port,token,4,"calibrate","28:28");assertEquals(AdSyncController.Calibration.SYNC_DISABLED.message,offCalibration.getString("result"));
+        assertFalse(TvFirst009TextServiceOwner.adSyncStatus().contains("Suspension manuelle"));
+        local(port,token,5,"suspend","");local(port,token,6,"adsync","true");
         Thread.sleep(600);assertTrue(TvFirst009TextServiceOwner.adSyncStatus().contains("Suspension manuelle"));assertEquals(3,TvFirst009TextServiceOwner.multimediaAudioPreparations());
-        main(()->TvFirst009TextServiceOwner.resumeMultimediaComments());await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Explicit resume did not recover",10000);
+        local(port,token,7,"resume","");await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Explicit local resume did not recover",10000);
+        local(port,token,8,"text","true");local(port,token,9,"audio","true");
+        assertEquals(AdSyncController.Calibration.APPLIED.message,local(port,token,10,"calibrate","28:28").getString("result"));
+        await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Local calibration did not recover",10000);
         assertEquals(3,TvFirst009TextServiceOwner.multimediaAudioPreparations());
+        main(()->TvFirst009TextServiceOwner.setLocalControlEnabled(false));assertTrue(TvFirst009TextServiceOwner.multimediaActive());
+
     }
+    /** Send a unique real local command to the active native service, never directly to its runtime. */
+    private JSONObject local(int port,String token,long sequence,String command,String value) throws Exception {
+        var reply=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",sequence).put("command",command).put("value",value),null);
+        assertEquals(200,reply.status);return reply.json();
+    }
+
 }

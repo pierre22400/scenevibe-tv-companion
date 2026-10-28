@@ -89,7 +89,10 @@ final class CloudMultimediaSession {
     private boolean current(){return active && admission.current() && Settings.canDrawOverlays(context) && NotificationAccess.isGranted(context);}
 
     /** Recheck the interruption gate at every delayed native effect, without retiring the admission itself. */
-    private boolean effectsAllowed(){return current() && (BuildConfig.ADSYNC_NONDESTRUCTIVE?adSync.status().allow:(!adSync.enabled() || adSync.status().allow));}
+    private boolean effectsAllowed(){
+        long now=SystemClock.elapsedRealtime();boolean fresh=lastAdSample!=null && now>=lastAdSample.capturedMs && now-lastAdSample.capturedMs<=2500;
+        return current() && (BuildConfig.ADSYNC_NONDESTRUCTIVE?fresh && adSync.status().allow:(!adSync.enabled() || adSync.status().allow));
+    }
 
     /** Apply the historical native matcher and its established content-time policy without retiming events. */
     private void observe(MediaSessionProbe.Snapshot snapshot) {
@@ -147,6 +150,7 @@ final class CloudMultimediaSession {
     /** Refresh MEDIA behind the closed effect gate, then return the exact local calibration outcome. */
     AdSyncController.Calibration calibrateCommentsResult(long contentMs,boolean confirmedSeek) {
         if(!active || !current())return AdSyncController.Calibration.COMPANION_INACTIVE;
+        if(!adSync.enabled())return AdSyncController.Calibration.SYNC_DISABLED;
         adSync.suspend();runtime.suspendComments();position=-1;
         probe.captureNow();
         AdSyncController.Calibration result=adSync.calibrateResult(contentMs,SystemClock.elapsedRealtime());
