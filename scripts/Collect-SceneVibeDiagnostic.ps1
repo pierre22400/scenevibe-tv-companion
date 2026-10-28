@@ -21,7 +21,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$diagnosticFile = Join-Path $OutputDirectory ('scenevibe-v22-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
+$diagnosticFile = Join-Path $OutputDirectory ('scenevibe-tv-runtime-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
 Write-Host 'Capture SceneVibe : reproduis le problème puis attends la reprise. Ctrl+C pour terminer.'
 Write-Host $diagnosticFile
 # Aucun -d ou -t : lecture des buffers disponibles, puis suivi continu.

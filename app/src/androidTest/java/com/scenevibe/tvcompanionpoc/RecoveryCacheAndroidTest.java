@@ -200,7 +200,7 @@ public final class RecoveryCacheAndroidTest {
         main(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,source,prepared,true)));
         await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Compatible MEDIA not delivered",10000);
         assertEquals("No TEXT is scheduled in the initial expired window",0,TvFirst009TextServiceOwner.status().renderRequests);
-        assertTrue(TvFirst009TextServiceOwner.multimediaAvailability().contains("01:30"));
+        assertTrue("The actual Columbo calendar has a second TEXT at 52.988s before the first MP3",TvFirst009TextServiceOwner.multimediaAvailability().contains("00:52"));
         main(()->media.setMetadata(null));await(()->"MEDIA_IDENTITY_INVALID".equals(TvFirst009TextServiceOwner.status().code),"Identity refusal not observed",10000);
         int downloads=fixture.port.audioRequests;
         main(()->{metadata();playback(PlaybackState.STATE_PLAYING,30009);});

@@ -40,6 +40,7 @@ final class CloudMultimediaSession {
     private String pendingScene;
     private int audioPreparations;
     private String lastCalendarState="";
+    private String lastAudioState="";
     private boolean textEnabled,audioEnabled;
 
     /** Compose real application ports only after the owner's separate explicit admission. */
@@ -204,7 +205,8 @@ final class CloudMultimediaSession {
     }
 
     /** Diagnose genuine native STARTED state, including a start deferred until seek completion. */
-    private void auditAudio(){if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource)){
+    private void auditAudio(){String state=audio.state().name();if(!state.equals(lastAudioState)){lastAudioState=state;trace("AUDIO_STATE","state="+state+" preparations="+audioPreparations);}
+        if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource)){
         publish("AUDIO_RESOURCE_STARTED");trace("AUDIO_NATIVE_STARTED","count="+started.size());}}
 
     /** Bound stale captures and expired consent while keeping media time exclusively probe-owned. */
@@ -214,7 +216,7 @@ final class CloudMultimediaSession {
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions()){main.postDelayed(watchdog,250);return;}
         if(!current()){retireInvalidAuthority();return;}
         if(lastCapture<0 || SystemClock.elapsedRealtime()-lastCapture>2500)unavailable("CAPTURE_TIMEOUT");
-        auditAudio();if(pendingScene!=null && renderer.isWindowAttached())shown.add(pendingScene);
+        auditAudio();if(pendingScene!=null && renderer.isWindowAttached() && shown.add(pendingScene))trace("TEXT_WINDOW_ATTACHED","count="+shown.size());
         if(active)main.postDelayed(watchdog,250);
     }
 
