@@ -25,7 +25,7 @@ public final class Runtime004CalendarTest {
         /** Read unchanged source coordinates; neither retime events nor generate resources. */
         Fixture() throws Exception {
             Path path=Path.of("src/androidTest/assets/cloudbridge003e/profile.json");if(!Files.exists(path))path=Path.of("app/src/androidTest/assets/cloudbridge003e/profile.json");
-            JSONObject profile=new JSONObject(Files.readString(path)),track=new JSONObject(new String(Base64.getDecoder().decode(profile.getString("trackBase64")),java.nio.charset.StandardCharsets.UTF_8));
+            JSONObject profile=new JSONObject(new String(Files.readAllBytes(path),java.nio.charset.StandardCharsets.UTF_8)),track=new JSONObject(new String(Base64.getDecoder().decode(profile.getString("trackBase64")),java.nio.charset.StandardCharsets.UTF_8));
             var source=track.getJSONArray("events");for(int i=0;i<source.length();i++){var event=source.getJSONObject(i);String id=event.getString("id");
                 events.add(new SceneEvent(id,event.getLong("startMs"),event.getLong("durationMs")));if("AUDIO".equals(event.getString("type")))audio.add(id);}
             scheduler=new MediaCalendarScheduler(this,true,true);scheduler.load(new MediaCalendar(events,true),"owned",audio);
