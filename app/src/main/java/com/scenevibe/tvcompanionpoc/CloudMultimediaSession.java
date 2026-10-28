@@ -70,7 +70,9 @@ final class CloudMultimediaSession {
                 trace(allowed?"TEXT_EVENT_ELIGIBLE":"TEXT_RENDER_REFUSED",allowed?"":"guard="+effectRefusal());return allowed;}
             /** Request the original TEXT window through the physically qualified renderer. */
             @Override public void show(OverlayManifest.Scene scene){admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{
-                if(effectsAllowed()){publish("TEXT_RENDER_REQUESTED");renderer.render(scene);pendingScene=scene.id;
+                if(effectsAllowed()){publish("TEXT_RENDER_REQUESTED");
+                    try{renderer.render(scene);}catch(RuntimeException refused){trace("TEXT_RENDER_FAILED",refused instanceof SecurityException?"guard=ANDROID_WINDOW_PERMISSION":"guard=ANDROID_WINDOW_OR_VIEW");throw refused;}
+                    pendingScene=scene.id;
                     if(renderer.isWindowAttached()){shown.add(scene.id);trace("TEXT_WINDOW_ATTACHED","count="+shown.size());}
                     else trace("TEXT_WINDOW_NOT_ATTACHED","overlayGranted="+Settings.canDrawOverlays(context));}
                 else trace("TEXT_RENDER_REFUSED","guard="+effectRefusal());});}
@@ -197,7 +199,8 @@ final class CloudMultimediaSession {
         if(sample==null)return "Aucune capture MEDIA actuelle.";
         long age=Math.max(0,SystemClock.elapsedRealtime()-sample.capturedMs);
         return "MEDIA brut "+sample.rawMs+" ms · suivi "+sample.selectedMs+" ms · local "+position+" ms\n"
-                +"Âge capture "+age+" ms · âge ancre "+(sample.capturedMs-sample.anchorMs)+" ms";
+                +"Âge capture "+age+" ms · âge ancre "+(sample.capturedMs-sample.anchorMs)+" ms"
+                +(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\n"+availability()+"\nCalendrier : "+runtime.diagnostics():"");
     }
 
     /** Diagnose genuine native STARTED state, including a start deferred until seek completion. */

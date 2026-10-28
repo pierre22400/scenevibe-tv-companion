@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           npm install --prefix "$RUNNER_TEMP/runtime003-browser" --no-audit --no-fund playwright@1.56.1
           "$RUNNER_TEMP/runtime003-browser/node_modules/.bin/playwright" install --with-deps chromium
-          json_jar="$(rg --files "${GRADLE_USER_HOME:-$HOME/.gradle}/caches" -g 'json-20240303.jar' | head -n 1)"
+          json_jar="$(find "${GRADLE_USER_HOME:-$HOME/.gradle}/caches/modules-2/files-2.1/org.json/json/20240303" -type f -name json-20240303.jar -print -quit)"
           test -n "$json_jar"
           mkdir -p "$RUNNER_TEMP/runtime003-classes" tv-runtime003-browser
           javac -cp "$json_jar" -d "$RUNNER_TEMP/runtime003-classes" app/src/main/java/com/scenevibe/tvcompanionpoc/LocalDeveloperServer.java qualification/tv-runtime003/LocalBrowserFixture.java

@@ -561,7 +561,8 @@ final class TvFirst009TextServiceOwner {
     }
 
     /** Service existence is not evidence of a currently compatible film or an event due now. */
-    static String multimediaAvailability(){return liveInstance==null || liveInstance.multimedia==null?"Service arrêté":liveInstance.multimedia.availability();}
+    static String multimediaAvailability(){if(liveInstance!=null && liveInstance.multimedia!=null)return liveInstance.multimedia.availability();
+        return "CONSENT_EXPIRED".equals(latest.code)?"Autorisation expirée · cache conservé":"Service arrêté · "+latest.code;}
 
     /** Express monotonic observation age without inventing a wall-clock date or provider timestamp. */
     private static String age(long at,long now) { return at<0 || now<at?"UNKNOWN":"il y a "+(now-at)+" ms"; }

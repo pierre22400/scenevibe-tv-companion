@@ -77,7 +77,7 @@ final class CloudMultimediaControls {
         for(int i=0;i<items.getChildCount();i++)items.getChildAt(i).setEnabled(catalogue.isEnabled());
         String state=source==null?"Association disponible dans le parcours Compte.":source.accountMessage();
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
-                +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"\nAdmission locale explicite requise. "+TvFirst009TextServiceOwner.status().code:
+                +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\nÉtat technique : ":"\nAdmission locale explicite requise. ")+TvFirst009TextServiceOwner.status().code:
                     "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE)status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability()
                 +(TvFirst009TextServiceOwner.multimediaActive()?"\nAdmission conservée tant que consentement et reçu restent valides.":"\nNouvelle confirmation de restitution depuis le cache ; aucun retéléchargement requis."));
