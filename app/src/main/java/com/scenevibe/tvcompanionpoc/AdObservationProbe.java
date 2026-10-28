@@ -90,7 +90,12 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
         void detach(){try{controller.unregisterCallback(callback);}catch(RuntimeException ignored){/* Already unavailable. */}}
     }
 
-    /** Read a present numeric flag according to the documented Android metadata type contract. */
+    /**
+     * Read a present numeric flag according to the public AndroidX metadata contract.
+     * Framework lint's closed built-in key list predates this interoperable key;
+     * only this documented extension read is exempted, never API/permission checks.
+     */
+    @android.annotation.SuppressLint("WrongConstant")
     static AdEvidenceDetector.Marker readMarker(MediaMetadata metadata){
         try{if(metadata==null || !metadata.containsKey(AD_KEY))return AdEvidenceDetector.Marker.ABSENT;
             return metadata.getLong(AD_KEY)==0?AdEvidenceDetector.Marker.CONTENT:AdEvidenceDetector.Marker.AD;

@@ -269,11 +269,17 @@ public final class RecoveryCacheAndroidTest {
         int downloads=fixture.port.audioRequests;
         assertFalse(LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation").getBoolean("enabled"));
         assertTrue(local(port,token,++seq,"adprobe","true").getJSONObject("adObservation").getBoolean("enabled"));
-        local(port,token,++seq,"admark","AD_VISIBLE");runtime004At(90000);
+        local(port,token,++seq,"admark","AD_VISIBLE");Thread.sleep(600);
+        assertEquals("Owner annotation is not automatic evidence","UNCERTAIN",LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation").getString("candidate"));
+        // This is an explicitly OWN synthetic flag. Even a positive candidate is
+        // observation-only until a real Prime publisher contract is corroborated.
+        main(()->media.setMetadata(new MediaMetadata.Builder(media.getController().getMetadata()).putLong(AdObservationProbe.AD_KEY,1).build()));
+        runtime004At(90000);
         await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"Direct SEEK onto 01:30 lost AUDIO with probe enabled",10000);
         await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"AUDIO window did not end",7000);
         JSONObject observation=LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation");
-        assertEquals("UNCERTAIN",observation.getString("candidate"));assertEquals(0,observation.getInt("adStarts"));
+        assertEquals("AD_CONFIRMED",observation.getString("candidate"));assertEquals(1,observation.getInt("adStarts"));
+        main(()->media.setMetadata(new MediaMetadata.Builder(media.getController().getMetadata()).putLong(AdObservationProbe.AD_KEY,0).build()));
         local(port,token,++seq,"admark","CONTENT_VISIBLE");local(port,token,++seq,"adsync","false");local(port,token,++seq,"adsync","true");
         assertTrue(local(port,token,++seq,"suspend","").getBoolean("suspended"));
         assertTrue(local(port,token,++seq,"adprobe","false").getBoolean("suspended"));
@@ -284,7 +290,7 @@ public final class RecoveryCacheAndroidTest {
         await(TvFirst009TextServiceOwner::multimediaTextAttached,"Reference TEXT not restored after disabling experiment",10000);
         assertTrue(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);assertEquals(19,prepared.track.calendar.events().size());
         runtime004Proof("ad-detection-service",new JSONObject().put("scope","ACTUAL_ANDROID_SERVICE_OWN_MEDIA_FIXTURE_NOT_PRIME_SONY")
-            .put("defaultOff",true).put("unknownDoesNotBlockAudio",true).put("nativeCueSeekStarts",2).put("manualPausePreservedAcrossProbeToggle",true)
+            .put("defaultOff",true).put("annotationsDoNotConfirmAd",true).put("positiveCandidateCannotGateCommentary",true).put("nativeCueSeekStarts",2).put("manualPausePreservedAcrossProbeToggle",true)
             .put("textAfterProbeDisabled",true).put("extraDownloads",0).put("cacheEvents",19));
     }
 
