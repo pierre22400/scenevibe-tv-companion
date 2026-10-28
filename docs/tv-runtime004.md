@@ -20,7 +20,7 @@ La v24 ajoute une preuve de recul au calendrier existant. Elle n'introduit ni de
 
 ### AD-SYNC : la politique de mode ne doit pas détruire un effet valide
 
-Dans la v23, `setEnabled()` efface les observations de continuité même si MEDIA reste valide. Lors du passage OFF vers ON, la reconstitution de cette preuve peut fermer les effets. `onInterruption()` retire la fenêtre, mais l'événement TEXT reste consommé ; le retour dans sa fenêtre ne le redessine pas. Ce chemin explique une disparition reproductible du TEXT courant, sans démontrer que tous les événements futurs étaient perdus sur Sony.
+Dans la v23, `setEnabled()` efface les observations de continuité même si MEDIA reste valide, mais ne retire pas directement une fenêtre. Une bascule isolée avec MEDIA continuellement compatible n'est pas démontrée comme cause de disparition. Le défaut reproduit concerne une véritable interruption MEDIA autour de la bascule : `onInterruption()` retire la fenêtre, mais l'événement TEXT reste consommé ; le retour dans sa fenêtre ne le redessine pas. Ce chemin explique une disparition reproductible du TEXT courant, sans attribuer définitivement l'incident Sony à la seule bascule ni prétendre que tous les événements futurs étaient perdus.
 
 La v24 conserve les preuves compatibles et l'intention de suspension lors d'une bascule. La bascule ne vide ni le calendrier ni ses consommations. Une véritable perte d'identité/horloge ferme toujours les effets ; au retour fiable, le TEXT déjà consommé peut être restauré uniquement à l'intérieur de sa fenêtre éditoriale originale. Cette restauration a son propre compteur et ne produit pas un deuxième DUE. Une fenêtre expirée reste expirée.
 
