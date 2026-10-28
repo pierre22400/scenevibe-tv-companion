@@ -154,7 +154,7 @@ final class CloudMultimediaControls {
         else {
             int audio=prepared.track.audio.size(),total=prepared.track.calendar.events().size();
             result="Cache privé vérifié : "+(total-audio)+" TEXT + "+audio+" AUDIO · "+total+" événements."
-                    +(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\n"+prepared.track.document.optString("title","Track")+" — cache présent : "+(total-audio)+" TEXT + "+audio+" AUDIO":"")
+                    +(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\n"+prepared.track.title()+" — cache présent : "+(total-audio)+" TEXT + "+audio+" AUDIO":"")
                     +"\nRelu après commit ; aucune restitution automatique.";
             if(BuildConfig.ADSYNC_NONDESTRUCTIVE)android.util.Log.i("SceneVibeCache","event=CACHE_RESTORED text="+(total-audio)+" audio="+audio+" events="+total);
         }

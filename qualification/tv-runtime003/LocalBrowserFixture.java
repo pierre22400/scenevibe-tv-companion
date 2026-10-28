@@ -21,6 +21,6 @@ public final class LocalBrowserFixture {
         if("text".equals(command))text=Boolean.parseBoolean(value);if("audio".equals(command))audio=Boolean.parseBoolean(value);if("adsync".equals(command))adsync=Boolean.parseBoolean(value);
         if("suspend".equals(command))suspended=true;if("resume".equals(command))suspended=false;
         return new JSONObject().put("text",text).put("audio",audio).put("adsync",adsync).put("active",true).put("focus","PASSIVE")
-                .put("runtime","OWN BROWSER RECORDING FIXTURE · no Android/Prime").put("sync",suspended?"USER_SUSPENDED":"MEDIA_FIXTURE_ONLY");
+                .put("runtime","OWN BROWSER RECORDING FIXTURE · no Android/Prime").put("sync",suspended?"USER_SUSPENDED":"MEDIA_FIXTURE_ONLY").put("result",command+":"+value);
     }
 }

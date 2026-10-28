@@ -23,7 +23,9 @@ async function main(){
     await page.locator('#suspend').click();await page.getByRole('status').filter({hasText:'USER_SUSPENDED'}).waitFor();
     await page.locator('#resume').click();await page.getByRole('status').filter({hasText:'MEDIA_FIXTURE_ONLY'}).waitFor();
     await page.locator('#time').fill('00:31');
-    for(const action of ['calibrate','show','close'])await Promise.all([page.waitForResponse(response=>response.url().endsWith('/command')&&response.status()===200),page.locator(`#${action}`).click()]);
+    for(const [action,result] of [['calibrate','calibrate:00:31'],['show','panel:show'],['close','panel:close']]){
+      await page.locator(`#${action}`).click();await page.getByRole('status').filter({hasText:result}).waitFor();
+    }
     child.stdin.write('6601000\n');await page.getByRole('status').filter({hasText:'10 min restantes'}).waitFor();
     await page.locator('#text').click();await page.locator('#text[aria-pressed="true"]').waitFor();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
