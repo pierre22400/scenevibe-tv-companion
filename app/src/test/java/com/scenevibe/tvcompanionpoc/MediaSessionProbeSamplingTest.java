@@ -41,6 +41,11 @@ public final class MediaSessionProbeSamplingTest {
     @Test public void multimediaCadenceAndStopUseTheSameSampler(){probe=new MediaSessionProbe(RuntimeEnvironment.getApplication(),listener(),null,250L);
         probe.start();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));assertEquals(5,unavailable.get());
         probe.stop();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));assertEquals(5,unavailable.get());}
+    /** A manual retry queries now but neither starts a stopped probe nor schedules a second sampler. */
+    @Test public void explicitCaptureDoesNotReuseOrDuplicateTheSampler(){probe=new MediaSessionProbe(RuntimeEnvironment.getApplication(),listener(),null,250L);
+        probe.captureNow();assertEquals(0,unavailable.get());probe.start();probe.captureNow();assertEquals(2,unavailable.get());
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(250));assertEquals(3,unavailable.get());
+        probe.stop();probe.captureNow();assertEquals(3,unavailable.get());}
     /** A faster or unbounded loop cannot be requested by any caller. */
     @Test public void outOfPolicyIntervalsAreRejected(){for(long value:new long[]{-1,0,249,1001}){
         try{new MediaSessionProbe(RuntimeEnvironment.getApplication(),listener(),null,value);fail("Unbounded cadence accepted");}

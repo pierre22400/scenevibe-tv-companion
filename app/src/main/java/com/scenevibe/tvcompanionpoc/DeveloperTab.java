@@ -1,0 +1,109 @@
+package com.scenevibe.tvcompanionpoc;
+
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.os.Handler;
+import android.os.Looper;
+
+/**
+ * The normal Activity's Developer tab, not an overlay Activity.
+ * Preparation and a normal explicit player launch are separate actions, so the
+ * service window cannot take D-pad focus while the user is choosing the player.
+ * All business widgets are the same CompanionControlPanel view/command port.
+ * The normal viewer launch now keeps input with the viewer. A separate labelled
+ * action is an explicit focus experiment, not an implied promise about Prime.
+ */
+final class DeveloperTab {
+    private final MainActivity activity;
+    private final LinearLayout root;
+    private final CompanionControlPanel controls;
+    private final TextView state,result;
+    private final Button mode,prepare,launch,focusExperiment,closeOverlay;
+    private final Button localControl;
+    private final TextView localInfo;
+    private final Handler handler=new Handler(Looper.getMainLooper());
+    private final Runnable poll=this::tick;
+
+    /** Construct ordinary Activity views; this creates no service, window or media admission. */
+    DeveloperTab(MainActivity activity,Runnable dismiss) {
+        this.activity=activity;root=new LinearLayout(activity);root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(android.graphics.Color.WHITE);root.setPadding(dp(12),dp(12),dp(12),dp(12));
+        state=label("Mode Développeur désactivé.");root.addView(state);
+        result=label("Par défaut, le panneau reste passif et les touches au lecteur. Utilise les commandes ici. L’essai interactif prend le focus et peut interrompre Prime.");
+        mode=button("Mode Développeur : OFF",()->{
+            boolean enabled=TvFirst009TextServiceOwner.developerStage()!=DeveloperOverlayState.Stage.OFF;
+            result.setText(TvFirst009TextServiceOwner.setDeveloperMode(activity,!enabled)?"Mode mis à jour.":"Activation du mode refusée.");refresh();
+        });
+        prepare=button("Afficher les commandes en overlay",()->{
+            result.setText(TvFirst009TextServiceOwner.prepareDeveloperPanel(activity)
+                    ?"Préparation demandée ; les touches restent dans l’application."
+                    :"Préparation refusée : active le mode et l’autorisation de superposition.");refresh();
+        });
+        launch=button("Passer à Prime Video",()->{
+            result.setText(activity.launchDeveloperPrime()?"Ouverture normale demandée · affichage passif, touches au lecteur.":"Prime indisponible ou panneau non préparé.");refresh();
+        });
+        focusExperiment=button("Tester le focus overlay (peut interrompre Prime)",()->{
+            result.setText(activity.launchDeveloperPrimeInteractive()?"Essai interactif explicite demandé pour ce lancement seulement.":"Essai refusé : Prime indisponible ou panneau non préparé.");refresh();
+        });
+        closeOverlay=button("Fermer le panneau overlay",()->{TvFirst009TextServiceOwner.closeDeveloperPanel();refresh();});
+        localControl=button("Activer les commandes locales (téléphone)",()->{
+            boolean enabled=TvFirst009TextServiceOwner.localControlEnabled();
+            result.setText(TvFirst009TextServiceOwner.setLocalControlEnabled(!enabled)?"Commandes locales mises à jour. Le téléphone ne remplace pas le D-pad Sony.":"Active d’abord le mode Développeur et attends le service.");refresh();
+        });
+        localInfo=label("");root.addView(localInfo);
+        root.addView(result);
+        controls=new CompanionControlPanel(activity,TvFirst009TextServiceOwner.panelCommands());
+        root.addView(controls.embeddedView(dismiss));
+        refresh();
+    }
+
+    /** Expose an ordinary subtree of the existing application navigation. */
+    LinearLayout view(){return root;}
+    /** Read only the owner; the tab has no duplicate TEXT/AUDIO/AD-SYNC preferences. */
+    void refresh() {
+        DeveloperOverlayState.Stage stage=TvFirst009TextServiceOwner.developerStage();
+        setText(mode,"Mode Développeur : "+(stage==DeveloperOverlayState.Stage.OFF?"OFF":"ON"));
+        ((DeveloperButton)mode).switchState(stage!=DeveloperOverlayState.Stage.OFF);
+        setText(state,TvFirst009TextServiceOwner.developerStatus());
+        prepare.setEnabled(stage!=DeveloperOverlayState.Stage.OFF && stage!=DeveloperOverlayState.Stage.HANDOFF && stage!=DeveloperOverlayState.Stage.WAITING_PLAYER);
+        launch.setEnabled(stage==DeveloperOverlayState.Stage.PREPARED && activity.developerPrimeAvailable());
+        focusExperiment.setEnabled(launch.isEnabled());
+        closeOverlay.setEnabled(stage==DeveloperOverlayState.Stage.PREPARED || stage==DeveloperOverlayState.Stage.MONITORING || stage==DeveloperOverlayState.Stage.INTERACTIVE);
+        localControl.setEnabled(BuildConfig.ADSYNC_NONDESTRUCTIVE && stage!=DeveloperOverlayState.Stage.OFF);
+        setText(localControl,TvFirst009TextServiceOwner.localControlEnabled()?"Arrêter les commandes locales (téléphone)":"Activer les commandes locales (téléphone)");
+        setText(localInfo,TvFirst009TextServiceOwner.localControlInfo());
+        linkActions();
+    }
+    /** Keep native vertical D-pad navigation in this action column instead of falling into the adjacent sidebar. */
+    private void linkActions(){
+        Button[] actions={mode,prepare,launch,focusExperiment,closeOverlay,localControl};
+        for(int i=0;i<actions.length;i++){
+            int up=android.view.View.NO_ID,down=android.view.View.NO_ID;
+            for(int n=i-1;n>=0;n--)if(actions[n].isEnabled()){up=actions[n].getId();break;}
+            for(int n=i+1;n<actions.length;n++)if(actions[n].isEnabled()){down=actions[n].getId();break;}
+            actions[i].setNextFocusUpId(up);actions[i].setNextFocusDownId(down);
+        }
+    }
+    /** The Activity can close a recalage form before changing its normal navigation page. */
+    boolean closeChild(){return controls.closeChild();}
+    /** Resume presentation only; no panel preparation or playback starts here. */
+    void resume(){handler.removeCallbacks(poll);controls.resumeEmbedded();tick();}
+    /** Stop both Activity-owned display refreshers while the service keeps its own lifetime. */
+    void pause(){handler.removeCallbacks(poll);controls.pauseEmbedded();}
+    /** Discard only this tab's transient view work. */
+    void close(){pause();}
+    /** Refresh state without becoming a media clock or an automatic focus transition. */
+    private void tick(){refresh();handler.postDelayed(poll,500);}
+    /** Prevent unchanged status from generating repeated layout/accessibility events. */
+    private void setText(TextView view,String text){if(!text.contentEquals(view.getText()))view.setText(text);}
+    /** Use remote-focusable native buttons, with literal labels for TV navigation. */
+    private Button button(String title,Runnable action) {
+        Button button=new DeveloperButton(activity);button.setId(android.view.View.generateViewId());button.setText(title);button.setTextSize(18);button.setAllCaps(false);
+        button.setFocusable(true);button.setOnClickListener(view->action.run());root.addView(button,new LinearLayout.LayoutParams(-1,dp(54)));return button;
+    }
+    /** Keep explanatory text legible on a light, opaque developer surface. */
+    private TextView label(String text){TextView view=new TextView(activity);view.setText(text);view.setTextColor(android.graphics.Color.BLACK);view.setTextSize(18);return view;}
+    /** Scale dimensions rather than assuming a specific Sony pixel density. */
+    private int dp(int value){return Math.round(value*activity.getResources().getDisplayMetrics().density);}
+}

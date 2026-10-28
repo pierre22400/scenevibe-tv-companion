@@ -28,6 +28,8 @@ import java.util.zip.ZipInputStream;
  * Original TEXT scenes feed the existing M5 regie/SceneRenderer unchanged.
  */
 final class StudioMultimediaPackage {
+    /** Display the immutable verified package title without exposing its mutable JSON document. */
+    String title(){return document.optString("title","Track");}
     /** Decode the actual MP3 bytes at the local native/software qualification boundary. */
     interface Decoder { long decodedDurationMs(byte[] bytes) throws Exception; }
     final String trackId;

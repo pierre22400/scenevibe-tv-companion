@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="app_name">SceneVibe TV Companion POC</string>
+  <string name="tv_developer">Développeur</string>
 </resources>
 

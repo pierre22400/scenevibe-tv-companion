@@ -12,6 +12,7 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.List;
+import java.util.function.Predicate;
 import com.scenevibe.tvcompanionpoc.tvfirst.MediaEvidence;
 import com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReader;
 
@@ -51,6 +52,8 @@ public final class MediaSessionProbe {
         public final String title;
         public final String subtitle;
         public final long durationMs;
+        public final Object sessionKey;
+        public final long capturedAtMs, updatedAtMs;
 
         Snapshot(
                 String packageName,
@@ -64,6 +67,15 @@ public final class MediaSessionProbe {
                 String title,
                 String subtitle,
                 long durationMs) {
+            this(packageName,state,stateName,positionMs,estimatedPositionMs,speed,updateAgeMs,
+                    mediaId,title,subtitle,durationMs,null,-1L,-1L);
+        }
+
+        /** Retain a nonserialized session token and raw observation anchors for opt-in interruption guards. */
+        Snapshot(String packageName,int state,String stateName,long positionMs,long estimatedPositionMs,
+                float speed,long updateAgeMs,String mediaId,String title,String subtitle,long durationMs,
+                Object sessionKey,long capturedAtMs,long updatedAtMs) {
+            this.sessionKey=sessionKey;this.capturedAtMs=capturedAtMs;this.updatedAtMs=updatedAtMs;
             this.packageName = packageName;
             this.state = state;
             this.stateName = stateName;
@@ -87,6 +99,7 @@ public final class MediaSessionProbe {
     private final long sampleIntervalMs;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
+    private final Predicate<Snapshot> preferred;
 
     private final Runnable sampler = new Runnable() {
         @Override
@@ -114,6 +127,12 @@ public final class MediaSessionProbe {
 
     /** Bound an explicit multimedia cadence while keeping every historical constructor at one second. */
     public MediaSessionProbe(Context context, Listener listener, Observer observer,long sampleIntervalMs) {
+        this(context,listener,observer,sampleIntervalMs,null);
+    }
+
+    /** Prefer an already-admitted identity while leaving historical session selection unchanged by default. */
+    public MediaSessionProbe(Context context,Listener listener,Observer observer,long sampleIntervalMs,Predicate<Snapshot> preferred) {
+        this.preferred=preferred;
         if(sampleIntervalMs<250L || sampleIntervalMs>SAMPLE_INTERVAL_MS)throw new IllegalArgumentException("SAMPLE_INTERVAL_OUT_OF_POLICY");
         if (listener != null && observer != null) throw new IllegalArgumentException("One probe mode only");
         this.sampleIntervalMs=sampleIntervalMs;
@@ -133,12 +152,22 @@ public final class MediaSessionProbe {
         sampler.run();
     }
 
+    /** Query currently published public MEDIA facts synchronously; never reuse a cached application observation. */
+    public void captureNow() { if(started)sample(); }
+
     /** Stop future sampling; the captured service writer also rejects late callbacks. */
     public void stop() {
         started = false;
         handler.removeCallbacks(sampler);
         Log.i(TAG, "Passive MediaSession probe stopped");
     }
+
+    private String lastProbeState="";
+    private Object lastSelectedSession;
+    private String lastSelection="";
+
+    /** Log v22 state transitions once; no MEDIA payload or repeated 250 ms absence messages. */
+    private void probeState(String code){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !code.equals(lastProbeState)){Log.i(TAG,code);lastProbeState=code;}}
 
     /** Dispatch one exclusive probe branch; the legacy branch below is retained unchanged. */
     private void sample() {
@@ -148,7 +177,7 @@ public final class MediaSessionProbe {
             return;
         }
         if (!NotificationAccess.isGranted(context)) {
-            Log.i(TAG, "ACCESS_REQUIRED notificationListener=false");
+            probeState("ACCESS_REQUIRED notificationListener=false");
             unavailable();
             return;
         }
@@ -172,21 +201,41 @@ public final class MediaSessionProbe {
         }
 
         if (controllers.isEmpty()) {
-            Log.i(TAG, "NO_ACTIVE_SESSIONS");
+            probeState("NO_ACTIVE_SESSIONS");
             unavailable();
             return;
         }
 
-        Snapshot primary = null;
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)probeState("ACTIVE_SESSIONS_AVAILABLE");
+        java.util.ArrayList<Snapshot> candidates=new java.util.ArrayList<>();
         for (int index = 0; index < controllers.size(); index++) {
-            Snapshot snapshot = snapshotController(index, controllers.get(index));
-            if (primary == null
-                    || (primary.state != PlaybackState.STATE_PLAYING
-                        && snapshot.state == PlaybackState.STATE_PLAYING)) {
-                primary = snapshot;
+            try{candidates.add(snapshotController(index,controllers.get(index)));}
+            catch(RuntimeException vanished){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)throw vanished;probeState("SESSION_READ_UNAVAILABLE");}
+        }
+        Snapshot primary=select(candidates,preferred,BuildConfig.ADSYNC_NONDESTRUCTIVE?lastSelectedSession:null);
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && primary!=null){
+            int compatible=0;for(Snapshot item:candidates)if(preferred!=null && preferred.test(item))compatible++;
+            String selection="active="+candidates.size()+" compatible="+compatible+" selected="+(preferred!=null && preferred.test(primary)?"COMPATIBLE":"INCOMPATIBLE")+" playback="+primary.stateName;
+            if(!java.util.Objects.equals(lastSelectedSession,primary.sessionKey) || !selection.equals(lastSelection)){
+                Log.i(TAG,"SELECTION "+selection+" rawMs="+primary.positionMs+" estimatedMs="+primary.estimatedPositionMs+" anchorAgeMs="+primary.updateAgeMs+" speed="+primary.speed);
+                lastSelection=selection;
             }
+            lastSelectedSession=primary.sessionKey;
         }
         if (listener != null && primary != null) listener.onSnapshot(primary);
+        else if(primary==null)unavailable();
+    }
+
+    /** Keep a compatible active session stable on ties; identity and PLAYING priority remain mandatory. */
+    static Snapshot select(java.util.List<Snapshot> candidates,Predicate<Snapshot> preferred,Object previous){
+        Snapshot primary=null,compatible=null;
+        for(Snapshot snapshot:candidates){
+            if(primary==null || primary.state!=PlaybackState.STATE_PLAYING && snapshot.state==PlaybackState.STATE_PLAYING)primary=snapshot;
+            if(preferred!=null && preferred.test(snapshot) && (compatible==null
+                    || compatible.state!=PlaybackState.STATE_PLAYING && snapshot.state==PlaybackState.STATE_PLAYING
+                    || compatible.state==snapshot.state && previous!=null && previous.equals(snapshot.sessionKey)))compatible=snapshot;
+        }
+        return compatible==null?primary:compatible;
     }
 
     /** Preserve historical absence forwarding without constructing an observation fallback. */
@@ -203,8 +252,9 @@ public final class MediaSessionProbe {
         long positionMs = state == null ? -1L : state.getPosition();
         float speed = state == null ? 0f : state.getPlaybackSpeed();
         long updatedAtMs = state == null ? -1L : state.getLastPositionUpdateTime();
+        long capturedAtMs=SystemClock.elapsedRealtime();
         long updateAgeMs = updatedAtMs <= 0L ? -1L
-                : Math.max(0L, SystemClock.elapsedRealtime() - updatedAtMs);
+                : Math.max(0L, capturedAtMs - updatedAtMs);
         long estimatedPositionMs = estimatePositionMs(state, positionMs, speed, updateAgeMs);
 
         String mediaId = metadataText(metadata, MediaMetadata.METADATA_KEY_MEDIA_ID);
@@ -217,7 +267,7 @@ public final class MediaSessionProbe {
                 ? -1L : metadata.getLong(MediaMetadata.METADATA_KEY_DURATION);
         String readableState = stateName(state);
 
-        Log.i(TAG,
+        if(!BuildConfig.ADSYNC_PROTOTYPE)Log.i(TAG,
                 "SESSION index=" + index
                 + " package=" + controller.getPackageName()
                 + " state=" + readableState
@@ -241,7 +291,7 @@ public final class MediaSessionProbe {
                 mediaId,
                 title,
                 subtitle,
-                durationMs);
+                durationMs,controller.getSessionToken(),capturedAtMs,updatedAtMs);
     }
 
     /** Preserve the historic estimate; the independent observation reader retains the raw anchor. */

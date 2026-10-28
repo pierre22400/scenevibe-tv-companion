@@ -3,6 +3,8 @@ package com.scenevibe.tvcompanionpoc;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
@@ -26,6 +28,9 @@ final class CloudMultimediaControls {
     private MultimediaPrivateCache.Prepared preparedCache;
     private Button activate,stop,textToggle,audioToggle;
     private boolean textEnabled=true,audioEnabled=true;
+    private Button adToggle,adSuspend,adResume,adCalibrate;
+    private TextView adStatus;
+    private long restoredEpoch=Long.MIN_VALUE;
 
     /** Attach only view controls; constructing the screen never performs network I/O or starts playback. */
     CloudMultimediaControls(Activity activity,Supplier<TvFirst008Source> owner) {
@@ -38,8 +43,20 @@ final class CloudMultimediaControls {
         if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){
             activate=button("Activer TEXT + AUDIO depuis le cache",this::confirmActivation);
             stop=button("Arrêter les commentaires",()->{TvFirst009TextServiceOwner.requestStop(activity);refresh();});
-            textToggle=button("Commentaires écrits : ON",()->{textEnabled=!textEnabled;TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
-            audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!audioEnabled;TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});
+            if(!BuildConfig.TVUX_DEVELOPER_OVERLAY){
+            textToggle=button("Commentaires écrits : ON",()->{textEnabled=!TvFirst009TextServiceOwner.multimediaTextEnabled();TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
+            audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!TvFirst009TextServiceOwner.multimediaAudioEnabled();TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});
+            if(BuildConfig.TVUX_CONTROL_PANEL)button("Ouvrir le panneau de commandes",()->{
+                result=TvFirst009TextServiceOwner.requestControlPanel(activity)?"Panneau demandé.":"Autorisation de superposition nécessaire.";refresh();
+            });
+            if(BuildConfig.ADSYNC_PROTOTYPE) {
+                adToggle=button("AD-SYNC : OFF",()->{TvFirst009TextServiceOwner.setAdSyncEnabled(!TvFirst009TextServiceOwner.adSyncEnabled());refresh();});
+                adSuspend=button("Suspendre les commentaires",()->{TvFirst009TextServiceOwner.suspendMultimediaComments();refresh();});
+                adResume=button("Reprendre les commentaires",()->{TvFirst009TextServiceOwner.resumeMultimediaComments();refresh();});
+                adCalibrate=button("Recaler sur le temps du film",this::confirmCalibration);
+                adStatus=new TextView(activity);adStatus.setTextColor(0xFFFFFFFF);adStatus.setTextSize(17);root.addView(adStatus);
+            }
+        }
         }
         refresh();
     }
@@ -49,20 +66,34 @@ final class CloudMultimediaControls {
 
     /** Reflect actual source readiness and failure; retaining a file never implies Cloud authorization. */
     void refresh() {
+        textEnabled=TvFirst009TextServiceOwner.multimediaTextEnabled();audioEnabled=TvFirst009TextServiceOwner.multimediaAudioEnabled();
         TvFirst008Source source=owner.get();boolean ready=source!=null && !source.busy();
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && ready && source.cacheViewEpoch()>=0 && restoredEpoch!=source.cacheViewEpoch()){
+            restoredEpoch=source.cacheViewEpoch();preparedCache=null;result="Vérification du cache local existant…";
+            source.restoreMultimedia(this::prepared);ready=false;
+        }
         catalogue.setEnabled(ready && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED);
         restore.setEnabled(ready);
         for(int i=0;i<items.getChildCount();i++)items.getChildAt(i).setEnabled(catalogue.isEnabled());
         String state=source==null?"Association disponible dans le parcours Compte.":source.accountMessage();
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
-                +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"\nAdmission locale explicite requise. "+TvFirst009TextServiceOwner.status().code:
+                +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\nÉtat technique : ":"\nAdmission locale explicite requise. ")+TvFirst009TextServiceOwner.status().code:
                     "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability()
+                +(TvFirst009TextServiceOwner.multimediaActive()?"\nAdmission conservée tant que consentement et reçu restent valides.":"\nNouvelle confirmation de restitution depuis le cache ; aucun retéléchargement requis."));
         if(activate!=null){
             activate.setEnabled(ready && preparedCache!=null && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED
                     && !TvFirst009TextServiceOwner.controlBusy());
             stop.setEnabled(TvFirst009TextServiceOwner.controlBusy());
-            textToggle.setText("Commentaires écrits : "+(textEnabled?"ON":"OFF"));
-            audioToggle.setText("Commentaires audio : "+(audioEnabled?"ON":"OFF"));
+            if(textToggle!=null)textToggle.setText("Commentaires écrits : "+(textEnabled?"ON":"OFF"));
+            if(audioToggle!=null)audioToggle.setText("Commentaires audio : "+(audioEnabled?"ON":"OFF"));
+            if(adToggle!=null) {
+                boolean enabled=TvFirst009TextServiceOwner.adSyncEnabled(),running=TvFirst009TextServiceOwner.multimediaActive();
+                adToggle.setText("AD-SYNC : "+(enabled?"ON · consultatif":"OFF · comportement v17"));
+                adSuspend.setEnabled((enabled || BuildConfig.ADSYNC_NONDESTRUCTIVE) && running);adResume.setEnabled((enabled || BuildConfig.ADSYNC_NONDESTRUCTIVE) && running);adCalibrate.setEnabled((enabled || BuildConfig.ADSYNC_NONDESTRUCTIVE) && running);
+                adStatus.setText("Aucune détection publicitaire Prime garantie. Suspendre manuellement pendant une publicité.\n"
+                        +TvFirst009TextServiceOwner.adSyncStatus());
+            }
         }
     }
 
@@ -98,7 +129,7 @@ final class CloudMultimediaControls {
 
     /** Separate catalogue discovery from the user's confirmed private assignment and download. */
     private void confirm(String publication,String title) {
-        new AlertDialog.Builder(activity).setTitle("Télécharger cette track ?").setMessage(title
+        TvCompanionDialogs.builder(activity).setTitle("Télécharger cette track ?").setMessage(title
                 +"\nLes fichiers seront vérifiés et conservés dans le cache privé de SceneVibe.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Télécharger",(dialog,which)->download(publication)).show();
     }
@@ -123,7 +154,9 @@ final class CloudMultimediaControls {
         else {
             int audio=prepared.track.audio.size(),total=prepared.track.calendar.events().size();
             result="Cache privé vérifié : "+(total-audio)+" TEXT + "+audio+" AUDIO · "+total+" événements."
+                    +(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\n"+prepared.track.title()+" — cache présent : "+(total-audio)+" TEXT + "+audio+" AUDIO":"")
                     +"\nRelu après commit ; aucune restitution automatique.";
+            if(BuildConfig.ADSYNC_NONDESTRUCTIVE)android.util.Log.i("SceneVibeCache","event=CACHE_RESTORED text="+(total-audio)+" audio="+audio+" events="+total);
         }
         refresh();
     }
@@ -131,12 +164,28 @@ final class CloudMultimediaControls {
     /** Require a fresh owner decision; UNKNOWN is never silently converted into editorial evidence. */
     private void confirmActivation(){
         if(preparedCache==null || activate==null || !activate.isEnabled())return;
-        new AlertDialog.Builder(activity).setTitle("Admission locale TEXT + AUDIO")
-                .setMessage("Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
+        TvCompanionDialogs.builder(activity).setTitle("Admission locale TEXT + AUDIO")
+                .setMessage(BuildConfig.ADSYNC_NONDESTRUCTIVE?"Active les 16 TEXT et 3 MP3 du cache pour l'édition de référence Columbo — Eaux troubles. Cette confirmation autorise le démarrage ; les allers-retours et interruptions MEDIA ne la renouvellent pas. Une véritable expiration/révocation reste bloquante. Publicité non observable : suspension manuelle disponible.":BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
                     boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
                     if(started){TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);}
                     result=started?"Démarrage du service demandé ; attente d'une identité MEDIA compatible.":"Admission refusée : vérifie compte, permissions et mapping de référence.";refresh();
+                }).show();
+    }
+
+    /** Confirm the film's visible time locally; no edit or seek is sent to the platform or Cloud. */
+    private void confirmCalibration() {
+        EditText input=new EditText(activity);input.setSingleLine(true);input.setHint("mm:ss ou hh:mm:ss");
+        input.setInputType(android.text.InputType.TYPE_CLASS_DATETIME | android.text.InputType.TYPE_DATETIME_VARIATION_TIME);
+        CheckBox replay=new CheckBox(activity);replay.setText("J'ai déplacé le film : autoriser la relecture");replay.setChecked(false);
+        LinearLayout form=new LinearLayout(activity);form.setOrientation(LinearLayout.VERTICAL);form.addView(input);form.addView(replay);
+        TvCompanionDialogs.builder(activity).setTitle("Temps du film")
+                .setMessage("Confirme que le film a repris, puis saisis son temps actuel. Seuls les commentaires SceneVibe seront recalés (correction limitée à une heure).")
+                .setView(form).setNegativeButton("Annuler",null).setPositiveButton("Confirmer le temps",(dialog,which)->{
+                    try{long time=AdSyncController.parseFilmTime(input.getText().toString());
+                        result=TvFirst009TextServiceOwner.calibrateMultimediaResult(time,replay.isChecked()).message;
+                    }catch(IllegalArgumentException invalid){result="Saisis un temps valide mm:ss ou hh:mm:ss.";}
+                    refresh();
                 }).show();
     }
 

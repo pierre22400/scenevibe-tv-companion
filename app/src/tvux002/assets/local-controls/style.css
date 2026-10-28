@@ -1,0 +1,53 @@
+/* Shared local phone controls: literal ON/OFF, light fills, red activation and a separate black keyboard focus ring. */
+body {
+  margin: 0;
+  background: #fff;
+  color: #171717;
+  font: 1.1rem system-ui, sans-serif;
+}
+main {
+  max-width: 42rem;
+  margin: auto;
+  padding: 1.25rem;
+}
+button, input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3rem;
+  margin: .75rem 0;
+  padding: .6rem;
+  font: inherit;
+  color: #171717;
+  background: #fff;
+  border: 1px solid #777;
+  border-radius: .4rem;
+}
+button[aria-pressed="true"] {
+  border: 3px solid #b3261e;
+  background: #fff4ef;
+}
+button:focus-visible, input:focus-visible {
+  outline: 3px solid #000;
+  outline-offset: 3px;
+}
+button:disabled {
+  background: #e7e7e7;
+  color: #555;
+}
+[hidden] {
+  display: none;
+}
+#status {
+  white-space: pre-line;
+}
+details {
+  margin: 1.25rem 0;
+  padding: .75rem;
+  border: 1px solid #777;
+  border-radius: .4rem;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}

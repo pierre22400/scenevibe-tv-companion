@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  Private-LAN SceneVibe controls. The actual service reports channel preferences,
+  manual pause and MEDIA availability separately; this page never controls Prime.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SceneVibe · commandes locales</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>SceneVibe</h1>
+      <p>
+        Commandes par téléphone sur réseau privé de confiance.
+        SceneVibe ne pilote pas le lecteur Prime.
+      </p>
+      <section id="pairing">
+        <h2>Associer cette page</h2>
+        <label for="code">Code affiché dans SceneVibe TV</label>
+        <input
+          id="code"
+          type="password"
+          inputmode="numeric"
+          maxlength="8"
+          autocomplete="off"
+        >
+        <button id="pair" type="button">Associer</button>
+        <p>
+          Durée : 120 minutes dès l’activation sur la TV, sans renouvellement automatique.
+          Garde cette page ouverte. HTTP local en clair, réseau privé de confiance uniquement.
+        </p>
+      </section>
+      <section id="controls" hidden>
+        <h2>Commentaires</h2>
+        <button id="text" type="button" aria-pressed="false">TEXT : OFF</button>
+        <button id="audio" type="button" aria-pressed="false">AUDIO : OFF</button>
+        <button id="adsync" type="button" aria-pressed="false">AD-SYNC : OFF</button>
+        <button id="hold" type="button" aria-pressed="false">Commentaires : état en attente</button>
+        <p>
+          La pause globale conserve tes choix TEXT et AUDIO, par exemple pendant une publicité.
+          Aucune publicité n’est détectée automatiquement.
+        </p>
+        <button id="show" type="button">Afficher le moniteur SceneVibe</button>
+        <button id="close" type="button">Masquer le moniteur SceneVibe</button>
+        <details>
+          <summary>Recalage et relecture en cas d’incertitude MEDIA</summary>
+          <label for="time">Temps réel du film : mm:ss ou hh:mm:ss</label>
+          <input
+            id="time"
+            type="text"
+            inputmode="text"
+            maxlength="9"
+            autocomplete="off"
+            placeholder="05:00"
+          >
+          <button id="calibrate" type="button">Recaler les commentaires sur ce temps</button>
+          <button id="replay" type="button">J’ai repris ce passage : autoriser sa relecture SceneVibe</button>
+          <p>
+            Une relecture cohérente dans la même session est confirmée automatiquement.
+            Cette action facultative sert si Android remplace la session ou publie un recul ambigu.
+            Elle ne déplace pas le film et ne crée aucune admission.
+          </p>
+        </details>
+        <p>Les touches de la télévision restent au lecteur.</p>
+      </section>
+      <p id="status" role="status" aria-live="polite">Entre le code de la télévision.</p>
+    </main>
+  </body>
+</html>

@@ -50,6 +50,8 @@ import java.util.Map;
  * here for the record.</p>
  */
 public final class SceneVibeAudioRenderer {
+    /** A renderer request is separate from native PREPARED/STARTED acknowledgements. */
+    public enum DueResult { REQUESTED, CHANNEL_OFF, PLAYBACK_PAUSED, STALE_ACTIVATION, UNKNOWN_EVENT, ALREADY_ACTIVE, OTHER_EVENT_ACTIVE }
     private final java.util.Map<String,Long> nativeOffsets = new java.util.HashMap<>();
     private boolean frozen;
     private float localGain=1f;
@@ -214,29 +216,34 @@ public final class SceneVibeAudioRenderer {
      * ignored (the scheduler owns window arbitration).
      */
     public void onDue(String token, String eventId) {
-        if (!audioEnabled || !playing) {
-            return;
-        }
+        onDueResult(token,eventId);
+    }
+
+    /** Return the precise routing refusal while retaining the original onDue entry and native player policy. */
+    public DueResult onDueResult(String token,String eventId) {
+        if(!audioEnabled)return DueResult.CHANNEL_OFF;
+        if(!playing)return DueResult.PLAYBACK_PAUSED;
         // C3 (session tokens): a due bearing a token that is NOT the current catalog
         // token comes from a stale/previous activation. The scheduler only emits the
         // active activation's token on main, but we defend against a late/reordered
         // callback: a stale-token due must neither start a new comment nor restart or
         // disturb one already playing under the current (live) token. Ignore it.
         if (catalogToken != null && !catalogToken.equals(token)) {
-            return;
+            return DueResult.STALE_ACTIVATION;
         }
         AudioEvent event = catalog.get(eventId);
         if (event == null) {
-            return;
+            return DueResult.UNKNOWN_EVENT;
         }
         if (eventId.equals(activeEventId)) {
             if (!activeStarted) {
                 startActive(event);
+                return DueResult.REQUESTED;
             }
-            return;
+            return DueResult.ALREADY_ACTIVE;
         }
         if (activeEventId != null) {
-            return;
+            return DueResult.OTHER_EVENT_ACTIVE;
         }
         activeEventId = eventId;
         activePrepared = true;
@@ -244,6 +251,7 @@ public final class SceneVibeAudioRenderer {
         prepareSample = sampleCount;
         port.prepare(event.assetRef());
         startActive(event);
+        return DueResult.REQUESTED;
     }
 
     /**
