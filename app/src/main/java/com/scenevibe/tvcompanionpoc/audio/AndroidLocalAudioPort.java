@@ -13,12 +13,19 @@ import java.io.IOException;
  * API is referenced. Native codec/seek accuracy still requires Android/Sony tests.
  */
 public final class AndroidLocalAudioPort implements LocalAudioPort {
+    /** Actual native lifecycle facts; STARTED never means an acoustic Sony test. */
+    public enum Event { PREPARE_REQUESTED, PREPARED, STARTED, PAUSED, RESUMED, STOPPED, COMPLETED, START_REFUSED, ERROR }
+    /** Optional diagnostic observer; it grants no playback authority and owns no clock. */
+    public interface Observer { /** Correlate one native attempt without changing the selected resource. */ void changed(long attempt,Event event); }
     /** Resolve only a resource id already verified in the local package. */
     public interface Resources { File resolve(String id) throws IOException; }
     /** Execute one audible effect under the service's current cache/consent fence. */
     public interface StartGate { /** Return false when the current owner no longer authorizes the effect. */ boolean run(Runnable audibleEffect); }
     private final Resources resources;
     private final StartGate startGate;
+    private final Observer observer;
+    private long attempt;
+    private boolean attemptPresent,startedOnce;
     private MediaPlayer player;
     private State state=State.IDLE;
     private float gain=1f;
@@ -34,13 +41,19 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
 
     /** Recheck the owner's current admission before every synchronous or deferred audible start. */
     public AndroidLocalAudioPort(Resources resources,StartGate startGate) {
+        this(resources,startGate,null);
+    }
+
+    /** Retain the existing guarded player and optionally acknowledge real preparation/start/terminal edges. */
+    public AndroidLocalAudioPort(Resources resources,StartGate startGate,Observer observer) {
         if(resources==null || startGate==null) throw new IllegalArgumentException("VERIFIED_RESOURCES_REQUIRED");
-        this.resources=resources;this.startGate=startGate;
+        this.resources=resources;this.startGate=startGate;this.observer=observer;
     }
 
     /** Prepare one actual local MP3 while retaining silent PREPARED state. */
     @Override public void prepare(String assetRef) {
         release();
+        attempt++;attemptPresent=true;startedOnce=false;notify(Event.PREPARE_REQUESTED);
         try {
             File file=resources.resolve(assetRef);
             if(file==null || !file.isFile() || file.length()<1) throw new IOException("RESOURCE_MISSING");
@@ -59,22 +72,23 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
                 if(startRequested) start();
             });
             created.setOnCompletionListener(completed -> {
-                if(player==created && captured==generation) release();
+                if(player==created && captured==generation) release(Event.COMPLETED);
             });
             created.setOnErrorListener((failed,what,extra) -> {
                 if(player==created && captured==generation) fail();
                 return true;
             });
-            created.prepare(); state=State.PREPARED;
+            created.prepare(); state=State.PREPARED;notify(Event.PREPARED);
         } catch(IOException | RuntimeException refused) { fail(); }
     }
 
     /** Start after native offset application, never before preparation. */
     @Override public void start() {
-        if(player==null || state==State.ERROR || state==State.IDLE) return;
+        if(player==null || state==State.ERROR || state==State.IDLE || state==State.STARTED) return;
         startRequested=true;
         if(seekPending) return;
-        try { if(!startGate.run(()->{player.setVolume(gain,gain);player.start();state=State.STARTED;}))release(); }
+        try { if(!startGate.run(()->{player.setVolume(gain,gain);player.start();state=State.STARTED;
+            boolean first=!startedOnce;startedOnce=true;notify(first?Event.STARTED:Event.RESUMED);}) || state!=State.STARTED)release(Event.START_REFUSED); }
         catch(RuntimeException refused) { fail(); }
     }
 
@@ -82,7 +96,7 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
     @Override public void pause() {
         startRequested=false;
         if(player==null || state==State.IDLE || state==State.ERROR) return;
-        try { if(state==State.STARTED) player.pause(); state=State.PAUSED; }
+        try { boolean changed=state!=State.PAUSED;if(state==State.STARTED) player.pause(); state=State.PAUSED;if(changed)notify(Event.PAUSED); }
         catch(RuntimeException refused) { fail(); }
     }
 
@@ -109,6 +123,11 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
 
     /** Invalidate callbacks before releasing a native player exactly once. */
     @Override public void release() {
+        release(Event.STOPPED);
+    }
+
+    /** Retire a native generation before publishing its exact terminal cause once. */
+    private void release(Event terminal) {
         ++generation; MediaPlayer previous=player; player=null;
         startRequested=false; seekPending=false; requestedOffset=0; state=State.IDLE;
         if(previous!=null) {
@@ -116,6 +135,7 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
             try { previous.reset(); } catch(RuntimeException ignored) { /* Teardown remains idempotent. */ }
             previous.release();
         }
+        if(attemptPresent){attemptPresent=false;notify(terminal);}
     }
 
     /** Change the local player gain only, preserving the native system/Prime volume. */
@@ -131,5 +151,8 @@ public final class AndroidLocalAudioPort implements LocalAudioPort {
     @Override public State state() { return state; }
 
     /** Tear down a failed native operation and retain an explicit error diagnostic. */
-    private void fail() { release(); state=State.ERROR; }
+    private void fail() { release(Event.ERROR); state=State.ERROR; }
+
+    /** Publish only lifecycle facts after their native transition; no URLs, credentials or audio bytes. */
+    private void notify(Event event){if(observer!=null)observer.changed(attempt,event);}
 }

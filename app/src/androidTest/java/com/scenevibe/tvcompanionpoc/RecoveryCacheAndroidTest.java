@@ -232,4 +232,122 @@ public final class RecoveryCacheAndroidTest {
         assertEquals(200,reply.status);return reply.json();
     }
 
+    /** Start the actual existing service against the owned public MediaSession, never a Prime process. */
+    private void runtime004Start(boolean adSync) throws Exception {
+        UiDevice remote=UiDevice.getInstance(instrument);remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+        remote.executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(target).flattenToString());launch();
+        main(()->{CloudMultimediaAdmission.useOwnedMediaSessionFixture(true);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);TvFirst009TextServiceOwner.setAdSyncEnabled(adSync);
+            media=new MediaSession(target,"OWN runtime004 MEDIA");metadata();playback(PlaybackState.STATE_PAUSED,0);media.setActive(true);});
+        await(()->NotificationAccess.isGranted(target),"Owned MEDIA listener missing",10000);
+        main(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,source,prepared,true)));
+        await(TvFirst009TextServiceOwner::multimediaActive,"Actual admitted service did not start",10000);
+    }
+
+    /** Publish a selected native coordinate before PLAYING so the real probe/calendars observe the transition. */
+    private void runtime004At(long position) throws Exception {
+        main(()->playback(PlaybackState.STATE_PAUSED,position));await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code)
+                && TvFirst009TextServiceOwner.status().positionMs==position,"Owned paused coordinate not observed",10000);
+        main(()->playback(PlaybackState.STATE_PLAYING,position));
+    }
+
+    /** Pair a real socket client with the existing service listener; no new admission is granted by pairing. */
+    private String[] runtime004Phone() throws Exception {
+        main(()->{assertTrue(TvFirst009TextServiceOwner.setDeveloperMode(target,true));assertTrue(TvFirst009TextServiceOwner.setLocalControlEnabled(true));});
+        String instructions=TvFirst009TextServiceOwner.localControlInfo();var address=java.util.regex.Pattern.compile("http://[^:]+:([0-9]+)").matcher(instructions);assertTrue(address.find());
+        int port=Integer.parseInt(address.group(1));String token=LocalControlTestClient.send(port,"/pair",null,new JSONObject().put("code",LocalControlTestClient.code(instructions)),null).json().getString("token");
+        return new String[]{Integer.toString(port),token};
+    }
+
+    /** Persist only bounded test facts, never a code, bearer, identity or editorial content. */
+    private void runtime004Proof(String name,JSONObject proof) throws Exception {
+        java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-"+name+"-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /** Resolve the existing integrity-checked cache through the native port's checked-I/O contract. */
+    private File runtime004Resource(String id) throws java.io.IOException {
+        try{return prepared.resource(id);}catch(Exception refused){throw new java.io.IOException("OWN_CACHE_RESOURCE_REFUSED",refused);}
+    }
+
+    /** Play, finish and genuinely rewind each MP3; plain pause and session absence cannot count as another playback. */
+    @Test public void runtime004AllThreeMp3ReplayOncePerConfirmedPassage() throws Exception {
+        runtime004Start(true);int downloads=fixture.port.audioRequests;JSONArray results=new JSONArray();
+        for(int ordinal=1;ordinal<=3;ordinal++){
+            long scheduled=new long[]{90000,300000,900000}[ordinal-1];runtime004At(scheduled-1000);final int first=ordinal*2-1;
+            await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==first,"Original AUDIO did not reach native STARTED",10000);
+            await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Original AUDIO did not reach its window end",7000);
+            main(()->playback(PlaybackState.STATE_PAUSED,scheduled+5000));Thread.sleep(350);main(()->playback(PlaybackState.STATE_PLAYING,scheduled+5000));Thread.sleep(600);
+            assertEquals(first,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+            main(()->media.setActive(false));await(()->"MEDIA_UNAVAILABLE".equals(TvFirst009TextServiceOwner.status().code),"Owned session absence not observed",10000);
+            main(()->{playback(PlaybackState.STATE_PLAYING,scheduled+6500);media.setActive(true);});
+            await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Compatible session did not recover",10000);assertEquals(first,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+            main(()->playback(PlaybackState.STATE_PLAYING,scheduled-10000));final int replay=ordinal*2;
+            await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==replay,"Confirmed rewind did not replay this MP3",16000);
+            await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Replayed MP3 did not end",7000);
+            main(()->playback(PlaybackState.STATE_PLAYING,scheduled+5000));Thread.sleep(650);assertEquals(replay,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+            var facts=TvFirst009TextServiceOwner.multimediaAudioDiagnostics(ordinal);assertEquals(2,facts.started);assertEquals(2,facts.due);assertTrue(facts.rearmed>=1);assertFalse(facts.consumedWithoutStart);
+            results.put(new JSONObject().put("ordinal",ordinal).put("nativeStarts",facts.started).put("due",facts.due).put("rearmed",facts.rearmed));
+        }
+        assertEquals(6,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());assertEquals(6,TvFirst009TextServiceOwner.multimediaAudioPreparations());
+        assertEquals(downloads,fixture.port.audioRequests);assertTrue(TvFirst009TextServiceOwner.multimediaActive());
+        runtime004Proof("runtime004-replay",new JSONObject().put("scope","REAL_ANDROID_SERVICE_OWN_MEDIA_NOT_PRIME_SONY").put("audio",results)
+                .put("nativeStarts",6).put("pauseAndSessionLossNoDuplicates",true).put("extraDownloads",0));
+    }
+
+    /** Phone mode changes preserve real TEXT windows, restore after real metadata loss and retain a true manual pause. */
+    @Test public void runtime004PhoneModeChangesPreserveAndRestoreText() throws Exception {
+        runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
+        local(port,token,++seq,"adsync","true");local(port,token,++seq,"adsync","false");runtime004At(31988);
+        await(TvFirst009TextServiceOwner::multimediaTextAttached,"First actual TEXT window missing",12000);
+        long renders=TvFirst009TextServiceOwner.status().renderRequests;int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed;
+        local(port,token,++seq,"adsync","true");await(TvFirst009TextServiceOwner::multimediaTextAttached,"OFF to ON removed a compatible window",3000);
+        local(port,token,++seq,"adsync","false");assertTrue(TvFirst009TextServiceOwner.multimediaTextAttached());assertEquals(renders,TvFirst009TextServiceOwner.status().renderRequests);
+        assertEquals(consumed,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed);
+        main(()->media.setMetadata(null));await(()->"MEDIA_IDENTITY_INVALID".equals(TvFirst009TextServiceOwner.status().code)
+                && !TvFirst009TextServiceOwner.multimediaTextAttached(),"Invalid MEDIA did not remove TEXT",10000);
+        local(port,token,++seq,"adsync","true");main(()->{metadata();playback(PlaybackState.STATE_PLAYING,35988);});
+        await(()->TvFirst009TextServiceOwner.multimediaTextAttached() && TvFirst009TextServiceOwner.status().renderRequests>renders,"Current TEXT did not restore",4000);
+        assertEquals(1,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().textDue);assertEquals(52988,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().nextStartMs);
+        local(port,token,++seq,"adsync","false");runtime004At(51988);await(()->TvFirst009TextServiceOwner.multimediaTextRequested()==2,"Future TEXT lost after mode recovery",12000);
+        JSONObject paused=local(port,token,++seq,"suspend","");assertTrue(paused.getBoolean("suspended"));assertEquals("USER_PAUSED",paused.getString("commentState"));
+        local(port,token,++seq,"adsync","true");assertTrue(LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getBoolean("suspended"));
+        assertTrue(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaTextAttached());
+        local(port,token,++seq,"resume","");main(()->playback(PlaybackState.STATE_PLAYING,54988));await(TvFirst009TextServiceOwner::multimediaTextAttached,"Manual resume did not restore current TEXT",5000);
+        assertEquals(2,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().textDue);
+        runtime004Proof("runtime004-toggle",new JSONObject().put("scope","REAL_ANDROID_SERVICE_REAL_TCP_OWN_MEDIA_NOT_SONY").put("compatibleTogglesPreserveWindow",true)
+                .put("metadataHoldRestoresCurrentText",true).put("futureTextRetained",true).put("manualPauseActualState",true).put("cacheEvents",19));
+    }
+
+    /** Absence over 15:00 is diagnosed as missed, never advertising or played; a later actual rewind permits AUDIO3. */
+    @Test public void runtime004MissedFifteenMinuteAudioCanBeReplayed() throws Exception {
+        runtime004Start(true);runtime004At(899000);main(()->media.setActive(false));
+        await(()->"MEDIA_UNAVAILABLE".equals(TvFirst009TextServiceOwner.status().code),"Owned session absence not seen",10000);Thread.sleep(4200);
+        main(()->{playback(PlaybackState.STATE_PLAYING,905000);media.setActive(true);});await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"MEDIA recovery absent",10000);
+        var missed=TvFirst009TextServiceOwner.multimediaAudioDiagnostics(3);assertEquals(0,missed.started);assertEquals(0,missed.due);assertTrue(missed.consumedWithoutStart);assertTrue(missed.skipped>=1);
+        main(()->playback(PlaybackState.STATE_PLAYING,890000));await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"AUDIO3 not replayed after 14:50 return",16000);
+        await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"AUDIO3 window did not end",7000);
+        main(()->playback(PlaybackState.STATE_PAUSED,905000));Thread.sleep(350);main(()->playback(PlaybackState.STATE_PLAYING,905000));Thread.sleep(600);
+        var replayed=TvFirst009TextServiceOwner.multimediaAudioDiagnostics(3);assertEquals(1,replayed.started);assertEquals(1,replayed.due);assertEquals(1,replayed.rearmed);assertFalse(replayed.consumedWithoutStart);
+        assertEquals(1,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+        runtime004Proof("runtime004-fifteen",new JSONObject().put("scope","OWN_SESSION_ABSENCE_NOT_A_SIMULATED_AD_DETECTOR").put("missedWindowNotPlayed",true)
+                .put("rewind1450RestoresAudio3",true).put("nativeStarts",1).put("noDuplicateOnResume",true).put("adSignal","UNAVAILABLE"));
+    }
+
+    /** The actual MP3 port reports refusal separately from STARTED, and natural completion separately from stop. */
+    @Test public void runtime004NativeAudioAcknowledgementsAreTruthful() throws Exception {
+        String asset=prepared.track.audio.values().iterator().next().assetRef();var events=new java.util.concurrent.CopyOnWriteArrayList<com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event>();
+        for(boolean claimsRun:new boolean[]{false,true}){
+            AtomicReference<com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort> port=new AtomicReference<>();
+            main(()->{port.set(new com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort(this::runtime004Resource,effect->claimsRun,(attempt,event)->events.add(event)));port.get().prepare(asset);port.get().start();});
+            assertTrue(events.contains(com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event.PREPARED));assertTrue(events.contains(com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event.START_REFUSED));
+            assertFalse(events.contains(com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event.STARTED));main(()->port.get().release());events.clear();
+        }
+        AtomicReference<com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort> port=new AtomicReference<>();
+        main(()->{port.set(new com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort(this::runtime004Resource,effect->{effect.run();return true;},(attempt,event)->events.add(event)));
+            port.get().setGain(0f);port.get().prepare(asset);port.get().start();});
+        await(()->events.contains(com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event.COMPLETED),"Native completion callback missing",7000);
+        assertEquals(1,events.stream().filter(e->e==com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event.STARTED).count());
+        assertFalse(events.contains(com.scenevibe.tvcompanionpoc.audio.AndroidLocalAudioPort.Event.STOPPED));main(()->port.get().release());
+        runtime004Proof("runtime004-port",new JSONObject().put("scope","NATIVE_PORT_UNIT_EXISTING_VERIFIED_MP3_NO_ACOUSTIC_CLAIM").put("refusedStarts",2).put("nativeStart",1).put("naturalCompletion",1));
+    }
+
 }

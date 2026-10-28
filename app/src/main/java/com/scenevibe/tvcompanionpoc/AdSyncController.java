@@ -84,9 +84,14 @@ final class AdSyncController {
     /** Reset process-local inference on opt-in changes; no preference can activate playback. */
     void setEnabled(boolean enabled) {
         if(automaticRecovery){
-            this.enabled=enabled;held=manualHold;resumeRequested=false;candidate=null;accepted=null;boundSession=null;boundDuration=-1;
-            state=manualHold?State.SUSPENDED:enabled?(offsetMs==0?State.SYNCHRONIZED:State.MANUAL):State.DISABLED;
-            reason=manualHold?Reason.USER_SUSPENDED:enabled?Reason.CONTINUITY_ONLY:Reason.OFF;return;
+            if(this.enabled==enabled)return;
+            this.enabled=enabled;
+            if(manualHold && !resumeRequested){held=true;state=State.SUSPENDED;reason=Reason.USER_SUSPENDED;}
+            else if(!held){state=enabled?(offsetMs==0?State.SYNCHRONIZED:State.MANUAL):State.DISABLED;
+                reason=enabled?Reason.CONTINUITY_ONLY:Reason.OFF;}
+            // Keep valid continuity evidence, pending recovery and manual intent.
+            // A preference change is not an observation of another timeline.
+            return;
         }
         this.enabled=enabled;held=false;resumeRequested=false;candidate=null;accepted=null;
         boundSession=null;boundDuration=-1;offsetMs=0;
@@ -206,7 +211,10 @@ final class AdSyncController {
     static String formatTime(long millis){long seconds=Math.max(0,millis)/1000;return String.format(java.util.Locale.ROOT,"%02d:%02d",seconds/60,seconds%60);}
 
     /** Present the current gate without claiming advertisement observability. */
-    Decision status(){return decision((automaticRecovery?latest!=null && latest.valid():enabled) && !held,latest==null?-1:translated(latest));}
+    Decision status(){return decision((automaticRecovery?latest!=null && latest.valid():enabled) && !held,latest==null?-1:automaticRecovery && !enabled?latest.selectedMs:translated(latest));}
+
+    /** Report actual user intent separately from a temporary MEDIA hold or synchronization preference. */
+    boolean manuallySuspended(){return manualHold && !resumeRequested;}
 
     /** Require two distinct fresh captures of the same compatible content-time progression after explicit user intent. */
     private void confirmResume(Sample sample) {

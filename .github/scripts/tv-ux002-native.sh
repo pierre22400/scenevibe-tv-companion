@@ -19,13 +19,13 @@ for image in prepared panel keypad monitor on-focus off-focus; do
     adb exec-out run-as com.scenevibe.tvcompanionpoc cat "files/tvux002-$image.png" > "tv-ux002-native/$image.png"
   fi
 done
-for proof in input service runtime003; do
+for proof in input service runtime003 runtime004-replay runtime004-toggle runtime004-fifteen runtime004-port; do
   if adb shell run-as com.scenevibe.tvcompanionpoc test -f "files/tvux002-$proof-proof.json"; then
     adb exec-out run-as com.scenevibe.tvcompanionpoc cat "files/tvux002-$proof-proof.json" > "tv-ux002-native/$proof-proof.json"
   fi
 done
 adb logcat -d -v brief -s SceneVibeControls:I SceneVibeAdSync:I SceneVibeMedia:I SceneVibeText009:I SceneVibeCache:I SceneVibeRuntime:I AndroidRuntime:E > tv-ux002-native/local-diagnostics.log
-grep -q '^OK (26 tests)' tv-ux002-native/instrumentation.log
+grep -q '^OK (30 tests)' tv-ux002-native/instrumentation.log
 grep -q '^INSTRUMENTATION_CODE: -1$' tv-ux002-native/instrumentation.log
 # Each phase must pass separately; force-stop is restricted to the disposable emulator app above.
 adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.CloudBridge003eRestartSeedTest com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee tv-ux002-native/restart-seed.log

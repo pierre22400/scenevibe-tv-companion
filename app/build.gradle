@@ -135,7 +135,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix "-tv-runtime003"
+        versionNameSuffix "-tv-runtime004"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "true"
     }
@@ -282,7 +282,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(23) }
+        variant.outputs.each { output -> output.versionCode.set(24) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }

@@ -286,13 +286,16 @@ final class TvFirst009TextServiceOwner {
     /** A closed allowlist controls only SceneVibe preferences/effects and passive window visibility. */
     private JSONObject localCommandNow(String command,String value) throws Exception {
         CompanionControlPanel.Commands controls=panelCommands();
+        String feedback=null;
         switch(command){
             case "status":break;
             case "text":case "audio":case "adsync":
                 if(!"true".equals(value) && !"false".equals(value))throw new IllegalArgumentException("BOOLEAN_REQUIRED");
-                boolean on=Boolean.parseBoolean(value);if("text".equals(command))controls.text(on);else if("audio".equals(command))controls.audio(on);else controls.adSync(on);break;
-            case "suspend":controls.suspend();break;
-            case "resume":controls.resume();break;
+                boolean on=Boolean.parseBoolean(value);if("text".equals(command))controls.text(on);else if("audio".equals(command))controls.audio(on);else controls.adSync(on);
+                feedback=command.toUpperCase(java.util.Locale.ROOT)+" : "+(on?"ON":"OFF")+" · préférence enregistrée, calendrier conservé.";break;
+            case "suspend":controls.suspend();feedback=multimediaActive()?"Pause volontaire demandée ; préférences conservées.":"Service arrêté ; aucune session suspendue.";break;
+            case "resume":controls.resume();feedback=multimediaActive()?"Reprise demandée ; les captures MEDIA compatibles restent nécessaires.":"Service arrêté ; aucune admission créée.";break;
+            case "replay":return localStatus().put("result",multimediaActive()?multimedia.confirmReplay():"Service arrêté ; relecture indisponible.");
             case "calibrate":try{AdSyncController.Calibration calibrated=controls.calibrate(AdSyncController.parseFilmTime(value),false);return localStatus().put("result",calibrated.message);}
                 catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
@@ -301,12 +304,14 @@ final class TvFirst009TextServiceOwner {
                 else throw new IllegalArgumentException("PASSIVE_PANEL_ACTION_REQUIRED");break;
             default:throw new IllegalArgumentException("LOCAL_COMMAND_REFUSED");
         }
-        return localStatus();
+        JSONObject result=localStatus();return feedback==null?result:result.put("result",feedback);
     }
     /** Return only numeric/state projections, never programme content, identity, code or credential. */
     private JSONObject localStatus() throws Exception {
         return new JSONObject().put("text",multimediaTextEnabled()).put("audio",multimediaAudioEnabled()).put("adsync",adSyncEnabled())
-                .put("active",multimediaActive()).put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("runtime",multimediaAvailability()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
+                .put("active",multimediaActive()).put("suspended",multimediaActive() && multimedia.manuallySuspended())
+                .put("commentState",multimediaActive()?multimedia.commentState():"SERVICE_STOPPED")
+                .put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("runtime",multimediaAvailability()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
     }
     /** Restore only requested channel preferences; no cache, consent, mode or playback permit is persisted here. */
     static void initMultimediaPreferences(Context context){
@@ -368,6 +373,14 @@ final class TvFirst009TextServiceOwner {
     static int multimediaTextRequested(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.textWindowsRequested();}
     /** Report native preparation count for diagnostics; a resumed MP3 should not be prepared again. */
     static int multimediaAudioPreparations(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.audioPreparations();}
+    /** Actual native STARTED count includes separate qualified replays of the same logical resource. */
+    static int multimediaAudioPlaybackStarts(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.audioPlaybackStarts();}
+    /** Current TEXT attachment is distinct from the historical count of original scenes observed. */
+    static boolean multimediaTextAttached(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.textWindowAttached();}
+    /** Pure diagnostic projection of the one service-owned calendar. */
+    static com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.Diagnostics multimediaCalendarDiagnostics(){return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.calendarDiagnostics();}
+    /** Native outcome by public AUDIO ordinal, never by a sensitive resource identifier. */
+    static com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.AudioDiagnostics multimediaAudioDiagnostics(int ordinal){return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.audioDiagnostics(ordinal);}
     /** Report only the local comment-player lifecycle, never the platform player's transport object. */
     static String multimediaAudioState(){return liveInstance==null || liveInstance.multimedia==null?"IDLE":liveInstance.multimedia.audioState();}
 

@@ -7,6 +7,7 @@
   let sequence = 0;
   let state = {};
   let busy = false;
+  let mutationVersion = 0;
   const status = document.getElementById("status");
   /** Send bounded local JSON with a same-origin custom header and no ambient cookies. */
   async function request(path, body) {
@@ -32,11 +33,24 @@
       button.setAttribute("aria-pressed", String(Boolean(value[name])));
       button.textContent = `${name.toUpperCase()} : ${value[name] ? "ON" : "OFF"}`;
     }
-    for (const name of ["suspend", "resume", "calibrate"]) document.getElementById(name).disabled = !value.active;
+    const hold = document.getElementById("hold");
+    hold.setAttribute("aria-pressed", String(Boolean(value.suspended)));
+    hold.textContent = value.suspended ? "Commentaires : en pause volontaire · reprendre" :
+      value.commentState === "MEDIA_WAIT" ? "Commentaires : en attente MEDIA · mettre en pause" :
+      value.commentState === "MEDIA_PAUSED" ? "Film en pause · mettre SceneVibe en pause" :
+      value.commentState === "CHANNELS_OFF" ? "Canaux OFF · mettre en pause" :
+      value.active ? "Commentaires : actifs · mettre en pause" : "Commentaires : service arrêté";
+    availability();
     status.textContent = `${value.runtime || (value.active ? "Service multimédia actif" : "Service multimédia inactif · préférences modifiables")}\n${value.sync}\nFocus TV : ${value.focus}\nCommandes locales : ${Math.ceil(value.remainingMs / 60000)} min restantes${value.result ? `\n${value.result}` : ""}`;
   }
   /** Report failures without replaying a potentially applied command. */
   function failure(error) { status.textContent = error.message; }
+  /** Disable only unavailable/pending actions; registered ON/OFF remains independent of MEDIA readiness. */
+  function availability() {
+    for (const button of document.querySelectorAll("#controls button")) {
+      button.disabled = busy || (["hold", "calibrate", "replay"].includes(button.id) && !state.active);
+    }
+  }
   /** Admit one browser from the explicitly displayed TV code. */
   async function pair() {
     try {
@@ -52,21 +66,28 @@
   async function command(name, value = "") {
     if (busy) return;
     busy = true;
+    mutationVersion += 1;
+    availability();
     try { render(await request("/command", { seq: ++sequence, command: name, value })); }
     catch (error) { failure(error); }
-    finally { busy = false; }
+    finally { busy = false; availability(); }
   }
   document.getElementById("pair").addEventListener("click", pair);
   for (const name of ["text", "audio", "adsync"]) document.getElementById(name).addEventListener("click", () => command(name, String(!state[name])));
-  for (const name of ["suspend", "resume"]) document.getElementById(name).addEventListener("click", () => command(name));
+  document.getElementById("hold").addEventListener("click", () => command(state.suspended ? "resume" : "suspend"));
+  document.getElementById("replay").addEventListener("click", () => command("replay"));
   document.getElementById("calibrate").addEventListener("click", () => command("calibrate", document.getElementById("time").value));
   document.getElementById("show").addEventListener("click", () => command("panel", "show"));
   document.getElementById("close").addEventListener("click", () => command("panel", "close"));
   /** Read status only; polling cannot open a window, acquire focus or renew the two-hour lifetime. */
   async function poll() {
     if (token && !busy) {
-      try { render(await request("/status", {})); }
-      catch (error) { failure(error); return; }
+      const version = mutationVersion;
+      try {
+        const value = await request("/status", {});
+        if (!busy && version === mutationVersion) render(value);
+      }
+      catch (error) { if (!busy && version === mutationVersion) failure(error); return; }
     }
     setTimeout(poll, 2000);
   }
