@@ -263,6 +263,31 @@ public final class RecoveryCacheAndroidTest {
         java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-"+name+"-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
+    /** The optional probe and owner labels preserve the actual service, direct cue SEEK, replay and private cache. */
+    @Test public void adObservationCannotSuppressOrRetainV24Commentary() throws Exception {
+        runtime004Start(true);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
+        int downloads=fixture.port.audioRequests;
+        assertFalse(LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation").getBoolean("enabled"));
+        assertTrue(local(port,token,++seq,"adprobe","true").getJSONObject("adObservation").getBoolean("enabled"));
+        local(port,token,++seq,"admark","AD_VISIBLE");runtime004At(90000);
+        await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"Direct SEEK onto 01:30 lost AUDIO with probe enabled",10000);
+        await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"AUDIO window did not end",7000);
+        JSONObject observation=LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation");
+        assertEquals("UNCERTAIN",observation.getString("candidate"));assertEquals(0,observation.getInt("adStarts"));
+        local(port,token,++seq,"admark","CONTENT_VISIBLE");local(port,token,++seq,"adsync","false");local(port,token,++seq,"adsync","true");
+        assertTrue(local(port,token,++seq,"suspend","").getBoolean("suspended"));
+        assertTrue(local(port,token,++seq,"adprobe","false").getBoolean("suspended"));
+        assertTrue(local(port,token,++seq,"adprobe","true").getBoolean("suspended"));local(port,token,++seq,"resume","");
+        runtime004At(90000);await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==2,"Direct backward cue SEEK lost re-listening",10000);
+        await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Replayed AUDIO window did not end",7000);
+        local(port,token,++seq,"adprobe","false");runtime004At(32988);
+        await(TvFirst009TextServiceOwner::multimediaTextAttached,"Reference TEXT not restored after disabling experiment",10000);
+        assertTrue(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);assertEquals(19,prepared.track.calendar.events().size());
+        runtime004Proof("ad-detection-service",new JSONObject().put("scope","ACTUAL_ANDROID_SERVICE_OWN_MEDIA_FIXTURE_NOT_PRIME_SONY")
+            .put("defaultOff",true).put("unknownDoesNotBlockAudio",true).put("nativeCueSeekStarts",2).put("manualPausePreservedAcrossProbeToggle",true)
+            .put("textAfterProbeDisabled",true).put("extraDownloads",0).put("cacheEvents",19));
+    }
+
     /** Resolve the existing integrity-checked cache through the native port's checked-I/O contract. */
     private File runtime004Resource(String id) throws java.io.IOException {
         try{return prepared.resource(id);}catch(Exception refused){throw new java.io.IOException("OWN_CACHE_RESOURCE_REFUSED",refused);}

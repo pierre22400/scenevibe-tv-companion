@@ -40,6 +40,13 @@
       value.commentState === "MEDIA_PAUSED" ? "Film en pause · mettre SceneVibe en pause" :
       value.commentState === "CHANNELS_OFF" ? "Canaux OFF · mettre en pause" :
       value.active ? "Commentaires : actifs · mettre en pause" : "Commentaires : service arrêté";
+    const observation = value.adObservation || {};
+    const probe = document.getElementById("adprobe");
+    probe.setAttribute("aria-pressed", String(Boolean(observation.enabled)));
+    probe.textContent = `Observation publicitaire : ${observation.enabled ? "ON" : "OFF"}`;
+    document.getElementById("ad-observation").textContent = observation.enabled ?
+      `Candidat : ${observation.candidate} · ${observation.reason || ""} · débuts ${observation.adStarts || 0}, fins ${observation.adEnds || 0}. Observation seule, aucun blocage des commentaires.` :
+      "Sonde désactivée · aucune protection automatique.";
     availability();
     status.textContent = `${value.runtime || (value.active ? "Service multimédia actif" : "Service multimédia inactif · préférences modifiables")}\n${value.sync}\nFocus TV : ${value.focus}\nCommandes locales : ${Math.ceil(value.remainingMs / 60000)} min restantes${value.result ? `\n${value.result}` : ""}`;
   }
@@ -48,7 +55,8 @@
   /** Disable only unavailable/pending actions; registered ON/OFF remains independent of MEDIA readiness. */
   function availability() {
     for (const button of document.querySelectorAll("#controls button")) {
-      button.disabled = busy || (["hold", "calibrate", "replay"].includes(button.id) && !state.active);
+      button.disabled = busy || (["hold", "calibrate", "replay", "adprobe"].includes(button.id) && !state.active) ||
+        (["ad-visible", "content-visible", "normal-seek", "normal-pause"].includes(button.id) && !(state.active && state.adObservation?.enabled));
     }
   }
   /** Admit one browser from the explicitly displayed TV code. */
@@ -79,6 +87,10 @@
   document.getElementById("calibrate").addEventListener("click", () => command("calibrate", document.getElementById("time").value));
   document.getElementById("show").addEventListener("click", () => command("panel", "show"));
   document.getElementById("close").addEventListener("click", () => command("panel", "close"));
+  document.getElementById("adprobe").addEventListener("click", () => command("adprobe", String(!state.adObservation?.enabled)));
+  for (const [id, marker] of [["ad-visible", "AD_VISIBLE"], ["content-visible", "CONTENT_VISIBLE"], ["normal-seek", "NORMAL_SEEK"], ["normal-pause", "NORMAL_PAUSE"]]) {
+    document.getElementById(id).addEventListener("click", () => command("admark", marker));
+  }
   /** Read status only; polling cannot open a window, acquire focus or renew the two-hour lifetime. */
   async function poll() {
     if (token && !busy) {

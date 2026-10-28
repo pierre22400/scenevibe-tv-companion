@@ -28,6 +28,7 @@ final class CloudMultimediaSession {
     private final AndroidLocalAudioPort audio;
     private final StudioMultimediaRuntime runtime;
     private final MediaSessionProbe probe;
+    private AdObservationProbe adObservation;
     private final Set<String> shown=new HashSet<>(),started=new HashSet<>();
     private final Runnable watchdog=this::watch;
     private final AdSyncController adSync=new AdSyncController(BuildConfig.ADSYNC_NONDESTRUCTIVE);
@@ -102,6 +103,22 @@ final class CloudMultimediaSession {
 
     /** Check the same local capability and OS permissions; no network or implicit renewal exists here. */
     private boolean current(){return active && admission.current() && Settings.canDrawOverlays(context) && NotificationAccess.isGranted(context);}
+
+    /** Opt in to observation only; no capture, transport, clock correction or commentary policy is triggered. */
+    void setAdObservationEnabled(boolean enabled){
+        if(!active || !BuildConfig.ADSYNC_NONDESTRUCTIVE)return;
+        if(enabled && adObservation==null){adObservation=new AdObservationProbe(admission.identity.targetPackage,
+                snapshot->MediaIdentityMatcher.matches(admission.identity,snapshot));probe.setControllerObserver(adObservation);}
+        else if(!enabled && adObservation!=null){probe.setControllerObserver(null);adObservation=null;}
+    }
+
+    /** Correlate an owner's visible ad/content observation without treating it as an automatic signal. */
+    void annotateAdObservation(String marker){if(adObservation==null)throw new IllegalStateException("OBSERVATION_DISABLED");adObservation.annotate(marker);}
+
+    /** Expose the isolated experiment honestly; no automatic advertising protection is enabled. */
+    org.json.JSONObject adObservationStatus(){if(adObservation!=null)return adObservation.status();
+        org.json.JSONObject status=new org.json.JSONObject();try{status.put("enabled",false).put("candidate","UNCERTAIN")
+                .put("mode","OBSERVATION_ONLY_NO_COMMENT_GATE").put("reason","EXPERIMENT_DISABLED");}catch(Exception ignored){/* Closed constants only. */}return status;}
 
     /** Recheck the interruption gate at every delayed native effect, without retiring the admission itself. */
     private boolean effectsAllowed(){

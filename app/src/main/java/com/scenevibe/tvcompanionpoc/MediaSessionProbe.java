@@ -25,6 +25,17 @@ import com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReader;
  * a bounded shorter interval on this same passive probe.
  */
 public final class MediaSessionProbe {
+    /** Optional, read-only experiment; it never substitutes the scheduler's listener. */
+    interface ControllerObserver {
+        /** Inspect the exact public facts already read by the historical probe. */
+        void onController(MediaController controller, Snapshot snapshot, MediaMetadata metadata, PlaybackState state);
+        /** Finish this batch, including the scheduler's unchanged selected session. */
+        void onSelection(Snapshot selected);
+        /** Record missing observations without manufacturing an advertising transition. */
+        void onUnavailable();
+        /** Unregister this experiment's callbacks when disabled or when the service stops. */
+        void close();
+    }
     /** Independent observation sink; it cannot receive a scheduling or rendering command. */
     public interface Observer {
         /** Receive one immutable batch whose programme/edition/context proofs remain unknown. */
@@ -99,6 +110,7 @@ public final class MediaSessionProbe {
     private final long sampleIntervalMs;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
+    private ControllerObserver controllerObserver;
     private final Predicate<Snapshot> preferred;
 
     private final Runnable sampler = new Runnable() {
@@ -155,10 +167,23 @@ public final class MediaSessionProbe {
     /** Query currently published public MEDIA facts synchronously; never reuse a cached application observation. */
     public void captureNow() { if(started)sample(); }
 
+    /** Attach only after explicit opt-in; null restores the reference probe path. */
+    void setControllerObserver(ControllerObserver next) {
+        if(controllerObserver==next)return;
+        if(controllerObserver!=null)try{controllerObserver.close();}catch(RuntimeException ignored){/* Optional diagnostic only. */}
+        controllerObserver=next;
+    }
+
+    /** Contain an experimental observer failure without altering playback, identity or scheduling. */
+    private void diagnostic(Runnable work) {
+        try{work.run();}catch(RuntimeException ignored){Log.w("SceneVibeAdProbe","event=READ_FAILED payloadOmitted=true");}
+    }
+
     /** Stop future sampling; the captured service writer also rejects late callbacks. */
     public void stop() {
         started = false;
         handler.removeCallbacks(sampler);
+        setControllerObserver(null);
         Log.i(TAG, "Passive MediaSession probe stopped");
     }
 
@@ -213,6 +238,7 @@ public final class MediaSessionProbe {
             catch(RuntimeException vanished){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)throw vanished;probeState("SESSION_READ_UNAVAILABLE");}
         }
         Snapshot primary=select(candidates,preferred,BuildConfig.ADSYNC_NONDESTRUCTIVE?lastSelectedSession:null);
+        if(controllerObserver!=null)diagnostic(()->controllerObserver.onSelection(primary));
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && primary!=null){
             int compatible=0;for(Snapshot item:candidates)if(preferred!=null && preferred.test(item))compatible++;
             String selection="active="+candidates.size()+" compatible="+compatible+" selected="+(preferred!=null && preferred.test(primary)?"COMPATIBLE":"INCOMPATIBLE")+" playback="+primary.stateName;
@@ -240,6 +266,7 @@ public final class MediaSessionProbe {
 
     /** Preserve historical absence forwarding without constructing an observation fallback. */
     private void unavailable() {
+        if(controllerObserver!=null)diagnostic(()->controllerObserver.onUnavailable());
         if (listener != null) listener.onUnavailable();
     }
 
@@ -280,7 +307,7 @@ public final class MediaSessionProbe {
                 + " title=" + safe(title)
                 + " subtitle=" + safe(subtitle));
 
-        return new Snapshot(
+        Snapshot snapshot = new Snapshot(
                 controller.getPackageName(),
                 stateCode,
                 readableState,
@@ -292,6 +319,8 @@ public final class MediaSessionProbe {
                 title,
                 subtitle,
                 durationMs,controller.getSessionToken(),capturedAtMs,updatedAtMs);
+        if(controllerObserver!=null)diagnostic(()->controllerObserver.onController(controller,snapshot,metadata,state));
+        return snapshot;
     }
 
     /** Preserve the historic estimate; the independent observation reader retains the raw anchor. */
