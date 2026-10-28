@@ -214,7 +214,10 @@ public final class RecoveryCacheAndroidTest {
         remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
         await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Restored real permission did not recover",10000);
         assertTrue(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);assertEquals(requested,TvFirst009TextServiceOwner.multimediaTextRequested());
-        main(()->playback(PlaybackState.STATE_PLAYING,-1));await(()->"MEDIA_CLOCK_INVALID".equals(TvFirst009TextServiceOwner.status().code),"Invalid position was accepted",10000);
+        // MediaSessionRecord extrapolates PLAYING and may normalize -1 into a
+        // nonnegative position before getPlaybackState() returns. BUFFERING/-1
+        // is actually delivered as unusable; no app-side fixture clock is used.
+        main(()->playback(PlaybackState.STATE_BUFFERING,-1));await(()->"MEDIA_CLOCK_INVALID".equals(TvFirst009TextServiceOwner.status().code),"Actually delivered invalid observation was accepted",10000);
         assertTrue(TvFirst009TextServiceOwner.multimediaActive());main(()->playback(PlaybackState.STATE_PLAYING,51000));
         await(()->TvFirst009TextServiceOwner.multimediaTextRequested()==2,"Future second TEXT did not recover",12000);
         var proof=new JSONObject().put("scope","REAL_ANDROID_SERVICE_OWN_MEDIA_NOT_PRIME_SONY")

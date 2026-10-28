@@ -43,6 +43,8 @@ public final class DeveloperOverlayAndroidTest {
         var display=target.getResources().getDisplayMetrics();assertTrue(display.widthPixels>display.heightPixels);
         remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
         main(()->{TvFirst009TextServiceOwner.setDeveloperMode(target,false);TvFirst009TextServiceOwner.setAdSyncEnabled(false);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);DeveloperViewerFixtureActivity.current=null;});
+        main(()->target.stopService(new Intent(target,OverlayService.class)));
+        await(()->!serviceRunning(),"Previous owned service teardown still pending");
         application=(MainActivity)InstrumentationRegistry.getInstrumentation().startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
         await(()->application.hasWindowFocus(),"Normal app did not acquire input");
     }
@@ -52,6 +54,7 @@ public final class DeveloperOverlayAndroidTest {
             TvFirst009TextServiceOwner.setAdSyncEnabled(false);target.stopService(new Intent(target,OverlayService.class));
             if(viewer!=null)viewer.finish();if(application!=null)application.finish();});
         remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+        await(()->!serviceRunning(),"Owned service did not finish asynchronous teardown");
     }
     /** Serialize native View/service observations on their actual owner thread. */
     private void main(Runnable work){InstrumentationRegistry.getInstrumentation().runOnMainSync(work);}

@@ -35,6 +35,12 @@ Le cache est restauré en lecture seule sans catalogue ni téléchargement. L’
 
 Une nouvelle admission n’est requise qu’après arrêt volontaire, perte du processus ou invalidation réelle du consentement/reçu/association. Le cache seul n’autorise pas une restitution après ces limites. Une seule confirmation directement accessible depuis le cache restauré valide le démarrage et l’édition de référence ; aucune nouvelle formalité n’est ajoutée.
 
+## Particularité du contrôleur Android observée pendant la qualification
+
+Le test natif a établi que publier `PLAYING` avec une position `-1` n’assure pas que le contrôleur tiers reçoive `-1` : sur le banc API31, `getPlaybackState()` retourne ensuite une position positive extrapolée par Android. Le code AOSP `MediaSessionRecord.getStateWithUpdatedPosition()` confirme cette transformation côté système. Les traces `rawMs` désignent donc la valeur retournée par le **contrôleur public Android**, pas une ancre interne de Prime. Aucune inspection de Prime n’est effectuée.
+
+Le cas instrumenté d’horloge invalide utilise désormais `BUFFERING/-1`, réellement livré au Companion puis refusé. Les règles de position, état, identité et fraîcheur du Companion ne sont pas affaiblies pour accommoder le test. Source : https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/media/MediaSessionRecord.java . Cette propriété Android ne permet pas d’attribuer rétrospectivement les alternances physiques à un mécanisme interne précis de Prime.
+
 ## Téléphone — 120 minutes dès activation TV
 
 Le serveur, code d’association et bearer partagent une échéance monotone absolue **7200000 ms**. Association tardive, polling, commandes et reconnexion HTTP ne la renouvellent pas. Aucun autre délai court de session n’est ajouté. Les timeouts de requête (2 s) protègent une connexion lente, sans expirer le téléphone. L’état retourné inclut le temps restant réel de cette échéance, affiché sur TV et page.
