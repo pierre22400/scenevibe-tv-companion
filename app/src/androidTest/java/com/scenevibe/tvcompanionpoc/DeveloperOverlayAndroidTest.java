@@ -68,13 +68,24 @@ public final class DeveloperOverlayAndroidTest {
     /** Drive only the D-pad; align sidebar columns only while the normal Activity actually owns the window. */
     private void focus(String label,boolean down) {
         for(int i=0;i<30;i++){if(remote.hasObject(By.text(label).focused(true)))return;
-            var desired=remote.findObject(By.text(label));var current=remote.findObject(By.focused(true));
-            AtomicBoolean activityOwnsInput=new AtomicBoolean();main(()->activityOwnsInput.set(application!=null && application.hasWindowFocus()));
-            if(activityOwnsInput.get() && desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
-                    && current.getVisibleBounds().centerX()<desired.getVisibleBounds().left)remote.pressDPadRight();
-            else if(activityOwnsInput.get() && desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
-                    && current.getVisibleBounds().centerX()>desired.getVisibleBounds().right)remote.pressDPadLeft();
+            int column=columnDirection(label);
+            if(column==KeyEvent.KEYCODE_DPAD_RIGHT)remote.pressDPadRight();
+            else if(column==KeyEvent.KEYCODE_DPAD_LEFT)remote.pressDPadLeft();
             else if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}var actual=remote.findObject(By.focused(true));fail("D-pad could not focus "+label+"; actual="+(actual==null?"NONE":actual.getText()));
+    }
+    /** Read only our Activity's actual focus tags, including a target currently scrolled out of the accessibility viewport. */
+    private int columnDirection(String label){AtomicInteger direction=new AtomicInteger();main(()->{
+        if(application==null || !application.hasWindowFocus())return;
+        var current=application.getCurrentFocus();var desired=ownButton(application.getWindow().getDecorView(),label);if(current==null || desired==null)return;
+        boolean fromSidebar=current.getTag() instanceof String && ((String)current.getTag()).startsWith("nav-");
+        boolean toSidebar=desired.getTag() instanceof String && ((String)desired.getTag()).startsWith("nav-");
+        if(fromSidebar!=toSidebar)direction.set(toSidebar?KeyEvent.KEYCODE_DPAD_LEFT:KeyEvent.KEYCODE_DPAD_RIGHT);
+    });if(direction.get()!=0)System.out.println("TVUX_TEST_COLUMN_ALIGNMENT; OWN_ACTIVITY; key="+direction.get());return direction.get();}
+    /** Find an existing own-application button without clicking, forcing focus or inspecting a third-party window. */
+    private android.widget.Button ownButton(android.view.View root,String label){
+        if(root instanceof android.widget.Button && label.contentEquals(((android.widget.Button)root).getText()))return (android.widget.Button)root;
+        if(root instanceof android.view.ViewGroup){var group=(android.view.ViewGroup)root;for(int i=0;i<group.getChildCount();i++){var found=ownButton(group.getChildAt(i),label);if(found!=null)return found;}}
+        return null;
     }
     /** Enter the sidebar and the real Developer page with the remote. */
     private void developerTab() {
