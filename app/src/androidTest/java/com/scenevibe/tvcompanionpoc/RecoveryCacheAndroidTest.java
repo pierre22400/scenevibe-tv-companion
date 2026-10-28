@@ -182,6 +182,11 @@ public final class RecoveryCacheAndroidTest {
         await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Local calibration did not recover",10000);
         assertEquals(3,TvFirst009TextServiceOwner.multimediaAudioPreparations());
         main(()->TvFirst009TextServiceOwner.setLocalControlEnabled(false));assertTrue(TvFirst009TextServiceOwner.multimediaActive());
+        var proof=new JSONObject().put("scope","REAL_ANDROID_SERVICE_OWN_PUBLIC_MEDIASESSION_PROVIDER_FIXTURE_NOT_PRIME_SONY_OR_CLOUD")
+                .put("textWindowsObserved",TvFirst009TextServiceOwner.multimediaTextRequested()).put("nativeMp3Started",TvFirst009TextServiceOwner.multimediaAudioStarted())
+                .put("nativePreparationsAfterRecovery",TvFirst009TextServiceOwner.multimediaAudioPreparations()).put("adSyncPreferenceStillOn",TvFirst009TextServiceOwner.adSyncEnabled())
+                .put("localTcpCommandsOnActiveService",true).put("cacheEvents",prepared.track.calendar.events().size());
+        java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-service-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
     }
     /** Send a unique real local command to the active native service, never directly to its runtime. */

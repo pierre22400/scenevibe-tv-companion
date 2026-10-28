@@ -40,4 +40,13 @@ public final class AdSyncRecoveryTest {
     @Test public void calibrationOffsetSurvivesRecovery(){var c=controller();c.observe(frame(1000,100000));assertTrue(c.calibrate(5000,100000));c.unavailable();assertFalse(c.observe(frame(2000,101000)).allow);assertTrue(c.observe(frame(2250,101250)).allow);assertEquals(6250,c.status().contentMs);}
     /** No wall-time estimate can override missing identity during a manual calibration. */
     @Test public void recoveryDoesNotWeakenCalibrationRefusals(){var c=controller();c.observe(new AdSyncController.Sample(session,false,true,0,-1,100000,100000,1f,100000,false));assertEquals(AdSyncController.Calibration.IDENTITY_INCOMPATIBLE,c.calibrateResult(1000,100000));}
+    /** OFF reference time remains raw even when resuming a manual hold with an earlier calibrated offset. */
+    @Test public void manualResumeWhileOffUsesReferenceTime(){
+        var guard=new AdSyncController(true);guard.setEnabled(true);
+        assertTrue(guard.observe(new AdSyncController.Sample("own",true,true,5000,5000,1000,1000,1f,100000)).allow);
+        assertEquals(AdSyncController.Calibration.APPLIED,guard.calibrateResult(10000,1000));guard.suspend();guard.setEnabled(false);guard.requestResume();
+        assertFalse(guard.observe(new AdSyncController.Sample("own",true,true,5250,5250,1250,1250,1f,100000)).allow);
+        var decision=guard.observe(new AdSyncController.Sample("own",true,true,5500,5500,1500,1500,1f,100000));assertTrue(decision.allow);assertEquals(5500,decision.contentMs);assertFalse(guard.enabled());
+    }
+
 }

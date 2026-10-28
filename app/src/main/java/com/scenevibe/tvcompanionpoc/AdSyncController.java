@@ -159,7 +159,7 @@ final class AdSyncController {
             confirmResume(sample);
             if(!held){manualHold=false;if(!enabled){state=State.DISABLED;reason=Reason.OFF;}
                 else if(!explicit)reason=Reason.AUTO_RECOVERED;}
-            return decision(!held,translated(sample));
+            return decision(!held,!enabled?sample.selectedMs:translated(sample));
         }
         Reason discontinuity=boundSession!=null && !boundSession.equals(sample.session)?Reason.SESSION_CHANGED:
                 accepted!=null && !continuous(accepted,sample)?Reason.CLOCK_JUMP:

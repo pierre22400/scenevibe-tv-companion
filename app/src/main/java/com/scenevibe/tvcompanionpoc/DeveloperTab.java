@@ -73,6 +73,17 @@ final class DeveloperTab {
         localControl.setEnabled(BuildConfig.ADSYNC_NONDESTRUCTIVE && stage!=DeveloperOverlayState.Stage.OFF);
         setText(localControl,TvFirst009TextServiceOwner.localControlEnabled()?"Arrêter les commandes locales (téléphone)":"Activer les commandes locales (téléphone)");
         setText(localInfo,TvFirst009TextServiceOwner.localControlInfo());
+        linkActions();
+    }
+    /** Keep native vertical D-pad navigation in this action column instead of falling into the adjacent sidebar. */
+    private void linkActions(){
+        Button[] actions={mode,prepare,launch,focusExperiment,closeOverlay,localControl};
+        for(int i=0;i<actions.length;i++){
+            int up=android.view.View.NO_ID,down=android.view.View.NO_ID;
+            for(int n=i-1;n>=0;n--)if(actions[n].isEnabled()){up=actions[n].getId();break;}
+            for(int n=i+1;n<actions.length;n++)if(actions[n].isEnabled()){down=actions[n].getId();break;}
+            actions[i].setNextFocusUpId(up);actions[i].setNextFocusDownId(down);
+        }
     }
     /** The Activity can close a recalage form before changing its normal navigation page. */
     boolean closeChild(){return controls.closeChild();}
@@ -88,7 +99,7 @@ final class DeveloperTab {
     private void setText(TextView view,String text){if(!text.contentEquals(view.getText()))view.setText(text);}
     /** Use remote-focusable native buttons, with literal labels for TV navigation. */
     private Button button(String title,Runnable action) {
-        Button button=new DeveloperButton(activity);button.setText(title);button.setTextSize(18);button.setAllCaps(false);
+        Button button=new DeveloperButton(activity);button.setId(android.view.View.generateViewId());button.setText(title);button.setTextSize(18);button.setAllCaps(false);
         button.setFocusable(true);button.setOnClickListener(view->action.run());root.addView(button,new LinearLayout.LayoutParams(-1,dp(54)));return button;
     }
     /** Keep explanatory text legible on a light, opaque developer surface. */

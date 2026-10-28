@@ -28,6 +28,8 @@ Le test natif `numericZerosBelongToTheViewerNotThePassivePanel` mesure les évé
 | Prise de focus explicite | États natifs demandés puis confirmés par callback | Peut interrompre un lecteur sensible ; jamais automatique par défaut |
 | Téléphone sur réseau privé | Page embarquée, mêmes commandes/service, panneau restant passif | Ne remplace pas le D-pad Sony ; nécessite téléphone + réseau privé de confiance |
 
+Dans l’onglet de l’application, les actions verticales reçoivent également des cibles D-pad explicites : le FocusFinder géométrique pouvait sinon renvoyer vers la barre latérale après une mise à jour de la page. Ce correctif concerne la navigation SceneVibe, pas les touches d’une autre application.
+
 Les états `PASSIVE`, `INTERACTIVE_REQUESTED`, `INTERACTIVE_CONFIRMED`, `RELEASING`, `CLOSED` sont distincts. Un appel WindowManager réussi n’est pas un focus confirmé. Back et × ne ferment que l’interface ; les touches de transport sont consommées sans appel à un lecteur tiers. La libération est observée séparément de la demande. Une perte de focus remet le panneau en état passif, sans reprendre de force le focus.
 
 Sources Android officielles consultées : [drapeaux WindowManager](https://developer.android.com/reference/android/view/WindowManager.LayoutParams), [cible unique des touches](https://developer.android.com/topic/performance/anrs/diagnose-and-fix-anrs#no-focused-window), [NotificationCompat.TvExtender](https://developer.android.com/reference/androidx/core/app/NotificationCompat.TvExtender). Le Companion utilise AndroidX 1.13.1 pour Android 12, et non la nouvelle classe plateforme API 35.

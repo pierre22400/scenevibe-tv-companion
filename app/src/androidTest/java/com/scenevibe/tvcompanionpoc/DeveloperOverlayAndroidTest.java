@@ -232,6 +232,9 @@ public final class DeveloperOverlayAndroidTest {
         await(()->viewer.numericZeros==6 && viewer.numpadZeros==3,"Numeric variants not observed in OWN receiver");
         assertEquals(before,TvFirst009TextServiceOwner.developerReceivedKeys());assertFalse(TvFirst009TextServiceOwner.developerHasFocus());assertTrue(viewer.simulatedPlaying);
         System.out.println("NUMERIC_ROUTING_PROOF fastBatchMs="+elapsed+" viewerKeycode0=6 viewerNumpad0=3 passivePanelEvents=0; SONY_HARDWARE_CODES_UNTESTED");
+        var proof=new org.json.JSONObject().put("scope","OWN_ANDROID_INPUT_NOT_SONY_HARDWARE").put("rapid000Millis",elapsed).put("viewerKeycode0",viewer.numericZeros).put("viewerNumpad0",viewer.numpadZeros)
+                .put("passivePanelEvents",TvFirst009TextServiceOwner.developerReceivedKeys()-before).put("viewerStillPlaying",viewer.simulatedPlaying);
+        java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-input-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
     /** An immutable notification capability requests focus without launching MainActivity; Sony menu reachability remains unproved. */
     @Test public void notificationRequestsAndConfirmsActualWindowFocus() throws Exception {
@@ -240,6 +243,13 @@ public final class DeveloperOverlayAndroidTest {
         main(()->{try{TvFirst009TextServiceOwner.panelIntent(target).send();}catch(Exception refused){throw new IllegalStateException(refused);}});
         await(()->"INTERACTIVE_CONFIRMED".equals(TvFirst009TextServiceOwner.developerFocusStatus()),"Visible/requested window was not confirmed by Android");
         assertFalse(application.hasWindowFocus());assertTrue(viewer.resumed);remote.pressBack();await(()->viewer.hasWindowFocus() && "CLOSED".equals(TvFirst009TextServiceOwner.developerFocusStatus()),"Focus was not released");assertEquals(0,viewer.backCount);
+    }
+    /** The TV remote can explicitly enable and revoke the phone fallback in the actual Developer tab. */
+    @Test public void actualTabEnablesLocalCommandsWithTheRemote() throws Exception {
+        prepare();focus("Activer les commandes locales (téléphone)",true);remote.pressDPadCenter();
+        visible("Arrêter les commandes locales (téléphone)");await(TvFirst009TextServiceOwner::localControlEnabled,"Real local-control button had no effect");
+        assertTrue(application.hasWindowFocus());assertTrue(TvFirst009TextServiceOwner.localControlInfo().contains("Code téléphone"));assertFalse(TvFirst009TextServiceOwner.multimediaActive());
+        remote.pressDPadCenter();visible("Activer les commandes locales (téléphone)");assertFalse(TvFirst009TextServiceOwner.localControlEnabled());
     }
     /** Real TCP commands use the same service state while a focus-sensitive OWN viewer keeps playing. */
     @Test public void pairedLocalCommandsDoNotStealTheViewersFocus() throws Exception {
