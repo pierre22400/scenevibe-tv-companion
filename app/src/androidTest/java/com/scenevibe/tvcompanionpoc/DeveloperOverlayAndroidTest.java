@@ -65,10 +65,15 @@ public final class DeveloperOverlayAndroidTest {
     }
     /** Wait for actual SceneVibe UI, never a platform third-party tree. */
     private void visible(String label){assertNotNull(label,remote.wait(Until.findObject(By.text(label)),10000));}
-    /** Drive only the D-pad and match the particular visible node's focus. */
+    /** Drive only the D-pad, first returning to the visible target's column after native focus restoration. */
     private void focus(String label,boolean down) {
         for(int i=0;i<30;i++){if(remote.hasObject(By.text(label).focused(true)))return;
-            if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}var actual=remote.findObject(By.focused(true));fail("D-pad could not focus "+label+"; actual="+(actual==null?"NONE":actual.getText()));
+            var desired=remote.findObject(By.text(label));var current=remote.findObject(By.focused(true));
+            if(desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
+                    && current.getVisibleBounds().centerX()<desired.getVisibleBounds().left)remote.pressDPadRight();
+            else if(desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
+                    && current.getVisibleBounds().centerX()>desired.getVisibleBounds().right)remote.pressDPadLeft();
+            else if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}var actual=remote.findObject(By.focused(true));fail("D-pad could not focus "+label+"; actual="+(actual==null?"NONE":actual.getText()));
     }
     /** Enter the sidebar and the real Developer page with the remote. */
     private void developerTab() {

@@ -297,7 +297,7 @@ public final class RecoveryCacheAndroidTest {
     @Test public void runtime004PhoneModeChangesPreserveAndRestoreText() throws Exception {
         runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
         local(port,token,++seq,"adsync","true");local(port,token,++seq,"adsync","false");runtime004At(31988);
-        await(TvFirst009TextServiceOwner::multimediaTextAttached,"First actual TEXT window missing",12000);
+        await(()->TvFirst009TextServiceOwner.multimediaTextAttached() && TvFirst009TextServiceOwner.multimediaTextRequested()==1,"First actual TEXT window missing or not yet audited",12000);
         long renders=TvFirst009TextServiceOwner.status().renderRequests;int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed;
         local(port,token,++seq,"adsync","true");await(TvFirst009TextServiceOwner::multimediaTextAttached,"OFF to ON removed a compatible window",3000);
         local(port,token,++seq,"adsync","false");assertTrue(TvFirst009TextServiceOwner.multimediaTextAttached());assertEquals(renders,TvFirst009TextServiceOwner.status().renderRequests);
@@ -307,7 +307,8 @@ public final class RecoveryCacheAndroidTest {
         local(port,token,++seq,"adsync","true");main(()->{metadata();playback(PlaybackState.STATE_PLAYING,35988);});
         await(()->TvFirst009TextServiceOwner.multimediaTextAttached() && TvFirst009TextServiceOwner.status().renderRequests>renders,"Current TEXT did not restore",4000);
         assertEquals(1,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().textDue);assertEquals(52988,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().nextStartMs);
-        local(port,token,++seq,"adsync","false");runtime004At(51988);await(()->TvFirst009TextServiceOwner.multimediaTextRequested()==2,"Future TEXT lost after mode recovery",12000);
+        local(port,token,++seq,"adsync","false");runtime004At(51988);await(()->TvFirst009TextServiceOwner.multimediaTextRequested()==2
+                && TvFirst009TextServiceOwner.multimediaTextAttached(),"Future TEXT lost after mode recovery",12000);
         JSONObject paused=local(port,token,++seq,"suspend","");assertTrue(paused.getBoolean("suspended"));assertEquals("USER_PAUSED",paused.getString("commentState"));
         local(port,token,++seq,"adsync","true");assertTrue(LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getBoolean("suspended"));
         assertTrue(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaTextAttached());
