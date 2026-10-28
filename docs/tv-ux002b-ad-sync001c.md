@@ -69,7 +69,7 @@ L’UI distingue cache vérifié, service actif/arrêté et confirmation nécess
 
 Les diagnostics distinguent les transitions de récupération, `USER_SUSPENDED`, `MEDIA_IDENTITY_INVALID`, `MEDIA_CLOCK_INVALID`, `MEDIA_UNAVAILABLE`, les refus précis de consentement/cache, `CACHE_RESTORED`, `FOCUS_REQUESTED`, `FOCUS_GRANTED`, `FOCUS_RELEASED`, et le refus/perte de focus. Pas de répétition AD-SYNC à 250 ms, ni alternance artificielle SESSION_UNAVAILABLE/CAPTURE_TIMEOUT à chaque tick. Les coordonnées temporelles numériques sont des observations, jamais du contenu Prime.
 
-Pour un diagnostic futur autorisé, utiliser [le script PowerShell](../scripts/Collect-SceneVibeDiagnostic.ps1). Il lit les buffers SceneVibe existants puis suit les nouveaux événements sans les vider. Démarrer avant l’action, laisser tourner après la reprise, arrêter avec Ctrl+C. Ne pas installer/désinstaller, force-stop, effacer le cache ou injecter des touches pour cette capture.
+Pour un diagnostic futur autorisé, utiliser [le script PowerShell](../scripts/Collect-SceneVibeDiagnostic.ps1). Il lit les buffers SceneVibe existants puis suit les nouveaux événements sans les vider. Sur DENIS, exécuter d’abord `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`, puis `./Collect-SceneVibeDiagnostic.ps1 -DeviceSerial <identifiant-TV>`. Démarrer avant l’action, laisser tourner après la reprise, arrêter avec Ctrl+C. Ne pas installer/désinstaller, force-stop, effacer le cache ou injecter des touches pour cette capture.
 
 ## Qualification et protocole physique
 

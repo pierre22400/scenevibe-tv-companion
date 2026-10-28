@@ -59,14 +59,14 @@ public final class RecoveryCacheAndroidTest {
         assertTrue(target.getSharedPreferences("tvfirst008_identity",0).edit().clear().commit());
         state=new TvFirst008State(target);
         state.claimed(new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("deviceId",fixture.binding.device)
-                .put("generation",fixture.generation).put("deviceToken","Q".repeat(43)));
+                .put("generation",fixture.generation).put("deviceToken","QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"));
         revision=fixture.binding.revision-1;
         source=new TvFirst008Source(target,state,this::response,"https://owned-fixture.invalid",Executors.newSingleThreadExecutor());
         main(source::resume);await(()->!source.busy() && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ASSOCIATED,"Association fixture not read",15000);
         AtomicReference<MultimediaPrivateCache.Prepared> result=new AtomicReference<>();
         main(()->source.downloadMultimedia(fixture.binding.publication,result::set,fixture.port));
         await(()->result.get()!=null && !source.busy(),"Actual Android download failed",20000);prepared=result.get();revision=prepared.binding.revision;
-        assertEquals(19,prepared.track.calendar.events().size());assertEquals(3,fixture.port.audioRequests);
+        assertEquals(19,prepared.track.calendar.events().size());assertEquals("Content-addressed transfer fetches each distinct resource once",prepared.profile.resources.stream().map(resource->resource.sha256).distinct().count(),fixture.port.audioRequests);
     }
 
     /** Stop only this test's service, worker, session and generation-owned files. */

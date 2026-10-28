@@ -64,6 +64,16 @@ public final class AdSyncRuntimeTest {
     /** Paused confirmation anchors the same calendar without prematurely dispatching due comments. */
     @Test public void pausedResumeWaitsForPlaying(){at(1750);runtime.suspendComments();runtime.observe("synthetic-activation",new MediaObservation(true,2000,false));assertEquals(0,port.starts);at(2000);assertEquals(1,port.starts);}
 
+    /** v22 automatic confirmation preserves consumed MP3 identities and still admits a future original event. */
+    @Test public void automaticRecoveryDoesNotReplayConsumedAudio(){
+        var guard=new AdSyncController(true);guard.setEnabled(true);
+        assertTrue(guard.observe(new AdSyncController.Sample("own",true,true,2000,2000,1000,1000,1f,100000)).allow);at(2000);assertEquals(1,port.starts);
+        guard.unavailable();runtime.suspendComments();
+        assertFalse(guard.observe(new AdSyncController.Sample("own",true,true,1750,1750,2000,2000,1f,100000)).allow);
+        var returned=guard.observe(new AdSyncController.Sample("own",true,true,2000,2000,2250,2250,1f,100000));assertTrue(returned.allow);at(returned.contentMs);assertEquals(1,port.starts);
+        var future=guard.observe(new AdSyncController.Sample("own",true,true,6000,6000,3000,3000,1f,100000));assertTrue(future.allow);at(future.contentMs);assertEquals(2,port.starts);
+    }
+
     /** A recording LOCAL audio port; there is deliberately no interface to a platform player or network. */
     private static final class Port implements LocalAudioPort {
         int starts;State state=State.IDLE;

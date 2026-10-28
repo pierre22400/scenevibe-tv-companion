@@ -162,12 +162,12 @@ public final class MediaSessionProbe {
         Log.i(TAG, "Passive MediaSession probe stopped");
     }
 
-    /** Dispatch one exclusive probe branch; the legacy branch below is retained unchanged. */
     private String lastProbeState="";
 
     /** Log v22 state transitions once; no MEDIA payload or repeated 250 ms absence messages. */
     private void probeState(String code){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !code.equals(lastProbeState)){Log.i(TAG,code);lastProbeState=code;}}
 
+    /** Dispatch one exclusive probe branch; the legacy branch below is retained unchanged. */
     private void sample() {
         if (observer != null) {
             observer.onObservation(observationReader.capture(sessions, listenerComponent,

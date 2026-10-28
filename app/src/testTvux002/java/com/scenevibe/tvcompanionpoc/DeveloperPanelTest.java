@@ -43,6 +43,8 @@ public final class DeveloperPanelTest {
     @Test public void prepareIsNotFocusableOrTouchable(){assertTrue(panel.prepare());assertTrue(panel.isPrepared());assertTrue((host.params.flags & WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)!=0);assertTrue((host.params.flags & WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)!=0);}
     /** The same root is promoted after handoff rather than removed and re-created. */
     @Test public void promotionRetainsTheWindow(){panel.prepare();View root=host.view;assertTrue(panel.activatePrepared());assertSame(root,host.view);assertEquals(1,host.adds);assertEquals(1,host.updates);assertEquals(0,host.removes);assertEquals(0,host.params.flags & WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);}
+    /** Requested focus without a native grant is refused and returned to a no-input window. */
+    @Test public void anUnconfirmedRequestTimesOutToPassive(){panel.prepare();panel.activatePrepared();assertEquals(DeveloperFocusState.State.INTERACTIVE_REQUESTED,panel.focusState());Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(1600));assertEquals(DeveloperFocusState.State.PASSIVE,panel.focusState());assertTrue(panel.isPrepared());assertNotEquals(0,host.params.flags & WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);}
     /** A second preparation parks the same window and releases input. */
     @Test public void parkingRetainsRootAndSwitches(){panel.prepare();panel.activatePrepared();View root=host.view;panel.standby();assertSame(root,host.view);assertTrue(panel.isPrepared());assertTrue(actions.text);assertTrue(actions.audio);assertEquals(0,host.removes);}
     /** Updating the window can fail without leaving an invisible input owner. */

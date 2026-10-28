@@ -65,7 +65,7 @@ public final class DeveloperOverlayAndroidTest {
     /** Drive only the D-pad and match the particular visible node's focus. */
     private void focus(String label,boolean down) {
         for(int i=0;i<30;i++){if(remote.hasObject(By.text(label).focused(true)))return;
-            if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}fail("D-pad could not focus "+label);
+            if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}var actual=remote.findObject(By.focused(true));fail("D-pad could not focus "+label+"; actual="+(actual==null?"NONE":actual.getText()));
     }
     /** Enter the sidebar and the real Developer page with the remote. */
     private void developerTab() {
@@ -80,6 +80,7 @@ public final class DeveloperOverlayAndroidTest {
     private void prepare() throws Exception {
         developerTab();focus("Mode Développeur : OFF",false);remote.pressDPadCenter();visible("Mode Développeur : ON");
         await(()->TvFirst009TextServiceOwner.developerStage()==DeveloperOverlayState.Stage.ENABLED,"Mode did not enable separately");
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();remote.waitForIdle();focus("Mode Développeur : ON",false);
         focus("Afficher les commandes en overlay",true);remote.pressDPadCenter();
         await(()->TvFirst009TextServiceOwner.developerStage()==DeveloperOverlayState.Stage.PREPARED && TvFirst009TextServiceOwner.developerWindowIdentity()!=null,"Prepared window not attached");
     }
@@ -254,7 +255,11 @@ public final class DeveloperOverlayAndroidTest {
         assertTrue(viewer.hasWindowFocus());assertTrue(viewer.simulatedPlaying);assertEquals(0,viewer.focusLosses);
         assertEquals(200,LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",3).put("command","panel").put("value","close"),null).status);
         assertTrue(viewer.hasWindowFocus());assertEquals(0,viewer.backCount);assertEquals(0,viewer.transportKeys);assertTrue(serviceRunning());assertFalse(TvFirst009TextServiceOwner.multimediaActive());
-        main(()->{TvFirst009TextServiceOwner.setLocalControlEnabled(false);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);});assertFalse(TvFirst009TextServiceOwner.localControlEnabled());
+        var invalid=LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",4).put("command","calibrate").put("value","bad"),null);
+        assertEquals(200,invalid.status);assertEquals(AdSyncController.Calibration.FORMAT_INVALID.message,invalid.json().getString("result"));assertFalse(invalid.json().getBoolean("text"));assertTrue(invalid.json().getBoolean("audio"));
+        assertEquals(200,LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",5).put("command","audio").put("value","false"),null).status);assertFalse(TvFirst009TextServiceOwner.multimediaAudioEnabled());
+        assertEquals(200,LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",6).put("command","adsync").put("value","true"),null).status);assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaActive());
+        main(()->{TvFirst009TextServiceOwner.setLocalControlEnabled(false);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);TvFirst009TextServiceOwner.setAdSyncEnabled(false);});assertFalse(TvFirst009TextServiceOwner.localControlEnabled());
     }
     /** Active command recorder has no MediaSession, provider identity or native playback authority. */
     private static final class Actions implements CompanionControlPanel.Commands {

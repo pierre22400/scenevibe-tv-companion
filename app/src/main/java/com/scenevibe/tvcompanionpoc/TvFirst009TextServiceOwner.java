@@ -278,7 +278,7 @@ final class TvFirst009TextServiceOwner {
         LocalDeveloperServer origin=localControls;
         main.post(()->{if(!pending.compareAndSet(true,false)){done.countDown();return;}
             try{if(closing || localControls!=origin || origin==null || !origin.isLive())return;answer.set(localCommandNow(command,value));}
-            catch(Exception refused){answer.set(new JSONObject());}finally{done.countDown();}});
+            catch(Exception refused){try{answer.set(localStatus().put("result","Commande refusée ; état SceneVibe conservé."));}catch(Exception unavailable){/* No fictional OFF snapshot is returned. */}}finally{done.countDown();}});
         if(!done.await(2,java.util.concurrent.TimeUnit.SECONDS)){pending.set(false);throw new IllegalStateException("LOCAL_COMMAND_TIMEOUT");}
         if(answer.get()==null)throw new IllegalStateException("LOCAL_COMMAND_REFUSED");return answer.get();
     }
@@ -292,7 +292,8 @@ final class TvFirst009TextServiceOwner {
                 boolean on=Boolean.parseBoolean(value);if("text".equals(command))controls.text(on);else if("audio".equals(command))controls.audio(on);else controls.adSync(on);break;
             case "suspend":controls.suspend();break;
             case "resume":controls.resume();break;
-            case "calibrate":return localStatus().put("result",controls.calibrate(AdSyncController.parseFilmTime(value),false).message);
+            case "calibrate":try{return localStatus().put("result",controls.calibrate(AdSyncController.parseFilmTime(value),false).message);}
+                catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
                 if("close".equals(value))closeDeveloperPanel();
                 else if("show".equals(value)){ensureControlPanel();if(controlPanel.prepare()){developer.prepared();if(controlPanel.presentPrepared(false))developer.shown();}}

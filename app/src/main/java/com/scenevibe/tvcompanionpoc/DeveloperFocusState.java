@@ -17,7 +17,7 @@ final class DeveloperFocusState {
     /** Only a real window-focus callback confirms input ownership. */
     void gained(){if(state==State.INTERACTIVE_REQUESTED)state=State.INTERACTIVE_CONFIRMED;}
     /** Unexpected loss releases the UI to a passive policy, never a hidden key trap. */
-    void lost(){if(state==State.INTERACTIVE_CONFIRMED || state==State.INTERACTIVE_REQUESTED)state=State.PASSIVE;}
+    void lost(){if(state==State.INTERACTIVE_CONFIRMED)state=State.PASSIVE;}
     /** Announce release before changing flags or removing the root. */
     void releasing(){state=State.RELEASING;}
     /** Confirm that the retired window no longer has an attached input capability. */
