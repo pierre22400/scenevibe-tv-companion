@@ -25,7 +25,8 @@ public final class AdEvidenceDetectorTest {
     /** Read one current compatible controller frame; time is a test capture clock, not a film clock replacement. */
     private Decision frame(long time,long position,Marker marker){return detector.observe(sample(session,time,position,marker,true,true,true),time);}
     /** Confirm one synthetic publisher AD flag with two independent, separated captures. */
-    private void start(){assertEquals(Edge.NONE,frame(1000,900000,Marker.AD).edge);assertEquals(Edge.AD_START,frame(1250,900250,Marker.AD).edge);}
+    private void start(){frame(0,0,Marker.CONTENT);frame(250,250,Marker.CONTENT);
+        assertEquals(Edge.NONE,frame(1000,900000,Marker.AD).edge);assertEquals(Edge.AD_START,frame(1250,900250,Marker.AD).edge);}
 
     /** A fresh compatible MEDIA clock without an explicit flag cannot establish content or advertising. */
     @Test public void ordinaryPlayingWithoutMarkerRemainsUncertain(){for(int i=0;i<20;i++)assertEquals(State.UNCERTAIN,frame(1000+i*250,80000+i*250,Marker.ABSENT).state);
@@ -68,7 +69,8 @@ public final class AdEvidenceDetectorTest {
     @Test public void duplicateCaptureDoesNotConfirm(){frame(1000,0,Marker.AD);assertEquals(State.UNCERTAIN,frame(1000,0,Marker.AD).state);
         assertEquals(0,detector.status().adStarts);}
     /** Very close callbacks cannot satisfy the sampling confirmation interval. */
-    @Test public void rapidCallbacksDoNotConfirm(){frame(1000,0,Marker.AD);assertEquals(State.UNCERTAIN,frame(1050,0,Marker.AD).state);
+    @Test public void rapidCallbacksDoNotConfirm(){frame(0,0,Marker.CONTENT);frame(250,250,Marker.CONTENT);
+        frame(1000,0,Marker.AD);assertEquals(State.UNCERTAIN,frame(1050,0,Marker.AD).state);
         assertEquals(Edge.AD_START,frame(1250,0,Marker.AD).edge);}
     /** A stale or future-dated observation cannot confirm a current break. */
     @Test public void staleAndFutureSamplesAreRejected(){frame(1000,0,Marker.AD);
@@ -88,10 +90,21 @@ public final class AdEvidenceDetectorTest {
         assertEquals(State.CONTENT_CONFIRMED,frame(1500,900250,Marker.CONTENT).state);assertEquals(0,detector.status().adStarts);}
     /** A metadata gap is never counted as an additional independent flag observation. */
     @Test public void gapRestartsConsecutiveEvidence(){frame(1000,0,Marker.AD);frame(1250,0,Marker.ABSENT);
-        assertEquals(State.UNCERTAIN,frame(1500,0,Marker.AD).state);assertEquals(Edge.AD_START,frame(1750,0,Marker.AD).edge);}
+        assertEquals(State.UNCERTAIN,frame(1500,0,Marker.AD).state);assertEquals(State.AD_CONFIRMED,frame(1750,0,Marker.AD).state);
+        assertEquals(0,detector.status().adStarts);}
     /** Timeouts do not silently convert stale evidence into an advertising end. */
     @Test public void timeoutDoesNotConfirmEnd(){start();assertEquals(State.UNCERTAIN,detector.unavailable().state);assertEquals(0,detector.status().adEnds);}
     /** Turning the independent module off and on starts empty without a retained advertising classification. */
     @Test public void resetOnlyClearsThisDetectorsInference(){start();detector.reset();assertEquals(State.UNCERTAIN,detector.status().state);
         assertEquals(0,detector.status().adStarts);assertEquals(0,detector.status().adEnds);}
+    /** Enabling the experiment in the middle of a positive flag does not locate the actual ad onset. */
+    @Test public void initialAdPresenceIsNotAStartBoundary(){frame(1000,0,Marker.AD);Decision result=frame(1250,0,Marker.AD);
+        assertEquals(State.AD_CONFIRMED,result.state);assertEquals(Edge.NONE,result.edge);assertEquals(0,result.adStarts);
+        frame(1500,1000,Marker.CONTENT);assertEquals(Edge.AD_END,frame(1750,1250,Marker.CONTENT).edge);}
+    /** A lost flag leaves an unobserved interval, so later content cannot date its missing ad end. */
+    @Test public void contentAfterEvidenceGapDoesNotInventAnEnd(){start();frame(1500,0,Marker.ABSENT);
+        frame(1750,1000,Marker.CONTENT);assertEquals(State.CONTENT_CONFIRMED,frame(2000,1250,Marker.CONTENT).state);assertEquals(0,detector.status().adEnds);}
+    /** Fresh reads after a long sampler gap do not recover the precise onset that happened off-observation. */
+    @Test public void freshCapturesAfterLongGapCannotDateAdStart(){frame(0,0,Marker.CONTENT);frame(250,250,Marker.CONTENT);
+        frame(10000,0,Marker.AD);assertEquals(State.AD_CONFIRMED,frame(10250,0,Marker.AD).state);assertEquals(0,detector.status().adStarts);}
 }

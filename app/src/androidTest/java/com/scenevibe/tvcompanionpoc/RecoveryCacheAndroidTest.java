@@ -271,6 +271,9 @@ public final class RecoveryCacheAndroidTest {
         assertTrue(local(port,token,++seq,"adprobe","true").getJSONObject("adObservation").getBoolean("enabled"));
         local(port,token,++seq,"admark","AD_VISIBLE");Thread.sleep(600);
         assertEquals("Owner annotation is not automatic evidence","UNCERTAIN",LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation").getString("candidate"));
+        main(()->media.setMetadata(new MediaMetadata.Builder(media.getController().getMetadata()).putLong(AdObservationProbe.AD_KEY,0).build()));
+        runtime004At(1000);Thread.sleep(600);
+        assertEquals("CONTENT_CONFIRMED",LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation").getString("candidate"));
         // This is an explicitly OWN synthetic flag. Even a positive candidate is
         // observation-only until a real Prime publisher contract is corroborated.
         main(()->media.setMetadata(new MediaMetadata.Builder(media.getController().getMetadata()).putLong(AdObservationProbe.AD_KEY,1).build()));

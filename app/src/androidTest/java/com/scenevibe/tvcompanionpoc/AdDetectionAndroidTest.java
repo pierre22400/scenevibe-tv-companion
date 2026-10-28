@@ -58,7 +58,7 @@ public final class AdDetectionAndroidTest {
         publish(null,PlaybackState.STATE_PAUSED,90000);JSONObject result=pair();assertEquals(0,result.getInt("adStarts"));assertEquals(0,result.getInt("adEnds"));}
     /** The own publisher can expose both distinct boundaries through a public metadata flag. */
     @Test public void ownExplicitMetadataProducesStartThenEndAndCallbacks() throws Exception {
-        publish(null,PlaybackState.STATE_PLAYING,1000);capture();
+        publish(0L,PlaybackState.STATE_PLAYING,1000);assertEquals("CONTENT_CONFIRMED",pair().getString("candidate"));
         publish(1L,PlaybackState.STATE_PLAYING,1250);JSONObject start=pair();assertEquals("AD_CONFIRMED",start.getString("candidate"));assertEquals(1,start.getInt("adStarts"));
         publish(0L,PlaybackState.STATE_PLAYING,2000);JSONObject end=pair();assertEquals("CONTENT_CONFIRMED",end.getString("candidate"));assertEquals(1,end.getInt("adEnds"));
         assertTrue("Public metadata callback not received",end.getInt("metadataCallbacks")>0);

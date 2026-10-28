@@ -17,7 +17,7 @@ public final class AdEvidenceDetector {
     /** Closed diagnostic reasons contain no publisher payload. */
     public enum Reason { NO_PUBLIC_AD_MARKER, NO_TARGET_SESSION, SESSION_CHANGED, STALE_CAPTURE,
         INVALID_MARKER, CONTENT_MEDIA_INVALID, AD_CONFIRMING, CONTENT_CONFIRMING,
-        EXPLICIT_AD_FLAG, EXPLICIT_CONTENT_FLAG, OBSERVATION_LOST }
+        EXPLICIT_AD_FLAG, INITIAL_AD_OBSERVATION, EXPLICIT_CONTENT_FLAG, OBSERVATION_LOST }
 
     /** Facts obtained from a public controller; opaque session identity remains in memory only. */
     public static final class Sample {
@@ -54,7 +54,7 @@ public final class AdEvidenceDetector {
     private Object session;
     private Sample candidate;
     private long lastCapture=-1;
-    private boolean adOpen;
+    private boolean adOpen,contentBeforeAd;
     private int starts,ends;
 
     /** Begin without any assertion about the visible programme or advertising. */
@@ -62,16 +62,17 @@ public final class AdEvidenceDetector {
 
     /** Reset only this experiment's inference, never another component's consumption or cache. */
     public void reset(){state=State.UNCERTAIN;reason=Reason.NO_PUBLIC_AD_MARKER;session=null;candidate=null;
-        lastCapture=-1;adOpen=false;starts=0;ends=0;}
+        lastCapture=-1;adOpen=false;contentBeforeAd=false;starts=0;ends=0;}
 
     /** Consume explicit publisher evidence; capture time bounds freshness but never advances film time. */
     public Decision observe(Sample sample,long nowMs){
         if(sample==null || sample.session==null || !sample.singleTarget){session=null;adOpen=false;return uncertain(Reason.NO_TARGET_SESSION);}
         if(sample.capturedMs<0 || nowMs<sample.capturedMs || nowMs-sample.capturedMs>2500)return uncertain(Reason.STALE_CAPTURE);
         boolean changed=session!=null && !session.equals(sample.session);
-        if(changed){candidate=null;adOpen=false;lastCapture=-1;state=State.UNCERTAIN;reason=Reason.SESSION_CHANGED;}
+        if(changed){candidate=null;adOpen=false;contentBeforeAd=false;lastCapture=-1;state=State.UNCERTAIN;reason=Reason.SESSION_CHANGED;}
         session=sample.session;
         if(sample.capturedMs<=lastCapture)return decision(Edge.NONE);
+        if(lastCapture>=0 && sample.capturedMs-lastCapture>2500){candidate=null;adOpen=false;contentBeforeAd=false;}
         lastCapture=sample.capturedMs;
         if(sample.marker==Marker.ABSENT)return uncertain(Reason.NO_PUBLIC_AD_MARKER);
         if(sample.marker==Marker.INVALID)return uncertain(Reason.INVALID_MARKER);
@@ -91,9 +92,12 @@ public final class AdEvidenceDetector {
         candidate=sample;
         if(sample.marker==Marker.AD){
             state=State.AD_CONFIRMED;reason=Reason.EXPLICIT_AD_FLAG;
-            if(!adOpen){adOpen=true;starts++;return decision(Edge.AD_START);}
+            if(!adOpen){adOpen=true;
+                if(contentBeforeAd){contentBeforeAd=false;starts++;return decision(Edge.AD_START);}
+                reason=Reason.INITIAL_AD_OBSERVATION;}
         }else{
             state=State.CONTENT_CONFIRMED;reason=Reason.EXPLICIT_CONTENT_FLAG;
+            contentBeforeAd=true;
             if(adOpen){adOpen=false;ends++;return decision(Edge.AD_END);}
         }
         return decision(Edge.NONE);
@@ -105,8 +109,8 @@ public final class AdEvidenceDetector {
     /** Expose candidate state without consuming a new capture or repeating its edge. */
     public Decision status(){return decision(Edge.NONE);}
 
-    /** Lose consecutive evidence while remembering an already-open break within the same session. */
-    private Decision uncertain(Reason cause){candidate=null;state=State.UNCERTAIN;reason=cause;return decision(Edge.NONE);}
+    /** Lose boundary continuity: a later positive flag may prove presence, but cannot date the missing onset/end. */
+    private Decision uncertain(Reason cause){candidate=null;adOpen=false;contentBeforeAd=false;state=State.UNCERTAIN;reason=cause;return decision(Edge.NONE);}
 
     /** Snapshot independent transition counters without granting any commentary effect. */
     private Decision decision(Edge edge){return new Decision(state,reason,edge,starts,ends);}

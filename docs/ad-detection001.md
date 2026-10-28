@@ -63,8 +63,8 @@ Pas de nouveau serveur, lecteur, autorisation, accès Cloud, stockage de jeton o
 
 `ad/AdEvidenceDetector` reçoit seulement la clé publique explicite et les scalaires déjà capturés. Il ne reçoit ni événement éditorial, ni position d'un MP3, ni bouton d'annotation physique.
 
-- AD_START candidat : deux captures distinctes d'un flag non-zéro présent, dans une seule session cible, séparées d'au moins 100 ms et de moins de 2,5 s.
-- AD_END candidat : après un AD_START dans la même session, deux flags zéro explicites, identité compatible et lecture/horloge cohérentes. Aucun AD_END initial, par disparition de clé, timeout ou remplacement de session.
+- AD_START candidat : après du contenu explicitement confirmé, deux captures distinctes d'un flag non-zéro présent, dans une seule session cible, séparées d'au moins 100 ms et de moins de 2,5 s. Une sonde activée au milieu d'une publicité peut constater sa présence, sans inventer son début.
+- AD_END candidat : après une publicité explicitement constatée dans la même session, deux flags zéro explicites, identité compatible et lecture/horloge cohérentes. Aucun AD_END initial, par disparition de clé, timeout ou remplacement de session ; un intervalle sans preuve rompt la continuité des frontières.
 - Sans clé, session ambiguë ou preuve insuffisante : UNCERTAIN. MEDIA valide seul ne devient jamais CONTENT_CONFIRMED.
 - Les états CONFIRMED désignent le **contrat public du publisher candidat**, pas une analyse d'image ou une validation physique Sony.
 
