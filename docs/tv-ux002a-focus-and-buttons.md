@@ -53,3 +53,5 @@ Candidat `scenevibe-tv-ux002a-stable.apk`, package `com.scenevibe.tvcompanionpoc
 4. Seulement si le lecteur conserve son écran : vérifier ON/OFF rouge/neutre, anneau noir sans bascule, suspension/reprise et recalage ; puis Back/× imbriqués, service/interrupteurs conservés et touches rendues au lecteur. Ne pas confondre ce test futur avec les résultats du banc.
 
 STOP avant installation Sony, fusion, déploiement et mutation Cloud. PR #31 maintenue en brouillon.
+
+> Suite v22 : [TV-UX 002-B / AD-SYNC 001-C](tv-ux002b-ad-sync001c.md). Les constats v21 restent historiques ; l’accès D-pad depuis Prime n’était pas qualifié.

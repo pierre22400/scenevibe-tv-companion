@@ -159,7 +159,7 @@ final class CompanionControlPanel {
         params.gravity=Gravity.END|Gravity.CENTER_VERTICAL;params.setTitle("SceneVibe companion controls");
         configureSize(prepared);
         if(prepared)showPrepared();else showMain();
-        try{host.add(root,params);trace("ATTACHED",-1,-1);if(!prepared)root.post(()->{if(root!=null && !passive)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
+        try{host.add(root,params);trace("ATTACHED",-1,-1);if(!prepared)verifyFocusRequest();if(!prepared)root.post(()->{if(root!=null && !passive)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
         catch(RuntimeException refused){close();return false;}
     }
 
@@ -172,9 +172,17 @@ final class CompanionControlPanel {
     boolean presentPrepared(boolean interactive) {
         if(root==null || !passive || !permission.getAsBoolean())return false;
         passive=!interactive;monitoring=!interactive;if(interactive)focusState.request();else focusState.passive();root.hadFocus=false;root.held.clear();configureSize(false);showMain();
-        try{host.update(root,params);trace(interactive?"EXPLICIT_FOCUS_REQUEST":"PASSIVE_EXPANDED",-1,-1);
+        try{host.update(root,params);trace(interactive?(BuildConfig.ADSYNC_NONDESTRUCTIVE?"FOCUS_REQUESTED":"EXPLICIT_FOCUS_REQUEST"):"PASSIVE_EXPANDED",-1,-1);
+            if(interactive)verifyFocusRequest();
             if(interactive)root.post(()->{if(root!=null && !passive)text.requestFocus();});return true;}
         catch(RuntimeException refused){close();return false;}
+    }
+
+    /** Refuse a focus request which Android never confirms, releasing the window without forcing input ownership. */
+    private void verifyFocusRequest(){
+        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)return;PanelRoot requested=root;
+        handler.postDelayed(()->{if(root==requested && !passive && focusState.state()==DeveloperFocusState.State.INTERACTIVE_REQUESTED
+                && !requested.hasWindowFocus()){trace("FOCUS_REFUSED",-1,-1);standby();}},1500);
     }
 
     /** Release focus while retaining the same window and every business switch. */

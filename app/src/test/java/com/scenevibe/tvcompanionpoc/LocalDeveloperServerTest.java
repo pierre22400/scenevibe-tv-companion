@@ -17,6 +17,11 @@ public final class LocalDeveloperServerTest {
     @After public void after(){server.close();}
     /** Perform the same one-use pairing as the bundled phone page. */
     private String pair() throws Exception{return LocalControlTestClient.send(server.port(),"/pair",null,new JSONObject().put("code",LocalControlTestClient.code(server.accessInfo())),null).json().getString("token");}
+    /** Fixed assets are served same-origin with embedding/CSP protection; arbitrary paths stay closed. */
+    @Test public void assetsAreFixedAndCannotBeUsedAsAnArbitraryFileServer() throws Exception {
+        for(String path:new String[]{"/","/app.js","/style.css"}){var response=LocalControlTestClient.get(server.port(),path);assertEquals(200,response.status);assertEquals("own page",response.body);assertTrue(response.headers.contains("Content-Security-Policy:"));assertTrue(response.headers.contains("X-Frame-Options: DENY"));}
+        assertEquals(404,LocalControlTestClient.get(server.port(),"/../private").status);assertEquals(0,effects.get());
+    }
     /** Unauthenticated status and mutations never reach the effect owner. */
     @Test public void unauthenticatedRequestsHaveNoEffect() throws Exception{assertEquals(403,LocalControlTestClient.send(server.port(),"/command",null,new JSONObject().put("seq",1).put("command","text").put("value","false"),null).status);assertEquals(0,effects.get());}
     /** Even a valid bearer cannot turn a cross-site browser request into a control command. */

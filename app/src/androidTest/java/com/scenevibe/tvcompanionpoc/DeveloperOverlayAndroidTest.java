@@ -225,7 +225,7 @@ public final class DeveloperOverlayAndroidTest {
     @Test public void numericZerosBelongToTheViewerNotThePassivePanel() throws Exception {
         playingViewerBehindBadge();int before=TvFirst009TextServiceOwner.developerReceivedKeys();
         long start=SystemClock.elapsedRealtime();for(int i=0;i<3;i++)remote.pressKeyCode(KeyEvent.KEYCODE_0);
-        long elapsed=SystemClock.elapsedRealtime()-start;await(()->viewer.numericZeros==3,"Viewer did not receive actual KEYCODE_0 events");
+        long elapsed=SystemClock.elapsedRealtime()-start;assertTrue("Owned rapid 000 must actually take less than two seconds",elapsed<2000);await(()->viewer.numericZeros==3,"Viewer did not receive actual KEYCODE_0 events");
         remote.pressKeyCode(KeyEvent.KEYCODE_0);Thread.sleep(1100);remote.pressKeyCode(KeyEvent.KEYCODE_0);Thread.sleep(1100);remote.pressKeyCode(KeyEvent.KEYCODE_0);
         for(int i=0;i<3;i++)remote.pressKeyCode(KeyEvent.KEYCODE_NUMPAD_0);
         await(()->viewer.numericZeros==6 && viewer.numpadZeros==3,"Numeric variants not observed in OWN receiver");
@@ -244,6 +244,7 @@ public final class DeveloperOverlayAndroidTest {
     @Test public void pairedLocalCommandsDoNotStealTheViewersFocus() throws Exception {
         playingViewerBehindBadge();main(()->assertTrue(TvFirst009TextServiceOwner.setLocalControlEnabled(true)));
         String info=TvFirst009TextServiceOwner.localControlInfo();var address=java.util.regex.Pattern.compile("http://[^:]+:([0-9]+)").matcher(info);assertTrue(address.find());int port=Integer.parseInt(address.group(1));
+        assertTrue(LocalControlTestClient.get(port,"/").body.contains("Code affiché dans SceneVibe TV"));assertTrue(LocalControlTestClient.get(port,"/app.js").body.contains("same-origin"));
         assertEquals(403,LocalControlTestClient.send(port,"/status",null,new org.json.JSONObject(),null).status);
         String token=LocalControlTestClient.send(port,"/pair",null,new org.json.JSONObject().put("code",LocalControlTestClient.code(info)),null).json().getString("token");
         var reply=LocalControlTestClient.send(port,"/command",token,new org.json.JSONObject().put("seq",1).put("command","text").put("value","false"),null);assertEquals(200,reply.status);assertFalse(reply.json().getBoolean("text"));
