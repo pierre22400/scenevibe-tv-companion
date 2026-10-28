@@ -202,6 +202,9 @@ final class AdSyncController {
         return seconds*1000;
     }
 
+    /** Format a verified nonnegative calendar timestamp for the TV/phone, without advancing it. */
+    static String formatTime(long millis){long seconds=Math.max(0,millis)/1000;return String.format(java.util.Locale.ROOT,"%02d:%02d",seconds/60,seconds%60);}
+
     /** Present the current gate without claiming advertisement observability. */
     Decision status(){return decision((automaticRecovery?latest!=null && latest.valid():enabled) && !held,latest==null?-1:translated(latest));}
 

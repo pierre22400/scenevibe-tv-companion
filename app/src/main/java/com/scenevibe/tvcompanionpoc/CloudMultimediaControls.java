@@ -79,7 +79,8 @@ final class CloudMultimediaControls {
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
                 +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"\nAdmission locale explicite requise. "+TvFirst009TextServiceOwner.status().code:
                     "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
-        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)status.append("\n"+(TvFirst009TextServiceOwner.multimediaActive()?"Service actif · activation conservée.":"Service arrêté · nouvelle confirmation requise, sans retéléchargement du cache valide."));
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability()
+                +(TvFirst009TextServiceOwner.multimediaActive()?"\nAdmission conservée tant que consentement et reçu restent valides.":"\nNouvelle confirmation de restitution depuis le cache ; aucun retéléchargement requis."));
         if(activate!=null){
             activate.setEnabled(ready && preparedCache!=null && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED
                     && !TvFirst009TextServiceOwner.controlBusy());
@@ -153,6 +154,7 @@ final class CloudMultimediaControls {
         else {
             int audio=prepared.track.audio.size(),total=prepared.track.calendar.events().size();
             result="Cache privé vérifié : "+(total-audio)+" TEXT + "+audio+" AUDIO · "+total+" événements."
+                    +(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\n"+prepared.track.document.optString("title","Track")+" — cache présent : "+(total-audio)+" TEXT + "+audio+" AUDIO":"")
                     +"\nRelu après commit ; aucune restitution automatique.";
             if(BuildConfig.ADSYNC_NONDESTRUCTIVE)android.util.Log.i("SceneVibeCache","event=CACHE_RESTORED text="+(total-audio)+" audio="+audio+" events="+total);
         }
@@ -163,7 +165,7 @@ final class CloudMultimediaControls {
     private void confirmActivation(){
         if(preparedCache==null || activate==null || !activate.isEnabled())return;
         TvCompanionDialogs.builder(activity).setTitle("Admission locale TEXT + AUDIO")
-                .setMessage(BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
+                .setMessage(BuildConfig.ADSYNC_NONDESTRUCTIVE?"Active les 16 TEXT et 3 MP3 du cache pour l'édition de référence Columbo — Eaux troubles. Cette confirmation autorise le démarrage ; les allers-retours et interruptions MEDIA ne la renouvellent pas. Une véritable expiration/révocation reste bloquante. Publicité non observable : suspension manuelle disponible.":BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
                     boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
                     if(started){TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);}

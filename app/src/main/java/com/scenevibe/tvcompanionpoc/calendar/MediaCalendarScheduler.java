@@ -41,11 +41,19 @@ public final class MediaCalendarScheduler {
     private long lastPositionMs = -1L;
     private boolean mediaEligible;
     private boolean interrupted;
+    private final boolean recoverInterruptedTextRewind;
+    private long interruptedPositionMs=-1,rewindCandidateMs=-1;
+    private int textDue,audioDue,textRearmed;
     private Set<String> audioIds=Collections.emptySet();
 
     /** Retain the synchronous sink; no collaborator starts background work. */
     public MediaCalendarScheduler(Sink sink) {
-        this.sink = sink;
+        this(sink,false);
+    }
+
+    /** v23 may rearm future TEXT after two lower observations; interrupted AUDIO stays consumed. */
+    public MediaCalendarScheduler(Sink sink,boolean recoverInterruptedTextRewind) {
+        this.sink=sink;this.recoverInterruptedTextRewind=recoverInterruptedTextRewind;
     }
 
     /** Emit invalidation for the previous binding before replacing and resetting state. */
@@ -68,6 +76,7 @@ public final class MediaCalendarScheduler {
         lastPositionMs = -1L;
         mediaEligible = false;
         interrupted = false;
+        interruptedPositionMs=-1;rewindCandidateMs=-1;textDue=0;audioDue=0;textRearmed=0;
     }
 
     /** Invalidate the old binding before clearing it, even when already empty. */
@@ -81,6 +90,7 @@ public final class MediaCalendarScheduler {
         lastPositionMs = -1L;
         mediaEligible = false;
         interrupted = false;
+        interruptedPositionMs=-1;rewindCandidateMs=-1;textDue=0;audioDue=0;textRearmed=0;
     }
 
     /** Lose eligibility without expiring windows or erasing consumed identities. */
@@ -96,6 +106,7 @@ public final class MediaCalendarScheduler {
      */
     public synchronized void onInterruption() {
         if (calendar == null || interrupted) return;
+        interruptedPositionMs=lastPositionMs;rewindCandidateMs=-1;
         interrupted = true;
         deactivate(activationToken);
     }
@@ -118,7 +129,16 @@ public final class MediaCalendarScheduler {
         long positionMs = observation.positionMs();
         if (interrupted) {
             if (positionMs < 0L) return;
+            if(recoverInterruptedTextRewind && interruptedPositionMs>=0
+                    && positionMs<interruptedPositionMs-BACKWARD_SEEK_THRESHOLD_MS){
+                if(rewindCandidateMs<0 || positionMs<rewindCandidateMs || positionMs-rewindCandidateMs>FORWARD_SEEK_THRESHOLD_MS){
+                    rewindCandidateMs=positionMs;return;
+                }
+                for(SceneEvent event:calendar.events())if(!audioIds.contains(event.eventId())
+                        && event.startMs()>=rewindCandidateMs && consumed.remove(event.eventId()))textRearmed++;
+            }
             interrupted = false;
+            interruptedPositionMs=-1;rewindCandidateMs=-1;
             mediaEligible = true;
             sink.onEligibility(token, true);
             sink.onPlayback(token, observation.playing(), calendar.freezeOnPause());
@@ -224,6 +244,7 @@ public final class MediaCalendarScheduler {
             if (audioIds.contains(event.eventId()) && positionMs >= event.startMs() + event.durationMs()) continue;
             if (event.durationMs() > 0L) windowed.put(event.eventId(), event);
             if (audioIds.contains(event.eventId())) sink.onAudioPosition(token,event.eventId(),positionMs-event.startMs(),false);
+            if(audioIds.contains(event.eventId()))audioDue++;else textDue++;
             sink.onDue(token, event.eventId());
             if (!audioIds.contains(event.eventId())) return;
         }
@@ -248,6 +269,7 @@ public final class MediaCalendarScheduler {
             if (windowed.containsKey(event.eventId())) continue;
             consumed.add(event.eventId()); windowed.put(event.eventId(),event);
             sink.onAudioPosition(token,event.eventId(),positionMs-event.startMs(),discontinuity);
+            audioDue++;
             sink.onDue(token,event.eventId());
         }
     }
@@ -267,5 +289,30 @@ public final class MediaCalendarScheduler {
             windowed.remove(event.eventId());
             sink.onExpire(token, event.eventId());
         }
+    }
+
+    /** Immutable temporal counters: no event IDs, content, tokens or additional playback clock. */
+    public static final class Diagnostics {
+        public final int total,consumed,future,eligible,windows,textDue,audioDue,textRearmed;
+        public final long positionMs,nextStartMs;
+        public final boolean interrupted;
+        /** Freeze one scheduler read without exposing mutable event sets. */
+        private Diagnostics(int total,int consumed,int future,int eligible,int windows,int textDue,int audioDue,
+                int textRearmed,long position,long next,boolean interrupted){
+            this.total=total;this.consumed=consumed;this.future=future;this.eligible=eligible;this.windows=windows;
+            this.textDue=textDue;this.audioDue=audioDue;this.textRearmed=textRearmed;positionMs=position;nextStartMs=next;this.interrupted=interrupted;
+        }
+        /** Stable numeric diagnostic, safe for transition logs and local developer UI. */
+        @Override public String toString(){return "total="+total+" consumed="+consumed+" future="+future+" eligible="+eligible
+                +" windows="+windows+" textDue="+textDue+" audioDue="+audioDue+" textRearmed="+textRearmed+" positionMs="+positionMs+" nextMs="+nextStartMs+" interrupted="+interrupted;}
+    }
+    /** Observe the first unconsumed future start separately from normal silence between windows. */
+    public synchronized Diagnostics diagnostics(){
+        int total=calendar==null?0:calendar.events().size(),future=0,due=0;long next=-1;
+        if(calendar!=null)for(SceneEvent event:calendar.events())if(!consumed.contains(event.eventId())){
+            if(lastPositionMs<0 || event.startMs()>lastPositionMs){future++;if(next<0)next=event.startMs();}
+            else if(event.startMs()+event.durationMs()>lastPositionMs)due++;
+        }
+        return new Diagnostics(total,consumed.size(),future,due,windowed.size(),textDue,audioDue,textRearmed,lastPositionMs,next,interrupted);
     }
 }

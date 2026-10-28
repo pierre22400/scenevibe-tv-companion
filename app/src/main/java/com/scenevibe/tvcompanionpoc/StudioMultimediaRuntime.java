@@ -26,6 +26,11 @@ final class StudioMultimediaRuntime {
 
     /** Retain renderer ports without preparing or starting any local player. */
     StudioMultimediaRuntime(SceneRuntimeController.SceneSink sink,LocalAudioPort port) {
+        this(sink,port,false);
+    }
+
+    /** Select v23's bounded TEXT recovery while retaining historical calendar semantics by default. */
+    StudioMultimediaRuntime(SceneRuntimeController.SceneSink sink,LocalAudioPort port,boolean recoverTextRewind) {
         text=new SceneRuntimeController(sink); audio=new SceneVibeAudioRenderer(port);
         scheduler=new MediaCalendarScheduler(new MediaCalendarScheduler.Sink() {
             /** Apply only the active calendar's eligibility. */
@@ -54,7 +59,7 @@ final class StudioMultimediaRuntime {
             @Override public void onAudioPosition(String captured,String id,long offset,boolean discontinuity) {
                 if(owns(captured)) audio.onAudioPosition(captured,id,offset,discontinuity);
             }
-        });
+        },recoverTextRewind);
     }
 
     /** Offer a verified cache to the existing calendar input without arming, observing or drawing it. */
@@ -125,6 +130,9 @@ final class StudioMultimediaRuntime {
 
     /** Lose session/identity without retaining an audible local comment. */
     void unavailable() { scheduler.onUnavailable(); }
+
+    /** Project the actual shared calendar, never an independent timeline or regenerated events. */
+    MediaCalendarScheduler.Diagnostics diagnostics(){return scheduler.diagnostics();}
 
     /** Invalidate the activation before releasing both existing renderers. */
     void close() {

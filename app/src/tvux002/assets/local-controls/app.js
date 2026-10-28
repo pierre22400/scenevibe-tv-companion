@@ -33,7 +33,7 @@
       button.textContent = `${name.toUpperCase()} : ${value[name] ? "ON" : "OFF"}`;
     }
     for (const name of ["suspend", "resume", "calibrate"]) document.getElementById(name).disabled = !value.active;
-    status.textContent = `${value.active ? "Service multimédia actif" : "Service multimédia inactif · préférences modifiables"}\n${value.sync}\nFocus TV : ${value.focus}${value.result ? `\n${value.result}` : ""}`;
+    status.textContent = `${value.runtime || (value.active ? "Service multimédia actif" : "Service multimédia inactif · préférences modifiables")}\n${value.sync}\nFocus TV : ${value.focus}\nCommandes locales : ${Math.ceil(value.remainingMs / 60000)} min restantes${value.result ? `\n${value.result}` : ""}`;
   }
   /** Report failures without replaying a potentially applied command. */
   function failure(error) { status.textContent = error.message; }
@@ -62,7 +62,7 @@
   document.getElementById("calibrate").addEventListener("click", () => command("calibrate", document.getElementById("time").value));
   document.getElementById("show").addEventListener("click", () => command("panel", "show"));
   document.getElementById("close").addEventListener("click", () => command("panel", "close"));
-  /** Read status only; polling cannot open a window, acquire focus or renew the ten-minute lifetime. */
+  /** Read status only; polling cannot open a window, acquire focus or renew the two-hour lifetime. */
   async function poll() {
     if (token && !busy) {
       try { render(await request("/status", {})); }

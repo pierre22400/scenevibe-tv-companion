@@ -163,6 +163,8 @@ public final class MediaSessionProbe {
     }
 
     private String lastProbeState="";
+    private Object lastSelectedSession;
+    private String lastSelection="";
 
     /** Log v22 state transitions once; no MEDIA payload or repeated 250 ms absence messages. */
     private void probeState(String code){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !code.equals(lastProbeState)){Log.i(TAG,code);lastProbeState=code;}}
@@ -205,20 +207,35 @@ public final class MediaSessionProbe {
         }
 
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE)probeState("ACTIVE_SESSIONS_AVAILABLE");
-        Snapshot primary = null;
-        Snapshot compatible = null;
+        java.util.ArrayList<Snapshot> candidates=new java.util.ArrayList<>();
         for (int index = 0; index < controllers.size(); index++) {
-            Snapshot snapshot = snapshotController(index, controllers.get(index));
-            if(preferred!=null && preferred.test(snapshot) && (compatible==null
-                    || compatible.state!=PlaybackState.STATE_PLAYING && snapshot.state==PlaybackState.STATE_PLAYING))compatible=snapshot;
-            if (primary == null
-                    || (primary.state != PlaybackState.STATE_PLAYING
-                        && snapshot.state == PlaybackState.STATE_PLAYING)) {
-                primary = snapshot;
-            }
+            try{candidates.add(snapshotController(index,controllers.get(index)));}
+            catch(RuntimeException vanished){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)throw vanished;probeState("SESSION_READ_UNAVAILABLE");}
         }
-        if(compatible!=null)primary=compatible;
+        Snapshot primary=select(candidates,preferred,BuildConfig.ADSYNC_NONDESTRUCTIVE?lastSelectedSession:null);
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && primary!=null){
+            int compatible=0;for(Snapshot item:candidates)if(preferred!=null && preferred.test(item))compatible++;
+            String selection="active="+candidates.size()+" compatible="+compatible+" selected="+(preferred!=null && preferred.test(primary)?"COMPATIBLE":"INCOMPATIBLE")+" playback="+primary.stateName;
+            if(!java.util.Objects.equals(lastSelectedSession,primary.sessionKey) || !selection.equals(lastSelection)){
+                Log.i(TAG,"SELECTION "+selection+" rawMs="+primary.positionMs+" estimatedMs="+primary.estimatedPositionMs+" anchorAgeMs="+primary.updateAgeMs+" speed="+primary.speed);
+                lastSelection=selection;
+            }
+            lastSelectedSession=primary.sessionKey;
+        }
         if (listener != null && primary != null) listener.onSnapshot(primary);
+        else if(primary==null)unavailable();
+    }
+
+    /** Keep a compatible active session stable on ties; identity and PLAYING priority remain mandatory. */
+    static Snapshot select(java.util.List<Snapshot> candidates,Predicate<Snapshot> preferred,Object previous){
+        Snapshot primary=null,compatible=null;
+        for(Snapshot snapshot:candidates){
+            if(primary==null || primary.state!=PlaybackState.STATE_PLAYING && snapshot.state==PlaybackState.STATE_PLAYING)primary=snapshot;
+            if(preferred!=null && preferred.test(snapshot) && (compatible==null
+                    || compatible.state!=PlaybackState.STATE_PLAYING && snapshot.state==PlaybackState.STATE_PLAYING
+                    || compatible.state==snapshot.state && previous!=null && previous.equals(snapshot.sessionKey)))compatible=snapshot;
+        }
+        return compatible==null?primary:compatible;
     }
 
     /** Preserve historical absence forwarding without constructing an observation fallback. */

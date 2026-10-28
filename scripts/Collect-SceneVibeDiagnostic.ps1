@@ -25,6 +25,6 @@ $diagnosticFile = Join-Path $OutputDirectory ('scenevibe-v22-' + (Get-Date -Form
 Write-Host 'Capture SceneVibe : reproduis le problème puis attends la reprise. Ctrl+C pour terminer.'
 Write-Host $diagnosticFile
 # Aucun -d ou -t : lecture des buffers disponibles, puis suivi continu.
-& adb -s $DeviceSerial logcat -v threadtime -s 'SceneVibeControls:I' 'SceneVibeAdSync:I' 'SceneVibeMedia:I' 'SceneVibeText009:I' 'SceneVibeCache:I' '*:S' |
+& adb -s $DeviceSerial logcat -v threadtime -s 'SceneVibeControls:I' 'SceneVibeAdSync:I' 'SceneVibeMedia:I' 'SceneVibeText009:I' 'SceneVibeCache:I' 'SceneVibeRuntime:I' '*:S' |
     ForEach-Object { $_ | Out-File -LiteralPath $diagnosticFile -Append -Encoding utf8 }
 if ($LASTEXITCODE -ne 0) { throw 'Capture adb interrompue ou connexion indisponible ; conserve le fichier déjà reçu.' }

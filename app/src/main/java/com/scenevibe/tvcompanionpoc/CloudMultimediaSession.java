@@ -39,6 +39,8 @@ final class CloudMultimediaSession {
     private String preparingResource;
     private String pendingScene;
     private int audioPreparations;
+    private String lastCalendarState="";
+    private boolean textEnabled,audioEnabled;
 
     /** Compose real application ports only after the owner's separate explicit admission. */
     static CloudMultimediaSession open(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
@@ -53,23 +55,30 @@ final class CloudMultimediaSession {
     private CloudMultimediaSession(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
             boolean textEnabled,boolean audioEnabled) {
         this.context=context;this.admission=admission;this.observer=observer;
-        renderer=new SceneRenderer(context,id->null,()->main.post(this::close));
+        this.textEnabled=textEnabled;this.audioEnabled=audioEnabled;
+        renderer=new SceneRenderer(context,id->null,()->main.post(()->{
+            if(BuildConfig.ADSYNC_NONDESTRUCTIVE)holdForPermissions();else close();
+        }));
         audio=new AndroidLocalAudioPort(id->{
             if(!current())throw new java.io.IOException("CURRENT_ADMISSION_REQUIRED");
-            try{preparingResource=id;audioPreparations++;return admission.reference.prepared.resource(id);}
+            try{preparingResource=id;audioPreparations++;trace("AUDIO_PREPARE_REQUESTED","count="+audioPreparations);return admission.reference.prepared.resource(id);}
             catch(Exception refused){throw new java.io.IOException("VERIFIED_RESOURCE_UNAVAILABLE");}
         },effect->admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{if(effectsAllowed())effect.run();}));
         runtime=new StudioMultimediaRuntime(new SceneRuntimeController.SceneSink() {
             /** Permissions and the exact receipt remain necessary immediately before SHOW. */
-            @Override public boolean preflight(OverlayManifest.Scene scene){return effectsAllowed() && renderer.preflight(scene);}
+            @Override public boolean preflight(OverlayManifest.Scene scene){boolean allowed=effectsAllowed() && renderer.preflight(scene);
+                trace(allowed?"TEXT_EVENT_ELIGIBLE":"TEXT_RENDER_REFUSED",allowed?"":"guard="+effectRefusal());return allowed;}
             /** Request the original TEXT window through the physically qualified renderer. */
             @Override public void show(OverlayManifest.Scene scene){admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{
-                if(effectsAllowed()){renderer.render(scene);pendingScene=scene.id;publish("TEXT_RENDER_REQUESTED");}});}
+                if(effectsAllowed()){publish("TEXT_RENDER_REQUESTED");renderer.render(scene);pendingScene=scene.id;
+                    if(renderer.isWindowAttached()){shown.add(scene.id);trace("TEXT_WINDOW_ATTACHED","count="+shown.size());}
+                    else trace("TEXT_WINDOW_NOT_ATTACHED","overlayGranted="+Settings.canDrawOverlays(context));}
+                else trace("TEXT_RENDER_REFUSED","guard="+effectRefusal());});}
             /** Expiration removes only SceneVibe's current visual window. */
             @Override public void hide(OverlayManifest.Scene scene){renderer.dismissNow();}
             /** Identity loss or teardown removes all SceneVibe visuals synchronously. */
             @Override public void hideAll(){renderer.dismissNow();}
-        },audio);
+        },audio,BuildConfig.ADSYNC_NONDESTRUCTIVE);
         try{runtime.loadAdmittedCloud(admission);}catch(RuntimeException refused){audio.release();renderer.dismissNow();throw refused;}
         // The probe may synchronously report an already-playing session. Apply the
         // owner's switches first, so an AUDIO OFF start cannot emit even briefly.
@@ -97,6 +106,8 @@ final class CloudMultimediaSession {
     /** Apply the historical native matcher and its established content-time policy without retiming events. */
     private void observe(MediaSessionProbe.Snapshot snapshot) {
         if(!active)return;
+        if(!admission.current()){retireInvalidAuthority();return;}
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
@@ -113,13 +124,13 @@ final class CloudMultimediaSession {
         }
         if(adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE) {
             AdSyncController.Decision decision=adSync.observe(lastAdSample,SystemClock.elapsedRealtime());logAdSync(decision);
-            if(!decision.allow){runtime.suspendComments();position=-1;publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?decision.reason.name():"ADSYNC_"+decision.state.name());return;}
+            if(!decision.allow){runtime.suspendComments();position=-1;publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?decision.reason.name():"ADSYNC_"+decision.state.name());auditCalendar();return;}
             selectedPosition=decision.contentMs;
         }
         if(!usable){unavailable(selected!=null && !selected.eligible()?"MEDIA_IDENTITY_BLOCKED":"MEDIA_CLOCK_UNUSABLE");return;}
         position=selectedPosition;
         try{runtime.observe(admission.activation,new MediaObservation(true,position,snapshot.state==PlaybackState.STATE_PLAYING));
-            auditAudio();publish(snapshot.state==PlaybackState.STATE_PLAYING?"MEDIA_PLAYING":"MEDIA_PAUSED");}
+            auditAudio();publish(snapshot.state==PlaybackState.STATE_PLAYING?"MEDIA_PLAYING":"MEDIA_PAUSED");auditCalendar();}
         catch(RuntimeException refused){close();publish("RUNTIME_FAILED");}
     }
 
@@ -133,7 +144,8 @@ final class CloudMultimediaSession {
                 +" rawMs="+(sample==null?-1:sample.rawMs)+" selectedMs="+(sample==null?-1:sample.selectedMs)
                 +" contentMs="+decision.contentMs+" offsetMs="+decision.offsetMs
                 +" playback="+(sample==null?"UNAVAILABLE":sample.playing?"PLAYING":"PAUSED")
-                +" anchorAgeMs="+(sample==null?-1:sample.capturedMs-sample.anchorMs));
+                +" anchorAgeMs="+(sample==null?-1:sample.capturedMs-sample.anchorMs)
+                +(BuildConfig.ADSYNC_NONDESTRUCTIVE?" clock="+clockReason(sample)+" textOn="+textEnabled+" audioOn="+audioEnabled:""));
     }
 
     /** Enable only the experimental local guard; disabling restores the v17 observation route. */
@@ -189,11 +201,14 @@ final class CloudMultimediaSession {
     }
 
     /** Diagnose genuine native STARTED state, including a start deferred until seek completion. */
-    private void auditAudio(){if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource))publish("AUDIO_RESOURCE_STARTED");}
+    private void auditAudio(){if(preparingResource!=null && audio.state()==LocalAudioPort.State.STARTED && started.add(preparingResource)){
+        publish("AUDIO_RESOURCE_STARTED");trace("AUDIO_NATIVE_STARTED","count="+started.size());}}
 
     /** Bound stale captures and expired consent while keeping media time exclusively probe-owned. */
     private void watch(){
         if(!active)return;
+        if(!admission.current()){retireInvalidAuthority();return;}
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions()){main.postDelayed(watchdog,250);return;}
         if(!current()){retireInvalidAuthority();return;}
         if(lastCapture<0 || SystemClock.elapsedRealtime()-lastCapture>2500)unavailable("CAPTURE_TIMEOUT");
         auditAudio();if(pendingScene!=null && renderer.isWindowAttached())shown.add(pendingScene);
@@ -202,6 +217,7 @@ final class CloudMultimediaSession {
 
     /** Loss of media eligibility stops both renderers without preserving an audible stale window. */
     private void unavailable(String code){if(active){position=-1;
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE){adSync.unavailable();lastAdSample=null;runtime.suspendComments();logAdSync(adSync.status());}
         else {if(BuildConfig.TVUX_DEVELOPER_OVERLAY)lastAdSample=null;runtime.unavailable();}publish(BuildConfig.ADSYNC_NONDESTRUCTIVE && ("CAPTURE_TIMEOUT".equals(code) || "SESSION_UNAVAILABLE".equals(code))?"MEDIA_UNAVAILABLE":code);}}
 
@@ -214,9 +230,9 @@ final class CloudMultimediaSession {
         close();publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?reason:"CACHE_OR_CONSENT_INVALID");}
 
     /** A TEXT switch affects only the visual regie and keeps the shared calendar intact. */
-    void setTextEnabled(boolean enabled){if(active)runtime.setTextEnabled(enabled);}
+    void setTextEnabled(boolean enabled){textEnabled=enabled;if(active){runtime.setTextEnabled(enabled);auditCalendar();}}
     /** An AUDIO switch immediately stops only the local MP3 port. */
-    void setAudioEnabled(boolean enabled){if(active)runtime.setAudioEnabled(enabled);}
+    void setAudioEnabled(boolean enabled){audioEnabled=enabled;if(active){runtime.setAudioEnabled(enabled);auditCalendar();}}
     /** Return observed distinct resources rather than equating a scheduler request with native STARTED. */
     int audioResourcesStarted(){auditAudio();return started.size();}
     /** Return distinct original TEXT scenes requested through this service session. */
@@ -227,6 +243,59 @@ final class CloudMultimediaSession {
     String audioState(){return audio.state().name();}
     /** Let the existing service retire itself when its admitted lifetime ends. */
     boolean isActive(){return active;}
+
+    /** A missing OS permission blocks every effect, retaining only the still-current admission and cache. */
+    private boolean holdForPermissions(){
+        String code=!Settings.canDrawOverlays(context)?"OVERLAY_PERMISSION_REQUIRED":!NotificationAccess.isGranted(context)?"MEDIA_PERMISSION_REQUIRED":null;
+        if(code==null)return false;
+        runtime.suspendComments();adSync.unavailable();lastAdSample=null;position=-1;publish(code);auditCalendar();return true;
+    }
+
+    /** Explain the first closed native boundary without private metadata or a fallback permission. */
+    private String effectRefusal(){
+        if(!active)return "SERVICE_STOPPED";
+        String invalid=admission.reference.invalidReason(SystemClock.elapsedRealtime());if(!invalid.isEmpty())return invalid;
+        if(!Settings.canDrawOverlays(context))return "OVERLAY_PERMISSION_REQUIRED";
+        if(!NotificationAccess.isGranted(context))return "MEDIA_PERMISSION_REQUIRED";
+        if(lastAdSample==null)return "MEDIA_UNAVAILABLE";
+        if(SystemClock.elapsedRealtime()-lastAdSample.capturedMs>2500)return "OBSERVATION_STALE";
+        return adSync.status().allow?"RENDERER_PREFLIGHT":adSync.status().reason.name();
+    }
+
+    /** Distinguish the observed clock fault from an identity refusal or normal silence between events. */
+    private static String clockReason(AdSyncController.Sample sample){
+        if(sample==null)return "NO_CAPTURE";
+        if(!sample.identityCompatible)return "IDENTITY_INCOMPATIBLE";
+        if(sample.rawMs<0)return "RAW_POSITION_MISSING";
+        if(sample.anchorMs<=0)return "ANCHOR_MISSING";
+        if(sample.anchorMs>sample.capturedMs)return "ANCHOR_FUTURE";
+        if(!Float.isFinite(sample.speed))return "SPEED_NONFINITE";
+        if(sample.playing && sample.speed<=0)return "PLAYING_SPEED_INVALID";
+        if(sample.durationMs < -1 || sample.durationMs>43_200_000L)return "DURATION_OUT_OF_RANGE";
+        return sample.valid()?"VALID":"STATE_OR_POSITION_UNUSABLE";
+    }
+
+    /** Emit structural/calendar transitions only; a progressing numeric position alone does not generate a log. */
+    private void auditCalendar(){
+        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)return;
+        var d=runtime.diagnostics();String state=d.total+":"+d.consumed+":"+d.future+":"+d.eligible+":"+d.windows+":"+d.textDue+":"+d.audioDue+":"+d.textRearmed+":"+d.interrupted+":"+textEnabled+":"+audioEnabled;
+        if(!state.equals(lastCalendarState)){lastCalendarState=state;trace("CALENDAR_EVALUATED",d+" admission="+admission.current()+" textOn="+textEnabled+" audioOn="+audioEnabled);}
+    }
+
+    /** Bounded transition log, never content, tokens, session keys or platform commands. */
+    private void trace(String code,String detail){if(BuildConfig.ADSYNC_NONDESTRUCTIVE)Log.i("SceneVibeRuntime","event="+code+(detail.isEmpty()?"":" "+detail));}
+
+    /** Truthful runtime state for the restored track, panel and phone, independent of service existence. */
+    String availability(){
+        if(!active)return "Service arrêté";
+        String refused=effectRefusal();
+        if(!"RENDERER_PREFLIGHT".equals(refused))return "En attente du film · "+refused;
+        if(lastAdSample!=null && !lastAdSample.playing)return "Film en pause · calendrier conservé";
+        var d=runtime.diagnostics();
+        return "Commentaires actifs · TEXT "+(textEnabled?"ON":"OFF")+" · AUDIO "+(audioEnabled?"ON":"OFF")
+                +" · "+d.future+" événements futurs · prochain "+(d.nextStartMs<0?"aucun":AdSyncController.formatTime(d.nextStartMs))
+                +" · demandes TEXT "+d.textDue+" · fenêtres attachées "+shown.size()+" · MP3 démarrés "+started.size();
+    }
 
     /** Invalidate callbacks before releasing the same probe, regie, native player and windows. */
     void close(){

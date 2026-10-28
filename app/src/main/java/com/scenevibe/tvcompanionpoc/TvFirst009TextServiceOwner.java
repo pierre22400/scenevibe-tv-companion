@@ -94,6 +94,7 @@ final class TvFirst009TextServiceOwner {
                 case "MEDIA_IDENTITY_INVALID": case "CONSENT_CLOCK_INVALID": case "CONSENT_EXPIRED":
                 case "AUTHORITY_SUPERSEDED": case "IDENTITY_CHANGED": case "REVISION_CHANGED":
                 case "CACHE_BINDING_CHANGED": case "CACHE_RECEIPT_INVALID": case "CACHE_METADATA_UNAVAILABLE": return true;
+                case "OVERLAY_PERMISSION_REQUIRED": case "MEDIA_PERMISSION_REQUIRED": return true;
                 default: return false;
             }
         }
@@ -305,7 +306,7 @@ final class TvFirst009TextServiceOwner {
     /** Return only numeric/state projections, never programme content, identity, code or credential. */
     private JSONObject localStatus() throws Exception {
         return new JSONObject().put("text",multimediaTextEnabled()).put("audio",multimediaAudioEnabled()).put("adsync",adSyncEnabled())
-                .put("active",multimediaActive()).put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
+                .put("active",multimediaActive()).put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("runtime",multimediaAvailability()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
     }
     /** Restore only requested channel preferences; no cache, consent, mode or playback permit is persisted here. */
     static void initMultimediaPreferences(Context context){
@@ -475,7 +476,8 @@ final class TvFirst009TextServiceOwner {
             /** Retire notification/probe after permission loss or self-closing consent/cache authority. */
             @Override public void run() {
                 if (closing || liveOwner!=owner || (session==null && multimedia==null)) return;
-                if (!Settings.canDrawOverlays(service) || !NotificationAccess.isGranted(service)) { fail("PERMISSION_REQUIRED");return; }
+                if ((!BuildConfig.ADSYNC_NONDESTRUCTIVE || multimedia==null)
+                        && (!Settings.canDrawOverlays(service) || !NotificationAccess.isGranted(service))) { fail("PERMISSION_REQUIRED");return; }
                 if (!(session!=null?session.isActive():multimedia.isActive())) { destroy();service.stopSelf();return; }
                 main.postDelayed(this,250);
             }
@@ -539,6 +541,8 @@ final class TvFirst009TextServiceOwner {
             case "CACHE_OR_CONSENT_INVALID": explanation="Consentement ou preuve de cache expiré/invalide. Session fermée.";break;
             case "COLUMBO_CACHE_NOT_READY": explanation="Retrouve Columbo et son cache confirmé dans Mes Tracks. Aucune affectation automatique.";break;
             case "PERMISSION_REQUIRED": explanation="Autorisations de superposition et d’accès MEDIA nécessaires, à accorder manuellement.";break;
+            case "OVERLAY_PERMISSION_REQUIRED": explanation="Superposition refusée par Android. Effets bloqués ; admission et cache conservés tant qu’ils restent valides.";break;
+            case "MEDIA_PERMISSION_REQUIRED": explanation="Accès MEDIA refusé par Android. Effets bloqués ; admission et cache conservés tant qu’ils restent valides.";break;
             case "MEDIA_PLAYING": explanation="Épisode reconnu par le contrat historique. Lecture MEDIA suivie.";break;
             case "MEDIA_PAUSED": explanation="Lecture en pause : commentaires gelés.";break;
             case "MEDIA_UNAVAILABLE": case "SESSION_CHANGED": case "CLOCK_JUMP": case "FRESH_POSITION_FROZEN": case "OBSERVATION_STALE": case "WAITING_MEDIA": case "SESSION_UNAVAILABLE": case "CAPTURE_TIMEOUT": explanation="En attente d’une session MEDIA reconnue. Aucun commentaire sans identité et position.";break;
@@ -555,6 +559,9 @@ final class TvFirst009TextServiceOwner {
                 +"\nPosition de la dernière demande (ms) : "+current.lastRequestedMs
                 +"\nUne demande de rendu ne prouve pas l’affichage. Historique en mémoire, remis à zéro à la prochaine session.";
     }
+
+    /** Service existence is not evidence of a currently compatible film or an event due now. */
+    static String multimediaAvailability(){return liveInstance==null || liveInstance.multimedia==null?"Service arrêté":liveInstance.multimedia.availability();}
 
     /** Express monotonic observation age without inventing a wall-clock date or provider timestamp. */
     private static String age(long at,long now) { return at<0 || now<at?"UNKNOWN":"il y a "+(now-at)+" ms"; }

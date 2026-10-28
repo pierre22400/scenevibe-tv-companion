@@ -189,6 +189,40 @@ public final class RecoveryCacheAndroidTest {
         java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-service-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
     }
+
+    /** Reproduce the v22 late-start/rewind loss with AD-SYNC OFF, then revoke the actual emulator overlay permission. */
+    @Test public void runtime003OffRewindRestoresTextAndPermissionRecoveryKeepsAdmission() throws Exception {
+        UiDevice remote=UiDevice.getInstance(instrument);remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+        remote.executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(target).flattenToString());launch();
+        main(()->{CloudMultimediaAdmission.useOwnedMediaSessionFixture(true);TvFirst009TextServiceOwner.setMultimediaTextEnabled(true);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);TvFirst009TextServiceOwner.setAdSyncEnabled(false);
+            media=new MediaSession(target,"OWN runtime003 coordinates");metadata();playback(PlaybackState.STATE_PLAYING,43788);media.setActive(true);});
+        await(()->NotificationAccess.isGranted(target),"Own MEDIA listener missing",10000);
+        main(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,source,prepared,true)));
+        await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Compatible MEDIA not delivered",10000);
+        assertEquals("No TEXT is scheduled in the initial expired window",0,TvFirst009TextServiceOwner.status().renderRequests);
+        assertTrue(TvFirst009TextServiceOwner.multimediaAvailability().contains("01:30"));
+        main(()->media.setMetadata(null));await(()->"MEDIA_IDENTITY_INVALID".equals(TvFirst009TextServiceOwner.status().code),"Identity refusal not observed",10000);
+        int downloads=fixture.port.audioRequests;
+        main(()->{metadata();playback(PlaybackState.STATE_PLAYING,30009);});
+        await(()->TvFirst009TextServiceOwner.multimediaTextRequested()==1,"Original 32.988s TEXT not attached after interrupted rewind",12000);
+        assertEquals(1,TvFirst009TextServiceOwner.status().renderRequests);assertFalse(TvFirst009TextServiceOwner.adSyncEnabled());
+        remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW ignore");
+        await(()->"OVERLAY_PERMISSION_REQUIRED".equals(TvFirst009TextServiceOwner.status().code),"Actual OS permission loss not held",10000);
+        assertFalse(android.provider.Settings.canDrawOverlays(target));assertTrue("Permission loss must not destroy valid admission",TvFirst009TextServiceOwner.multimediaActive());
+        int requested=TvFirst009TextServiceOwner.multimediaTextRequested(),preparations=TvFirst009TextServiceOwner.multimediaAudioPreparations();Thread.sleep(700);
+        assertEquals(preparations,TvFirst009TextServiceOwner.multimediaAudioPreparations());
+        remote.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+        await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Restored real permission did not recover",10000);
+        assertTrue(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);assertEquals(requested,TvFirst009TextServiceOwner.multimediaTextRequested());
+        main(()->playback(PlaybackState.STATE_PLAYING,-1));await(()->"MEDIA_CLOCK_INVALID".equals(TvFirst009TextServiceOwner.status().code),"Invalid position was accepted",10000);
+        assertTrue(TvFirst009TextServiceOwner.multimediaActive());main(()->playback(PlaybackState.STATE_PLAYING,51000));
+        await(()->TvFirst009TextServiceOwner.multimediaTextRequested()==2,"Future second TEXT did not recover",12000);
+        var proof=new JSONObject().put("scope","REAL_ANDROID_SERVICE_OWN_MEDIA_NOT_PRIME_SONY")
+                .put("adSyncOff",true).put("originalFirstTextRecovered",true).put("secondTextAttached",true)
+                .put("realOverlayRevocationBlocked",true).put("admissionRetained",true).put("automaticPermissionRecovery",true)
+                .put("downloadsAfterInitialCache",fixture.port.audioRequests-downloads).put("cacheEvents",prepared.track.calendar.events().size());
+        java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-runtime003-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
     /** Send a unique real local command to the active native service, never directly to its runtime. */
     private JSONObject local(int port,String token,long sequence,String command,String value) throws Exception {
         var reply=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",sequence).put("command",command).put("value",value),null);

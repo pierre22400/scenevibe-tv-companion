@@ -30,8 +30,27 @@ public final class LocalDeveloperServerTest {
     @Test public void duplicateCommandCannotToggleTwice() throws Exception{String token=pair();JSONObject command=new JSONObject().put("seq",1).put("command","text").put("value","false");assertEquals(200,LocalControlTestClient.send(server.port(),"/command",token,command,null).status);assertEquals(409,LocalControlTestClient.send(server.port(),"/command",token,command,null).status);assertEquals(1,effects.get());}
     /** The closed command surface contains no upload, download, activation or Prime transport route. */
     @Test public void privilegedCommandsAreNotExposed() throws Exception{String token=pair();for(String command:new String[]{"play","pause","seek","activate","download","reset","sql","focus"})assertEquals(409,LocalControlTestClient.send(server.port(),"/command",token,new JSONObject().put("seq",1).put("command",command).put("value",""),null).status);assertEquals(0,effects.get());}
-    /** Polling never extends the absolute ten-minute control lifetime. */
-    @Test public void expiryRevokesBearerAndCode() throws Exception{pair();time.set(601000);assertFalse(server.isLive());assertEquals("Commandes locales arrêtées.",server.accessInfo());assertEquals(0,effects.get());}
+    /** Real HTTP requests remain authorized past ten minutes, then expire at the original 120-minute boundary. */
+    @Test public void expiryRevokesBearerAndCode() throws Exception{
+        String token=pair();assertEquals(7_200_000L,LocalDeveloperServer.LIFETIME_MS);
+        for(int minute=1;minute<=119;minute++){
+            time.set(1000+minute*60_000L);
+            var reply=LocalControlTestClient.send(server.port(),"/command",token,new JSONObject().put("seq",minute).put("command","text").put("value","true"),null);
+            assertEquals("Minute "+minute,200,reply.status);assertEquals(7_200_000L-minute*60_000L,reply.json().getLong("remainingMs"));
+        }
+        time.set(7_200_999L);assertTrue(server.isLive());assertEquals(200,LocalControlTestClient.send(server.port(),"/status",token,new JSONObject(),null).status);
+        int before=effects.get();time.set(7_201_000L);assertFalse(server.isLive());assertEquals(0,server.remainingMs());assertEquals("Commandes locales arrêtées.",server.accessInfo());
+        try{assertEquals(403,LocalControlTestClient.send(server.port(),"/command",token,new JSONObject().put("seq",120).put("command","text").put("value","false"),null).status);}
+        catch(java.io.IOException closed){/* A fully closed expired socket also rejects the old bearer. */}
+        assertEquals(before,effects.get());
+    }
+    /** Pairing late grants only the remainder, never a fresh two-hour browser lease. */
+    @Test public void latePairingDoesNotRenewPeriod() throws Exception{
+        time.set(7_000_000L);String token=pair();var status=LocalControlTestClient.send(server.port(),"/status",token,new JSONObject(),null);
+        assertEquals(200,status.status);assertEquals(201000,status.json().getLong("remainingMs"));
+    }
+    /** Voluntary stop revokes immediately without invoking or mutating the commentary runtime. */
+    @Test public void voluntaryStopRevokesWithoutEffects() throws Exception{pair();server.close();assertFalse(server.isLive());assertEquals(0,server.remainingMs());assertEquals(0,effects.get());}
     /** Five wrong pairing attempts cannot be bypassed by a sixth correct code. */
     @Test public void pairingAttemptsAreBounded() throws Exception{String code=LocalControlTestClient.code(server.accessInfo());String wrong=code.equals("00000000")?"11111111":"00000000";for(int i=0;i<5;i++)assertEquals(403,LocalControlTestClient.send(server.port(),"/pair",null,new JSONObject().put("code",wrong),null).status);assertEquals(403,LocalControlTestClient.send(server.port(),"/pair",null,new JSONObject().put("code",code),null).status);}
     /** A second browser cannot claim the code after the first has paired. */

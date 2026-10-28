@@ -26,7 +26,7 @@ import java.util.function.LongSupplier;
 import org.json.JSONObject;
 
 /**
- * Explicit ten-minute trusted-LAN fallback for developer commands, never Cloud.
+ * Explicit two-hour trusted-LAN fallback for developer commands, never Cloud.
  * One TV-displayed pairing code admits one ephemeral browser bearer. Host/Origin
  * checks, a custom same-origin header, bounded input/concurrency and one-use
  * command sequence numbers prevent cross-site/replayed actions. HTTP is local
@@ -34,6 +34,7 @@ import org.json.JSONObject;
  * No credential, token, address or pairing code is logged or persisted.
  */
 final class LocalDeveloperServer implements AutoCloseable {
+    static final long LIFETIME_MS=120L*60L*1000L;
     interface Commands {
         /** Execute only bounded SceneVibe commands; no activation, download, transport or filesystem path. */
         JSONObject apply(String command,String value) throws Exception;
@@ -66,17 +67,19 @@ final class LocalDeveloperServer implements AutoCloseable {
             for(InetAddress address:Collections.list(face.getInetAddresses()))
                 if(address instanceof Inet4Address && address.isSiteLocalAddress())addresses.add(address.getHostAddress());
         server=new ServerSocket();server.bind(new InetSocketAddress(0));server.setSoTimeout(1000);
-        code=String.format(Locale.ROOT,"%08d",random.nextInt(100_000_000));deadline=clock.getAsLong()+600_000L;live=true;
+        code=String.format(Locale.ROOT,"%08d",random.nextInt(100_000_000));deadline=clock.getAsLong()+LIFETIME_MS;live=true;
         Thread thread=new Thread(this::accept,"scenevibe-local-controls");thread.setDaemon(true);thread.start();
     }
     /** Return public connection instructions only to the TV UI; never put a bearer in a URL. */
-    synchronized String accessInfo(){if(!isLive())return "Commandes locales arrêtées.";return "Réseau privé de confiance uniquement · HTTP local · expiration 10 min.\nhttp://"+advertisedAddress()+":"+port()+"\n"+(token==null?"Code téléphone : "+code:"Téléphone associé · garde sa page ouverte.");}
+    synchronized String accessInfo(){if(!isLive())return "Commandes locales arrêtées.";return "Réseau privé de confiance uniquement · HTTP local · durée 120 min dès activation · reste "+((remainingMs()+59999)/60000)+" min.\nhttp://"+advertisedAddress()+":"+port()+"\n"+(token==null?"Code téléphone : "+code:"Téléphone associé · garde sa page ouverte.");}
     /** Prefer an actual private interface, while loopback remains available to the owned native bank. */
     private String advertisedAddress(){return addresses.size()>1?addresses.get(1):"127.0.0.1";}
     /** Expose only the bound port for native socket qualification. */
     synchronized int port(){return server==null?-1:server.getLocalPort();}
     /** Expiry never renews itself because a browser polls status. */
     boolean isLive(){return live && clock.getAsLong()<deadline;}
+    /** Read the original absolute deadline; pairing, polling and commands cannot extend it. */
+    long remainingMs(){return live?Math.max(0,deadline-clock.getAsLong()):0;}
     /** Bound the accepted queue; slow clients cannot allocate an unbounded worker pool. */
     private void accept(){try{while(isLive())try{Socket socket=server.accept();
         if(!socket.getInetAddress().isSiteLocalAddress() && !socket.getInetAddress().isLoopbackAddress()){socket.close();continue;}
@@ -119,6 +122,7 @@ final class LocalDeveloperServer implements AutoCloseable {
         // Never hold this listener's monitor while awaiting the Android main
         // thread: the TV UI may be reading its pairing state on that same thread.
         if(dispatch!=null)result=commands.apply(dispatch,dispatchValue);
+        if(status==200)result.put("remainingMs",remainingMs());
         reply(client,status,"application/json",bytes(result.toString()));
     }catch(Exception invalid){/* Invalid, incomplete or timed-out requests have no fallback command. */}}
     /** Compare secret values without an early character mismatch. */
