@@ -283,10 +283,16 @@ public final class RecoveryCacheAndroidTest {
         JSONObject observation=LocalControlTestClient.send(port,"/status",token,new JSONObject(),null).json().getJSONObject("adObservation");
         assertEquals("AD_CONFIRMED",observation.getString("candidate"));assertEquals(1,observation.getInt("adStarts"));
         main(()->media.setMetadata(new MediaMetadata.Builder(media.getController().getMetadata()).putLong(AdObservationProbe.AD_KEY,0).build()));
+        runtime004At(100000);
         local(port,token,++seq,"admark","CONTENT_VISIBLE");local(port,token,++seq,"adsync","false");local(port,token,++seq,"adsync","true");
         assertTrue(local(port,token,++seq,"suspend","").getBoolean("suspended"));
         assertTrue(local(port,token,++seq,"adprobe","false").getBoolean("suspended"));
         assertTrue(local(port,token,++seq,"adprobe","true").getBoolean("suspended"));local(port,token,++seq,"resume","");
+        // Resume/mode changes deliberately rebase v24's replay proof. First
+        // observe the recovered coordinate; only then perform a distinct,
+        // unambiguous backward SEEK directly onto the cue (no pre-roll).
+        await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code)
+            && TvFirst009TextServiceOwner.status().positionMs>=100000,"Manual resume did not restore the native reference",10000);
         runtime004At(90000);await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==2,"Direct backward cue SEEK lost re-listening",10000);
         await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Replayed AUDIO window did not end",7000);
         local(port,token,++seq,"adprobe","false");runtime004At(32988);
