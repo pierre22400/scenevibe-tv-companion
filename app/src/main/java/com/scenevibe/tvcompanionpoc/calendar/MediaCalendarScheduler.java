@@ -123,6 +123,8 @@ public final class MediaCalendarScheduler {
      * Stop only SceneVibe effects, preserving every consumed event identity and
      * all future timestamps. Unlike session reacquisition, the next observation
      * must not rearm a phrase already consumed before an interruption.
+     * The v24 profile may subsequently rearm only after separate confirmed
+     * rewind evidence, never because this interruption ended on its own.
      */
     public synchronized void onInterruption() {
         if(confirmedReplay){rewindProof.interrupted();restoreTextPending=true;}

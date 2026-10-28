@@ -176,7 +176,10 @@ final class CloudMultimediaSession {
         adSync.suspend();suspendRuntime("USER_CALIBRATION");position=-1;
         probe.captureNow();
         AdSyncController.Calibration result=adSync.calibrateResult(contentMs,SystemClock.elapsedRealtime());
-        if(result==AdSyncController.Calibration.APPLIED && confirmedSeek)runtime.confirmSeek();
+        if(result==AdSyncController.Calibration.APPLIED){
+            if(confirmedSeek)runtime.confirmSeek();
+            else if(BuildConfig.ADSYNC_NONDESTRUCTIVE)runtime.policyChanged();
+        }
         logAdSync(adSync.status());return result;
     }
     /** Expose only the bounded controller state for the existing Settings screen. */

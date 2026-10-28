@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 
 /** Compile temporary mutated copies of the real candidate; no production hook or fixture edit exists. */
 public final class M5NegativeSensitivityTest {
-    /** Compile just the candidate against the unchanged three value classes. */
+    /** Compile the candidate and its package-private evidence helper against the unchanged three value classes. */
     private static URLClassLoader mutant(String before,String after) throws Exception {
         Path source=Path.of("src/main/java/com/scenevibe/tvcompanionpoc/calendar/MediaCalendarScheduler.java");
         if(!Files.exists(source))source=Path.of("app").resolve(source);
@@ -21,11 +21,11 @@ public final class M5NegativeSensitivityTest {
         Path temp=Files.createTempDirectory("m5c-mutant-");Path file=temp.resolve("MediaCalendarScheduler.java");Files.write(file,text.replace(before,after).getBytes(StandardCharsets.UTF_8));
         Path classes=Files.createDirectory(temp.resolve("classes"));
         String cp=Path.of(MediaCalendar.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
-        Process process=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-m","jdk.compiler/com.sun.tools.javac.Main","-cp",cp,"-d",classes.toString(),file.toString()).redirectErrorStream(true).redirectOutput(temp.resolve("compile.log").toFile()).start();
+        Process process=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-m","jdk.compiler/com.sun.tools.javac.Main","-cp",cp,"-d",classes.toString(),file.toString(),source.resolveSibling("MediaRewindProof.java").toString()).redirectErrorStream(true).redirectOutput(temp.resolve("compile.log").toFile()).start();
         assertTrue(process.waitFor(30,TimeUnit.SECONDS));assertEquals(0,process.exitValue());
         return new URLClassLoader(new URL[]{classes.toUri().toURL()},MediaCalendarScheduler.class.getClassLoader()){
-            /** Isolate scheduler and its sink while retaining exact production model identity. */
-            @Override protected synchronized Class<?> loadClass(String name,boolean resolve) throws ClassNotFoundException {if(!name.startsWith(MediaCalendarScheduler.class.getName()))return super.loadClass(name,resolve);Class<?> c=findLoadedClass(name);if(c==null)c=findClass(name);if(resolve)resolveClass(c);return c;}
+            /** Isolate scheduler and its helper in the same runtime package, retaining exact production model identity. */
+            @Override protected synchronized Class<?> loadClass(String name,boolean resolve) throws ClassNotFoundException {if(!name.startsWith(MediaCalendarScheduler.class.getName()) && !name.startsWith("com.scenevibe.tvcompanionpoc.calendar.MediaRewindProof"))return super.loadClass(name,resolve);Class<?> c=findLoadedClass(name);if(c==null)c=findClass(name);if(resolve)resolveClass(c);return c;}
         };
     }
     /** Execute the temporary compiled scheduler against real immutable values and record raw effects. */

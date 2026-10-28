@@ -350,4 +350,17 @@ public final class RecoveryCacheAndroidTest {
         runtime004Proof("runtime004-port",new JSONObject().put("scope","NATIVE_PORT_UNIT_EXISTING_VERIFIED_MP3_NO_ACOUSTIC_CLAIM").put("refusedStarts",2).put("nativeStart",1).put("naturalCompletion",1));
     }
 
+    /** A phone calibration changes the selected offset, never proving a physical player rewind or replaying a consumed MP3. */
+    @Test public void runtime004CalibrationOffsetIsNotBackwardSeek() throws Exception {
+        runtime004Start(true);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];runtime004At(89000);
+        await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"Original MP3 did not start",10000);
+        await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Original MP3 window did not end",7000);
+        runtime004At(105000);JSONObject calibrated=local(port,token,1,"calibrate","01:25");assertEquals(AdSyncController.Calibration.APPLIED.message,calibrated.getString("result"));
+        await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Calibrated MEDIA not restored",10000);
+        Thread.sleep(6500);assertEquals("A changed offset is not user SEEK evidence",1,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+        local(port,token,2,"adsync","false");local(port,token,3,"adsync","true");Thread.sleep(500);
+        var facts=TvFirst009TextServiceOwner.multimediaAudioDiagnostics(1);assertEquals(1,facts.started);assertEquals(0,facts.rearmed);
+        runtime004Proof("runtime004-calibration",new JSONObject().put("scope","REAL_SERVICE_REAL_PHONE_COMMAND_NO_PLAYER_SEEK").put("consumedAudioPreserved",true).put("nativeStarts",1).put("rearmed",0));
+    }
+
 }

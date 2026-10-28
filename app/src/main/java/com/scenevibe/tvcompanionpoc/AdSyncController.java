@@ -81,7 +81,7 @@ final class AdSyncController {
     /** Select v22's non-destructive policy without rewriting historical qualification profiles. */
     AdSyncController(boolean automaticRecovery) {this.automaticRecovery=automaticRecovery;}
 
-    /** Reset process-local inference on opt-in changes; no preference can activate playback. */
+    /** Reset historical inference on opt-in changes; v24 preserves valid evidence, and no preference grants playback. */
     void setEnabled(boolean enabled) {
         if(automaticRecovery){
             if(this.enabled==enabled)return;
