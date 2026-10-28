@@ -1,6 +1,6 @@
 # SceneVibe TV Companion POC
 
-> **STATUS — ACTIVE ANDROID TV REPOSITORY.** Together with `pierre22400/interface-scenevibe`, this is part of the default active SceneVibe working set. `main` includes `0.8.0-tv-hardening` (merge `396e1bb02fed57af1b7219a2435f691d2fa52c2c`), physically qualified on Sony BRAVIA with the canonical `/api/v1` Cloud. The earlier PR #7 Cloud client is integrated.
+> **CURRENT BASELINE — Sony-tested v24 (TV-RUNTIME 004), 28 October 2026.** `main` includes [PR #31](https://github.com/pierre22400/scenevibe-tv-companion/pull/31), merged as `6aa1f9a1493964eb8d1c67efdeee7f0f3a071782`. This is a **private experimental Companion**, not a public production release. It retains the previous Cloud 0.8 baseline, the 19-event Columbo track, TEXT/AUDIO replay and phone developer controls. **Prime Video advertising is not automatically detected** and is now the highest-priority outstanding runtime issue.
 
 
 **Purpose:** verify on a physical Android TV / Google TV that SceneVibe can keep
@@ -9,6 +9,39 @@ without controlling, modifying, capturing or replacing the video stream.
 
 This repository is an installable technical POC, not the final SceneVibe TV
 application.
+
+## Current Sony qualification — v24 / TV-RUNTIME 004 (28 October 2026)
+
+**Repository and preservation**
+
+- [Merged PR #31](https://github.com/pierre22400/scenevibe-tv-companion/pull/31), implementation source commit `6cb4e759a982cdc496dfb36bfae43e3615428e8c`, merge commit `6aa1f9a1493964eb8d1c67efdeee7f0f3a071782`.
+- Immutable-intent historical snapshot (ordinary Git branch, **not** a protected tag): [`archive/scenevibe-v24-sony-qualified-20261028`](https://github.com/pierre22400/scenevibe-tv-companion/tree/archive/scenevibe-v24-sony-qualified-20261028) at `6cb4e759a982cdc496dfb36bfae43e3615428e8c`. Do not rewrite/delete.
+- Stable M5-signed physical test APK: `versionCode=24`, `versionName=0.8.2-tv-release-hardening-tv-runtime004`, SHA-256 `e9d5a2a033c352fd29d6eec0157c2cf91b50f40e31c1b49ba922864bdfac63a0`. APK + software evidence and Sony log were preserved separately in the owner's v24 qualification archive; they are not source files in this repo.
+- Work reported 1,302 passing JVM tests (+1 skipped), 25 view tests, 31 Android TV tests + 2 restart tests, and 8 successful GitHub workflows. These are **software** checks, not blanket proof of physical behavior.
+
+**Physically observed on Sony BRAVIA / Android TV 12 / Prime Video — Columbo, *Eaux troubles***
+
+- Cloud-cached editorial track: **16 TEXT + 3 AUDIO (3-second synthetic MP3 tones), 19 shared timeline events**.
+- TEXT overlays and AUDIO tones play above Prime Video, without replacing or controlling the Prime player.
+- Backward seeks permit replay of already-heard AUDIO; TEXT replay works as well.
+- Seeking directly into an event's valid time window can render the matching TEXT or AUDIO without starting 10 seconds beforehand. The first AUDIO at 01:30 replayed after a backward seek; other observations confirmed direct seek behavior. This is an observed scenario, **not** a general guarantee for every player or timestamp.
+- With AD-SYNC toggled ON or OFF, the owner observed TEXT and AUDIO playback working; the v23 destructive toggle regression was not reproduced in those v24 trials.
+- The TV developer monitor and TEXT/AUDIO controls work from a phone on the same private LAN while Prime remains in the foreground. The 120-minute control lifetime was software-qualified; 120-minute physical endurance was not established.
+- Sony D-pad-only access to the passive panel remains unresolved.
+
+**Critical open blocker — advertising time versus editorial content time**
+
+In a physical Sony/Prime test, a seek triggered a Prime advertisement. SceneVibe's scheduled AUDIO at **15:00 editorial time** was **audibly emitted during the advertisement**, instead of being withheld. The Sony log `scenevibe-v24-publicite-20261028-163257.log` recorded `AUDIO_DUE` at approximately 16:33:02.619, `AUDIO_PREPARED` at 16:33:02.663, `AUDIO_RESOURCE_STARTED` at 16:33:02.677 and `AUDIO_STOPPED` at 16:33:05.520 (local log clock). **AD-SYNC was OFF at that time**, so the result does not establish what ON would have done. Prime ad-break start/end markers have **not** been demonstrated via public Android APIs. After the ad, an attempted replay of 15:00 initially failed, and later worked; a confirmed backward rearm was observed in logs. The issue is **not** that the MP3 decoder generally fails.
+
+**Priority project: AD-DETECTION 001**
+
+Development branch: [`work/scenevibe-ad-detection-001`](https://github.com/pierre22400/scenevibe-tv-companion/tree/work/scenevibe-ad-detection-001), initially identical to the v24 merge on `main`. Goal: investigate reliable **advertisement-start and advertisement-end** evidence available to an ordinary Android TV app, and prevent editorial TEXT/AUDIO playback during advertisements **only when the available signal is sufficiently trustworthy**. Inspect `MediaSession` transitions, identity/metadata, playback state, anchor/clock discontinuities, and permitted Android APIs; compare captured start/end timelines with explicit human observations. A MediaSession discontinuity alone does not prove an ad break. If there is no trustworthy public signal, report that limitation and qualify a non-intrusive, user-controlled pause/resume fallback using the existing phone interface. Do not infer ad status from protected playback, screen capture, accessibility scraping or unofficial Prime APIs; do not control/modify the streaming player.
+
+**Regression requirements for all follow-up work:** preserve TEXT/AUDIO replay (including direct seeks), non-destructive AD-SYNC toggles, valid offline cache/admission, phone controls, and official player independence. No Sony installation, merge to `main`, Cloud mutation or Play Store release without separate approval.
+
+**The sections below describe earlier milestones and historical protocols.** Their version-specific instructions (including the obsolete v0.6 LAN host/port and debug-APK reinstall guidance) are **not** instructions for updating an installed, signed v24: use an M5-stable-signed APK with `adb install -r` to preserve user data.
+
+---
 
 ## Cycle 0.8 — autonomous consumer Cloud runtime (`0.8.0-tv-hardening`)
 
