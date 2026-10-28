@@ -65,13 +65,14 @@ public final class DeveloperOverlayAndroidTest {
     }
     /** Wait for actual SceneVibe UI, never a platform third-party tree. */
     private void visible(String label){assertNotNull(label,remote.wait(Until.findObject(By.text(label)),10000));}
-    /** Drive only the D-pad, first returning to the visible target's column after native focus restoration. */
+    /** Drive only the D-pad; align sidebar columns only while the normal Activity actually owns the window. */
     private void focus(String label,boolean down) {
         for(int i=0;i<30;i++){if(remote.hasObject(By.text(label).focused(true)))return;
             var desired=remote.findObject(By.text(label));var current=remote.findObject(By.focused(true));
-            if(desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
+            AtomicBoolean activityOwnsInput=new AtomicBoolean();main(()->activityOwnsInput.set(application!=null && application.hasWindowFocus()));
+            if(activityOwnsInput.get() && desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
                     && current.getVisibleBounds().centerX()<desired.getVisibleBounds().left)remote.pressDPadRight();
-            else if(desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
+            else if(activityOwnsInput.get() && desired!=null && current!=null && !desired.getVisibleBounds().isEmpty()
                     && current.getVisibleBounds().centerX()>desired.getVisibleBounds().right)remote.pressDPadLeft();
             else if(down)remote.pressDPadDown();else remote.pressDPadUp();remote.waitForIdle();}var actual=remote.findObject(By.focused(true));fail("D-pad could not focus "+label+"; actual="+(actual==null?"NONE":actual.getText()));
     }
@@ -151,7 +152,9 @@ public final class DeveloperOverlayAndroidTest {
     private Actions recordingPanel() throws Exception {
         main(()->application.startActivity(new Intent(application,DeveloperViewerFixtureActivity.class)));
         await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Own recording viewer missing");viewer=DeveloperViewerFixtureActivity.current;
-        Actions actions=new Actions();main(()->{direct=new CompanionControlPanel(target,actions);assertTrue(direct.open());});visible("Commentaires écrits : ON");return actions;
+        Actions actions=new Actions();main(()->{direct=new CompanionControlPanel(target,actions);assertTrue(direct.open());});
+        await(()->direct.hasInputFocus(),"Recording panel is visible but does not own native input");
+        visible("Commentaires écrits : ON");focus("Commentaires écrits : ON",false);return actions;
     }
     /** Nested Back/cross and full cross closure are usable remotely and leave the viewer/service alone. */
     @Test public void nestedBackAndCrossCloseOnlyTheirOwnUi() throws Exception {
