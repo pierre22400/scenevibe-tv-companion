@@ -1,0 +1,143 @@
+{
+  "scope": "DELIBERATELY_SYNTHETIC_PUBLIC_SCALARS_NOT_NETFLIX_DISNEY_OBSERVATIONS",
+  "cases": [
+    {
+      "name": "NETFLIX-ABSENT",
+      "platform": "NETFLIX",
+      "scope": "SYNTHETIC_NOT_REAL_PLATFORM_OR_SONY",
+      "frames": [
+        {
+          "session": 1,
+          "capturedMs": 1000,
+          "rawMs": 1000,
+          "state": 3,
+          "marker": "ABSENT",
+          "type": "ABSENT"
+        },
+        {
+          "session": 1,
+          "capturedMs": 2000,
+          "rawMs": 2000,
+          "state": 2,
+          "marker": "ABSENT",
+          "type": "ABSENT"
+        }
+      ]
+    },
+    {
+      "name": "NETFLIX-AD",
+      "platform": "NETFLIX",
+      "scope": "SYNTHETIC_NOT_REAL_PLATFORM_OR_SONY",
+      "frames": [
+        {
+          "session": 1,
+          "capturedMs": 1000,
+          "rawMs": 1000,
+          "state": 3,
+          "marker": "AD",
+          "type": "LONG"
+        },
+        {
+          "session": 1,
+          "capturedMs": 2000,
+          "rawMs": 2000,
+          "state": 2,
+          "marker": "AD",
+          "type": "LONG"
+        }
+      ]
+    },
+    {
+      "name": "NETFLIX-INVALID",
+      "platform": "NETFLIX",
+      "scope": "SYNTHETIC_NOT_REAL_PLATFORM_OR_SONY",
+      "frames": [
+        {
+          "session": 1,
+          "capturedMs": 1000,
+          "rawMs": 1000,
+          "state": 3,
+          "marker": "INVALID",
+          "type": "STRING"
+        },
+        {
+          "session": 1,
+          "capturedMs": 2000,
+          "rawMs": 2000,
+          "state": 2,
+          "marker": "INVALID",
+          "type": "STRING"
+        }
+      ]
+    },
+    {
+      "name": "DISNEY_PLUS-ABSENT",
+      "platform": "DISNEY_PLUS",
+      "scope": "SYNTHETIC_NOT_REAL_PLATFORM_OR_SONY",
+      "frames": [
+        {
+          "session": 1,
+          "capturedMs": 1000,
+          "rawMs": 1000,
+          "state": 3,
+          "marker": "ABSENT",
+          "type": "ABSENT"
+        },
+        {
+          "session": 1,
+          "capturedMs": 2000,
+          "rawMs": 2000,
+          "state": 2,
+          "marker": "ABSENT",
+          "type": "ABSENT"
+        }
+      ]
+    },
+    {
+      "name": "DISNEY_PLUS-AD",
+      "platform": "DISNEY_PLUS",
+      "scope": "SYNTHETIC_NOT_REAL_PLATFORM_OR_SONY",
+      "frames": [
+        {
+          "session": 1,
+          "capturedMs": 1000,
+          "rawMs": 1000,
+          "state": 3,
+          "marker": "AD",
+          "type": "LONG"
+        },
+        {
+          "session": 1,
+          "capturedMs": 2000,
+          "rawMs": 2000,
+          "state": 2,
+          "marker": "AD",
+          "type": "LONG"
+        }
+      ]
+    },
+    {
+      "name": "DISNEY_PLUS-INVALID",
+      "platform": "DISNEY_PLUS",
+      "scope": "SYNTHETIC_NOT_REAL_PLATFORM_OR_SONY",
+      "frames": [
+        {
+          "session": 1,
+          "capturedMs": 1000,
+          "rawMs": 1000,
+          "state": 3,
+          "marker": "INVALID",
+          "type": "STRING"
+        },
+        {
+          "session": 1,
+          "capturedMs": 2000,
+          "rawMs": 2000,
+          "state": 2,
+          "marker": "INVALID",
+          "type": "STRING"
+        }
+      ]
+    }
+  ]
+}

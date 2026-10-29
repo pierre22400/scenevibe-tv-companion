@@ -48,6 +48,10 @@ final class TvFirst009TextServiceOwner {
     private CompanionControlPanel controlPanel;
     private static Context preferenceContext;
     private LocalDeveloperServer localControls;
+    private MultiPlatformAdObservationProbe multiObservation;
+    private com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Platform multiCampaign;
+    private MediaSessionProbe idleDiagnosticProbe;
+    private final Runnable multiLifetime=this::watchMultiLifetime;
     private static final String SHOW_INTERACTIVE="com.scenevibe.tvcompanionpoc.SHOW_INTERACTIVE_CONTROLS";
     private static final DeveloperOverlayState developer=new DeveloperOverlayState();
     private static final String DEV_ENABLE="com.scenevibe.tvcompanionpoc.DEVELOPER_ENABLE";
@@ -261,6 +265,7 @@ final class TvFirst009TextServiceOwner {
     static boolean setLocalControlEnabled(boolean enabled){
         if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || liveInstance==null)return false;
         TvFirst009TextServiceOwner owner=liveInstance;
+        owner.detachMultiObservation();
         if(owner.localControls!=null){owner.localControls.close();owner.localControls=null;}
         if(!enabled)return true;if(!developer.enabled() || !owner.foreground)return false;
         try{owner.localControls=new LocalDeveloperServer(owner::localCommand,filename->{
@@ -279,7 +284,15 @@ final class TvFirst009TextServiceOwner {
         LocalDeveloperServer origin=localControls;
         main.post(()->{if(!pending.compareAndSet(true,false)){done.countDown();return;}
             try{if(closing || localControls!=origin || origin==null || !origin.isLive())return;answer.set(localCommandNow(command,value));}
-            catch(Exception refused){try{answer.set(localStatus().put("result","Commande refusée ; état SceneVibe conservé."));}catch(Exception unavailable){/* No fictional OFF snapshot is returned. */}}finally{done.countDown();}});
+            catch(Exception refused){try{
+                JSONObject state=localStatus().put("result","Commande refusée ; état SceneVibe conservé.");
+                if("multiobserve".equals(command) || "multimark".equals(command)){
+                    String code=refused.getMessage();
+                    if(!java.util.Arrays.asList("MEDIA_ACCESS_REQUIRED","LOCAL_CONTROL_REQUIRED","MULTIMEDIA_OR_IDLE_SERVICE_REQUIRED","SERVICE_CLOSING","OBSERVATION_DISABLED","ANNOTATION_REFUSED").contains(code))code="DIAGNOSTIC_UNAVAILABLE";
+                    state.put("diagnosticRefusal",code).put("result","Observation refusée : "+code+" · état SceneVibe conservé.");
+                    Log.w("SceneVibeMultiAd","event=COMMAND_REFUSED code="+code);
+                }answer.set(state);
+            }catch(Exception unavailable){/* No fictional OFF snapshot is returned. */}}finally{done.countDown();}});
         if(!done.await(2,java.util.concurrent.TimeUnit.SECONDS)){pending.set(false);throw new IllegalStateException("LOCAL_COMMAND_TIMEOUT");}
         if(answer.get()==null)throw new IllegalStateException("LOCAL_COMMAND_REFUSED");return answer.get();
     }
@@ -308,6 +321,13 @@ final class TvFirst009TextServiceOwner {
                 if(multimediaActive())multimedia.setAdProtectionEnabled(Boolean.parseBoolean(value));
                 feedback=multimediaActive()?("true".equals(value)?"Protection publicitaire expérimentale ON · reprise soumise aux preuves MEDIA.":
                         "Protection publicitaire OFF · référence v25, commentaires possibles pendant une publicité."):"Service arrêté ; protection indisponible.";break;
+            case "multiobserve":
+                if("OFF".equals(value))detachMultiObservation();
+                else startMultiObservation(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Platform.valueOf(value));
+                feedback="Observation multi-plateforme : "+value+" · lecture seule, aucune autorité sur les commentaires.";break;
+            case "multimark":
+                if(multiObservation==null)throw new IllegalStateException("OBSERVATION_DISABLED");
+                multiObservation.annotate(value);feedback="Annotation de campagne séparée ; aucun effet sur la restitution.";break;
             case "calibrate":try{AdSyncController.Calibration calibrated=controls.calibrate(AdSyncController.parseFilmTime(value),false);return localStatus().put("result",calibrated.message);}
                 catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
@@ -325,7 +345,35 @@ final class TvFirst009TextServiceOwner {
                 .put("commentState",multimediaActive()?multimedia.commentState():"SERVICE_STOPPED")
                 .put("adObservation",multimediaActive()?multimedia.adObservationStatus():new JSONObject().put("enabled",false).put("candidate","UNCERTAIN").put("reason","SERVICE_STOPPED"))
                 .put("adProtection",multimediaActive()?multimedia.adProtectionStatus():new JSONObject().put("enabled",false).put("state","NORMAL").put("allow",true).put("reason","SERVICE_STOPPED"))
+                .put("multiObservation",multiObservation==null?new JSONObject().put("enabled",false).put("reason","EXPERIMENT_DISABLED")
+                        .put("conclusion","INSUFFICIENT_EVIDENCE").put("mode","OBSERVATION_ONLY_NO_COMMENT_AUTHORITY"):multiObservation.status())
                 .put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("runtime",multimediaAvailability()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
+    }
+
+    /** Explicit phone opt-in only; reuse the running sampler, or the same probe inside the idle existing service. */
+    private void startMultiObservation(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Platform platform){
+        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !foreground || closing || localControls==null || !localControls.isLive())throw new IllegalStateException("LOCAL_CONTROL_REQUIRED");
+        if(!NotificationAccess.isGranted(service))throw new IllegalStateException("MEDIA_ACCESS_REQUIRED");
+        if(session!=null)throw new IllegalStateException("MULTIMEDIA_OR_IDLE_SERVICE_REQUIRED");
+        if(multimedia!=null && !multimedia.isActive())throw new IllegalStateException("SERVICE_CLOSING");
+        detachMultiObservation();multiCampaign=platform;
+        multiObservation=new MultiPlatformAdObservationProbe(platform,snapshot->multimedia==null?
+                com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility.NOT_EVALUATED:multimedia.diagnosticCompatibility(snapshot));
+        if(multimedia!=null)multimedia.setDiagnosticObserver(multiObservation);
+        else{idleDiagnosticProbe=new MediaSessionProbe(service);idleDiagnosticProbe.setDiagnosticObserver(multiObservation);idleDiagnosticProbe.start();}
+        main.postDelayed(multiLifetime,1000);
+    }
+    /** Never leave an unbounded diagnostic monitor after the existing two-hour local control lifetime. */
+    private void watchMultiLifetime(){if(multiObservation==null)return;
+        if(closing || localControls==null || !localControls.isLive()){detachMultiObservation();return;}
+        main.postDelayed(multiLifetime,1000);
+    }
+    /** Detach only diagnostic callbacks; preference, admission, cache and Prime protection remain untouched. */
+    private void detachMultiObservation(){
+        main.removeCallbacks(multiLifetime);
+        if(multimedia!=null && multiObservation!=null)multimedia.setDiagnosticObserver(null);
+        if(idleDiagnosticProbe!=null){idleDiagnosticProbe.stop();idleDiagnosticProbe=null;}
+        if(multiObservation!=null){multiObservation.close();multiObservation=null;}multiCampaign=null;
     }
     /** Restore only requested channel preferences; no cache, consent, mode or playback permit is persisted here. */
     static void initMultimediaPreferences(Context context){
@@ -493,12 +541,15 @@ final class TvFirst009TextServiceOwner {
                     (request.reference==null || !request.reference.isCurrent(SystemClock.elapsedRealtime()) || !DIGEST.equals(request.reference.binding.digest)))) {
             fail("START_PROOF_INVALID");return Service.START_NOT_STICKY;
         }
+        var diagnosticCampaign=multiCampaign;detachMultiObservation();
         liveOwner=owner;liveInstance=this;latest=new Status("WAITING_MEDIA",-1,true,0,-1);
         if(multimediaRequest)multimedia=CloudMultimediaSession.open(service,request.multimedia,this::observed,
                 multimediaTextPreference,multimediaAudioPreference);
         else session=TvFirst009TextSession.openConfirmed(service,request.reference,
                     TvFirst009TextRuntime.Decision.OWNER_LOCAL_AD_FREE_QUALIFICATION,this::observed);
         if (session==null && multimedia==null) { fail("CACHE_OR_PERMISSION_UNAVAILABLE");return Service.START_NOT_STICKY; }
+        if(diagnosticCampaign!=null && multimedia!=null)try{startMultiObservation(diagnosticCampaign);}
+            catch(RuntimeException unavailable){detachMultiObservation();Log.w("SceneVibeMultiAd","event=REATTACH_UNAVAILABLE payloadOmitted=true");}
         watch=new Runnable() {
             /** Retire notification/probe after permission loss or self-closing consent/cache authority. */
             @Override public void run() {
@@ -537,6 +588,7 @@ final class TvFirst009TextServiceOwner {
     void destroy() {
         if (closing) return;
         closing=true;
+        detachMultiObservation();
         if(localControls!=null){localControls.close();localControls=null;}
         if(controlPanel!=null){controlPanel.close();controlPanel=null;}
         if (watch!=null) main.removeCallbacks(watch);

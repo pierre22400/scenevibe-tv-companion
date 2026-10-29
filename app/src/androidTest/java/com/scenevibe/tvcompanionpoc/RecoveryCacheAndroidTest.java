@@ -276,6 +276,23 @@ public final class RecoveryCacheAndroidTest {
         while(SystemClock.elapsedRealtime()<end){if(state.equals(ad002Status(phone).getJSONObject("adProtection").getString("state")))return;Thread.sleep(50);}
         fail("Native protection did not reach "+state+": "+ad002Status(phone).getJSONObject("adProtection"));}
 
+    /** Read-only campaign switches and owner labels preserve Prime commentary, guard and cache. */
+    @Test public void multiPlatformObservationDoesNotChangePrimeCommentaryOrGuard() throws Exception {
+        runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
+        local(port,token,++seq,"adguard","true");local(port,token,++seq,"multiobserve","NETFLIX");runtime004At(90000);
+        await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"Prime reference MP3 absent",10000);
+        int downloads=fixture.port.audioRequests,starts=TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts();
+        local(port,token,++seq,"multimark","AD_VISIBLE");local(port,token,++seq,"multimark","CONTENT_VISIBLE");
+        assertEquals("NORMAL",ad002Status(phone).getJSONObject("adProtection").getString("state"));assertEquals("STARTED",TvFirst009TextServiceOwner.multimediaAudioState());
+        local(port,token,++seq,"multiobserve","OFF");assertEquals(starts,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+        ad002Marker(true);ad002Await(phone,"AD_GUARD");local(port,token,++seq,"multiobserve","DISNEY_PLUS");
+        assertFalse(ad002Status(phone).getJSONObject("adProtection").getBoolean("allow"));local(port,token,++seq,"multiobserve","OFF");
+        assertFalse(ad002Status(phone).getJSONObject("adProtection").getBoolean("allow"));assertEquals(downloads,fixture.port.audioRequests);
+        assertTrue(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());
+        runtime004Proof("multi-prime",new JSONObject().put("scope","OWN_NATIVE_SERVICE_REFERENCE_NOT_NEW_PHYSICAL_PRIME_SONY")
+                .put("normalAudioUnchanged",true).put("ownerLabelsNoGateEffect",true).put("primeGuardSurvivesCampaignSwitches",true).put("extraDownloads",0).put("cacheEvents",19));
+    }
+
     /** Enabling/disabling protection during a normal cue does not invent an interruption or restart the local MP3. */
     @Test public void ad002NormalAudioSurvivesProtectionSwitches() throws Exception {
         runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];runtime004At(90000);

@@ -115,6 +115,7 @@ final class CloudMultimediaSession {
 
     /** Independently enable experimental protection, initially closed until an actual current read. */
     void setAdProtectionEnabled(boolean enabled){if(!active || !BuildConfig.ADSYNC_NONDESTRUCTIVE)return;
+        if(enabled && !qualifiedProtectionTarget())throw new IllegalStateException("PROTECTION_PLATFORM_UNQUALIFIED");
         adProtection.setEnabled(enabled);updateAdReader();
         // The fence is closed immediately, but query synchronously before
         // tearing down an already-playing normal cue. The same main Looper
@@ -128,7 +129,7 @@ final class CloudMultimediaSession {
             if(adObservation==null){adObservation=new AdObservationProbe(admission.identity.targetPackage,
                     snapshot->MediaIdentityMatcher.matches(admission.identity,snapshot),adObservationRequested);probe.setControllerObserver(adObservation);}
             adObservation.setDiagnosticsEnabled(adObservationRequested);
-            adObservation.setProtectionSink(adProtection.status().enabled?new AdObservationProbe.ProtectionSink(){
+            adObservation.setProtectionSink(adProtection.status().enabled && qualifiedProtectionTarget()?new AdObservationProbe.ProtectionSink(){
                 /** Close the local effect fence on this main-thread metadata callback. */
                 @Override public void positive(Object session,long now){applyAdProtection(adProtection.positive(session,now));}
                 /** Requalify the film using already-read public scalars, never an annotation. */
@@ -152,7 +153,7 @@ final class CloudMultimediaSession {
 
     /** Expose protection state and explicit OFF escape without persisting a permit or preference. */
     org.json.JSONObject adProtectionStatus(){var d=adProtection.status();org.json.JSONObject out=new org.json.JSONObject();
-        try{out.put("enabled",d.enabled).put("state",d.state.name()).put("allow",d.allow).put("reason",d.reason)
+        try{out.put("enabled",d.enabled).put("available",qualifiedProtectionTarget()).put("state",d.state.name()).put("allow",d.allow).put("reason",d.reason)
                 .put("adStarts",d.adStarts).put("adEnds",d.adEnds);}catch(Exception ignored){/* Closed constants only. */}return out;}
 
     /** Correlate an owner's visible ad/content observation without treating it as an automatic signal. */
@@ -162,6 +163,17 @@ final class CloudMultimediaSession {
     org.json.JSONObject adObservationStatus(){if(adObservation!=null)return adObservation.status();
         org.json.JSONObject status=new org.json.JSONObject();try{status.put("enabled",false).put("candidate","UNCERTAIN")
                 .put("mode","OBSERVATION_ONLY_NO_COMMENT_GATE").put("reason","EXPERIMENT_DISABLED");}catch(Exception ignored){/* Closed constants only. */}return status;}
+
+    /** Keep the already-qualified Prime path; other publishers cannot acquire advertising authority. */
+    private boolean qualifiedProtectionTarget(){return com.scenevibe.tvcompanionpoc.ad.AdProtectionPlatformScope.permits(
+            admission.identity.targetPackage,BuildConfig.DEBUG && BuildConfig.CLOUD_ORIGIN.isEmpty());}
+    /** Share the same public sampler with a diagnostic-only observer, never a second player or clock. */
+    void setDiagnosticObserver(MediaSessionProbe.ControllerObserver diagnostic){probe.setDiagnosticObserver(diagnostic);}
+    /** Report the existing track match honestly; a mismatch does not prevent read-only investigation. */
+    com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility diagnosticCompatibility(MediaSessionProbe.Snapshot snapshot){
+        return MediaIdentityMatcher.matches(admission.identity,snapshot)?com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility.MATCH:
+                com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility.MISMATCH;
+    }
 
     /** Recheck the interruption gate at every delayed native effect, without retiring the admission itself. */
     private boolean effectsAllowed(){

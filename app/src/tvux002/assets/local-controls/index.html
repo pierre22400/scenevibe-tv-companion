@@ -86,6 +86,25 @@
           <p id="ad-observation" role="note">Sonde désactivée · aucune protection automatique.</p>
         </details>
         <p>Les touches de la télévision restent au lecteur.</p>
+        <section aria-labelledby="multi-title">
+          <h2 id="multi-title">Observation multi-plateforme — expérimental</h2>
+          <p>
+            Lecture seule des signaux publics Netflix ou Disney+.
+            Aucun commentaire n’est bloqué, arrêté ou déclenché par cette observation.
+            Choisis une campagne ; son marqueur absent ne prouve pas l’absence de publicité.
+          </p>
+          <label for="multi-platform">Campagne à observer</label>
+          <select id="multi-platform">
+            <option value="NETFLIX">Netflix Android TV</option>
+            <option value="DISNEY_PLUS">Disney+ Android TV</option>
+          </select>
+          <button id="multi-observe" type="button" aria-pressed="false">Observation multi-plateforme : OFF</button>
+          <button id="multi-ad" type="button">Publicité visible sur cette plateforme</button>
+          <button id="multi-content" type="button">Programme de nouveau visible</button>
+          <button id="multi-seek" type="button">SEEK ordinaire observé</button>
+          <button id="multi-pause" type="button">Pause volontaire observée</button>
+          <p id="multi-observation" role="note">Désactivée · aucune conclusion physique disponible.</p>
+        </section>
       </section>
       <p id="status" role="status" aria-live="polite">Entre le code de la télévision.</p>
     </main>

@@ -8,6 +8,7 @@
   let state = {};
   let busy = false;
   let mutationVersion = 0;
+  let lastCommandResult = "";
   const status = document.getElementById("status");
   /** Send bounded local JSON with a same-origin custom header and no ambient cookies. */
   async function request(path, body) {
@@ -26,8 +27,9 @@
     return response.json();
   }
   /** Reflect requested switches separately from current playback availability and window focus. */
-  function render(value) {
+  function render(value, commandReply = false) {
     state = value;
+    if (commandReply) lastCommandResult = value.result || "";
     for (const name of ["text", "audio", "adsync"]) {
       const button = document.getElementById(name);
       button.setAttribute("aria-pressed", String(Boolean(value[name])));
@@ -54,8 +56,18 @@
     document.getElementById("ad-observation").textContent = observation.enabled ?
       `Candidat : ${observation.candidate} · ${observation.reason || ""} · débuts ${observation.adStarts || 0}, fins ${observation.adEnds || 0}. Observation seule, aucun blocage des commentaires.` :
       "Observation passive désactivée · réglage indépendant de la protection.";
+    const multi = value.multiObservation || {};
+    const multiButton = document.getElementById("multi-observe");
+    multiButton.setAttribute("aria-pressed", String(Boolean(multi.enabled)));
+    multiButton.textContent = `Observation multi-plateforme : ${multi.enabled ? "ON" : "OFF"}`;
+    const platform = document.getElementById("multi-platform");
+    if (multi.enabled) platform.value = multi.platform;
+    platform.disabled = busy || Boolean(multi.enabled);
+    document.getElementById("multi-observation").textContent = multi.enabled ?
+      `Campagne ${multi.platform} · plateforme observée : ${multi.observedPlatform || "NONE"} · ${multi.selection || ""} · sessions cibles ${multi.targetSessionCount || 0}/${multi.activeSessionCount || 0} · ${multi.fresh ? "observation récente" : "observation absente ou périmée"}. ${(multi.samples || []).map(sample => `Session ${sample.session} : ${sample.state}, marqueur ${sample.marker} (${sample.markerType}), âge ancre ${sample.anchorAgeMs} ms, identité ${sample.identityCompatibility}`).join(" ; ")} Lecture seule ; preuve physique à établir.` :
+      "Observation désactivée · aucune protection Netflix/Disney+ et aucune conclusion physique.";
     availability();
-    status.textContent = `${value.runtime || (value.active ? "Service multimédia actif" : "Service multimédia inactif · préférences modifiables")}\n${value.sync}\nFocus TV : ${value.focus}\nCommandes locales : ${Math.ceil(value.remainingMs / 60000)} min restantes${value.result ? `\n${value.result}` : ""}`;
+    status.textContent = `${value.runtime || (value.active ? "Service multimédia actif" : "Service multimédia inactif · préférences modifiables")}\n${value.sync}\nFocus TV : ${value.focus}\nCommandes locales : ${Math.ceil(value.remainingMs / 60000)} min restantes${lastCommandResult ? `\n${lastCommandResult}` : ""}`;
   }
   /** Report failures without replaying a potentially applied command. */
   function failure(error) { status.textContent = error.message; }
@@ -63,8 +75,11 @@
   function availability() {
     for (const button of document.querySelectorAll("#controls button")) {
       button.disabled = busy || (["hold", "calibrate", "replay", "adprobe", "adguard"].includes(button.id) && !state.active) ||
-        (["ad-visible", "content-visible", "normal-seek", "normal-pause"].includes(button.id) && !(state.active && state.adObservation?.enabled));
+        (button.id === "adguard" && state.adProtection?.available === false) ||
+        (["ad-visible", "content-visible", "normal-seek", "normal-pause"].includes(button.id) && !(state.active && state.adObservation?.enabled)) ||
+        (["multi-ad", "multi-content", "multi-seek", "multi-pause"].includes(button.id) && !state.multiObservation?.enabled);
     }
+    document.getElementById("multi-platform").disabled = busy || Boolean(state.multiObservation?.enabled);
   }
   /** Admit one browser from the explicitly displayed TV code. */
   async function pair() {
@@ -83,7 +98,7 @@
     busy = true;
     mutationVersion += 1;
     availability();
-    try { render(await request("/command", { seq: ++sequence, command: name, value })); }
+    try { render(await request("/command", { seq: ++sequence, command: name, value }), true); }
     catch (error) { failure(error); }
     finally { busy = false; availability(); }
   }
@@ -96,6 +111,10 @@
   document.getElementById("close").addEventListener("click", () => command("panel", "close"));
   document.getElementById("adprobe").addEventListener("click", () => command("adprobe", String(!state.adObservation?.enabled)));
   document.getElementById("adguard").addEventListener("click", () => command("adguard", String(!state.adProtection?.enabled)));
+  document.getElementById("multi-observe").addEventListener("click", () => command("multiobserve", state.multiObservation?.enabled ? "OFF" : document.getElementById("multi-platform").value));
+  for (const [id, marker] of [["multi-ad", "AD_VISIBLE"], ["multi-content", "CONTENT_VISIBLE"], ["multi-seek", "NORMAL_SEEK"], ["multi-pause", "NORMAL_PAUSE"]]) {
+    document.getElementById(id).addEventListener("click", () => command("multimark", marker));
+  }
   for (const [id, marker] of [["ad-visible", "AD_VISIBLE"], ["content-visible", "CONTENT_VISIBLE"], ["normal-seek", "NORMAL_SEEK"], ["normal-pause", "NORMAL_PAUSE"]]) {
     document.getElementById(id).addEventListener("click", () => command("admark", marker));
   }

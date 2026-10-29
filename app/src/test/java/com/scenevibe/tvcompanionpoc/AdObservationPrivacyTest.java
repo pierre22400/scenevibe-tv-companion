@@ -38,4 +38,11 @@ public final class AdObservationPrivacyTest {
     /** Missing bundles and metadata are represented explicitly without a synthetic negative advertising flag. */
     @Test public void missingPublicFamiliesAreExplicit(){assertEquals(Marker.ABSENT,AdObservationProbe.readMarker(null));
         assertEquals("ABSENT",AdObservationProbe.metadataShape(null));assertEquals("ABSENT",AdObservationProbe.extrasShape(null));}
+    /** Netflix/Disney+ diagnostics expose the actual closed type category without printing its value. */
+    @Test public void multiPlatformTypesRemainExplicit(){
+        assertEquals(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.ValueType.ABSENT,MultiPlatformAdObservationProbe.markerType(null));
+        assertEquals(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.ValueType.LONG,MultiPlatformAdObservationProbe.markerType(new MediaMetadata.Builder().putLong(AdObservationProbe.AD_KEY,1).build()));
+        assertEquals(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.ValueType.STRING,MultiPlatformAdObservationProbe.markerType(new MediaMetadata.Builder().putString(AdObservationProbe.AD_KEY,"PRIVATE_VALUE").build()));
+        assertEquals(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.ValueType.NULL,MultiPlatformAdObservationProbe.markerType(new MediaMetadata.Builder().putString(AdObservationProbe.AD_KEY,null).build()));
+    }
 }

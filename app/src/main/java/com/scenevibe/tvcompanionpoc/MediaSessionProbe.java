@@ -27,6 +27,8 @@ import com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReader;
 public final class MediaSessionProbe {
     /** Optional, read-only experiment; it never substitutes the scheduler's listener. */
     interface ControllerObserver {
+        /** Optional diagnostic batch size; it never participates in session selection. */
+        default void onBatch(int activeSessions) {}
         /** Inspect the exact public facts already read by the historical probe. */
         void onController(MediaController controller, Snapshot snapshot, MediaMetadata metadata, PlaybackState state);
         /** Finish this batch, including the scheduler's unchanged selected session. */
@@ -111,6 +113,7 @@ public final class MediaSessionProbe {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean started;
     private ControllerObserver controllerObserver;
+    private ControllerObserver diagnosticObserver;
     private final Predicate<Snapshot> preferred;
 
     private final Runnable sampler = new Runnable() {
@@ -174,6 +177,16 @@ public final class MediaSessionProbe {
         controllerObserver=next;
     }
 
+    /** Keep read-only campaigns separate from the qualified Prime protection observer. */
+    void setDiagnosticObserver(ControllerObserver next){
+        if(diagnosticObserver==next)return;
+        if(diagnosticObserver!=null)multiDiagnostic(diagnosticObserver::close);
+        diagnosticObserver=next;
+    }
+
+    /** A diagnostic failure cannot reach the selected MEDIA listener or Prime gate. */
+    private void multiDiagnostic(Runnable work){try{work.run();}catch(RuntimeException unavailable){Log.w("SceneVibeMultiAd","event=READ_FAILED payloadOmitted=true");}}
+
     /** Contain an experimental observer failure without altering playback, identity or scheduling. */
     private void diagnostic(Runnable work) {
         try{work.run();}catch(RuntimeException ignored){Log.w("SceneVibeAdProbe","event=READ_FAILED payloadOmitted=true");}
@@ -184,6 +197,7 @@ public final class MediaSessionProbe {
         started = false;
         handler.removeCallbacks(sampler);
         setControllerObserver(null);
+        setDiagnosticObserver(null);
         Log.i(TAG, "Passive MediaSession probe stopped");
     }
 
@@ -232,6 +246,7 @@ public final class MediaSessionProbe {
         }
 
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE)probeState("ACTIVE_SESSIONS_AVAILABLE");
+        if(diagnosticObserver!=null)multiDiagnostic(()->diagnosticObserver.onBatch(controllers.size()));
         java.util.ArrayList<Snapshot> candidates=new java.util.ArrayList<>();
         for (int index = 0; index < controllers.size(); index++) {
             try{candidates.add(snapshotController(index,controllers.get(index)));}
@@ -239,6 +254,7 @@ public final class MediaSessionProbe {
         }
         Snapshot primary=select(candidates,preferred,BuildConfig.ADSYNC_NONDESTRUCTIVE?lastSelectedSession:null);
         if(controllerObserver!=null)diagnostic(()->controllerObserver.onSelection(primary));
+        if(diagnosticObserver!=null)multiDiagnostic(()->diagnosticObserver.onSelection(primary));
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && primary!=null){
             int compatible=0;for(Snapshot item:candidates)if(preferred!=null && preferred.test(item))compatible++;
             String selection="active="+candidates.size()+" compatible="+compatible+" selected="+(preferred!=null && preferred.test(primary)?"COMPATIBLE":"INCOMPATIBLE")+" playback="+primary.stateName;
@@ -267,6 +283,7 @@ public final class MediaSessionProbe {
     /** Preserve historical absence forwarding without constructing an observation fallback. */
     private void unavailable() {
         if(controllerObserver!=null)diagnostic(()->controllerObserver.onUnavailable());
+        if(diagnosticObserver!=null)multiDiagnostic(()->diagnosticObserver.onUnavailable());
         if (listener != null) listener.onUnavailable();
     }
 
@@ -320,6 +337,7 @@ public final class MediaSessionProbe {
                 subtitle,
                 durationMs,controller.getSessionToken(),capturedAtMs,updatedAtMs);
         if(controllerObserver!=null)diagnostic(()->controllerObserver.onController(controller,snapshot,metadata,state));
+        if(diagnosticObserver!=null)multiDiagnostic(()->diagnosticObserver.onController(controller,snapshot,metadata,state));
         return snapshot;
     }
 
