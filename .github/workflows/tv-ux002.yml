@@ -8,6 +8,35 @@ on:
 permissions:
   contents: read
 jobs:
+  windows_capture:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Actual Windows PowerShell 5 and 7 with owned fake ADB, never a device
+        shell: cmd
+        run: |
+          mkdir multi-observation-windows
+          set SCENEVIBE_TEST_POWERSHELL=powershell.exe
+          python -B -m unittest discover -s qualification/multiplatform001 -p test_*.py -v > multi-observation-windows/powershell5.log 2>&1
+          if errorlevel 1 exit /b 1
+          set SCENEVIBE_TEST_POWERSHELL=pwsh.exe
+          python -B -m unittest discover -s qualification/multiplatform001 -p test_*.py -v > multi-observation-windows/powershell7.log 2>&1
+          if errorlevel 1 exit /b 1
+          type multi-observation-windows\powershell5.log
+          type multi-observation-windows\powershell7.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-multiplatform-windows-${{ github.run_id }}
+          path: multi-observation-windows/
+          if-no-files-found: error
+          retention-days: 14
   software:
     runs-on: ubuntu-24.04
     timeout-minutes: 35

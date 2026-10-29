@@ -12,6 +12,10 @@ adb shell getprop ro.build.characteristics >> tv-ux002-native/environment.txt
 adb install -r app/build/outputs/apk/tvux002/app-tvux002.apk
 adb install -r app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk
 adb shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW allow
+# Fail fast on the new idle-service path before the retained seven-minute suite.
+# This is the same owned Android case, not another provider or physical campaign.
+adb shell am instrument -w -r -e class 'com.scenevibe.tvcompanionpoc.MultiPlatformObservationAndroidTest#idleServicePhoneCampaignsDoNotActivateTrack' com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee tv-ux002-native/idle-observation-smoke.log
+grep -q '^OK (1 test)' tv-ux002-native/idle-observation-smoke.log
 adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.AdSyncAndroidTest,com.scenevibe.tvcompanionpoc.AdDetectionAndroidTest,com.scenevibe.tvcompanionpoc.MultiPlatformObservationAndroidTest,com.scenevibe.tvcompanionpoc.DeveloperOverlayAndroidTest,com.scenevibe.tvcompanionpoc.RecoveryCacheAndroidTest com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee tv-ux002-native/instrumentation.log
 # Images contain only SceneVibe and the explicitly OWN foreground fixture, never protected content.
 for image in prepared panel keypad monitor on-focus off-focus; do

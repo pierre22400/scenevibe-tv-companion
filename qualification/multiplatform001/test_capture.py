@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -40,18 +41,30 @@ class CaptureTests(unittest.TestCase):
 
     def test_powershell_capture_with_owned_fake_adb(self):
         """Exercise the shipped PowerShell script with paths containing spaces, filtered JSONL and preserved old files."""
-        self.assertIsNotNone(shutil.which('pwsh'), 'CI must provide PowerShell; do not silently skip this test')
+        shell = os.environ.get('SCENEVIBE_TEST_POWERSHELL', 'pwsh')
+        self.assertIsNotNone(shutil.which(shell), 'CI must provide PowerShell; do not silently skip this test')
         script = Path(__file__).resolve().parents[2] / 'scripts/Collect-SceneVibeMultiPlatform.ps1'
         with tempfile.TemporaryDirectory(prefix='scenevibe owned capture ') as directory:
             base = Path(directory)
-            adb = base / 'owned adb'
-            adb.write_text('#!/usr/bin/env python3\nimport sys\nassert sys.argv[1:] == ["-s","OWN_SIMULATED_SERIAL","logcat","-v","raw","-s","SceneVibeMultiAd:I","*:S"]\n' +
-                           '\n'.join('print(' + repr(json.dumps(row)) + ')' for row in self.records()) + '\n', encoding='utf-8')
-            adb.chmod(0o700)
+            if os.name == 'nt':
+                adb = base / 'owned adb.exe'
+                source = base / 'owned-adb.cs'
+                expected = ['-s', 'OWN_SIMULATED_SERIAL', 'logcat', '-v', 'raw', '-s', 'SceneVibeMultiAd:I', '*:S']
+                code = 'using System; public class OwnedAdb { public static int Main(string[] args) { string[] expected = new string[] {' + ','.join(json.dumps(arg) for arg in expected) + '}; if(args.Length != expected.Length) return 3; for(int i=0;i<args.Length;i++) if(args[i]!=expected[i]) return 4; ' + ''.join('Console.WriteLine(' + json.dumps(json.dumps(row)) + ');' for row in self.records()) + 'return 0; } }'
+                source.write_text(code, encoding='utf-8')
+                compiler = base / 'compile-owned-adb.ps1'
+                compiler.write_text('param([string]$SourcePath,[string]$OutputPath)\n$ErrorActionPreference="Stop"\nAdd-Type -TypeDefinition ([IO.File]::ReadAllText($SourcePath)) -OutputAssembly $OutputPath -OutputType ConsoleApplication\n', encoding='utf-8')
+                result = subprocess.run(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(compiler), '-SourcePath', str(source), '-OutputPath', str(adb)], capture_output=True, text=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            else:
+                adb = base / 'owned adb'
+                adb.write_text('#!/usr/bin/env python3\nimport sys\nassert sys.argv[1:] == ["-s","OWN_SIMULATED_SERIAL","logcat","-v","raw","-s","SceneVibeMultiAd:I","*:S"]\n' +
+                               '\n'.join('print(' + repr(json.dumps(row)) + ')' for row in self.records()) + '\n', encoding='utf-8')
+                adb.chmod(0o700)
             output = base / 'capture output'
             for platform in ['NETFLIX', 'DISNEY_PLUS', 'NETFLIX']:
                 before = {p: p.read_bytes() for p in output.glob('*')} if output.exists() else {}
-                result = subprocess.run(['pwsh', '-NoProfile', '-File', str(script), '-Platform', platform, '-DeviceSerial', 'OWN_SIMULATED_SERIAL', '-AdbPath', str(adb), '-OutputDirectory', str(output)], capture_output=True, text=True, timeout=30)
+                result = subprocess.run([shell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(script), '-Platform', platform, '-DeviceSerial', 'OWN_SIMULATED_SERIAL', '-AdbPath', str(adb), '-OutputDirectory', str(output)], capture_output=True, text=True, timeout=30)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 for path, data in before.items():
                     self.assertEqual(path.read_bytes(), data, 'Previous capture overwritten')
