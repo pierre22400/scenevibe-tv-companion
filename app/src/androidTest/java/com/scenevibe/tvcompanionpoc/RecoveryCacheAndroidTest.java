@@ -276,11 +276,21 @@ public final class RecoveryCacheAndroidTest {
         while(SystemClock.elapsedRealtime()<end){if(state.equals(ad002Status(phone).getJSONObject("adProtection").getString("state")))return;Thread.sleep(50);}
         fail("Native protection did not reach "+state+": "+ad002Status(phone).getJSONObject("adProtection"));}
 
+    /** Enabling/disabling protection during a normal cue does not invent an interruption or restart the local MP3. */
+    @Test public void ad002NormalAudioSurvivesProtectionSwitches() throws Exception {
+        runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];runtime004At(90000);
+        await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"Reference cue absent",10000);
+        int starts=TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts(),prepares=TvFirst009TextServiceOwner.multimediaAudioPreparations();
+        local(port,token,1,"adguard","true");assertEquals("NORMAL",ad002Status(phone).getJSONObject("adProtection").getString("state"));
+        assertEquals("STARTED",TvFirst009TextServiceOwner.multimediaAudioState());local(port,token,2,"adguard","false");
+        assertEquals(starts,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());assertEquals(prepares,TvFirst009TextServiceOwner.multimediaAudioPreparations());
+    }
+
     /** An upcoming MP3 is neither started nor consumed on the ad clock; an expired return cannot catch it up. */
     @Test public void ad002UpcomingAudioDuringAdIsNotConsumedOrCaughtUp() throws Exception {
         runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];
         local(port,token,1,"adguard","true");main(()->playback(PlaybackState.STATE_PAUSED,88000));
-        await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code),"Paused native pre-cue coordinate missing",10000);
+        await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code) && TvFirst009TextServiceOwner.status().positionMs==88000,"Paused native pre-cue coordinate missing",10000);
         ad002Marker(true);ad002Await(phone,"AD_GUARD");int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed;
         main(()->playback(PlaybackState.STATE_PLAYING,90000));Thread.sleep(1100);
         assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPreparations());

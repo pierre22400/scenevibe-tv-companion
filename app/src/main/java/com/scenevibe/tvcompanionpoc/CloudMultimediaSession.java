@@ -115,8 +115,12 @@ final class CloudMultimediaSession {
 
     /** Independently enable experimental protection, initially closed until an actual current read. */
     void setAdProtectionEnabled(boolean enabled){if(!active || !BuildConfig.ADSYNC_NONDESTRUCTIVE)return;
-        adProtection.setEnabled(enabled);updateAdReader();applyAdProtection(adProtection.status());
-        if(enabled)probe.captureNow();}
+        adProtection.setEnabled(enabled);updateAdReader();
+        // The fence is closed immediately, but query synchronously before
+        // tearing down an already-playing normal cue. The same main Looper
+        // cannot dispatch a delayed native start between this query and its
+        // guarded selection; a positive or unavailable capture still closes it.
+        if(enabled)probe.captureNow();else applyAdProtection(adProtection.status());}
 
     /** One reader serves two independent switches; both OFF fully restore the v25 probe path. */
     private void updateAdReader(){

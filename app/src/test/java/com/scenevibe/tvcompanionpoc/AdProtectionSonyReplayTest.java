@@ -13,14 +13,15 @@ import static org.junit.Assert.*;
 public final class AdProtectionSonyReplayTest {
     /** Locate only the committed, redacted fixture in the Gradle app or repository working directory. */
     private JSONObject fixture(String name) throws Exception {Path p=Path.of("qualification/ad-detection002/fixtures/"+name+".json");
-        if(!Files.exists(p))p=Path.of("..").resolve(p);return new JSONObject(Files.readString(p));}
+        if(!Files.exists(p))p=Path.of("..").resolve(p);return new JSONObject(new String(Files.readAllBytes(p),java.nio.charset.StandardCharsets.UTF_8));}
     /** Replay actual records at their exported elapsedMs; do not interpolate the unlogged 250ms observations. */
     private void replay(String name,boolean appearance) throws Exception {
         JSONObject fixture=fixture(name);AdProtectionController guard=new AdProtectionController();guard.setEnabled(true);
         int edges=0;boolean sawGuard=false;long operationalEnd=-1,lastPositive=-1,firstPositive=-1,firstAbsentAfterAd=-1;
-        for(Object item:fixture.getJSONArray("inputs")){JSONObject row=(JSONObject)item;long time=row.getLong("elapsedMs");
+        for(int i=0;i<fixture.getJSONArray("inputs").length();i++){JSONObject row=fixture.getJSONArray("inputs").getJSONObject(i);long time=row.getLong("elapsedMs");
             Marker marker=Marker.valueOf(row.getString("marker"));Object session=row.getInt("session");
             AdProtectionController.Decision decision;
+            if(firstPositive>=0 && marker==Marker.ABSENT && firstAbsentAfterAd<0)firstAbsentAfterAd=time;
             if(row.getString("event").equals("METADATA_CALLBACK")){
                 if(marker!=Marker.AD)continue;decision=guard.positive(session,time);
             }else{
@@ -29,7 +30,6 @@ public final class AdProtectionSonyReplayTest {
                     raw>=0 && position>=0 && row.getLong("anchorAgeMs")>=0 && Float.isFinite(speed) && speed>0,marker),time);
             }
             if(marker==Marker.AD){if(firstPositive<0)firstPositive=time;lastPositive=time;assertFalse("Positive public flag did not inhibit",decision.allow);}
-            if(firstPositive>=0 && marker==Marker.ABSENT && firstAbsentAfterAd<0)firstAbsentAfterAd=time;
             if(decision.state==AdProtectionController.State.AD_GUARD)sawGuard=true;
             if(decision.edge==AdProtectionController.Edge.AD_START)edges++;
             if(decision.edge==AdProtectionController.Edge.AD_END){operationalEnd=time;assertTrue(time>lastPositive);}
@@ -41,7 +41,7 @@ public final class AdProtectionSonyReplayTest {
             .put("firstPositiveObservedElapsedMs",firstPositive).put("markerDisappearanceElapsedMs",firstAbsentAfterAd)
             .put("operationalExitElapsedMs",operationalEnd).put("observedStarts",edges).put("operationalEnds",guard.status().adEnds)
             .put("ownerAnnotationsComparisonOnly",fixture.getJSONArray("owner_annotations"));
-        Path output=Path.of("build/reports/ad002/sony-replay-"+name+".json");Files.createDirectories(output.getParent());Files.writeString(output,proof.toString(2));
+        Path output=Path.of("build/reports/ad002/sony-replay-"+name+".json");Files.createDirectories(output.getParent());Files.write(output,proof.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
     /** The first capture begins during advertising: presence is protective even without an observed onset. */
     @Test public void firstSonyCaptureShowsPresenceAndOperationalReturn() throws Exception {replay("215514",false);}
