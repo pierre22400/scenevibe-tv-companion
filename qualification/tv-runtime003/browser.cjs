@@ -36,6 +36,20 @@ async function main(){
     await page.locator('#adguard').click();await page.locator('#adguard[aria-pressed="false"]').waitFor();
     await page.getByText('Investigation publicitaire · observation seule', {exact:true}).click();
     assert.equal(await page.locator('#ad-visible').isDisabled(),true);
+    assert.equal(await page.locator('#multi-observe').getAttribute('aria-pressed'),'false');
+    assert.equal(await page.locator('#multi-ad').isDisabled(),true);
+    for(const platform of ['NETFLIX','DISNEY_PLUS']){
+      await page.locator('#multi-platform').selectOption(platform);
+      await page.locator('#multi-observe').click();await page.locator('#multi-observe[aria-pressed="true"]').waitFor();
+      assert.match(await page.locator('#multi-observation').innerText(),new RegExp(platform));
+      assert.equal(await page.locator('#adguard').getAttribute('aria-pressed'),'false');
+      assert.equal(await page.locator('#hold').getAttribute('aria-pressed'),'false');
+      for(const [id,marker] of [['multi-ad','AD_VISIBLE'],['multi-content','CONTENT_VISIBLE'],['multi-seek','NORMAL_SEEK'],['multi-pause','NORMAL_PAUSE']]){
+        await page.locator(`#${id}`).click();await page.getByRole('status').filter({hasText:`multimark:${marker}`}).waitFor();
+      }
+      await page.locator('#multi-observe').click();await page.locator('#multi-observe[aria-pressed="false"]').waitFor();
+      assert.equal(await page.locator('#multi-ad').isDisabled(),true);
+    }
     await page.locator('#adprobe').click();await page.locator('#adprobe[aria-pressed="true"]').waitFor();
     for(const [id,marker] of [['ad-visible','AD_VISIBLE'],['content-visible','CONTENT_VISIBLE'],['normal-seek','NORMAL_SEEK'],['normal-pause','NORMAL_PAUSE']]){
       await page.locator(`#${id}`).click();await page.getByRole('status').filter({hasText:`admark:${marker}`}).waitFor();
@@ -52,7 +66,7 @@ async function main(){
     child.stdin.write('7201000\n');await page.getByRole('status').filter({hasText:/Accès refusé|expiré|fetch|Failed to fetch/i}).waitFor();
     assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
     fs.writeFileSync(proof,JSON.stringify({result:'PASS',scope:'CHROMIUM_390x844_REAL_HTTP_EXACT_ASSETS_RECORDING_OWNER_NOT_ANDROID_OR_PRIME',pairing:true,channelSwitches:true,manualSuspendResume:true,
-      singlePauseActualState:true,optionalReplay:true,adProtectionIndependentSwitch:true,adObservationOptIn:true,ownerAnnotationsNotDetection:true,commandsAfter110Minutes:true,deadline120Minutes:true,clock:'INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS',noExternalRequests:true,noPersistentToken:true,pageErrors:errors.length},null,2));
+      singlePauseActualState:true,optionalReplay:true,adProtectionIndependentSwitch:true,adObservationOptIn:true,multiPlatformSeparateCampaigns:true,multiLabelsDoNotArmGuard:true,ownerAnnotationsNotDetection:true,commandsAfter110Minutes:true,deadline120Minutes:true,clock:'INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS',noExternalRequests:true,noPersistentToken:true,pageErrors:errors.length},null,2));
   }finally{if(browser)await browser.close();child.stdin.end();child.kill('SIGTERM');try{fs.unlinkSync(info);}catch{}}
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

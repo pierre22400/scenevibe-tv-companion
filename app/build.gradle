@@ -135,7 +135,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix "-ad-detection002"
+        versionNameSuffix "-multiplatform-ad-observation001"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "true"
     }
@@ -220,7 +220,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java"])
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -282,7 +282,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(26) }
+        variant.outputs.each { output -> output.versionCode.set(27) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }

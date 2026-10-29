@@ -9,6 +9,8 @@ public final class LocalBrowserFixture {
     private boolean text=true,audio=true,adsync;
     private boolean suspended,adProbe,adGuard;
     private int annotations;
+    private String multi="OFF";
+    private int multiAnnotations;
     /** Launch the real HTTP server and exact bundled assets against a recording command port. */
     public static void main(String[] args) throws Exception {LocalBrowserFixture fixture=new LocalBrowserFixture();Path assets=Path.of(args[0]);
         var clock=new java.util.concurrent.atomic.AtomicLong(1000);
@@ -22,10 +24,14 @@ public final class LocalBrowserFixture {
         if("text".equals(command))text=Boolean.parseBoolean(value);if("audio".equals(command))audio=Boolean.parseBoolean(value);if("adsync".equals(command))adsync=Boolean.parseBoolean(value);
         if("adguard".equals(command))adGuard=Boolean.parseBoolean(value);
         if("adprobe".equals(command))adProbe=Boolean.parseBoolean(value);if("admark".equals(command)&&adProbe)annotations++;
+        if("multiobserve".equals(command)){multi=value;multiAnnotations=0;}
+        if("multimark".equals(command) && !"OFF".equals(multi))multiAnnotations++;
         if("suspend".equals(command))suspended=true;if("resume".equals(command))suspended=false;
         return new JSONObject().put("text",text).put("audio",audio).put("adsync",adsync).put("active",true).put("focus","PASSIVE")
                 .put("adProtection",new JSONObject().put("enabled",adGuard).put("state","NORMAL").put("reason","BROWSER_RECORDING_ONLY").put("allow",true))
                 .put("adObservation",new JSONObject().put("enabled",adProbe).put("candidate","UNCERTAIN").put("reason","NO_PUBLIC_AD_MARKER").put("adStarts",0).put("adEnds",0).put("annotations",annotations))
+                .put("multiObservation",new JSONObject().put("enabled",!"OFF".equals(multi)).put("platform",multi).put("observedPlatform","NONE")
+                        .put("selection","NO_TARGET_SESSION").put("targetSessionCount",0).put("activeSessionCount",0).put("annotations",multiAnnotations).put("fresh",false))
                 .put("suspended",suspended).put("commentState",suspended?"USER_PAUSED":"ACTIVE")
                 .put("runtime","OWN BROWSER RECORDING FIXTURE · no Android/Prime").put("sync",suspended?"USER_SUSPENDED":"MEDIA_FIXTURE_ONLY").put("result",command+":"+value);
     }

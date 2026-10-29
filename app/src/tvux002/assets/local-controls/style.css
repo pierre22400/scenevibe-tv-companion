@@ -10,7 +10,7 @@ main {
   margin: auto;
   padding: 1.25rem;
 }
-button, input {
+button, input, select {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -27,7 +27,7 @@ button[aria-pressed="true"] {
   border: 3px solid #b3261e;
   background: #fff4ef;
 }
-button:focus-visible, input:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 3px solid #000;
   outline-offset: 3px;
 }

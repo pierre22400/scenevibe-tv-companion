@@ -1,3 +1,7 @@
+# Branche expérimentale — observation Netflix / Disney+
+
+Voir [le mandat, les limites et les protocoles](docs/multiplatform-ad-observation001.md). La v26 Sony reste archivée et qualifiée ; la v27 observe seulement Netflix/Disney+, sans protection sur ces plateformes.
+
 # SceneVibe TV Companion POC
 
 > **AD-DETECTION 002 experimental branch — v26:** [SceneVibe-only automatic commentary protection](docs/ad-detection002.md), OFF by default. Physical v25 marker evidence is reused; automatic protection on Sony is not yet physically qualified. The v24 archive and PR #32 are preserved.
