@@ -135,7 +135,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix "-ad-detection001"
+        versionNameSuffix "-ad-detection002"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "true"
     }
@@ -282,7 +282,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(25) }
+        variant.outputs.each { output -> output.versionCode.set(26) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }
@@ -311,6 +311,8 @@ androidComponents {
 }
 
 dependencies {
+    // Public typed metadata adapter only; no Media3 player or new permission.
+    implementation "androidx.media:media:1.7.0"
     // Public TV notification extensions on Android 12; no hidden framework extras or permissions.
     tvux001Implementation "androidx.core:core:1.13.1"
     tvux002Implementation "androidx.core:core:1.13.1"

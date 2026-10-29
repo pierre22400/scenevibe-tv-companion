@@ -303,6 +303,11 @@ final class TvFirst009TextServiceOwner {
             case "admark":
                 if(multimediaActive()){multimedia.annotateAdObservation(value);feedback="Observation physique horodatée ; aucune détection automatique ni commande de lecture.";}
                 else feedback="Service arrêté ; aucune observation enregistrée.";break;
+            case "adguard":
+                if(!"true".equals(value) && !"false".equals(value))throw new IllegalArgumentException("BOOLEAN_REQUIRED");
+                if(multimediaActive())multimedia.setAdProtectionEnabled(Boolean.parseBoolean(value));
+                feedback=multimediaActive()?("true".equals(value)?"Protection publicitaire expérimentale ON · reprise soumise aux preuves MEDIA.":
+                        "Protection publicitaire OFF · référence v25, commentaires possibles pendant une publicité."):"Service arrêté ; protection indisponible.";break;
             case "calibrate":try{AdSyncController.Calibration calibrated=controls.calibrate(AdSyncController.parseFilmTime(value),false);return localStatus().put("result",calibrated.message);}
                 catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
@@ -319,6 +324,7 @@ final class TvFirst009TextServiceOwner {
                 .put("active",multimediaActive()).put("suspended",multimediaActive() && multimedia.manuallySuspended())
                 .put("commentState",multimediaActive()?multimedia.commentState():"SERVICE_STOPPED")
                 .put("adObservation",multimediaActive()?multimedia.adObservationStatus():new JSONObject().put("enabled",false).put("candidate","UNCERTAIN").put("reason","SERVICE_STOPPED"))
+                .put("adProtection",multimediaActive()?multimedia.adProtectionStatus():new JSONObject().put("enabled",false).put("state","NORMAL").put("allow",true).put("reason","SERVICE_STOPPED"))
                 .put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("runtime",multimediaAvailability()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
     }
     /** Restore only requested channel preferences; no cache, consent, mode or playback permit is persisted here. */

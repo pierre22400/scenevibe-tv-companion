@@ -263,6 +263,105 @@ public final class RecoveryCacheAndroidTest {
         java.nio.file.Files.write(new File(target.getFilesDir(),"tvux002-"+name+"-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
+    /** Change only the OWN publisher's public metadata; no target transport command is sent. */
+    private void ad002Marker(boolean ad){main(()->{metadata();if(ad)media.setMetadata(new MediaMetadata.Builder(media.getController().getMetadata()).putLong(AdObservationProbe.AD_KEY,1).build());});}
+
+    /** Read the actual authenticated phone status outside the main thread it dispatches to. */
+    private JSONObject ad002Status(String[] phone) throws Exception {
+        return LocalControlTestClient.send(Integer.parseInt(phone[0]),"/status",phone[1],new JSONObject(),null).json();
+    }
+
+    /** Await a real guard state from the service, without direct machine injection or a synthetic content clock. */
+    private void ad002Await(String[] phone,String state) throws Exception {long end=SystemClock.elapsedRealtime()+12000;
+        while(SystemClock.elapsedRealtime()<end){if(state.equals(ad002Status(phone).getJSONObject("adProtection").getString("state")))return;Thread.sleep(50);}
+        fail("Native protection did not reach "+state+": "+ad002Status(phone).getJSONObject("adProtection"));}
+
+    /** An upcoming MP3 is neither started nor consumed on the ad clock; an expired return cannot catch it up. */
+    @Test public void ad002UpcomingAudioDuringAdIsNotConsumedOrCaughtUp() throws Exception {
+        runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];
+        local(port,token,1,"adguard","true");main(()->playback(PlaybackState.STATE_PAUSED,88000));
+        await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code),"Paused native pre-cue coordinate missing",10000);
+        ad002Marker(true);ad002Await(phone,"AD_GUARD");int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed;
+        main(()->playback(PlaybackState.STATE_PLAYING,90000));Thread.sleep(1100);
+        assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPreparations());
+        assertEquals(consumed,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed);
+        ad002Marker(false);main(()->playback(PlaybackState.STATE_PLAYING,103000));ad002Await(phone,"NORMAL");
+        await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Film did not regain normal gate",10000);
+        assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());runtime004At(90000);
+        await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"Skipped cue cannot be replayed after actual backward SEEK",10000);
+        runtime004Proof("ad002-upcoming",new JSONObject().put("scope","OWN_NATIVE_PUBLISHER_NOT_PHYSICAL_SONY").put("noAudioDuringAd",true)
+            .put("noAdClockConsumption",true).put("noExpiredCatchup",true).put("directSeekReplay",true));
+    }
+
+    /** A real active TEXT disappears at positive metadata, survives marker/identity uncertainty, and respects manual pause. */
+    @Test public void ad002TextHoldAndQualifiedReturnRespectUserPause() throws Exception {
+        runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
+        local(port,token,++seq,"adguard","true");assertFalse(ad002Status(phone).getJSONObject("adObservation").getBoolean("enabled"));
+        runtime004At(32988);await(TvFirst009TextServiceOwner::multimediaTextAttached,"Initial TEXT window absent",10000);
+        int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed,downloads=fixture.port.audioRequests;
+        ad002Marker(true);ad002Await(phone,"AD_GUARD");assertFalse(TvFirst009TextServiceOwner.multimediaTextAttached());
+        local(port,token,++seq,"adsync","true");local(port,token,++seq,"adsync","false");
+        assertFalse(ad002Status(phone).getJSONObject("adProtection").getBoolean("allow"));
+        main(()->playback(PlaybackState.STATE_PLAYING,900000));Thread.sleep(700);
+        assertEquals(consumed,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed);assertEquals(0,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());
+        local(port,token,++seq,"suspend","");ad002Marker(false);main(()->{media.setMetadata(null);playback(PlaybackState.STATE_PLAYING,35000);});
+        Thread.sleep(1100);assertFalse(ad002Status(phone).getJSONObject("adProtection").getBoolean("allow"));
+        main(this::metadata);ad002Await(phone,"NORMAL");assertTrue(ad002Status(phone).getBoolean("suspended"));assertFalse(TvFirst009TextServiceOwner.multimediaTextAttached());
+        local(port,token,++seq,"resume","");await(TvFirst009TextServiceOwner::multimediaTextAttached,"Current TEXT did not restore after owner resume",5000);
+        assertEquals(downloads,fixture.port.audioRequests);assertEquals(1,ad002Status(phone).getJSONObject("adProtection").getInt("adEnds"));
+        runtime004Proof("ad002-text",new JSONObject().put("scope","ACTUAL_SERVICE_OWN_PUBLISHER_NOT_PRIME_SONY").put("activeTextHidden",true)
+            .put("adClockNotConsumed",true).put("identityRequiredForExit",true).put("manualPausePreserved",true).put("restoredText",true).put("extraDownloads",0));
+    }
+
+    /** Each real MP3 is stopped during an explicit ad; return does not replay it, while direct backward cue SEEK still does. */
+    @Test public void ad002AllMp3StopWithoutCatchupAndReplayAfterRealSeek() throws Exception {
+        runtime004Start(true);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
+        local(port,token,++seq,"adguard","true");int downloads=fixture.port.audioRequests;JSONArray results=new JSONArray();
+        java.util.concurrent.atomic.AtomicInteger transports=new java.util.concurrent.atomic.AtomicInteger();
+        main(()->media.setCallback(new MediaSession.Callback(){
+            /** Count forbidden video PLAY requests to this OWN publisher. */ @Override public void onPlay(){transports.incrementAndGet();}
+            /** Count forbidden video PAUSE requests to this OWN publisher. */ @Override public void onPause(){transports.incrementAndGet();}
+            /** Count forbidden video SEEK requests to this OWN publisher. */ @Override public void onSeekTo(long pos){transports.incrementAndGet();}
+            /** Count forbidden video STOP requests to this OWN publisher. */ @Override public void onStop(){transports.incrementAndGet();}
+        }));
+        for(int ordinal=1;ordinal<=3;ordinal++){
+            long cue=new long[]{90000,300000,900000}[ordinal-1];runtime004At(cue);final int first=ordinal*2-1;
+            await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==first,"Direct cue MP3 not started",12000);
+            int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed;
+            long start=SystemClock.elapsedRealtime();ad002Marker(true);ad002Await(phone,"AD_GUARD");
+            await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"SceneVibe MP3 not stopped",3000);
+            long stoppedMs=SystemClock.elapsedRealtime()-start;assertTrue(stoppedMs<2500);
+            local(port,token,++seq,"adprobe","true");local(port,token,++seq,"adprobe","false");
+            assertFalse(ad002Status(phone).getJSONObject("adProtection").getBoolean("allow"));
+            main(()->playback(PlaybackState.STATE_PLAYING,cue+180000));Thread.sleep(600);
+            assertEquals(first,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());assertEquals(consumed,TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed);
+            ad002Marker(false);main(()->playback(PlaybackState.STATE_PLAYING,cue+13000));ad002Await(phone,"NORMAL");
+            await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Historical MEDIA gate not recovered",10000);
+            assertEquals(first,TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts());runtime004At(cue);final int replay=ordinal*2;
+            await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==replay,"Direct backward cue replay lost",12000);
+            await(()->"IDLE".equals(TvFirst009TextServiceOwner.multimediaAudioState()),"Replayed cue did not expire",7000);
+            results.put(new JSONObject().put("ordinal",ordinal).put("nativeStarts",2).put("positiveFlagToObservedStopMs",stoppedMs));
+        }
+        assertEquals(0,transports.get());assertEquals(downloads,fixture.port.audioRequests);
+        runtime004Proof("ad002-audio",new JSONObject().put("scope","ACTUAL_SERVICE_AND_DECODER_OWN_MEDIA_NOT_PRIME_SONY").put("audio",results)
+            .put("noCatchup",true).put("guardIndependentOfObservation",true).put("targetTransportCalls",transports.get()).put("extraDownloads",0));
+    }
+
+    /** OFF preserves v25 and a new service resets protection OFF without destroying any verified cached resource. */
+    @Test public void ad002OffIsReferenceAndServiceRestartDoesNotPersistOptIn() throws Exception {
+        runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];
+        assertFalse(ad002Status(phone).getJSONObject("adProtection").getBoolean("enabled"));ad002Marker(true);runtime004At(90000);
+        await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()==1,"OFF changed v25 behavior",10000);
+        local(port,token,1,"adguard","true");ad002Await(phone,"AD_GUARD");int downloads=fixture.port.audioRequests;
+        main(()->TvFirst009TextServiceOwner.requestStop(target));await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Service did not stop",7000);
+        ad002Marker(false);main(()->playback(PlaybackState.STATE_PAUSED,0));
+        main(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,source,prepared,true)));
+        await(TvFirst009TextServiceOwner::multimediaActive,"Service did not restart",10000);String[] next=runtime004Phone();
+        assertFalse(ad002Status(next).getJSONObject("adProtection").getBoolean("enabled"));assertEquals(downloads,fixture.port.audioRequests);
+        runtime004Proof("ad002-restart",new JSONObject().put("scope","REAL_SERVICE_RESTART_NOT_NEW_PROCESS_OR_SONY").put("offReferenceAudioStarted",true)
+            .put("protectionOffAfterServiceRestart",true).put("cacheEvents",19).put("extraDownloads",0));
+    }
+
     /** The optional probe and owner labels preserve the actual service, direct cue SEEK, replay and private cache. */
     @Test public void adObservationCannotSuppressOrRetainV24Commentary() throws Exception {
         runtime004Start(true);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;

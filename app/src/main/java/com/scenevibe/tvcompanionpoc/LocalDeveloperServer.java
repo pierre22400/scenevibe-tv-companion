@@ -115,7 +115,7 @@ final class LocalDeveloperServer implements AutoCloseable {
             else if("/status".equals(request[1])){dispatch="status";}
             else {
                 long sequence=json.optLong("seq",-1);String command=json.optString("command"),value=json.optString("value");
-                if(json.length()!=3 || sequence<=lastSequence || sequence>1_000_000 || !java.util.Arrays.asList("text","audio","adsync","suspend","resume","calibrate","panel","replay","adprobe","admark").contains(command) || value.length()>32){status=409;result=new JSONObject();}
+                if(json.length()!=3 || sequence<=lastSequence || sequence>1_000_000 || !java.util.Arrays.asList("text","audio","adsync","suspend","resume","calibrate","panel","replay","adprobe","admark","adguard").contains(command) || value.length()>32){status=409;result=new JSONObject();}
                 else {lastSequence=sequence;dispatch=command;dispatchValue=value;}
             }
         }

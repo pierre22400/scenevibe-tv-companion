@@ -1,0 +1,15 @@
+{
+  "source": {
+    "filename": "scenevibe-ad-detection-20261028-215220(1).log",
+    "sha256": "33cace4b70f55e9ba491d39999d14df60cff145dc550cc928de66a7146237863",
+    "bytes": 53,
+    "encoding": "utf-8-sig",
+    "lines": 1,
+    "duplicateProbeRecordsRemoved": 0
+  },
+  "scope": "ACTUAL_SONY_PUBLIC_SCALARS_REPLAY_NOT_NEW_PHYSICAL_PROTECTION_TEST",
+  "captureTimeBasis": "exact exported elapsedMs; underlying probe capturedAtMs not logged",
+  "inputs": [],
+  "owner_annotations": [],
+  "records": []
+}

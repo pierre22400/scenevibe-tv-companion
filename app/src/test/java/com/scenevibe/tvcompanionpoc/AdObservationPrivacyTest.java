@@ -13,6 +13,11 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=32)
 public final class AdObservationPrivacyTest {
+    /** A wrong-type public flag is invalid, never coerced to content by framework numeric defaults. */
+    @Test public void malformedMetadataDoesNotBecomeExplicitZero(){
+        assertEquals(Marker.INVALID,AdObservationProbe.readMarker(new MediaMetadata.Builder().putString(AdObservationProbe.AD_KEY,"1").build()));
+        assertEquals(Marker.INVALID,AdObservationProbe.readMarker(new MediaMetadata.Builder().putString(AdObservationProbe.AD_KEY,null).build()));
+    }
     /** The platform's numeric default zero must not hide the absence of the advertising key. */
     @Test public void absentAndExplicitZeroAreDifferent(){MediaMetadata absent=new MediaMetadata.Builder().build();
         assertEquals(0,absent.getLong(AdObservationProbe.AD_KEY));assertEquals(Marker.ABSENT,AdObservationProbe.readMarker(absent));

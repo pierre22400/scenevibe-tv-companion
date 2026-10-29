@@ -1,9 +1,9 @@
-name: AD-DETECTION 001 passive public evidence and v24 regression
+name: AD-DETECTION 002 experimental commentary protection
 
 # No provider calls, deployment, platform modification or physical device access.
 on:
   push:
-    branches: [work/scenevibe-ad-detection-001]
+    branches: [work/scenevibe-ad-detection-002]
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 35
     env:
       SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app
-      SIGNING_ENABLED: ${{ github.ref == 'refs/heads/work/scenevibe-ad-detection-001' && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
+      SIGNING_ENABLED: ${{ github.ref == 'refs/heads/work/scenevibe-ad-detection-002' && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -31,7 +31,7 @@ jobs:
       - name: Deterministic guard and actual shared runtime
         env:
           SCENEVIBE_CLOUD_ORIGIN: ''
-        run: gradle --no-daemon --max-workers=2 testDebugUnitTest --tests '*AdSyncControllerTest' --tests '*AdSyncRuntimeTest' --tests '*AdSyncFreshCaptureTest' --tests '*DeveloperOverlayStateTest' --tests '*AdSyncRecoveryTest' --tests '*DeveloperFocusStateTest' --tests '*LocalDeveloperServerTest' --tests '*Runtime003*' --tests '*Runtime004*' --tests '*AdEvidenceDetectorTest' --tests '*AdObservationPrivacyTest'
+        run: gradle --no-daemon --max-workers=2 testDebugUnitTest --tests '*AdSyncControllerTest' --tests '*AdSyncRuntimeTest' --tests '*AdSyncFreshCaptureTest' --tests '*DeveloperOverlayStateTest' --tests '*AdSyncRecoveryTest' --tests '*DeveloperFocusStateTest' --tests '*LocalDeveloperServerTest' --tests '*Runtime003*' --tests '*Runtime004*' --tests '*AdEvidenceDetectorTest' --tests '*AdObservationPrivacyTest' --tests '*AdProtection*'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -49,7 +49,7 @@ jobs:
         env:
           SCENEVIBE_CLOUD_ORIGIN: ''
         run: gradle --no-daemon --max-workers=2 testTvux002UnitTest --tests '*DeveloperPanelTest'
-      - name: Compile and lint experimental v25 plus retained v19/v18/v17
+      - name: Compile and lint experimental v26 plus retained v19/v18/v17
         run: gradle --no-daemon --max-workers=2 assembleTvux002 lintTvux002 assembleTvux001 assembleAdsync001 assembleCloudandroid002
       - name: Sign candidate with the existing M5 key when present
         if: env.SIGNING_ENABLED == 'true'
@@ -67,9 +67,9 @@ jobs:
           "$tools/aapt" dump badging app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk > tv-ux002-signed/apk-badging.txt
           if grep -q application-debuggable tv-ux002-signed/apk-badging.txt; then exit 1; fi
           "$tools/zipalign" -f 4 app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk "$RUNNER_TEMP/tvux-aligned.apk"
-          "$tools/apksigner" sign --ks "$RUNNER_TEMP/tvux-stable.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD --out tv-ux002-signed/scenevibe-ad-detection001-stable.apk "$RUNNER_TEMP/tvux-aligned.apk"
-          "$tools/apksigner" verify --verbose --print-certs tv-ux002-signed/scenevibe-ad-detection001-stable.apk > tv-ux002-signed/apksigner-verify.txt
-          sha256sum tv-ux002-signed/scenevibe-ad-detection001-stable.apk > tv-ux002-signed/sha256.txt
+          "$tools/apksigner" sign --ks "$RUNNER_TEMP/tvux-stable.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD --out tv-ux002-signed/scenevibe-ad-detection002-stable.apk "$RUNNER_TEMP/tvux-aligned.apk"
+          "$tools/apksigner" verify --verbose --print-certs tv-ux002-signed/scenevibe-ad-detection002-stable.apk > tv-ux002-signed/apksigner-verify.txt
+          sha256sum tv-ux002-signed/scenevibe-ad-detection002-stable.apk > tv-ux002-signed/sha256.txt
       - name: Remove temporary signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/tvux-stable.jks" "$RUNNER_TEMP/tvux-aligned.apk"
@@ -82,6 +82,7 @@ jobs:
             tv-runtime003-browser/
             app/build/outputs/apk/tvux002/*unsigned.apk
             app/build/test-results/**/*.xml
+            app/build/reports/ad002/*.json
             app/build/reports/lint-results-tvux002.*
           if-no-files-found: error
           retention-days: 14

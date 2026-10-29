@@ -1,5 +1,7 @@
 # SceneVibe TV Companion POC
 
+> **AD-DETECTION 002 experimental branch — v26:** [SceneVibe-only automatic commentary protection](docs/ad-detection002.md), OFF by default. Physical v25 marker evidence is reused; automatic protection on Sony is not yet physically qualified. The v24 archive and PR #32 are preserved.
+
 > **CURRENT BASELINE — Sony-tested v24 (TV-RUNTIME 004), 28 October 2026.** `main` includes [PR #31](https://github.com/pierre22400/scenevibe-tv-companion/pull/31), merged as `6aa1f9a1493964eb8d1c67efdeee7f0f3a071782`. This is a **private experimental Companion**, not a public production release. It retains the previous Cloud 0.8 baseline, the 19-event Columbo track, TEXT/AUDIO replay and phone developer controls. **Prime Video advertising is not automatically detected** and is now the highest-priority outstanding runtime issue.
 
 

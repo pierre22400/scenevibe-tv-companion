@@ -25,8 +25,18 @@ import org.json.JSONObject;
  * public key names enter logcat; titles, IDs, unknown key names/values, artwork,
  * custom event payloads, credentials and session tokens stay out of diagnostics.
  * Candidate AD_START/AD_END describe a publisher flag contract, not Sony pixels.
+ * AD-DETECTION 002 optionally forwards those same facts to a separate explicit
+ * SceneVibe protection consumer; the historical observation-only mode retains
+ * its absence of commentary authority. No reader ever controls the video app.
  */
 final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
+    /** Optional protection consumer shares reads; annotations never reach this interface. */
+    interface ProtectionSink {
+        /** Inhibit promptly on a public positive callback; negative callbacks cannot release effects. */
+        void positive(Object session,long capturedMs);
+        /** Confirm/requalify from the same unambiguous already-read MEDIA snapshots. */
+        void sample(AdEvidenceDetector.Sample sample,long now);
+    }
     static final String AD_KEY="android.media.metadata.ADVERTISEMENT";
     private static final String TAG="SceneVibeAdProbe";
     private final String targetPackage;
@@ -34,16 +44,28 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
     private final Handler main=new Handler(Looper.getMainLooper());
     private final AdEvidenceDetector detector=new AdEvidenceDetector();
     private final Map<Object,Entry> entries=new LinkedHashMap<>();
-    private boolean closed,overflow;
+    private boolean closed,overflow,diagnostics=true;
+    private ProtectionSink protection;
     private int ordinal,sequence,annotations;
     private long lastCapture=-1;
     private String lastState="";
 
     /** Bind only the already-admitted target and matcher; construction does not start a second probe. */
     AdObservationProbe(String targetPackage,Predicate<MediaSessionProbe.Snapshot> compatible){
+        this(targetPackage,compatible,true);
+    }
+    /** Protection-only reads do not silently opt the owner into passive diagnostic recording. */
+    AdObservationProbe(String targetPackage,Predicate<MediaSessionProbe.Snapshot> compatible,boolean diagnostics){
         this.targetPackage=targetPackage;this.compatible=compatible;
+        this.diagnostics=diagnostics;
         emit("ENABLED",new JSONObject());
     }
+
+    /** Attach an independent gate without enabling diagnostic logging or owner annotations. */
+    void setProtectionSink(ProtectionSink sink){protection=sink;}
+
+    /** Switch passive logging independently of the gate, retaining existing controller callbacks. */
+    void setDiagnosticsEnabled(boolean enabled){diagnostics=enabled;}
 
     /** Keep opaque controller identity and callback bookkeeping only in process memory. */
     private final class Entry {
@@ -70,6 +92,9 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
                 /** Retain only the public flag's presence/value category at metadata transitions. */
                 @Override public void onMetadataChanged(MediaMetadata value){if(closed)return;metadataCallbacks++;dirty=true;
                     AdEvidenceDetector.Marker marker=readMarker(value);String shape=metadataShape(value);
+                    if(marker==AdEvidenceDetector.Marker.AD && protection!=null && !destroyed
+                            && entries.get(controller.getSessionToken())==Entry.this)
+                        protection.positive(controller.getSessionToken(),SystemClock.elapsedRealtime());
                     if(marker!=lastCallbackMarker || !shape.equals(lastCallbackShape)){
                         emit("METADATA_CALLBACK",facts("session",number,"marker",marker.name(),"keys",shape));lastCallbackMarker=marker;lastCallbackShape=shape;}}
                 /** Count state publication without using the callback as a scheduler or ad detector. */
@@ -98,7 +123,12 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
     @android.annotation.SuppressLint("WrongConstant")
     static AdEvidenceDetector.Marker readMarker(MediaMetadata metadata){
         try{if(metadata==null || !metadata.containsKey(AD_KEY))return AdEvidenceDetector.Marker.ABSENT;
-            return metadata.getLong(AD_KEY)==0?AdEvidenceDetector.Marker.CONTENT:AdEvidenceDetector.Marker.AD;
+            // The framework getLong getter coerces wrong types and null to zero.
+            // Use the public AndroidX bundle adapter solely to validate this key's
+            // actual type; no private API, extra controller or payload export.
+            Object value=android.support.v4.media.MediaMetadataCompat.fromMediaMetadata(metadata).getBundle().get(AD_KEY);
+            if(!(value instanceof Long))return AdEvidenceDetector.Marker.INVALID;
+            return ((Long)value)==0?AdEvidenceDetector.Marker.CONTENT:AdEvidenceDetector.Marker.AD;
         }catch(RuntimeException malformed){return AdEvidenceDetector.Marker.INVALID;}
     }
 
@@ -135,7 +165,7 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
                 || entry.oldDuration!=snapshot.durationMs);
         entry.oldMediaId=snapshot.mediaId;entry.oldTitle=snapshot.title;entry.oldSubtitle=snapshot.subtitle;entry.oldDuration=snapshot.durationMs;
         long now=SystemClock.elapsedRealtime();
-        if(entry.lastDetails<0 || now-entry.lastDetails>=1000){entry.details=publicDetails(entry);entry.lastDetails=now;entry.dirty=false;}
+        if(diagnostics && (entry.lastDetails<0 || now-entry.lastDetails>=1000)){entry.details=publicDetails(entry);entry.lastDetails=now;entry.dirty=false;}
     }
 
     /** Read public API families independently; a disappearing field does not erase other observations. */
@@ -163,13 +193,15 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
         long now=SystemClock.elapsedRealtime();lastCapture=now;
         boolean single=count==1 && !overflow && selected!=null && Objects.equals(only.snapshot.sessionKey,selected.sessionKey);
         overflow=false;
-        if(!single){transition(detector.observe(null,now));return;}
+        if(!single){if(protection!=null)protection.sample(null,now);transition(detector.observe(null,now));return;}
         MediaSessionProbe.Snapshot sample=only.snapshot;
         boolean identity=compatible.test(sample);
         boolean clock=sample.positionMs>=0 && sample.estimatedPositionMs>=0 && sample.updateAgeMs>=0
                 && Float.isFinite(sample.speed) && sample.speed>0;
-        AdEvidenceDetector.Decision decision=detector.observe(new AdEvidenceDetector.Sample(sample.sessionKey,sample.capturedAtMs,
-                sample.estimatedPositionMs,sample.speed,true,identity,sample.state==PlaybackState.STATE_PLAYING,clock,only.marker),now);
+        AdEvidenceDetector.Sample captured=new AdEvidenceDetector.Sample(sample.sessionKey,sample.capturedAtMs,
+                sample.estimatedPositionMs,sample.speed,true,identity,sample.state==PlaybackState.STATE_PLAYING,clock,only.marker);
+        if(protection!=null)protection.sample(captured,now);
+        AdEvidenceDetector.Decision decision=detector.observe(captured,now);
         boolean changed=transition(decision);
         if(changed || only.identityChanged || only.lastLog<0 || now-only.lastLog>=1000){
             JSONObject frame=facts("session",only.number,"marker",only.marker.name(),"state",sample.stateName,
@@ -193,10 +225,11 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
 
     /** Lack of observations is uncertainty; release old callbacks instead of retaining publisher sessions. */
     @Override public void onUnavailable(){if(closed)return;for(Entry entry:entries.values())entry.detach();entries.clear();lastCapture=-1;
+        if(protection!=null)protection.sample(null,SystemClock.elapsedRealtime());
         transition(detector.observe(null,SystemClock.elapsedRealtime()));}
 
     /** Record a user observation separately; it is never passed to the candidate or commentary runtime. */
-    void annotate(String marker){if(closed)throw new IllegalStateException("OBSERVATION_DISABLED");
+    void annotate(String marker){if(closed || !diagnostics)throw new IllegalStateException("OBSERVATION_DISABLED");
         if(!java.util.Arrays.asList("AD_VISIBLE","CONTENT_VISIBLE","NORMAL_SEEK","NORMAL_PAUSE").contains(marker))throw new IllegalArgumentException("ANNOTATION_REFUSED");
         annotations++;emit("OWNER_ANNOTATION",facts("annotation",marker,"origin","PHONE_OWNER_OBSERVATION_NOT_AUTOMATIC_DETECTION"));}
 
@@ -204,7 +237,7 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
     JSONObject status(){if(!closed && lastCapture>=0 && SystemClock.elapsedRealtime()-lastCapture>2500)transition(detector.unavailable());
         int metadata=0,playback=0,extras=0,ignored=0;for(Entry entry:entries.values()){
             metadata+=entry.metadataCallbacks;playback+=entry.playbackCallbacks;extras+=entry.extrasCallbacks;ignored+=entry.ignoredEvents;}
-        AdEvidenceDetector.Decision value=detector.status();return facts("enabled",!closed,"mode","OBSERVATION_ONLY_NO_COMMENT_GATE",
+        AdEvidenceDetector.Decision value=detector.status();return facts("enabled",!closed && diagnostics,"mode","OBSERVATION_ONLY_NO_COMMENT_GATE",
                 "candidate",value.state.name(),"reason",value.reason.name(),"adStarts",value.adStarts,"adEnds",value.adEnds,
                 "annotations",annotations,"sessionCount",entries.size(),"metadataCallbacks",metadata,"playbackCallbacks",playback,
                 "extrasCallbacks",extras,"ignoredCustomEvents",ignored);}
@@ -219,6 +252,6 @@ final class AdObservationProbe implements MediaSessionProbe.ControllerObserver {
     private static void put(JSONObject object,String key,Object value){try{object.put(key,value);}catch(Exception ignored){/* Unsupported diagnostic scalar is omitted. */}}
 
     /** Correlate device elapsed/wall clocks; a wall timestamp never becomes a content-time estimate. */
-    private void emit(String event,JSONObject fields){put(fields,"event",event);put(fields,"sequence",++sequence);put(fields,"elapsedMs",SystemClock.elapsedRealtime());
+    private void emit(String event,JSONObject fields){if(!diagnostics)return;put(fields,"event",event);put(fields,"sequence",++sequence);put(fields,"elapsedMs",SystemClock.elapsedRealtime());
         put(fields,"wallTimeMs",System.currentTimeMillis());put(fields,"scope","PUBLIC_API_CANDIDATE_NOT_PHYSICAL_AD_PROOF");Log.i(TAG,fields.toString());}
 }
