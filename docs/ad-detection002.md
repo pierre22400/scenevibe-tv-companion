@@ -68,6 +68,8 @@ La protection est **OFF au démarrage d'un nouveau service/processus** et n'est 
 
 Le getLong framework transforme aussi une mauvaise valeur en zéro. Le petit adaptateur public AndroidX `media:1.7.0` permet de lire le type réel de cette seule clé via MediaMetadataCompat/getBundle : absent, Long zéro, Long non-zéro, invalide. Aucun Media3 Player, API cachée, permission ou protocole Prime ajouté. Les autres clés/valeurs ne sont pas exportées.
 
+La dépendance transitive AndroidX core déclare une permission **locale de signature** pour ses récepteurs non exportés, déjà présente dans l'APK v25. Les anciennes variantes sans core la reçoivent désormais aussi : le contrôle TV-FIRST 008 vérifie son nom exact, son propriétaire et sa protection signature, tout en refusant toute autre autorisation et en maintenant tous ses services/récepteurs désactivés. Il ne s'agit d'aucun droit système, accès média supplémentaire ou permission sensible.
+
 Références publiques : [MediaMetadataCompat](https://developer.android.com/reference/android/support/v4/media/MediaMetadataCompat), [MediaController.Callback](https://developer.android.com/reference/android/media/session/MediaController.Callback). Les callbacks personnalisés non possédés restent ignorés. Aucun accès Accessibility, capture protégée, modification DRM ou insertion publicitaire SceneVibe.
 
 ## Qualification et limites
