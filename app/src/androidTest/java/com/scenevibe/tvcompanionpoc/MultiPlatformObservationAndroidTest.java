@@ -96,6 +96,9 @@ public final class MultiPlatformObservationAndroidTest {
     @Test public void idleServicePhoneCampaignsDoNotActivateTrack() throws Exception {
         application=(MainActivity)InstrumentationRegistry.getInstrumentation().startActivitySync(new android.content.Intent(target,MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK|android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK));
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(target).flattenToString());
+        long permissionDeadline=SystemClock.elapsedRealtime()+10000;
+        while(!NotificationAccess.isGranted(target) && SystemClock.elapsedRealtime()<permissionDeadline)Thread.sleep(50);
+        assertTrue("Fixture MEDIA permission was not actually granted by Android",NotificationAccess.isGranted(target));
         main(()->assertTrue(TvFirst009TextServiceOwner.setDeveloperMode(target,true)));
         long end=SystemClock.elapsedRealtime()+10000;boolean ready=false;
         while(SystemClock.elapsedRealtime()<end){AtomicReference<Boolean> value=new AtomicReference<>(false);main(()->value.set(TvFirst009TextServiceOwner.setLocalControlEnabled(true)));if(value.get()){ready=true;break;}Thread.sleep(50);}assertTrue(ready);
@@ -103,7 +106,7 @@ public final class MultiPlatformObservationAndroidTest {
         String token=LocalControlTestClient.send(port,"/pair",null,new JSONObject().put("code",LocalControlTestClient.code(instructions)),null).json().getString("token");
         long sequence=0;for(Platform platform:Platform.values()){
             var started=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multiobserve").put("value",platform.name()),null).json();
-            assertTrue(started.getJSONObject("multiObservation").getBoolean("enabled"));assertFalse(started.getBoolean("active"));assertFalse(started.getJSONObject("adProtection").getBoolean("enabled"));
+            assertTrue("Campaign activation refused: "+started,started.getJSONObject("multiObservation").getBoolean("enabled"));assertFalse(started.getBoolean("active"));assertFalse(started.getJSONObject("adProtection").getBoolean("enabled"));
             var marked=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multimark").put("value","AD_VISIBLE"),null).json();
             assertEquals(1,marked.getJSONObject("multiObservation").getInt("annotations"));assertFalse(marked.getBoolean("active"));
         }

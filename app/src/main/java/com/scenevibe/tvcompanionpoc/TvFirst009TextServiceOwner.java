@@ -284,7 +284,15 @@ final class TvFirst009TextServiceOwner {
         LocalDeveloperServer origin=localControls;
         main.post(()->{if(!pending.compareAndSet(true,false)){done.countDown();return;}
             try{if(closing || localControls!=origin || origin==null || !origin.isLive())return;answer.set(localCommandNow(command,value));}
-            catch(Exception refused){try{answer.set(localStatus().put("result","Commande refusée ; état SceneVibe conservé."));}catch(Exception unavailable){/* No fictional OFF snapshot is returned. */}}finally{done.countDown();}});
+            catch(Exception refused){try{
+                JSONObject state=localStatus().put("result","Commande refusée ; état SceneVibe conservé.");
+                if("multiobserve".equals(command) || "multimark".equals(command)){
+                    String code=refused.getMessage();
+                    if(!java.util.Arrays.asList("MEDIA_ACCESS_REQUIRED","LOCAL_CONTROL_REQUIRED","MULTIMEDIA_OR_IDLE_SERVICE_REQUIRED","SERVICE_CLOSING","OBSERVATION_DISABLED","ANNOTATION_REFUSED").contains(code))code="DIAGNOSTIC_UNAVAILABLE";
+                    state.put("diagnosticRefusal",code).put("result","Observation refusée : "+code+" · état SceneVibe conservé.");
+                    Log.w("SceneVibeMultiAd","event=COMMAND_REFUSED code="+code);
+                }answer.set(state);
+            }catch(Exception unavailable){/* No fictional OFF snapshot is returned. */}}finally{done.countDown();}});
         if(!done.await(2,java.util.concurrent.TimeUnit.SECONDS)){pending.set(false);throw new IllegalStateException("LOCAL_COMMAND_TIMEOUT");}
         if(answer.get()==null)throw new IllegalStateException("LOCAL_COMMAND_REFUSED");return answer.get();
     }
@@ -344,8 +352,8 @@ final class TvFirst009TextServiceOwner {
 
     /** Explicit phone opt-in only; reuse the running sampler, or the same probe inside the idle existing service. */
     private void startMultiObservation(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Platform platform){
-        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !foreground || closing || localControls==null || !localControls.isLive()
-                || !NotificationAccess.isGranted(service))throw new IllegalStateException("EXPLICIT_LOCAL_MEDIA_ACCESS_REQUIRED");
+        if(!BuildConfig.ADSYNC_NONDESTRUCTIVE || !foreground || closing || localControls==null || !localControls.isLive())throw new IllegalStateException("LOCAL_CONTROL_REQUIRED");
+        if(!NotificationAccess.isGranted(service))throw new IllegalStateException("MEDIA_ACCESS_REQUIRED");
         if(session!=null)throw new IllegalStateException("MULTIMEDIA_OR_IDLE_SERVICE_REQUIRED");
         if(multimedia!=null && !multimedia.isActive())throw new IllegalStateException("SERVICE_CLOSING");
         detachMultiObservation();multiCampaign=platform;
