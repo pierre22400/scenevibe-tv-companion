@@ -307,7 +307,10 @@ public final class RecoveryCacheAndroidTest {
     @Test public void ad002TextHoldAndQualifiedReturnRespectUserPause() throws Exception {
         runtime004Start(false);String[] phone=runtime004Phone();int port=Integer.parseInt(phone[0]);String token=phone[1];long seq=0;
         local(port,token,++seq,"adguard","true");assertFalse(ad002Status(phone).getJSONObject("adObservation").getBoolean("enabled"));
-        runtime004At(32988);await(TvFirst009TextServiceOwner::multimediaTextAttached,"Initial TEXT window absent",10000);
+        // Enter the original window by continuous playback. A deliberately
+        // paused forward jump exactly onto its start invokes the historical
+        // skip-through policy, independently of this advertising protection.
+        runtime004At(31988);await(TvFirst009TextServiceOwner::multimediaTextAttached,"Initial TEXT window absent",10000);
         int consumed=TvFirst009TextServiceOwner.multimediaCalendarDiagnostics().consumed,downloads=fixture.port.audioRequests;
         ad002Marker(true);ad002Await(phone,"AD_GUARD");assertFalse(TvFirst009TextServiceOwner.multimediaTextAttached());
         local(port,token,++seq,"adsync","true");local(port,token,++seq,"adsync","false");
