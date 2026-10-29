@@ -57,6 +57,10 @@ public final class MultiPlatformObservationTest {
     @Test public void disabledRecorderCannotContinue() throws Exception {var log=new MultiPlatformObservationLog(Platform.NETFLIX);log.close(1000,100000);assertTrue(log.capture(List.of(frame(1,2000,1,3,Marker.AD)),1,1,2000,200000).isEmpty());assertFalse(log.status(2000).getBoolean("enabled"));try{log.annotate("AD_VISIBLE",2000,200000);fail();}catch(IllegalStateException expected){assertEquals("OBSERVATION_DISABLED",expected.getMessage());}}
     /** Exact package allowlists exclude other providers and cannot be widened through a phone value. */
     @Test public void packageScopeIsExact(){var n=new MultiPlatformObservationLog(Platform.NETFLIX);assertTrue(n.accepts("com.netflix.ninja"));assertFalse(n.accepts("com.disney.disneyplus"));assertFalse(n.accepts("com.netflix.ninja.evil"));}
+    /** No target session is still a logged observation, including full API counts and later count changes. */
+    @Test public void noTargetAndCountChangesAreJournaled() throws Exception {var log=new MultiPlatformObservationLog(Platform.NETFLIX);
+        var first=log.capture(List.of(),2,0,1000,100000);assertEquals(1,first.size());assertEquals(2,first.get(0).getInt("activeSessionCount"));
+        assertTrue(log.capture(List.of(),2,0,1250,100250).isEmpty());assertEquals(1,log.capture(List.of(),3,0,1500,100500).size());assertFalse(log.status(1500).getBoolean("fresh"));}
     /** Neither platform can reach Prime's guard, even in a disposable debug build. */
     @Test public void protectionScopeRejectsBothPlatforms(){for(Platform p:Platform.values()){assertFalse(AdProtectionPlatformScope.permits(p.packageName,false));assertFalse(AdProtectionPlatformScope.permits(p.packageName,true));}assertTrue(AdProtectionPlatformScope.permits(AdProtectionPlatformScope.PRIME,false));assertFalse(AdProtectionPlatformScope.permits("com.scenevibe.tvcompanionpoc",false));assertTrue(AdProtectionPlatformScope.permits("com.scenevibe.tvcompanionpoc",true));}
     /** A populated Netflix journal cannot change an independent Prime machine's reference decision. */

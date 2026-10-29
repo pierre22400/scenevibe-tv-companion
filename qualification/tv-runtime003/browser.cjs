@@ -57,6 +57,8 @@ async function main(){
       assert.match(await page.locator('#ad-observation').innerText(),/UNCERTAIN/);
     }
     await page.locator('#adprobe').click();await page.locator('#adprobe[aria-pressed="false"]').waitFor();
+    await page.waitForTimeout(2100);
+    assert.match(await page.getByRole('status').innerText(),/adprobe:false/);
     assert.equal(await page.locator('#ad-visible').isDisabled(),true);
     child.stdin.write('6601000\n');await page.getByRole('status').filter({hasText:'10 min restantes'}).waitFor();
     await page.locator('#text').click();await page.locator('#text[aria-pressed="true"]').waitFor();

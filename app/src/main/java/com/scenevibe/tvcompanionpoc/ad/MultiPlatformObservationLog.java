@@ -76,9 +76,10 @@ public final class MultiPlatformObservationLog {
     /** Record a bounded batch without influencing the historical session selection or clock. */
     public List<JSONObject> capture(List<Frame> frames,int allCount,int targetCount,long now,long wall){
         List<JSONObject> out=new ArrayList<>();if(!enabled)return out;
+        boolean countsChanged=lastCapture<0 || activeSessions!=allCount || targetSessions!=targetCount;
         activeSessions=allCount;targetSessions=targetCount;lastCapture=now;
         String next=targetCount==0?"NO_TARGET_SESSION":targetCount==1?"SINGLE_TARGET":"MULTIPLE_TARGET_SESSIONS";
-        if(!next.equals(selection)){selection=next;out.add(event("SELECTION",now,wall).put("selection",selection)
+        if(countsChanged || !next.equals(selection)){selection=next;out.add(event("SELECTION",now,wall).put("selection",selection)
                 .put("activeSessionCount",allCount).put("targetSessionCount",targetCount));}
         latest=new JSONArray();Map<Integer,Frame> retained=new LinkedHashMap<>();
         for(Frame f:frames){if(retained.size()>=4)break;if(f==null || f.session<=0)continue;
