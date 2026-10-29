@@ -25,11 +25,25 @@ async function main(){
     await page.getByRole('status').filter({hasText:'USER_SUSPENDED'}).waitFor();
     await page.locator('#hold').click();await page.locator('#hold[aria-pressed="false"]').waitFor();
     await page.getByRole('status').filter({hasText:'MEDIA_FIXTURE_ONLY'}).waitFor();
-    await page.locator('summary').click();
+    await page.getByText('Recalage et relecture en cas d’incertitude MEDIA', {exact:true}).click();
     await page.locator('#time').fill('00:31');
     for(const [action,result] of [['calibrate','calibrate:00:31'],['replay','replay:'],['show','panel:show'],['close','panel:close']]){
       await page.locator(`#${action}`).click();await page.getByRole('status').filter({hasText:result}).waitFor();
     }
+    await page.locator('#adguard').click();await page.locator('#adguard[aria-pressed="true"]').waitFor();
+    assert.equal(await page.locator('#adprobe').getAttribute('aria-pressed'),'false');
+    assert.equal(await page.locator('#hold').getAttribute('aria-pressed'),'false');
+    await page.locator('#adguard').click();await page.locator('#adguard[aria-pressed="false"]').waitFor();
+    await page.getByText('Investigation publicitaire · observation seule', {exact:true}).click();
+    assert.equal(await page.locator('#ad-visible').isDisabled(),true);
+    await page.locator('#adprobe').click();await page.locator('#adprobe[aria-pressed="true"]').waitFor();
+    for(const [id,marker] of [['ad-visible','AD_VISIBLE'],['content-visible','CONTENT_VISIBLE'],['normal-seek','NORMAL_SEEK'],['normal-pause','NORMAL_PAUSE']]){
+      await page.locator(`#${id}`).click();await page.getByRole('status').filter({hasText:`admark:${marker}`}).waitFor();
+      assert.equal(await page.locator('#hold').getAttribute('aria-pressed'),'false');
+      assert.match(await page.locator('#ad-observation').innerText(),/UNCERTAIN/);
+    }
+    await page.locator('#adprobe').click();await page.locator('#adprobe[aria-pressed="false"]').waitFor();
+    assert.equal(await page.locator('#ad-visible').isDisabled(),true);
     child.stdin.write('6601000\n');await page.getByRole('status').filter({hasText:'10 min restantes'}).waitFor();
     await page.locator('#text').click();await page.locator('#text[aria-pressed="true"]').waitFor();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -38,7 +52,7 @@ async function main(){
     child.stdin.write('7201000\n');await page.getByRole('status').filter({hasText:/Accès refusé|expiré|fetch|Failed to fetch/i}).waitFor();
     assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
     fs.writeFileSync(proof,JSON.stringify({result:'PASS',scope:'CHROMIUM_390x844_REAL_HTTP_EXACT_ASSETS_RECORDING_OWNER_NOT_ANDROID_OR_PRIME',pairing:true,channelSwitches:true,manualSuspendResume:true,
-      singlePauseActualState:true,optionalReplay:true,commandsAfter110Minutes:true,deadline120Minutes:true,clock:'INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS',noExternalRequests:true,noPersistentToken:true,pageErrors:errors.length},null,2));
+      singlePauseActualState:true,optionalReplay:true,adProtectionIndependentSwitch:true,adObservationOptIn:true,ownerAnnotationsNotDetection:true,commandsAfter110Minutes:true,deadline120Minutes:true,clock:'INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS',noExternalRequests:true,noPersistentToken:true,pageErrors:errors.length},null,2));
   }finally{if(browser)await browser.close();child.stdin.end();child.kill('SIGTERM');try{fs.unlinkSync(info);}catch{}}
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

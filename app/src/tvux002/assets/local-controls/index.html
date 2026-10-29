@@ -40,9 +40,15 @@
         <button id="audio" type="button" aria-pressed="false">AUDIO : OFF</button>
         <button id="adsync" type="button" aria-pressed="false">AD-SYNC : OFF</button>
         <button id="hold" type="button" aria-pressed="false">Commentaires : état en attente</button>
+        <button id="adguard" type="button" aria-pressed="false">Protection publicitaire expérimentale : OFF</button>
+        <p id="ad-protection" role="note">
+          OFF conserve la référence v25. ON protège seulement les commentaires SceneVibe.
+          Une sortie de publicité exige une reprise MEDIA vérifiée.
+          En cas d’attente persistante, OFF retire explicitement cette protection.
+        </p>
         <p>
           La pause globale conserve tes choix TEXT et AUDIO, par exemple pendant une publicité.
-          Aucune publicité n’est détectée automatiquement.
+          La protection expérimentale dispose de son propre interrupteur, indépendant d’AD-SYNC.
         </p>
         <button id="show" type="button">Afficher le moniteur SceneVibe</button>
         <button id="close" type="button">Masquer le moniteur SceneVibe</button>
@@ -64,6 +70,20 @@
             Cette action facultative sert si Android remplace la session ou publie un recul ambigu.
             Elle ne déplace pas le film et ne crée aucune admission.
           </p>
+        </details>
+        <details>
+          <summary>Investigation publicitaire · observation seule</summary>
+          <p>
+            Cette sonde lit les signaux publics Android, sans suspendre les commentaires.
+            Ses états candidats ne prouvent pas que Prime expose une publicité.
+            Les boutons ci-dessous horodatent ce que tu vois, sans commander le lecteur.
+          </p>
+          <button id="adprobe" type="button" aria-pressed="false">Observation publicitaire : OFF</button>
+          <button id="ad-visible" type="button">Je vois une publicité</button>
+          <button id="content-visible" type="button">Je vois le film reprendre</button>
+          <button id="normal-seek" type="button">Je viens de déplacer le film</button>
+          <button id="normal-pause" type="button">Je viens de mettre le film en pause</button>
+          <p id="ad-observation" role="note">Sonde désactivée · aucune protection automatique.</p>
         </details>
         <p>Les touches de la télévision restent au lecteur.</p>
       </section>

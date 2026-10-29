@@ -296,6 +296,18 @@ final class TvFirst009TextServiceOwner {
             case "suspend":controls.suspend();feedback=multimediaActive()?"Pause volontaire demandée ; préférences conservées.":"Service arrêté ; aucune session suspendue.";break;
             case "resume":controls.resume();feedback=multimediaActive()?"Reprise demandée ; les captures MEDIA compatibles restent nécessaires.":"Service arrêté ; aucune admission créée.";break;
             case "replay":return localStatus().put("result",multimediaActive()?multimedia.confirmReplay():"Service arrêté ; relecture indisponible.");
+            case "adprobe":
+                if(!"true".equals(value) && !"false".equals(value))throw new IllegalArgumentException("BOOLEAN_REQUIRED");
+                if(multimediaActive())multimedia.setAdObservationEnabled(Boolean.parseBoolean(value));
+                feedback=multimediaActive()?"Observation publicitaire : "+("true".equals(value)?"ON":"OFF")+" · aucun commentaire suspendu par cette sonde.":"Service arrêté ; observation indisponible.";break;
+            case "admark":
+                if(multimediaActive()){multimedia.annotateAdObservation(value);feedback="Observation physique horodatée ; aucune détection automatique ni commande de lecture.";}
+                else feedback="Service arrêté ; aucune observation enregistrée.";break;
+            case "adguard":
+                if(!"true".equals(value) && !"false".equals(value))throw new IllegalArgumentException("BOOLEAN_REQUIRED");
+                if(multimediaActive())multimedia.setAdProtectionEnabled(Boolean.parseBoolean(value));
+                feedback=multimediaActive()?("true".equals(value)?"Protection publicitaire expérimentale ON · reprise soumise aux preuves MEDIA.":
+                        "Protection publicitaire OFF · référence v25, commentaires possibles pendant une publicité."):"Service arrêté ; protection indisponible.";break;
             case "calibrate":try{AdSyncController.Calibration calibrated=controls.calibrate(AdSyncController.parseFilmTime(value),false);return localStatus().put("result",calibrated.message);}
                 catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
@@ -311,6 +323,8 @@ final class TvFirst009TextServiceOwner {
         return new JSONObject().put("text",multimediaTextEnabled()).put("audio",multimediaAudioEnabled()).put("adsync",adSyncEnabled())
                 .put("active",multimediaActive()).put("suspended",multimediaActive() && multimedia.manuallySuspended())
                 .put("commentState",multimediaActive()?multimedia.commentState():"SERVICE_STOPPED")
+                .put("adObservation",multimediaActive()?multimedia.adObservationStatus():new JSONObject().put("enabled",false).put("candidate","UNCERTAIN").put("reason","SERVICE_STOPPED"))
+                .put("adProtection",multimediaActive()?multimedia.adProtectionStatus():new JSONObject().put("enabled",false).put("state","NORMAL").put("allow",true).put("reason","SERVICE_STOPPED"))
                 .put("focus",developerFocusStatus()).put("sync",adSyncStatus()).put("runtime",multimediaAvailability()).put("access","PHONE_LOCAL_NOT_SONY_DPAD");
     }
     /** Restore only requested channel preferences; no cache, consent, mode or playback permit is persisted here. */

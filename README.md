@@ -1,5 +1,7 @@
 # SceneVibe TV Companion POC
 
+> **AD-DETECTION 002 experimental branch — v26:** [SceneVibe-only automatic commentary protection](docs/ad-detection002.md), OFF by default. Physical v25 marker evidence is reused; automatic protection on Sony is not yet physically qualified. The v24 archive and PR #32 are preserved.
+
 > **CURRENT BASELINE — Sony-tested v24 (TV-RUNTIME 004), 28 October 2026.** `main` includes [PR #31](https://github.com/pierre22400/scenevibe-tv-companion/pull/31), merged as `6aa1f9a1493964eb8d1c67efdeee7f0f3a071782`. This is a **private experimental Companion**, not a public production release. It retains the previous Cloud 0.8 baseline, the 19-event Columbo track, TEXT/AUDIO replay and phone developer controls. **Prime Video advertising is not automatically detected** and is now the highest-priority outstanding runtime issue.
 
 
@@ -34,6 +36,8 @@ application.
 In a physical Sony/Prime test, a seek triggered a Prime advertisement. SceneVibe's scheduled AUDIO at **15:00 editorial time** was **audibly emitted during the advertisement**, instead of being withheld. The Sony log `scenevibe-v24-publicite-20261028-163257.log` recorded `AUDIO_DUE` at approximately 16:33:02.619, `AUDIO_PREPARED` at 16:33:02.663, `AUDIO_RESOURCE_STARTED` at 16:33:02.677 and `AUDIO_STOPPED` at 16:33:05.520 (local log clock). **AD-SYNC was OFF at that time**, so the result does not establish what ON would have done. Prime ad-break start/end markers have **not** been demonstrated via public Android APIs. After the ad, an attempted replay of 15:00 initially failed, and later worked; a confirmed backward rearm was observed in logs. The issue is **not** that the MP3 decoder generally fails.
 
 **Priority project: AD-DETECTION 001**
+
+**Experiment on this branch — v25:** the [AD-DETECTION 001 investigation](docs/ad-detection001.md) adds an opt-in public-controller probe and a publisher-flag candidate classifier. The phone can timestamp owner observations separately. The module is OFF by default and has no commentary gating authority. **PARTIAL: automatic AD_START/AD_END on Prime/Sony remains unproven; a manual pause does not close this objective.** The v24 physical baseline and its archive remain the reference.
 
 Development branch: [`work/scenevibe-ad-detection-001`](https://github.com/pierre22400/scenevibe-tv-companion/tree/work/scenevibe-ad-detection-001), initially identical to the v24 merge on `main`. Goal: investigate reliable **advertisement-start and advertisement-end** evidence available to an ordinary Android TV app, and prevent editorial TEXT/AUDIO playback during advertisements **only when the available signal is sufficiently trustworthy**. Inspect `MediaSession` transitions, identity/metadata, playback state, anchor/clock discontinuities, and permitted Android APIs; compare captured start/end timelines with explicit human observations. A MediaSession discontinuity alone does not prove an ad break. If there is no trustworthy public signal, report that limitation and qualify a non-intrusive, user-controlled pause/resume fallback using the existing phone interface. Do not infer ad status from protected playback, screen capture, accessibility scraping or unofficial Prime APIs; do not control/modify the streaming player.
 

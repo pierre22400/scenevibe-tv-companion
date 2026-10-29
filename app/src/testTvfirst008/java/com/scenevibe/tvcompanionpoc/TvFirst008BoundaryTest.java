@@ -29,13 +29,21 @@ import static org.junit.Assert.*;
 @Config(sdk={31,35})
 @LooperMode(LooperMode.Mode.PAUSED)
 public final class TvFirst008BoundaryTest {
-    /** The merged installable profile exposes only the TV launcher and Internet permission. */
+    /** The merged installable profile exposes only the TV launcher and Internet permission.
+     * AndroidX additionally protects its own non-exported receivers with an app-local signature permission;
+     * this grants no platform capability and must never become normal/dangerous or externally namespaced.
+     */
     @Test public void mergedManifestAndBuildCloseRuntimeAuthorities() throws Exception {
         Context context=RuntimeEnvironment.getApplication();
         assertTrue(BuildConfig.TVFIRST_DELIVERY_ONLY);assertTrue(BuildConfig.TVFIRST_OBSERVATION_ONLY);assertFalse(BuildConfig.ENABLE_LAN_DEV);
         assertEquals(13,BuildConfig.VERSION_CODE);assertEquals("",BuildConfig.CLOUD_ORIGIN);assertFalse(BuildConfig.DEBUG);
         PackageInfo info=context.getPackageManager().getPackageInfo(context.getPackageName(),PackageManager.GET_PERMISSIONS|PackageManager.GET_SERVICES|PackageManager.GET_RECEIVERS|PackageManager.MATCH_DISABLED_COMPONENTS);
-        assertArrayEquals(new String[]{"android.permission.INTERNET"},info.requestedPermissions);
+        String receiverPermission=context.getPackageName()+".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION";
+        assertArrayEquals(new String[]{"android.permission.INTERNET",receiverPermission},info.requestedPermissions);
+        android.content.pm.PermissionInfo privateReceiver=context.getPackageManager().getPermissionInfo(receiverPermission,0);
+        assertEquals(context.getPackageName(),privateReceiver.packageName);
+        assertEquals(android.content.pm.PermissionInfo.PROTECTION_SIGNATURE,
+                privateReceiver.protectionLevel & android.content.pm.PermissionInfo.PROTECTION_MASK_BASE);
         for(android.content.pm.ServiceInfo service:info.services)assertFalse(service.enabled);
         for(android.content.pm.ActivityInfo receiver:info.receivers)assertFalse(receiver.enabled);
         assertEquals("SceneVibe TV",context.getApplicationInfo().loadLabel(context.getPackageManager()).toString());

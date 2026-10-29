@@ -28,6 +28,10 @@ final class CloudMultimediaSession {
     private final AndroidLocalAudioPort audio;
     private final StudioMultimediaRuntime runtime;
     private final MediaSessionProbe probe;
+    private AdObservationProbe adObservation;
+    private boolean adObservationRequested,adGuardBlocked;
+    private final com.scenevibe.tvcompanionpoc.ad.AdProtectionController adProtection=new com.scenevibe.tvcompanionpoc.ad.AdProtectionController();
+    private String lastProtectionState="";
     private final Set<String> shown=new HashSet<>(),started=new HashSet<>();
     private final Runnable watchdog=this::watch;
     private final AdSyncController adSync=new AdSyncController(BuildConfig.ADSYNC_NONDESTRUCTIVE);
@@ -103,10 +107,66 @@ final class CloudMultimediaSession {
     /** Check the same local capability and OS permissions; no network or implicit renewal exists here. */
     private boolean current(){return active && admission.current() && Settings.canDrawOverlays(context) && NotificationAccess.isGranted(context);}
 
+    /** Opt in to observation only; no capture, transport, clock correction or commentary policy is triggered. */
+    void setAdObservationEnabled(boolean enabled){
+        if(!active || !BuildConfig.ADSYNC_NONDESTRUCTIVE)return;
+        adObservationRequested=enabled;updateAdReader();
+    }
+
+    /** Independently enable experimental protection, initially closed until an actual current read. */
+    void setAdProtectionEnabled(boolean enabled){if(!active || !BuildConfig.ADSYNC_NONDESTRUCTIVE)return;
+        adProtection.setEnabled(enabled);updateAdReader();
+        // The fence is closed immediately, but query synchronously before
+        // tearing down an already-playing normal cue. The same main Looper
+        // cannot dispatch a delayed native start between this query and its
+        // guarded selection; a positive or unavailable capture still closes it.
+        if(enabled)probe.captureNow();else applyAdProtection(adProtection.status());}
+
+    /** One reader serves two independent switches; both OFF fully restore the v25 probe path. */
+    private void updateAdReader(){
+        if(adObservationRequested || adProtection.status().enabled){
+            if(adObservation==null){adObservation=new AdObservationProbe(admission.identity.targetPackage,
+                    snapshot->MediaIdentityMatcher.matches(admission.identity,snapshot),adObservationRequested);probe.setControllerObserver(adObservation);}
+            adObservation.setDiagnosticsEnabled(adObservationRequested);
+            adObservation.setProtectionSink(adProtection.status().enabled?new AdObservationProbe.ProtectionSink(){
+                /** Close the local effect fence on this main-thread metadata callback. */
+                @Override public void positive(Object session,long now){applyAdProtection(adProtection.positive(session,now));}
+                /** Requalify the film using already-read public scalars, never an annotation. */
+                @Override public void sample(com.scenevibe.tvcompanionpoc.ad.AdEvidenceDetector.Sample sample,long now){applyAdProtection(adProtection.observe(sample,now));}
+            }:null);
+        }else if(adObservation!=null){probe.setControllerObserver(null);adObservation=null;}
+    }
+
+    /** Stop/hide only SceneVibe once per hold; preserve the exact calendar and replay proof. */
+    private void applyAdProtection(com.scenevibe.tvcompanionpoc.ad.AdProtectionController.Decision decision){
+        if(!active)return;
+        String projection=decision.enabled+":"+decision.state+":"+decision.reason+":"+decision.allow;
+        if(!projection.equals(lastProtectionState) || decision.edge!=com.scenevibe.tvcompanionpoc.ad.AdProtectionController.Edge.NONE){
+            lastProtectionState=projection;Log.i("SceneVibeAdGuard","state="+decision.state+" reason="+decision.reason+" edge="+decision.edge
+                    +" enabled="+decision.enabled+" allow="+decision.allow+" adStarts="+decision.adStarts+" adEnds="+decision.adEnds
+                    +" elapsedMs="+SystemClock.elapsedRealtime()+" wallTimeMs="+System.currentTimeMillis());}
+        if(!decision.allow){if(!adGuardBlocked){adGuardBlocked=true;suspendRuntime("AD_PROTECTION");adSync.unavailable();}
+            position=-1;publish("AD_"+decision.state);}
+        else adGuardBlocked=false;
+    }
+
+    /** Expose protection state and explicit OFF escape without persisting a permit or preference. */
+    org.json.JSONObject adProtectionStatus(){var d=adProtection.status();org.json.JSONObject out=new org.json.JSONObject();
+        try{out.put("enabled",d.enabled).put("state",d.state.name()).put("allow",d.allow).put("reason",d.reason)
+                .put("adStarts",d.adStarts).put("adEnds",d.adEnds);}catch(Exception ignored){/* Closed constants only. */}return out;}
+
+    /** Correlate an owner's visible ad/content observation without treating it as an automatic signal. */
+    void annotateAdObservation(String marker){if(adObservation==null)throw new IllegalStateException("OBSERVATION_DISABLED");adObservation.annotate(marker);}
+
+    /** Expose the isolated experiment honestly; no automatic advertising protection is enabled. */
+    org.json.JSONObject adObservationStatus(){if(adObservation!=null)return adObservation.status();
+        org.json.JSONObject status=new org.json.JSONObject();try{status.put("enabled",false).put("candidate","UNCERTAIN")
+                .put("mode","OBSERVATION_ONLY_NO_COMMENT_GATE").put("reason","EXPERIMENT_DISABLED");}catch(Exception ignored){/* Closed constants only. */}return status;}
+
     /** Recheck the interruption gate at every delayed native effect, without retiring the admission itself. */
     private boolean effectsAllowed(){
         long now=SystemClock.elapsedRealtime();boolean fresh=lastAdSample!=null && now>=lastAdSample.capturedMs && now-lastAdSample.capturedMs<=2500;
-        return current() && (BuildConfig.ADSYNC_NONDESTRUCTIVE?fresh && adSync.status().allow:(!adSync.enabled() || adSync.status().allow));
+        return current() && adProtection.status().allow && (BuildConfig.ADSYNC_NONDESTRUCTIVE?fresh && adSync.status().allow:(!adSync.enabled() || adSync.status().allow));
     }
 
     /** Apply the historical native matcher and its established content-time policy without retiming events. */
@@ -116,6 +176,7 @@ final class CloudMultimediaSession {
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
+        if(!adProtection.status().allow){applyAdProtection(adProtection.status());return;}
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
         boolean usable=snapshot!=null && selected!=null && selected.eligible() && snapshot.positionMs>=0
                 && snapshot.updateAgeMs>=0 && Float.isFinite(snapshot.speed)
@@ -225,6 +286,7 @@ final class CloudMultimediaSession {
         if(!admission.current()){retireInvalidAuthority();return;}
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions()){main.postDelayed(watchdog,250);return;}
         if(!current()){retireInvalidAuthority();return;}
+        if(adProtection.status().enabled)applyAdProtection(adProtection.watch(SystemClock.elapsedRealtime()));
         if(lastCapture<0 || SystemClock.elapsedRealtime()-lastCapture>2500)unavailable("CAPTURE_TIMEOUT");
         auditAudio();if(pendingScene!=null && renderer.isWindowAttached() && shown.add(pendingScene))trace("TEXT_WINDOW_ATTACHED","count="+shown.size());
         if(active)main.postDelayed(watchdog,250);
@@ -312,6 +374,7 @@ final class CloudMultimediaSession {
         String invalid=admission.reference.invalidReason(SystemClock.elapsedRealtime());if(!invalid.isEmpty())return invalid;
         if(!Settings.canDrawOverlays(context))return "OVERLAY_PERMISSION_REQUIRED";
         if(!NotificationAccess.isGranted(context))return "MEDIA_PERMISSION_REQUIRED";
+        if(!adProtection.status().allow)return "AD_"+adProtection.status().state+"_"+adProtection.status().reason;
         if(lastAdSample==null)return "MEDIA_UNAVAILABLE";
         if(SystemClock.elapsedRealtime()-lastAdSample.capturedMs>2500)return "OBSERVATION_STALE";
         return adSync.status().allow?"RENDERER_PREFLIGHT":adSync.status().reason.name();
