@@ -11,7 +11,7 @@ on:
       - work/tv-cloud-client-001
       - kiro/tv-product-hardening-001
   pull_request:
-    branches: [main]
+    branches: [main, work/scenevibe-multiplatform-ad-observation-001]
   workflow_dispatch:
 
 permissions:

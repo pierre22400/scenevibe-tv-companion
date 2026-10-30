@@ -58,7 +58,7 @@ final class MultiPlatformAdObservationProbe implements MediaSessionProbe.Control
         MediaMetadata metadata;
         PlaybackState playback;
         boolean seen,destroyed,hadIdentity,identityChanged;
-        String oldId,oldTitle,oldSubtitle,lastCallback="";
+        String oldId,oldTitle,oldSubtitle,lastCallback="",lastPlayback="";
         long oldDuration=-1;
         long extrasReadAt=-1;
         String sessionExtras="ABSENT";
@@ -69,9 +69,13 @@ final class MultiPlatformAdObservationProbe implements MediaSessionProbe.Control
                 /** Retain the typed standardized flag at real metadata callbacks, without private values. */
                 @Override public void onMetadataChanged(MediaMetadata value){if(!current())return;metadataCallbacks++;
                     var marker=AdObservationProbe.readMarker(value);var type=markerType(value);String shape=marker+":"+type+":"+AdObservationProbe.metadataShape(value);
-                    if(!shape.equals(lastCallback)){lastCallback=shape;emit(journal.metadataCallback(number,marker,type,SystemClock.elapsedRealtime(),System.currentTimeMillis()));}}
+                    if(!shape.equals(lastCallback)){lastCallback=shape;emit(journal.metadataCallback(number,marker,type,value!=null,SystemClock.elapsedRealtime(),System.currentTimeMillis()));}}
                 /** State publication is a counter; PAUSED/BUFFERING never becomes advertising proof. */
-                @Override public void onPlaybackStateChanged(PlaybackState value){if(current())playbackCallbacks++;}
+                @Override public void onPlaybackStateChanged(PlaybackState value){if(!current())return;playbackCallbacks++;
+                    int state=value==null?0:value.getState();long position=value==null?-1:value.getPosition();
+                    float speed=value==null?Float.NaN:value.getPlaybackSpeed();long anchor=value==null?-1:value.getLastPositionUpdateTime();
+                    String shape=state+":"+position+":"+speed+":"+anchor;
+                    if(!shape.equals(lastPlayback)){lastPlayback=shape;emit(journal.playbackCallback(number,state,position,speed,anchor,SystemClock.elapsedRealtime(),System.currentTimeMillis()));}}
                 /** Unknown extra names and values are never exported. */
                 @Override public void onExtrasChanged(android.os.Bundle value){if(current())extrasCallbacks++;}
                 /** Custom event names/payloads are not a documented advertising protocol. */

@@ -92,6 +92,30 @@ public final class MultiPlatformObservationAndroidTest {
         publish(source,1L,PlaybackState.STATE_PLAYING,1000);capture(List.of(source));main(observer::onUnavailable);assertEquals(0,capture(List.of()).getInt("targetSessionCount"));
         publish(source,null,PlaybackState.STATE_PLAYING,2000);assertEquals(1,capture(List.of(source)).getInt("targetSessionCount"));main(observer::close);
         publish(source,1L,PlaybackState.STATE_PLAYING,3000);JSONObject status=capture(List.of(source));assertFalse(status.getBoolean("enabled"));assertEquals(0,status.getJSONArray("samples").length());assertEquals(0,transports.get());}
+    /** Real Android state callbacks expose pause/resume and session replacement without any target transport. */
+    @Test public void publicTransitionsRemainReadOnly() throws Exception {
+        MediaSession first=publisher();main(()->observer=MultiPlatformAdObservationProbe.ownedFixture(Platform.NETFLIX));
+        publish(first,null,PlaybackState.STATE_PAUSED,10000);capture(List.of(first));Thread.sleep(50);
+        publish(first,null,PlaybackState.STATE_PLAYING,10000);Thread.sleep(100);
+        JSONObject resumed=capture(List.of(first));JSONObject sample=resumed.getJSONArray("samples").getJSONObject(0);
+        assertTrue(sample.getInt("playbackCallbacks")>0);assertTrue(sample.getJSONArray("changes").toString().contains("PLAYBACK_RESUMED"));
+        assertEquals("STATE_CHANGED",sample.getJSONObject("comparison").getString("reason"));
+        MediaSession second=publisher();publish(second,null,PlaybackState.STATE_PLAYING,500);
+        JSONObject replacement=capture(List.of(second));assertEquals("FIRST_SESSION_SAMPLE",replacement.getJSONArray("samples").getJSONObject(0).getJSONObject("comparison").getString("reason"));
+        assertEquals(0,transports.get());proof("transitions",new JSONObject().put("scope","OWN_ANDROID_CALLBACKS_NOT_OFFICIAL_PLATFORM_OR_SONY").put("resumed",resumed).put("replacement",replacement).put("targetTransportCalls",transports.get()));
+    }
+    /** Framework metadata distinguishes unavailable data, absent keys, explicit zero/nonzero and wrong types. */
+    @Test public void publicMarkerTypesAreNotCoerced() throws Exception {
+        MediaSession source=publisher();main(()->observer=MultiPlatformAdObservationProbe.ownedFixture(Platform.DISNEY_PLUS));
+        publish(source,null,PlaybackState.STATE_PLAYING,1000);capture(List.of(source));
+        main(()->source.setMetadata(null));assertEquals("UNAVAILABLE",capture(List.of(source)).getJSONArray("samples").getJSONObject(0).getString("markerStatus"));
+        for(long value:new long[]{0,1}){publish(source,value,PlaybackState.STATE_PLAYING,2000);
+            assertEquals(value==0?"CONTENT":"AD",capture(List.of(source)).getJSONArray("samples").getJSONObject(0).getString("markerStatus"));}
+        main(()->source.setMetadata(new MediaMetadata.Builder().putString(AdObservationProbe.AD_KEY,"PRIVATE_WRONG_TYPE").build()));
+        JSONObject invalid=capture(List.of(source));assertEquals("INVALID",invalid.getJSONArray("samples").getJSONObject(0).getString("markerStatus"));
+        assertFalse(invalid.toString().contains("PRIVATE_WRONG_TYPE"));assertEquals(0,transports.get());
+        proof("types",new JSONObject().put("scope","OWN_ANDROID_METADATA_TYPES_NOT_OFFICIAL_PLATFORM_OR_SONY").put("invalid",invalid).put("targetTransportCalls",transports.get()));
+    }
     /** The existing foreground service can observe without a track, Cloud admission, or a second service. */
     @Test public void idleServicePhoneCampaignsDoNotActivateTrack() throws Exception {
         application=(MainActivity)InstrumentationRegistry.getInstrumentation().startActivitySync(new android.content.Intent(target,MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK|android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK));
@@ -109,6 +133,13 @@ public final class MultiPlatformObservationAndroidTest {
             assertTrue("Campaign activation refused: "+started,started.getJSONObject("multiObservation").getBoolean("enabled"));assertFalse(started.getBoolean("active"));assertFalse(started.getJSONObject("adProtection").getBoolean("enabled"));
             var marked=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multimark").put("value","AD_VISIBLE"),null).json();
             assertEquals(1,marked.getJSONObject("multiObservation").getInt("annotations"));assertFalse(marked.getBoolean("active"));
+            var other=platform==Platform.NETFLIX?Platform.DISNEY_PLUS:Platform.NETFLIX;
+            var refused=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multiobserve").put("value",other.name()),null).json();
+            assertEquals("CAMPAIGN_STOP_REQUIRED",refused.getString("diagnosticRefusal"));
+            assertEquals(platform.name(),refused.getJSONObject("multiObservation").getString("platform"));
+            LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multiobserve").put("value","OFF"),null);
+            var noCampaign=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multimark").put("value","AD_VISIBLE"),null).json();
+            assertEquals("OBSERVATION_DISABLED",noCampaign.getString("diagnosticRefusal"));
         }
         var stopped=LocalControlTestClient.send(port,"/command",token,new JSONObject().put("seq",++sequence).put("command","multiobserve").put("value","OFF"),null).json();assertFalse(stopped.getJSONObject("multiObservation").getBoolean("enabled"));assertFalse(TvFirst009TextServiceOwner.multimediaActive());
         proof("idle-service",new JSONObject().put("scope","REAL_ANDROID_SERVICE_PHONE_OWN_EMULATOR_NOT_SONY_OR_CLOUD").put("noTrackAdmission",true).put("platformCampaignsSeparated",true).put("primeProtectionNotActivated",true));

@@ -64,6 +64,7 @@ public final class MultiPlatformObservationLog {
     private int sequence,annotations,activeSessions,targetSessions;
     private long lastCapture=-1;
     private String selection="NO_TARGET_SESSION";
+    private String lastTransition="NONE";
 
     /** Select one platform; a new campaign never inherits another platform's samples. */
     public MultiPlatformObservationLog(Platform platform){this(platform,0);}
@@ -82,10 +83,20 @@ public final class MultiPlatformObservationLog {
         if(countsChanged || !next.equals(selection)){selection=next;out.add(event("SELECTION",now,wall).put("selection",selection)
                 .put("activeSessionCount",allCount).put("targetSessionCount",targetCount));}
         latest=new JSONArray();Map<Integer,Frame> retained=new LinkedHashMap<>();
+        java.util.Set<Integer> incoming=new java.util.LinkedHashSet<>();
+        for(Frame frame:frames){if(frame!=null && frame.session>0 && incoming.size()<4)incoming.add(frame.session);}
+        for(Integer session:previous.keySet())if(!incoming.contains(session)){
+            lastTransition="SESSION_DISAPPEARED";out.add(event(lastTransition,now,wall).put("session",session));}
+        if(previous.size()==1 && incoming.size()==1 && !previous.keySet().equals(incoming)){
+            lastTransition="SESSION_REPLACED";out.add(event(lastTransition,now,wall)
+                    .put("previousSession",previous.keySet().iterator().next()).put("session",incoming.iterator().next()));}
         for(Frame f:frames){if(retained.size()>=4)break;if(f==null || f.session<=0)continue;
-            Frame old=previous.get(f.session);JSONObject row=projection(f,old,now);latest.put(row);retained.put(f.session,f);
+            Frame old=previous.get(f.session);Scalars row=projection(f,old,now);latest.put(row);retained.put(f.session,f);
+            JSONArray changes=MultiPlatformTransitionFacts.changes(f,old,now);row.put("changes",changes);
+            if(changes.length()>0){lastTransition=changes.optString(changes.length()-1,"NONE");
+                out.add(event("PUBLIC_TRANSITION",now,wall).put("session",f.session).put("changes",changes).put("sample",row));}
             boolean changed=old==null || old.marker!=f.marker || old.markerType!=f.markerType || old.state!=f.state
-                    || old.metadataPresent!=f.metadataPresent || f.identityChanged || old.selected!=f.selected;
+                    || old.metadataPresent!=f.metadataPresent || f.identityChanged || old.selected!=f.selected || changes.length()>0;
             if(changed || now-logged.getOrDefault(f.session,-1000L)>=1000){
                 out.add(event("PUBLIC_SAMPLE",now,wall).put("sample",row));logged.put(f.session,now);}
         }
@@ -93,8 +104,19 @@ public final class MultiPlatformObservationLog {
     }
     /** Log a genuine callback's marker/type only; negative callbacks do not establish content return. */
     public JSONObject metadataCallback(int session,AdEvidenceDetector.Marker marker,ValueType type,long now,long wall){
+        return metadataCallback(session,marker,type,true,now,wall);
+    }
+    /** Add availability to the legacy callback envelope; an absent object differs from an absent key. */
+    public JSONObject metadataCallback(int session,AdEvidenceDetector.Marker marker,ValueType type,boolean available,long now,long wall){
         if(!enabled)return null;return event("METADATA_CALLBACK",now,wall).put("session",session)
-                .put("marker",marker.name()).put("markerType",type.name());
+                .put("marker",marker.name()).put("markerType",type.name())
+                .put("markerStatus",!available || type==ValueType.UNREADABLE?"UNAVAILABLE":marker.name());
+    }
+    /** Record an actual public playback callback; no estimate, custom event or transport is requested. */
+    public JSONObject playbackCallback(int session,int state,long position,float speed,long anchor,long now,long wall){
+        if(!enabled)return null;return event("PLAYBACK_CALLBACK",now,wall).put("session",session)
+                .put("state",stateName(state)).put("stateCode",state).put("rawMs",position)
+                .put("speed",Float.isFinite(speed)?(double)speed:JSONObject.NULL).put("updatedAtMs",anchor);
     }
     /** Missing access/session information is explicit uncertainty, never AD_END. */
     public JSONObject unavailable(long now,long wall){if(!enabled)return null;
@@ -114,7 +136,7 @@ public final class MultiPlatformObservationLog {
         return new Scalars().put("enabled",enabled).put("platform",platform.name()).put("package",platform.packageName).put("campaignStartedMs",startedMs)
                 .put("observedPlatform",targetSessions==0?"NONE":platform.name()).put("selection",selection)
                 .put("activeSessionCount",activeSessions).put("targetSessionCount",targetSessions)
-                .put("sampleAgeMs",age).put("fresh",enabled && targetSessions>0 && age>=0 && age<=2500).put("annotations",annotations)
+                .put("lastTransition",lastTransition).put("sampleAgeMs",age).put("fresh",enabled && targetSessions>0 && age>=0 && age<=2500).put("annotations",annotations)
                 .put("retainedSessionCount",latest.length()).put("truncated",targetSessions>latest.length())
                 .put("mode","OBSERVATION_ONLY_NO_COMMENT_AUTHORITY").put("conclusion","INSUFFICIENT_EVIDENCE")
                 .put("samples",copyLatest());}
@@ -128,12 +150,13 @@ public final class MultiPlatformObservationLog {
             .put("platform",platform.name()).put("package",platform.packageName).put("elapsedMs",now).put("wallTimeMs",wall)
             .put("scope","PUBLIC_SCALARS_NOT_PHYSICAL_AD_PROOF");}
     /** Export only allowlisted numeric/boolean/enumerated facts; unknown metadata names never survive. */
-    private JSONObject projection(Frame f,Frame old,long now){long elapsed=old==null?-1:f.capturedMs-old.capturedMs;
+    private Scalars projection(Frame f,Frame old,long now){long elapsed=old==null?-1:f.capturedMs-old.capturedMs;
         Scalars row=new Scalars().put("session",f.session).put("state",stateName(f.state)).put("stateCode",f.state)
                 .put("capturedAtMs",f.capturedMs).put("sampleAgeMs",now>=f.capturedMs?now-f.capturedMs:-1)
                 .put("rawMs",f.positionMs).put("estimatedMs",f.estimatedMs).put("anchorAgeMs",f.anchorAgeMs)
                 .put("durationMs",f.durationMs).put("speed",Float.isFinite(f.speed)?(double)f.speed:JSONObject.NULL)
-                .put("marker",f.marker.name()).put("markerType",f.markerType.name()).put("metadataPresent",f.metadataPresent)
+                .put("marker",f.marker.name()).put("markerType",f.markerType.name())
+                .put("markerStatus",!f.metadataPresent || f.markerType==ValueType.UNREADABLE?"UNAVAILABLE":f.marker.name()).put("metadataPresent",f.metadataPresent)
                 .put("identityPresent",f.identityPresent).put("identityChanged",f.identityChanged)
                 .put("identityCompatibility",f.compatibility.name()).put("selectedByHistoricalProbe",f.selected)
                 .put("metadataCallbacks",f.metadataCallbacks).put("playbackCallbacks",f.playbackCallbacks)
@@ -143,6 +166,7 @@ public final class MultiPlatformObservationLog {
         if(old!=null && elapsed>0){double delta=f.positionMs-(double)old.positionMs;
             row.put("captureDeltaMs",elapsed).put("rawDeltaMs",f.positionMs>=0 && old.positionMs>=0?delta:JSONObject.NULL)
                 .put("positionDiscontinuity",f.positionMs>=0 && old.positionMs>=0 && Math.abs(delta-elapsed*old.speed)>5000);}
+        row.put("comparison",MultiPlatformTransitionFacts.compare(f,old,now));
         return row;
     }
     /** Do not trust a publisher-controlled string even when the caller labels it an inventory. */

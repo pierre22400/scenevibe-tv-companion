@@ -38,10 +38,12 @@ async function main(){
     assert.equal(await page.locator('#ad-visible').isDisabled(),true);
     assert.equal(await page.locator('#multi-observe').getAttribute('aria-pressed'),'false');
     assert.equal(await page.locator('#multi-ad').isDisabled(),true);
+    for(const [id,label] of [['multi-ad','Je vois une publicité commencer'],['multi-content','Le film ou l’épisode reprend'],['multi-seek','Je viens d’avancer ou de reculer dans la vidéo'],['multi-pause','Je viens de mettre la vidéo en pause']])assert.equal(await page.locator(`#${id}`).innerText(),label);
     for(const platform of ['NETFLIX','DISNEY_PLUS']){
       await page.locator('#multi-platform').selectOption(platform);
       await page.locator('#multi-observe').click();await page.locator('#multi-observe[aria-pressed="true"]').waitFor();
       assert.match(await page.locator('#multi-observation').innerText(),new RegExp(platform));
+      assert.equal(await page.locator('#multi-platform').isDisabled(),true);
       assert.equal(await page.locator('#adguard').getAttribute('aria-pressed'),'false');
       assert.equal(await page.locator('#hold').getAttribute('aria-pressed'),'false');
       for(const [id,marker] of [['multi-ad','AD_VISIBLE'],['multi-content','CONTENT_VISIBLE'],['multi-seek','NORMAL_SEEK'],['multi-pause','NORMAL_PAUSE']]){
@@ -68,7 +70,7 @@ async function main(){
     child.stdin.write('7201000\n');await page.getByRole('status').filter({hasText:/Accès refusé|expiré|fetch|Failed to fetch/i}).waitFor();
     assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
     fs.writeFileSync(proof,JSON.stringify({result:'PASS',scope:'CHROMIUM_390x844_REAL_HTTP_EXACT_ASSETS_RECORDING_OWNER_NOT_ANDROID_OR_PRIME',pairing:true,channelSwitches:true,manualSuspendResume:true,
-      singlePauseActualState:true,optionalReplay:true,adProtectionIndependentSwitch:true,adObservationOptIn:true,multiPlatformSeparateCampaigns:true,multiLabelsDoNotArmGuard:true,ownerAnnotationsNotDetection:true,commandsAfter110Minutes:true,deadline120Minutes:true,clock:'INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS',noExternalRequests:true,noPersistentToken:true,pageErrors:errors.length},null,2));
+      singlePauseActualState:true,optionalReplay:true,adProtectionIndependentSwitch:true,adObservationOptIn:true,multiPlatformSeparateCampaigns:true,explicitHumanLabels:true,platformLockedWhileCampaignActive:true,multiLabelsDoNotArmGuard:true,ownerAnnotationsNotDetection:true,commandsAfter110Minutes:true,deadline120Minutes:true,clock:'INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS',noExternalRequests:true,noPersistentToken:true,pageErrors:errors.length},null,2));
   }finally{if(browser)await browser.close();child.stdin.end();child.kill('SIGTERM');try{fs.unlinkSync(info);}catch{}}
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

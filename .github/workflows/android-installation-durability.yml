@@ -2,7 +2,7 @@ name: Android installation disk and process durability
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, work/scenevibe-multiplatform-ad-observation-001]
   workflow_dispatch:
 
 permissions:

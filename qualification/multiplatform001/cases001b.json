@@ -1,0 +1,505 @@
+{
+  "provenance": "OWN_SYNTHETIC_NOT_OFFICIAL_PLATFORM_OR_SONY",
+  "cases": [
+    {
+      "name": "NORMAL_SEEK_RESET",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 50000,
+            "estimatedMs": 50000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 0,
+            "estimatedMs": 0,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NORMAL_PAUSE_RESUME",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 1,
+            "state": "PAUSED",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 0,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 3000,
+          "sequence": 3000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 3000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BUFFERING_NO_AD",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 1,
+            "state": "BUFFERING",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 0,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 3000,
+          "sequence": 3000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 3000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EPISODE_CHANGE",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 2,
+            "state": "PLAYING",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 0,
+            "estimatedMs": 0,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SIMULATED_EXPLICIT_AD",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "AD",
+            "markerType": "LONG"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 3000,
+          "sequence": 3000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 3000,
+            "sampleAgeMs": 0,
+            "rawMs": 11000,
+            "estimatedMs": 11000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SIMULATED_UNMARKED_AD",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 3000,
+          "sequence": 3000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 3000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "INVALID_MARKER",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "INVALID",
+            "markerType": "STRING"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SESSION_LOSS_DURING_FAKE_AD",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "AD",
+            "markerType": "LONG"
+          }
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "UNAVAILABLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000
+        },
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 3000,
+          "sequence": 3000,
+          "sample": {
+            "session": 2,
+            "state": "PLAYING",
+            "capturedAtMs": 3000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPARATE_PLATFORMS",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        },
+        {
+          "platform": "DISNEY_PLUS",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 20,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 2000,
+          "sequence": 2000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 2000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AD_DATA_UNAVAILABLE",
+      "records": [
+        {
+          "platform": "NETFLIX",
+          "event": "PUBLIC_SAMPLE",
+          "campaignStartedMs": 10,
+          "publisherScope": "OWN_FIXTURE_NOT_REAL_PLATFORM",
+          "elapsedMs": 1000,
+          "sequence": 1000,
+          "sample": {
+            "session": 1,
+            "state": "PLAYING",
+            "capturedAtMs": 1000,
+            "sampleAgeMs": 0,
+            "rawMs": 10000,
+            "estimatedMs": 10000,
+            "anchorAgeMs": 0,
+            "speed": 1,
+            "marker": "ABSENT",
+            "markerType": "ABSENT",
+            "metadataPresent": false,
+            "markerStatus": "UNAVAILABLE"
+          }
+        }
+      ]
+    }
+  ]
+}
