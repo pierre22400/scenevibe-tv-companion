@@ -46,11 +46,15 @@ class CaptureTests(unittest.TestCase):
         script = Path(__file__).resolve().parents[2] / 'scripts/Collect-SceneVibeMultiPlatform.ps1'
         with tempfile.TemporaryDirectory(prefix='scenevibe owned capture ') as directory:
             base = Path(directory)
+            capture_records = self.records() + [
+                {'platform': 'NETFLIX', 'event': 'ENABLED', 'sequence': 1, 'campaignStartedMs': 30, 'elapsedMs': 3000},
+                {'platform': 'NETFLIX', 'event': 'PUBLIC_SAMPLE', 'sequence': 2, 'campaignStartedMs': 30, 'elapsedMs': 3100, 'sample': {'session': 1, 'marker': 'ABSENT', 'markerType': 'ABSENT', 'state': 'PLAYING'}}
+            ]
             if os.name == 'nt':
                 adb = base / 'owned adb.exe'
                 source = base / 'owned-adb.cs'
                 expected = ['-s', 'OWN_SIMULATED_SERIAL', 'logcat', '-v', 'raw', '-s', 'SceneVibeMultiAd:I', '*:S']
-                code = 'using System; public class OwnedAdb { public static int Main(string[] args) { string[] expected = new string[] {' + ','.join(json.dumps(arg) for arg in expected) + '}; if(args.Length != expected.Length) return 3; for(int i=0;i<args.Length;i++) if(args[i]!=expected[i]) return 4; ' + ''.join('Console.WriteLine(' + json.dumps(json.dumps(row)) + ');' for row in self.records()) + 'return 0; } }'
+                code = 'using System; public class OwnedAdb { public static int Main(string[] args) { string[] expected = new string[] {' + ','.join(json.dumps(arg) for arg in expected) + '}; if(args.Length != expected.Length) return 3; for(int i=0;i<args.Length;i++) if(args[i]!=expected[i]) return 4; ' + ''.join('Console.WriteLine(' + json.dumps(json.dumps(row)) + ');' for row in capture_records) + 'return 0; } }'
                 source.write_text(code, encoding='utf-8')
                 compiler = base / 'compile-owned-adb.ps1'
                 compiler.write_text('param([string]$SourcePath,[string]$OutputPath)\n$ErrorActionPreference="Stop"\nAdd-Type -TypeDefinition ([IO.File]::ReadAllText($SourcePath)) -OutputAssembly $OutputPath -OutputType ConsoleApplication\n', encoding='utf-8')
@@ -59,12 +63,15 @@ class CaptureTests(unittest.TestCase):
             else:
                 adb = base / 'owned adb'
                 adb.write_text('#!/usr/bin/env python3\nimport sys\nassert sys.argv[1:] == ["-s","OWN_SIMULATED_SERIAL","logcat","-v","raw","-s","SceneVibeMultiAd:I","*:S"]\n' +
-                               '\n'.join('print(' + repr(json.dumps(row)) + ')' for row in self.records()) + '\n', encoding='utf-8')
+                               '\n'.join('print(' + repr(json.dumps(row)) + ')' for row in capture_records) + '\n', encoding='utf-8')
                 adb.chmod(0o700)
             output = base / 'capture output'
-            for platform in ['NETFLIX', 'DISNEY_PLUS', 'NETFLIX']:
+            for platform, pinned, expected_campaign in [('NETFLIX', None, 30), ('DISNEY_PLUS', None, 20), ('NETFLIX', 10, 10)]:
                 before = {p: p.read_bytes() for p in output.glob('*')} if output.exists() else {}
-                result = subprocess.run([shell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(script), '-Platform', platform, '-DeviceSerial', 'OWN_SIMULATED_SERIAL', '-AdbPath', str(adb), '-OutputDirectory', str(output)], capture_output=True, text=True, timeout=30)
+                arguments = [shell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(script), '-Platform', platform, '-DeviceSerial', 'OWN_SIMULATED_SERIAL', '-AdbPath', str(adb), '-OutputDirectory', str(output)]
+                if pinned is not None:
+                    arguments += ['-CampaignStartedMs', str(pinned)]
+                result = subprocess.run(arguments, capture_output=True, text=True, timeout=30)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 for path, data in before.items():
                     self.assertEqual(path.read_bytes(), data, 'Previous capture overwritten')
@@ -73,6 +80,9 @@ class CaptureTests(unittest.TestCase):
                 rows = [json.loads(line) for line in new_json[0].read_text(encoding='utf-8').splitlines()]
                 self.assertTrue(rows)
                 self.assertEqual({row['platform'] for row in rows}, {platform})
+                self.assertEqual({row['campaignStartedMs'] for row in rows}, {expected_campaign})
+                context_path = new_json[0].with_suffix('.context.json')
+                self.assertEqual(json.loads(context_path.read_text(encoding='utf-8'))['campaignStartedMs'], expected_campaign)
                 self.assertFalse(new_json[0].read_bytes().startswith(b'\xef\xbb\xbf'))
 
 

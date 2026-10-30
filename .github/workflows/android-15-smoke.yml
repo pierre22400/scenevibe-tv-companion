@@ -38,7 +38,7 @@ name: Android 15 (API 35) platform smoke (NOT Android TV)
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, work/scenevibe-multiplatform-ad-observation-001]
 
 permissions:
   contents: read

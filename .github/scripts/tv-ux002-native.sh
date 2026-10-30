@@ -23,7 +23,7 @@ for image in prepared panel keypad monitor on-focus off-focus; do
     adb exec-out run-as com.scenevibe.tvcompanionpoc cat "files/tvux002-$image.png" > "tv-ux002-native/$image.png"
   fi
 done
-for proof in input service runtime003 runtime004-replay runtime004-toggle runtime004-fifteen runtime004-port runtime004-calibration ad-detection ad-detection-service ad002-text ad002-audio ad002-upcoming ad002-restart multi-netflix multi-disney_plus multi-idle-service multi-prime; do
+for proof in input service runtime003 runtime004-replay runtime004-toggle runtime004-fifteen runtime004-port runtime004-calibration ad-detection ad-detection-service ad002-text ad002-audio ad002-upcoming ad002-restart multi-netflix multi-disney_plus multi-idle-service multi-prime multi-transitions multi-types; do
   if adb shell run-as com.scenevibe.tvcompanionpoc test -f "files/tvux002-$proof-proof.json"; then
     adb exec-out run-as com.scenevibe.tvcompanionpoc cat "files/tvux002-$proof-proof.json" > "tv-ux002-native/$proof-proof.json"
   fi

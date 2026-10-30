@@ -288,7 +288,7 @@ final class TvFirst009TextServiceOwner {
                 JSONObject state=localStatus().put("result","Commande refusée ; état SceneVibe conservé.");
                 if("multiobserve".equals(command) || "multimark".equals(command)){
                     String code=refused.getMessage();
-                    if(!java.util.Arrays.asList("MEDIA_ACCESS_REQUIRED","LOCAL_CONTROL_REQUIRED","MULTIMEDIA_OR_IDLE_SERVICE_REQUIRED","SERVICE_CLOSING","OBSERVATION_DISABLED","ANNOTATION_REFUSED").contains(code))code="DIAGNOSTIC_UNAVAILABLE";
+                    if(!java.util.Arrays.asList("MEDIA_ACCESS_REQUIRED","LOCAL_CONTROL_REQUIRED","MULTIMEDIA_OR_IDLE_SERVICE_REQUIRED","SERVICE_CLOSING","OBSERVATION_DISABLED","ANNOTATION_REFUSED","CAMPAIGN_STOP_REQUIRED").contains(code))code="DIAGNOSTIC_UNAVAILABLE";
                     state.put("diagnosticRefusal",code).put("result","Observation refusée : "+code+" · état SceneVibe conservé.");
                     Log.w("SceneVibeMultiAd","event=COMMAND_REFUSED code="+code);
                 }answer.set(state);
@@ -323,11 +323,15 @@ final class TvFirst009TextServiceOwner {
                         "Protection publicitaire OFF · référence v25, commentaires possibles pendant une publicité."):"Service arrêté ; protection indisponible.";break;
             case "multiobserve":
                 if("OFF".equals(value))detachMultiObservation();
-                else startMultiObservation(com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Platform.valueOf(value));
+                else {
+                    var requestedPlatform=com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Platform.valueOf(value);
+                    if(multiObservation!=null && multiCampaign!=requestedPlatform)throw new IllegalStateException("CAMPAIGN_STOP_REQUIRED");
+                    if(multiObservation==null)startMultiObservation(requestedPlatform);
+                }
                 feedback="Observation multi-plateforme : "+value+" · lecture seule, aucune autorité sur les commentaires.";break;
             case "multimark":
                 if(multiObservation==null)throw new IllegalStateException("OBSERVATION_DISABLED");
-                multiObservation.annotate(value);feedback="Annotation de campagne séparée ; aucun effet sur la restitution.";break;
+                multiObservation.annotate(value);feedback="Annotation enregistrée ; aucun effet sur la restitution.";break;
             case "calibrate":try{AdSyncController.Calibration calibrated=controls.calibrate(AdSyncController.parseFilmTime(value),false);return localStatus().put("result",calibrated.message);}
                 catch(IllegalArgumentException invalid){return localStatus().put("result",AdSyncController.Calibration.FORMAT_INVALID.message);}
             case "panel":
