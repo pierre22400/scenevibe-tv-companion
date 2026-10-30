@@ -80,6 +80,13 @@ public final class MultiPlatformTransitionTest {
         log.capture(List.of(missing),1,1,1000,100000);assertEquals("UNAVAILABLE",log.status(1000).getJSONArray("samples").getJSONObject(0).getString("markerStatus"));
         Frame absent=frame(1,3,2000,1001,1f,0);absent.metadataPresent=true;
         log.capture(List.of(absent),1,1,2000,101000);assertEquals("ABSENT",log.status(2000).getJSONArray("samples").getJSONObject(0).getString("markerStatus"));
+        for(ValueType type:new ValueType[]{ValueType.NULL,ValueType.STRING,ValueType.BOOLEAN,ValueType.OTHER,ValueType.UNREADABLE}){
+            Frame invalid=new Frame(1,3,3000,2001,2001,1f,0,1000000,Marker.INVALID,type);invalid.metadataPresent=true;
+            log.capture(List.of(invalid),1,1,3000,102000);
+            JSONObject row=log.status(3000).getJSONArray("samples").getJSONObject(0);
+            assertEquals("INVALID",row.getString("marker"));assertEquals(type.name(),row.getString("markerType"));
+            assertEquals(type==ValueType.UNREADABLE?"UNAVAILABLE":"INVALID",row.getString("markerStatus"));
+        }
     }
     /** Genuine callback envelopes carry only public numbers and are disabled with their campaign. */
     @Test public void callbacksAndAnnotationsRemainScoped() throws Exception {
