@@ -29,7 +29,7 @@ for proof in input service runtime003 runtime004-replay runtime004-toggle runtim
   fi
 done
 adb logcat -d -v brief -s SceneVibeControls:I SceneVibeAdSync:I SceneVibeMedia:I SceneVibeText009:I SceneVibeCache:I SceneVibeRuntime:I SceneVibeAdProbe:I SceneVibeAdGuard:I SceneVibeMultiAd:I AndroidRuntime:E > tv-ux002-native/local-diagnostics.log
-grep -q '^OK (49 tests)' tv-ux002-native/instrumentation.log
+grep -q '^OK (51 tests)' tv-ux002-native/instrumentation.log
 grep -q '^INSTRUMENTATION_CODE: -1$' tv-ux002-native/instrumentation.log
 # Each phase must pass separately; force-stop is restricted to the disposable emulator app above.
 adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.CloudBridge003eRestartSeedTest com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee tv-ux002-native/restart-seed.log
