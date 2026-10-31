@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fixed public explanations; no platform or account data is interpolated into UI exports. -->
+<resources>
+  <string name="app_name">SceneVibe Probe 003 — privé</string>
+  <string name="service_description">Diagnostic volontaire et local : lecture minimale des événements et nœuds du seul profil choisi. Aucun contrôle du lecteur, aucune capture, aucun réseau. Connexion désarmée ; collecte limitée à dix minutes et 2 Mo. Cette sonde ne détecte ni ne bloque les publicités. Active le service uniquement pour un essai autorisé, puis désactive-le dans Android.</string>
+  <item name="fixture_button" type="id" />
+  <item name="fixture_label" type="id" />
+</resources>
