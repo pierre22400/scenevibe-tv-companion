@@ -1,0 +1,8 @@
+/** Independent diagnostic build; never includes the Companion project or its plugins. */
+pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = 'SceneVibeAccessibilityProbe004'
+include ':app'

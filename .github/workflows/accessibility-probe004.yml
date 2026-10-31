@@ -1,0 +1,74 @@
+name: Accessibility Probe 004 — isolated software qualification
+
+# Dedicated project only; no Companion build, production secrets, player or physical access.
+on:
+  push:
+    branches: [work/scenevibe-accessibility-probe-004]
+    paths: ['diagnostics/accessibility-probe004/**', '.github/workflows/accessibility-probe004.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Core software scenarios and protected-file boundary checks
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics/accessibility-probe004/proofs
+          bash diagnostics/accessibility-probe004/tests/core-checks.sh | tee diagnostics/accessibility-probe004/proofs/core.log
+          python3 -B -m unittest discover -s diagnostics/accessibility-probe004/tests -p 'test_*.py' -v 2>&1 | tee diagnostics/accessibility-probe004/proofs/boundaries.log
+      - name: Toolchain, standalone APK and Android test APK
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          gradle -p diagnostics/accessibility-probe004 --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --stacktrace
+          cp diagnostics/accessibility-probe004/app/build/outputs/apk/debug/app-debug.apk diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk > diagnostics/accessibility-probe004/proofs/signature.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk > diagnostics/accessibility-probe004/proofs/apk-badging.txt
+          sha256sum diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk > diagnostics/accessibility-probe004/proofs/APK-SHA256.txt
+          gradle -p diagnostics/accessibility-probe004 --no-daemon --console=plain :app:signingReport > diagnostics/accessibility-probe004/proofs/signing-report.txt
+          diagnostic_keystore="$(sed -n 's/^Store: //p' diagnostics/accessibility-probe004/proofs/signing-report.txt | head -1)"
+          test -f "$diagnostic_keystore"
+          keytool -exportcert -alias androiddebugkey -keystore "$diagnostic_keystore" -storepass android -file diagnostics/accessibility-probe004/proofs/diagnostic-signing-cert.der
+          git rev-parse HEAD > diagnostics/accessibility-probe004/proofs/COMMIT.txt
+      - name: Enable KVM for the disposable owned emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android TV API31 own-control events, roots and process restart
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          arch: x86
+          profile: tv_1080p
+          disk-size: 2048M
+          disable-animations: true
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: bash diagnostics/accessibility-probe004/tests/emulator-checks.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-accessibility-probe004-${{ github.run_id }}
+          path: |
+            diagnostics/accessibility-probe004/proofs/
+            diagnostics/accessibility-probe004/app/build/reports/lint-results-debug.*
+            diagnostics/accessibility-probe004/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          if-no-files-found: error
+          retention-days: 14

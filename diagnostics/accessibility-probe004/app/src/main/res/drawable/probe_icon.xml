@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static launcher artwork; no overlay or runtime drawing over another application. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+  android:width="320dp" android:height="180dp" android:viewportWidth="320" android:viewportHeight="180">
+  <path android:fillColor="#EAF2FA" android:pathData="M0,0h320v180h-320z" />
+  <path android:fillColor="#16456B" android:pathData="M80,40h160v20h-160zM80,80h120v20h-120zM80,120h160v20h-160z" />
+</vector>
