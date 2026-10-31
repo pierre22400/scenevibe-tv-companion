@@ -26,7 +26,11 @@ final class EmulatorServiceControl {
     static ProbeService connect(Instrumentation instrumentation) throws IOException {
         requireEmulator();
         UiAutomation ui = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        command(ui, "settings put secure accessibility_enabled 0");
         command(ui, "settings delete secure enabled_accessibility_services");
+        long disconnectedDeadline = SystemClock.uptimeMillis() + 15_000;
+        while (ProbeService.current() != null && SystemClock.uptimeMillis() < disconnectedDeadline) SystemClock.sleep(50);
+        if (ProbeService.current() != null) throw new IOException("Previous emulator service did not disconnect");
         command(ui, "settings put secure enabled_accessibility_services com.scenevibe.accessibilityprobe004/com.scenevibe.accessibilityprobe004.ProbeService");
         command(ui, "settings put secure accessibility_enabled 1");
         long deadline = SystemClock.uptimeMillis() + 15_000;

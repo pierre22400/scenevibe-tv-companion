@@ -76,7 +76,7 @@ public final class ProbeActivity extends Activity implements View.OnClickListene
         setContentView(scroll);
     }
 
-    /** Refresh only on voluntary entry; no polling service or background UI loop is introduced. */
+    /** Refresh only on voluntary entry; the campaign worker does not run a background UI loop. */
     @Override public void onResume() { super.onResume(); refresh(); }
 
     /** Create a readable text block in this app's own Activity. */

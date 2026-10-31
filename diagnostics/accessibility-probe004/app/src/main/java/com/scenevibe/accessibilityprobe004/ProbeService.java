@@ -34,6 +34,7 @@ public final class ProbeService extends AccessibilityService {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean busy = new AtomicBoolean();
     private final AtomicLong callbacks = new AtomicLong();
+    private final AtomicLong periodicCallbacks = new AtomicLong();
     private volatile ProbeController controller;
     private JournalStore store;
     private ObservationCadence cadence;
@@ -74,7 +75,7 @@ public final class ProbeService extends AccessibilityService {
     public boolean arm(ProbeProfile profile, ObservationCadence.Mode mode) {
         if (mode == null || (mode == ObservationCadence.Mode.EVENT_ONLY_CONTROL && profile != ProbeProfile.OWN_CONTROL)
             || busy.get() || controller == null || !controller.arm(profile)) return false;
-        projection.clear(); history = new SurveyEngine.History(); callbacks.set(0); snapshotSequence = 0;
+        projection.clear(); history = new SurveyEngine.History(); callbacks.set(0); periodicCallbacks.set(0); snapshotSequence = 0;
         lastEventSurvey = lastAcceptedSurvey = Long.MIN_VALUE / 2; cadence = new ObservationCadence(mode, clock.elapsed());
         configure(true); handler.postDelayed(new Expiry(this), ProbeLimits.DURATION_MS);
         AccessibilityServiceInfo info = getServiceInfo();
@@ -101,7 +102,7 @@ public final class ProbeService extends AccessibilityService {
         try {
             if (event == null) { core.record(new SafeRow(SafeRow.Kind.CALLBACK_NULL)); return; }
             if (!core.accepts(event.getPackageName())) return;
-            callbacks.incrementAndGet();
+            callbacks.incrementAndGet(); periodicCallbacks.incrementAndGet();
             SafeRow.Quality quality = core.eventQuality(event.getEventTime());
             core.record(new SafeRow(SafeRow.Kind.EVENT).number("eventTimeUptimeMs", event.getEventTime())
                 .number("eventType", event.getEventType()).number("contentChangeTypes", event.getContentChangeTypes())
@@ -254,7 +255,11 @@ public final class ProbeService extends AccessibilityService {
         }
         /** Request a single scan and plan the next future period without catch-up. */
         @Override public void run() {
-            if (service.controller != core || !core.generationActive(generation)) return;
+            if (service.controller != core) return;
+            if (!core.generationActive(generation)) {
+                if (!core.active()) service.stop(core.lastReason());
+                return;
+            }
             service.requestSurvey(null, SafeRow.Trigger.PERIODIC_TICK, due);
             service.scheduleTick(core, generation);
         }
@@ -284,6 +289,7 @@ public final class ProbeService extends AccessibilityService {
                 core.recordFor(generation, new SafeRow(SafeRow.Kind.TICK_START).number("snapshotId", id).category("trigger", trigger)
                     .number("tickStartElapsedMs", start).number("tickStartUptimeMs", uptime)
                     .number("schedulingDelayMs", Math.max(0, uptime - due)).number("callbacksSincePrevious", service.callbacks.getAndSet(0))
+                    .number("callbacksSincePreviousTick", trigger == SafeRow.Trigger.PERIODIC_TICK ? service.periodicCallbacks.getAndSet(0) : 0)
                     .flag("automaticAdDecision", false));
                 core.observationState(generation, true);
                 outcome = service.explore(core, generation, id, trigger, event, history);

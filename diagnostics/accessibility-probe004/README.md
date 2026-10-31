@@ -22,7 +22,7 @@ Cette instrumentation répond à l'angle mort de Probe003 : sans callback, aucun
 
 ## Journal et confidentialité
 
-UTF-8 sans BOM, UUID de campagne technique et séquences, horloges de réception uptime/elapsedRealtime/murale ; eventTimeUptimeMs séparé. Ne pas soustraire ces bases entre elles. Les ticks ont snapshotId, trigger, début/fin, retard, compteur de callbacks, CPU du processus, PSS et tas natif. Les opérations déjà engagées à l'arrêt sont explicitement non préemptibles.
+UTF-8 sans BOM, UUID de campagne technique et séquences, horloges de réception uptime/elapsedRealtime/murale ; eventTimeUptimeMs séparé. Ne pas soustraire ces bases entre elles. Les enregistrements TICK_START/TICK_END encadrent toute exploration ; trigger distingue INITIAL, ANDROID_EVENT et PERIODIC_TICK. Ils portent snapshotId, début/fin, retard, callbacks depuis l’exploration précédente et, pour PERIODIC_TICK, callbacks depuis le tick périodique précédent, CPU du processus, PSS et tas natif. Les opérations déjà engagées à l'arrêt sont explicitement non préemptibles.
 
 NODE décrit rôle/ID public catégorisé, enfants, profondeur, parent local, visibilité/focus/sélection/activation, présence et catégories fermées de texte/description, fraîcheur et plage numérique. Aucun texte libre, titre, compte, URL, token ou hash stable de contenu n'est exporté. Password interdit l'accès aux payloads texte/description/plage. Les classes et IDs inconnus ne sont pas exportés librement.
 

@@ -175,7 +175,11 @@ public final class AndroidProbeTest {
         /** Store the fixed test profile. */
         Arm(ProbeService service, ProbeProfile profile) { this.service = service; this.profile = profile; }
         /** Require successful arming; no player transport is invoked. */
-        @Override public void run() { assertTrue(service.arm(profile)); }
+        @Override public void run() {
+            assertSame("Test retained a stale service instance", ProbeService.current(), service);
+            assertTrue("Arm refused: connected=" + service.controller().connected() + " active=" + service.controller().active()
+                + " busy=" + service.observing(), service.arm(profile));
+        }
     }
     /** Main-thread explicit stop action. */
     private static final class Stop implements Runnable {
