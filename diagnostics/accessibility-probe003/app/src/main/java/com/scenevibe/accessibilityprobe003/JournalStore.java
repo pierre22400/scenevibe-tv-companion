@@ -50,7 +50,9 @@ public final class JournalStore {
     /** Flush/close this store; absence of a terminal row after process death remains detectable. */
     public void close() throws IOException {
         if (output != null) {
-            try { output.flush(); } finally { output.close(); output = null; }
+            FileOutputStream closing = output;
+            output = null;
+            try { closing.flush(); } finally { closing.close(); }
         }
     }
 

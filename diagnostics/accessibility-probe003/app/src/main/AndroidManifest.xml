@@ -6,6 +6,7 @@
   <application
     android:allowBackup="false"
     android:fullBackupContent="false"
+    android:dataExtractionRules="@xml/probe_data_extraction"
     android:label="@string/app_name"
     android:icon="@drawable/probe_icon"
     android:banner="@drawable/probe_icon"

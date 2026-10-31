@@ -50,6 +50,20 @@ public final class TextProjection {
         return SafeRow.Role.UNKNOWN;
     }
 
+    /** Classify only public IDs reported in the mandate or owned fixture IDs; unknown IDs stay private. */
+    public SafeRow.ViewKind viewKind(CharSequence value, ProbeProfile profile) {
+        if (value == null) return SafeRow.ViewKind.NONE;
+        if (profile == ProbeProfile.NETFLIX) {
+            if ("com.netflix.ninja:id/gibbonMain".contentEquals(value)) return SafeRow.ViewKind.GIBBON_MAIN;
+            if ("com.netflix.ninja:id/playerContainer0".contentEquals(value)) return SafeRow.ViewKind.PLAYER_CONTAINER;
+            if ("com.netflix.ninja:id/player0".contentEquals(value)) return SafeRow.ViewKind.PLAYER;
+            if ("com.netflix.ninja:id/gibbon".contentEquals(value)) return SafeRow.ViewKind.GIBBON;
+        }
+        if (profile == ProbeProfile.OWN_CONTROL && ("com.scenevibe.accessibilityprobe003:id/fixture_label".contentEquals(value)
+            || "com.scenevibe.accessibilityprobe003:id/fixture_button".contentEquals(value))) return SafeRow.ViewKind.OWN_FIXTURE;
+        return SafeRow.ViewKind.OTHER;
+    }
+
     /** Forget all transient identifiers at each campaign boundary or OFF. */
     public void clear() { refs.clear(); }
 }

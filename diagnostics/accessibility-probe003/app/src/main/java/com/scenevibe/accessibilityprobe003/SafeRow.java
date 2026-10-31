@@ -11,10 +11,11 @@ public final class SafeRow {
     public enum Kind { ARMED, EVENT, CALLBACK_NULL, SNAPSHOT, COALESCED, ACCESS_FAILURE, SESSION_END }
     public enum Origin { EVENT_TEXT, RECORD, SOURCE_NODE, ACTIVE_ROOT, WINDOW_ROOT, NONE }
     public enum Quality { OK, NULL_SOURCE, NULL_ROOT, REFRESH_FAILED, STALE_EVENT, FUTURE_EVENT,
-        UNAVAILABLE, TRUNCATED, COALESCED_SOURCE, FOREIGN_PACKAGE, CLOCK_INVALID }
+        UNAVAILABLE, TRUNCATED, ROOT_ONLY, COALESCED_SOURCE, FOREIGN_PACKAGE, CLOCK_INVALID }
     public enum Reason { OWNER_STOP, TIME_LIMIT, BYTE_LIMIT, INTERRUPTED, DISCONNECTED, RECONNECTED,
         PROCESS_DESTROYED, IO_FAILURE, CLOCK_INVALID }
     public enum Role { TEXT, BUTTON, IMAGE, CONTAINER, GIBBON, UNKNOWN }
+    public enum ViewKind { GIBBON_MAIN, PLAYER_CONTAINER, PLAYER, GIBBON, OWN_FIXTURE, OTHER, NONE }
     public enum Label { NONE, OTHER, AD_LABEL_CANDIDATE, COUNTDOWN_CANDIDATE, PASSWORD_SKIPPED, TOO_LONG }
 
     public final Kind kind;
@@ -34,7 +35,8 @@ public final class SafeRow {
 
     /** Reject unsafe keys and duplicate fields so projections have an unambiguous schema. */
     private void put(String key, Object value) {
-        if (!key.matches("[a-z][A-Za-z0-9]{0,39}") || values.containsKey(key)) {
+        if (!key.matches("[a-z][A-Za-z0-9]{0,39}") || values.containsKey(key)
+            || key.matches("schemaVersion|runId|sequence|profile|package|provenance|kind|receivedUptimeMs|receivedElapsedRealtimeMs|wallTimeMs")) {
             throw new IllegalArgumentException("Invalid scalar field");
         }
         values.put(key, value);

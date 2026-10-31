@@ -60,6 +60,16 @@ final class NodeSurvey {
         } catch (RuntimeException failure) {
             errors++; node.recycle(); return;
         }
+        try {
+            controller.record(new SafeRow(SafeRow.Kind.SNAPSHOT).category("origin", origin)
+            .flag("sourceAvailable", origin == SafeRow.Origin.SOURCE_NODE)
+            .category("quality", SafeRow.Quality.OK).number("windowId", node.getWindowId())
+            .category("classCategory", projection.role(node.getClassName()))
+            .category("viewKind", projection.viewKind(node.getViewIdResourceName(), controller.profile()))
+            .number("classRef", projection.reference(node.getClassName()))
+            .number("viewRef", projection.reference(node.getViewIdResourceName()))
+            .flag("activeNodeFocused", node.isFocused()).flag("activeNodeSelected", node.isSelected()));
+        } catch (RuntimeException failure) { errors++; node.recycle(); return; }
         visit(node, 0, origin);
     }
 

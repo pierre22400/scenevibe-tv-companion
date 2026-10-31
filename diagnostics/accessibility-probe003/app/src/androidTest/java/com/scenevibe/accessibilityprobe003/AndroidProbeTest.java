@@ -39,9 +39,8 @@ public final class AndroidProbeTest {
         instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         Intent intent = new Intent(instrumentation.getTargetContext(), ProbeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         activity = (ProbeActivity) instrumentation.startActivitySync(intent);
-        long deadline = SystemClock.uptimeMillis() + 15_000;
-        while (ProbeService.current() == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-        service = ProbeService.current(); assertNotNull("Owned service did not connect", service);
+        service = EmulatorServiceControl.connect(instrumentation);
+        assertNotNull("Owned service did not connect", service);
         instrumentation.runOnMainSync(new Reset(service));
     }
 
@@ -123,6 +122,15 @@ public final class AndroidProbeTest {
             }
         }
         assertTrue("Large fixture did not exercise the node limit", truncated);
+    }
+
+    /** A narrow but deep owned tree must report its depth limit without requiring 200 nodes. */
+    @Test public void depthBudgetAndTruncation() throws Exception {
+        instrumentation.runOnMainSync(new DeepFixture(activity));
+        SystemClock.sleep(500);
+        instrumentation.runOnMainSync(new Arm(service, ProbeProfile.OWN_CONTROL));
+        instrumentation.runOnMainSync(new RootSurvey(service));
+        assertTrue(read().contains("\"truncated\":true"));
     }
 
     /** Reconnect the Android adapter and confirm it resets the live mask and volatile campaign. */
@@ -211,6 +219,36 @@ public final class AndroidProbeTest {
                 TextView child = new TextView(activity); child.setText("SYNTHETIC CONTROL");
                 child.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES); parent.addView(child);
             }
+        }
+    }
+
+    /** Own-app deep hierarchy for the depth ceiling. */
+    private static final class DeepFixture implements Runnable {
+        private final ProbeActivity activity;
+        /** Store only the owned Activity. */
+        DeepFixture(ProbeActivity activity) { this.activity = activity; }
+        /** Add deterministic visible-accessibility containers, without touching a platform app. */
+        @Override public void run() {
+            LinearLayout parent = (LinearLayout) activity.findViewById(R.id.fixture_label).getParent();
+            for (int i = 0; i < 20; i++) {
+                LinearLayout child = new LinearLayout(activity);
+                child.setOrientation(LinearLayout.VERTICAL);
+                child.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+                parent.addView(child); parent = child;
+            }
+            TextView leaf = new TextView(activity); leaf.setText("SYNTHETIC DEEP CONTROL"); parent.addView(leaf);
+        }
+    }
+
+    /** Root-only traversal of the actual owned accessibility hierarchy, not a fabricated NodeInfo. */
+    private static final class RootSurvey implements Runnable {
+        private final ProbeService service;
+        /** Store the owned service. */
+        RootSurvey(ProbeService service) { this.service = service; }
+        /** Read the active own root and emit bounded results for assertions. */
+        @Override public void run() {
+            NodeSurvey survey = new NodeSurvey(service.controller(), new TextProjection());
+            survey.root(service.getRootInActiveWindow(), SafeRow.Origin.ACTIVE_ROOT); survey.finish();
         }
     }
 }

@@ -13,12 +13,10 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public final class RestartSeedTest {
     /** Arm own control and leave a durable row; the next runner must not restore that arm state. */
-    @Test public void seedVolatileState() {
+    @Test public void seedVolatileState() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
-        long end = SystemClock.uptimeMillis() + 15_000;
-        while (ProbeService.current() == null && SystemClock.uptimeMillis() < end) SystemClock.sleep(100);
-        assertNotNull(ProbeService.current());
+        assertNotNull(EmulatorServiceControl.connect(instrumentation));
         instrumentation.runOnMainSync(new Seed());
     }
     /** Seed action on the owned service thread. */

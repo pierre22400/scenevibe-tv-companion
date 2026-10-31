@@ -72,6 +72,7 @@ public final class ProbeService extends AccessibilityService {
             .number("notificationTimeoutMs", info.notificationTimeout)
             .number("packageCount", info.packageNames == null ? 0 : info.packageNames.length)
             .number("capabilities", info.getCapabilities()).flag("configurationSnapshot", true));
+        if (controller.allowExplore(-1)) explore(null, -1, SafeRow.Quality.ROOT_ONLY);
         return controller.active();
     }
 
@@ -104,7 +105,7 @@ public final class ProbeService extends AccessibilityService {
             }
             if (quality != SafeRow.Quality.OK || !controller.active()) return;
             int id = event.getWindowId();
-            if (controller.allowExplore(id)) explore(event, id);
+            if (controller.allowExplore(id)) explore(event, id, SafeRow.Quality.OK);
             else {
                 controller.record(new SafeRow(SafeRow.Kind.COALESCED).number("windowId", id)
                     .category("quality", SafeRow.Quality.COALESCED_SOURCE));
@@ -134,14 +135,15 @@ public final class ProbeService extends AccessibilityService {
     }
 
     /** Read scoped event source and window roots under a shared 200-node, depth-12 budget. */
-    private void explore(AccessibilityEvent event, int admittedWindow) {
+    private void explore(AccessibilityEvent event, int admittedWindow, SafeRow.Quality sourceQuality) {
         if (!controller.active()) return;
         NodeSurvey survey = new NodeSurvey(controller, projection);
         Set<Integer> done = new HashSet<>();
         done.add(admittedWindow);
+        List<AccessibilityWindowInfo> windows = null;
         try {
             if (event != null) survey.root(event.getSource(), SafeRow.Origin.SOURCE_NODE);
-            else controller.record(new SafeRow(SafeRow.Kind.SNAPSHOT).category("quality", SafeRow.Quality.COALESCED_SOURCE)
+            else controller.record(new SafeRow(SafeRow.Kind.SNAPSHOT).category("quality", sourceQuality)
                 .flag("sourceAvailable", false));
             if (survey.remaining()) {
                 AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -150,7 +152,7 @@ public final class ProbeService extends AccessibilityService {
                     done.add(root.getWindowId()); survey.root(root, SafeRow.Origin.ACTIVE_ROOT);
                 } else root.recycle();
             }
-            List<AccessibilityWindowInfo> windows = getWindows();
+            windows = getWindows();
             int limit = Math.min(windows.size(), ProbeLimits.WINDOWS);
             for (int i = 0; i < limit && survey.remaining(); i++) {
                 AccessibilityWindowInfo window = windows.get(i);
@@ -158,19 +160,26 @@ public final class ProbeService extends AccessibilityService {
                 if (!done.contains(id) && !controller.allowExplore(id)) continue;
                 done.add(id);
                 AccessibilityNodeInfo root = window.getRoot();
-                if (root != null && controller.profile().accepts(root.getPackageName())) {
-                    controller.record(new SafeRow(SafeRow.Kind.SNAPSHOT).number("windowId", id)
-                        .flag("active", window.isActive()).flag("focused", window.isFocused())
-                        .flag("accessibilityFocused", window.isAccessibilityFocused()));
+                try {
+                    if (root != null && controller.profile().accepts(root.getPackageName())) {
+                        controller.record(new SafeRow(SafeRow.Kind.SNAPSHOT).number("windowId", id)
+                            .flag("active", window.isActive()).flag("focused", window.isFocused())
+                            .flag("accessibilityFocused", window.isAccessibilityFocused()));
+                    }
+                } catch (RuntimeException failure) {
+                    if (root != null) root.recycle();
+                    throw failure;
                 }
                 survey.root(root, SafeRow.Origin.WINDOW_ROOT);
             }
             controller.record(new SafeRow(SafeRow.Kind.SNAPSHOT).number("interactiveWindowCount", windows.size())
                 .flag("windowsTruncated", windows.size() > limit));
-            for (AccessibilityWindowInfo window : windows) window.recycle();
         } catch (RuntimeException failure) {
             controller.record(new SafeRow(SafeRow.Kind.ACCESS_FAILURE).category("quality", SafeRow.Quality.UNAVAILABLE));
-        } finally { survey.finish(); }
+        } finally {
+            if (windows != null) for (AccessibilityWindowInfo window : windows) window.recycle();
+            survey.finish();
+        }
     }
 
     /** Stop at an Android interruption; never attempt to resume collection automatically. */
@@ -207,7 +216,8 @@ public final class ProbeService extends AccessibilityService {
         /** Explore current roots if still admitted; the original event source is explicitly unavailable. */
         @Override public void run() {
             service.pending.remove(windowId);
-            if (service.controller.active() && service.controller.allowExplore(windowId)) service.explore(null, windowId);
+            if (service.controller.active() && service.controller.allowExplore(windowId))
+                service.explore(null, windowId, SafeRow.Quality.COALESCED_SOURCE);
             if (!service.controller.active()) service.stop(service.controller.lastReason());
         }
     }

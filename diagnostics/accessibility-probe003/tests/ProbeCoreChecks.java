@@ -172,6 +172,15 @@ public final class ProbeCoreChecks {
         require(p.role("private.title.class") == SafeRow.Role.UNKNOWN); require(p.role(null) == SafeRow.Role.UNKNOWN);
     }
 
+    /** Only owner-reported public IDs receive readable categories and only in the correct profile. */
+    public static void checkPublicIds() {
+        TextProjection p = new TextProjection();
+        require(p.viewKind("com.netflix.ninja:id/gibbonMain", ProbeProfile.NETFLIX) == SafeRow.ViewKind.GIBBON_MAIN);
+        require(p.viewKind("com.netflix.ninja:id/gibbonMain", ProbeProfile.DISNEY_PLUS) == SafeRow.ViewKind.OTHER);
+        require(p.viewKind("private@example.test", ProbeProfile.NETFLIX) == SafeRow.ViewKind.OTHER);
+        require(p.viewKind(null, ProbeProfile.NETFLIX) == SafeRow.ViewKind.NONE);
+    }
+
     /** A second platform campaign gets a fresh file/run and its own terminal profile. */
     public static void checkCampaignSeparation() throws Exception {
         Rig r = rig(); r.arm(); r.stop(); File netflix = r.store.latest();
@@ -184,6 +193,8 @@ public final class ProbeCoreChecks {
     /** A raw string value cannot enter a row; invalid/duplicate scalar field names are rejected. */
     public static void checkSafeSchema() {
         boolean rejected = false; try { new SafeRow(SafeRow.Kind.EVENT).number("private\"field", 1); }
+        catch (IllegalArgumentException expected) { rejected = true; } require(rejected);
+        rejected = false; try { new SafeRow(SafeRow.Kind.EVENT).number("sequence", 999); }
         catch (IllegalArgumentException expected) { rejected = true; } require(rejected);
         rejected = false; try { new SafeRow(SafeRow.Kind.EVENT).number("value", 1).number("value", 2); }
         catch (IllegalArgumentException expected) { rejected = true; } require(rejected);
