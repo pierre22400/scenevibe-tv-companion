@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Content capability is static. Runtime starts with eventTypes=0 until voluntary arming. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+  android:accessibilityEventTypes="typeAllMask"
+  android:packageNames="com.scenevibe.accessibilityprobe004"
+  android:accessibilityFeedbackType="feedbackGeneric"
+  android:notificationTimeout="0"
+  android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
+  android:canRetrieveWindowContent="true"
+  android:isAccessibilityTool="false"
+  android:description="@string/service_description" />
