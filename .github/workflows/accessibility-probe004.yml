@@ -40,7 +40,10 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk > diagnostics/accessibility-probe004/proofs/signature.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk > diagnostics/accessibility-probe004/proofs/apk-badging.txt
           sha256sum diagnostics/accessibility-probe004/proofs/scenevibe-accessibility-probe004-private-diagnostic.apk > diagnostics/accessibility-probe004/proofs/APK-SHA256.txt
-          keytool -exportcert -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android -file diagnostics/accessibility-probe004/proofs/diagnostic-signing-cert.der
+          gradle -p diagnostics/accessibility-probe004 --no-daemon --console=plain :app:signingReport > diagnostics/accessibility-probe004/proofs/signing-report.txt
+          diagnostic_keystore="$(sed -n 's/^Store: //p' diagnostics/accessibility-probe004/proofs/signing-report.txt | head -1)"
+          test -f "$diagnostic_keystore"
+          keytool -exportcert -alias androiddebugkey -keystore "$diagnostic_keystore" -storepass android -file diagnostics/accessibility-probe004/proofs/diagnostic-signing-cert.der
           git rev-parse HEAD > diagnostics/accessibility-probe004/proofs/COMMIT.txt
       - name: Enable KVM for the disposable owned emulator
         run: |
