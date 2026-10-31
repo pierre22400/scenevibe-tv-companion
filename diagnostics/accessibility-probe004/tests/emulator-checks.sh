@@ -15,10 +15,10 @@ failure=0
 for test_class in AutonomousProbeTest AndroidProbeTest RestartSeedTest; do
   adb -s "$serial" shell am instrument -w -e disableAnalytics true -e class "com.scenevibe.accessibilityprobe004.$test_class" \
     com.scenevibe.accessibilityprobe004.test/androidx.test.runner.AndroidJUnitRunner | tee "$proof/$test_class.log"
-  if [ "$test_class" = AndroidProbeTest ]; then count=8; elif [ "$test_class" = AutonomousProbeTest ]; then count=6; else count=1; fi
+  if [ "$test_class" = AndroidProbeTest ]; then count=8; elif [ "$test_class" = AutonomousProbeTest ]; then count=7; else count=1; fi
   if ! test "$(grep -c "OK ($count test" "$proof/$test_class.log")" = 1; then failure=1; fi
 done
-for evidence in positive-event-only positive-periodic; do
+for evidence in positive-event-only positive-periodic positive-owner-buttons; do
   adb -s "$serial" exec-out run-as com.scenevibe.accessibilityprobe004 cat "files/$evidence.jsonl" > "$proof/$evidence.jsonl" || failure=1
 done
 adb -s "$serial" shell am force-stop com.scenevibe.accessibilityprobe004

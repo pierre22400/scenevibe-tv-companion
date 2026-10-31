@@ -62,6 +62,22 @@ public final class AutonomousProbeTest {
         stopAndSave("positive-periodic.jsonl");
     }
 
+    /** The actual manual-control buttons reset each campaign and mark the delayed silent mutation. */
+    @Test public void delayedOwnerControlIsRepeatable() throws Exception {
+        instrumentation.runOnMainSync(() -> {
+            activity.silentFixture().setSilentPhase(1);
+            activity.getWindow().getDecorView().findViewWithTag("Armer le profil sélectionné").performClick();
+        });
+        assertTrue(service.controller().active()); SystemClock.sleep(700); waitIdle();
+        assertTrue("Manual arm did not reset the owned fixture", read().contains("\"rangeCurrent\":10.0"));
+        instrumentation.runOnMainSync(() -> activity.getWindow().getDecorView()
+            .findViewWithTag("Contrôle silencieux — changer les nœuds dans 5 secondes").performClick());
+        long deadline = SystemClock.uptimeMillis() + 9000;
+        while (!candidateAfterMark(read(), true) && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+        String log = read(); assertTrue(candidateAfterMark(log, true)); assertEquals(0, nativeAfterMark(log));
+        stopAndSave("positive-owner-buttons.jsonl");
+    }
+
     /** Missing target roots still produce periodic start/end and explicit unavailable results. */
     @Test public void emptyTargetStillProducesTicks() throws Exception {
         instrumentation.runOnMainSync(() -> assertTrue(service.arm(ProbeProfile.NETFLIX)));

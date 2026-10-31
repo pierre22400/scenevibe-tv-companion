@@ -98,6 +98,8 @@ public final class ProbeActivity extends Activity implements View.OnClickListene
             if (view == settings) {
                 if (service == null || !service.controller().active()) startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             } else if (view == arm) {
+                if (profiles.getSelectedItem() == ProbeProfile.OWN_CONTROL && (service == null || !service.controller().active()))
+                    silentFixture.setSilentPhase(0);
                 if (service == null || !service.arm((ProbeProfile) profiles.getSelectedItem(), (ObservationCadence.Mode) modes.getSelectedItem())) {
                     status.setText("Armement refusé : service absent, déjà actif ou stockage indisponible."); return;
                 }
@@ -170,8 +172,11 @@ public final class ProbeActivity extends Activity implements View.OnClickListene
         }
         /** Mutate only the virtual synthetic provider if its original campaign is still active. */
         @Override public void run() {
-            if (core.generationActive(generation) && core.profile() == ProbeProfile.OWN_CONTROL)
+            if (core.generationActive(generation) && core.profile() == ProbeProfile.OWN_CONTROL) {
+                core.recordFor(generation, new SafeRow(SafeRow.Kind.CONTROL_MARK).number("syntheticPhase", 1)
+                    .flag("automaticAdDecision", false));
                 activity.silentFixture.setSilentPhase(1);
+            }
         }
     }
 
