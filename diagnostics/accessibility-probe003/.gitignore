@@ -1,0 +1,6 @@
+# Local build products and private diagnostic keys are not reference source.
+.gradle/
+**/build/
+local.properties
+*.keystore
+*.jks

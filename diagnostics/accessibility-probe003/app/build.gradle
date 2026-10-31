@@ -1,0 +1,28 @@
+plugins { id 'com.android.application' }
+/** Platform-only application; AndroidX/JUnit exist exclusively in software test APKs. */
+android {
+    namespace 'com.scenevibe.accessibilityprobe003'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.scenevibe.accessibilityprobe003'
+        minSdk 31
+        targetSdk 35
+        versionCode 1
+        versionName '0.0.3-private-diagnostic'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    buildTypes {
+        debug { debuggable true }
+        release { debuggable false; minifyEnabled false; signingConfig null }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint { abortOnError true }
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
