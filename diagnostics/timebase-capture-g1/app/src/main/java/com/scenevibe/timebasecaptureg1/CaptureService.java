@@ -54,6 +54,7 @@ public final class CaptureService extends Service {
     private int width,height,received,rejected,closedImages,markers;
     private boolean middleMagenta;
     private boolean started;
+    private boolean consentGranted;
     private final String attempt=UUID.randomUUID().toString();
 
     /** New service instances never restore a token or previous arm state. */
@@ -102,6 +103,7 @@ public final class CaptureService extends Service {
             generation=policy.arm(SystemClock.elapsedRealtime(),delay);
             consent=intent.getParcelableExtra("consent");
             if(consent==null||intent.getIntExtra("code",0)!=android.app.Activity.RESULT_OK) { finish("CONSENT_DENIED"); return; }
+            consentGranted=true;
             worker.postDelayed(()->begin(),delay);
             worker.postDelayed(()->finish("IMAGE_TIMEOUT"),delay+CapturePolicy.MAX_CAPTURE_MS);
         } catch(RuntimeException e) { finish("ROI_INVALID"); }
@@ -185,12 +187,10 @@ public final class CaptureService extends Service {
                 .put("bufferReceivedElapsedMs",bufferElapsed).put("closedElapsedMs",SystemClock.elapsedRealtime())
                 .put("imageTimestampBase","NOT_ASSUMED_NOT_USED").put("received",received).put("rejected",rejected)
                 .put("imagesClosed",closedImages).put("markerMatches",markers).put("middleMagenta",middleMagenta)
-                .put("secureSurfaceDrawn",FixtureActivity.surfaceDrawn).put("sequence",1)
+                .put("secureSurfaceDrawn",FixtureActivity.surfaceDrawn).put("sequence",1).put("consent",consentGranted?"GRANTED":"UNKNOWN")
                 .put("releaseErrors",errors).put("resourcesClosed",errors==0).put("imagePersisted",false);
             lastProof=j;
-            File file=new File(getFilesDir(),"g1.jsonl");
-            if(file.length()>1024*1024&&!file.delete())throw new java.io.IOException("JOURNAL_LIMIT");
-            try(FileOutputStream stream=new FileOutputStream(file,true)) { stream.write((j.toString()+"\n").getBytes(StandardCharsets.UTF_8)); }
+            if(!LocalJournal.append(this,j))lastResult="JOURNAL_UNAVAILABLE";
         } catch(Exception e) { lastResult="JOURNAL_UNAVAILABLE"; }
         active=false; live=null; stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); thread.quitSafely();
     }

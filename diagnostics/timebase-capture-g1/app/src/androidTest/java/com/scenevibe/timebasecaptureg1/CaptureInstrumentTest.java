@@ -106,6 +106,8 @@ public final class CaptureInstrumentTest {
     @Test public void deniedConsent() throws Exception {
         open(CapturePolicy.Mode.PUBLIC);device.pressBack();Thread.sleep(500);
         assertFalse(CaptureService.active);assertEquals("CONSENT_DENIED",CaptureService.lastResult);
+        assertEquals("CONSENT_DENIED",CaptureService.lastProof.getString("outcome"));
+        assertTrue(new java.io.File(context.getFilesDir(),"g1.jsonl").isFile());
     }
 
     /** Stopping an armed attempt closes it before an image and never retries. */
@@ -130,7 +132,8 @@ public final class CaptureInstrumentTest {
         for(int i=0;i<100;i++) {
             Object service=live.get(null);
             if(service!=null)own=(android.media.projection.MediaProjection)projection.get(service);
-            if(own!=null)break;Thread.sleep(50);
+            if(own!=null&&"ACQUIRING_PATTERN_NOT_READY".equals(CaptureService.lastResult))break;
+            own=null;Thread.sleep(50);
         }
         assertNotNull("Owned projection did not start",own);own.stop();
         JSONObject j=terminal();assertEquals(j.toString(),"SESSION_REVOKED",j.getString("outcome"));assertClosed(j);

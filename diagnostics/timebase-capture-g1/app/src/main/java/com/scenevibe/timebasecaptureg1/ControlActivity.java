@@ -74,14 +74,17 @@ public final class ControlActivity extends Activity {
             MediaProjectionManager m=getSystemService(MediaProjectionManager.class);
             Intent consent=Build.VERSION.SDK_INT>=34?m.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay()):m.createScreenCaptureIntent();
             startActivityForResult(consent,101);
-        } catch(RuntimeException e) { pending=null; result.setText("ROI_INVALID / PROJECTION_UNAVAILABLE"); }
+        } catch(RuntimeException e) { pending=null; LocalJournal.rejected(this,"ROI_INVALID_OR_PROJECTION_UNAVAILABLE",mode);result.setText(CaptureService.lastResult); }
     }
 
     /** Consume consent exactly once, then open only our fixture; cancellation never starts capture. */
     @Override protected void onActivityResult(int request,int code,Intent data) {
         super.onActivityResult(request,code,data);
         if(request!=101)return;
-        if(code!=RESULT_OK||data==null||pending==null) { CaptureService.lastResult="CONSENT_DENIED"; result.setText("CONSENT_DENIED"); pending=null; return; }
+        if(code!=RESULT_OK||data==null||pending==null) {
+            LocalJournal.rejected(this,code!=RESULT_OK?"CONSENT_DENIED":"CONSENT_DISCARDED",mode);
+            result.setText(CaptureService.lastResult); pending=null; return;
+        }
         Intent capture=new Intent(this,CaptureService.class).putExtra("consent",data).putExtra("code",code)
             .putExtra("mode",mode.name()).putExtra("roi",pending).putExtra("delay",pendingDelay);
         pending=null;
