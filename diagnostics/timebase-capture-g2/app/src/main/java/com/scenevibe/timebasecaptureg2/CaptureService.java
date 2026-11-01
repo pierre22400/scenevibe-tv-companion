@@ -135,7 +135,7 @@ public final class CaptureService extends Service {
     private void openDisplay() {
         if(closed.get())return;
         String refusal=SessionMemory.policy.bufferRejection(generation,SystemClock.elapsedRealtime());
-        if(refusal!=null) { decision(refusal,0,SystemClock.elapsedRealtime(),generation);finish(refusal);return; }
+        if(refusal!=null) { decision(refusal,null,SystemClock.elapsedRealtime(),generation);finish(refusal);return; }
         if(SessionMemory.preparationVisible) { finish("PREPARATION_RETURNED");return; }
         try {
             reader=ImageReader.newInstance(width,height,PixelFormat.RGBA_8888,2);
@@ -162,10 +162,10 @@ public final class CaptureService extends Service {
         try {
             if(closed.get())return;
             long now=SystemClock.elapsedRealtime();
-            if(source!=reader) { decision("SOURCE_READER_MISMATCH",0,now,callbackGeneration);outcome="SOURCE_READER_MISMATCH";return; }
-            if(callbackGeneration!=readerGeneration||callbackGeneration!=generation) { decision("STALE_GENERATION",0,now,callbackGeneration);outcome="STALE_GENERATION";return; }
-            if(display==null||display.getDisplay()==null||display.getDisplay().getDisplayId()!=displayId) { decision("DISPLAY_BINDING_MISMATCH",0,now,callbackGeneration);outcome="DISPLAY_BINDING_MISMATCH";return; }
-            image=source.acquireLatestImage();if(image==null){decision("NO_IMAGE_AVAILABLE",0,now,callbackGeneration);return;}received++;
+            if(source!=reader) { decision("SOURCE_READER_MISMATCH",null,now,callbackGeneration);outcome="SOURCE_READER_MISMATCH";return; }
+            if(callbackGeneration!=readerGeneration||callbackGeneration!=generation) { decision("STALE_GENERATION",null,now,callbackGeneration);outcome="STALE_GENERATION";return; }
+            if(display==null||display.getDisplay()==null||display.getDisplay().getDisplayId()!=displayId) { decision("DISPLAY_BINDING_MISMATCH",null,now,callbackGeneration);outcome="DISPLAY_BINDING_MISMATCH";return; }
+            image=source.acquireLatestImage();if(image==null){decision("NO_IMAGE_AVAILABLE",null,now,callbackGeneration);return;}received++;
             now=SystemClock.elapsedRealtime();long stamp=image.getTimestamp();
             if(received>240) { decision("BUFFER_LIMIT",stamp,now,callbackGeneration);outcome="IMAGE_TIMEOUT";return; }
             String refusal=SessionMemory.policy.bufferRejection(callbackGeneration,now);
@@ -183,7 +183,7 @@ public final class CaptureService extends Service {
             new Handler(getMainLooper()).postDelayed(()->SessionMemory.roi.get(generation,SystemClock.elapsedRealtime()),CapturePolicy.ROI_MS);
             outcome="FRAME_READY_NOT_CLASSIFIED";
             decision("ACCEPTED",stamp,now,callbackGeneration);
-        } catch(RuntimeException e) { decision("IMAGE_READ_OR_CROP_FAILURE",0,SystemClock.elapsedRealtime(),callbackGeneration);outcome="IMAGE_INVALID"; }
+        } catch(RuntimeException e) { decision("IMAGE_READ_OR_CROP_FAILURE",null,SystemClock.elapsedRealtime(),callbackGeneration);outcome="IMAGE_INVALID"; }
         finally {
             if(crop!=null)Arrays.fill(crop,0);
             if(image!=null){image.close();closedImages++;}
@@ -191,13 +191,14 @@ public final class CaptureService extends Service {
         }
     }
 
+    // A nullable timestamp distinguishes no observed Image from an actually observed zero timestamp.
     /** Keep bounded scalar decisions and aggregate rejection causes; never log or retain diagnostic pixels. */
-    private void decision(String reason,long stamp,long now,long callbackGeneration) {
+    private void decision(String reason,Long stamp,long now,long callbackGeneration) {
         if(!"ACCEPTED".equals(reason)){rejected++;rejectionCounts.put(reason,rejectionCounts.getOrDefault(reason,0)+1);}
         if(bufferDecisions.length()>=16){decisionsTruncated++;return;}
         try {
             bufferDecisions.put(new JSONObject().put("index",received).put("decision",reason).put("receiptElapsedMs",now)
-                .put("sinceTriggerMs",now-requestElapsed).put("imageTimestampNs",stamp).put("callbackGeneration",callbackGeneration)
+                .put("sinceTriggerMs",now-requestElapsed).put("imageTimestampNs",stamp==null?JSONObject.NULL:stamp).put("callbackGeneration",callbackGeneration)
                 .put("readerGeneration",readerGeneration).put("virtualDisplayId",displayId));
         } catch(org.json.JSONException e){decisionLogErrors++;}
     }
