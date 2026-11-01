@@ -103,7 +103,7 @@ public final class CaptureInstrumentTest {
         Thread.sleep(300);assertNotNull(button("Effacer et fermer"));
         assertTrue(SessionMemory.label(context,"A",true));
         String journal=new String(java.nio.file.Files.readAllBytes(new java.io.File(context.getFilesDir(),"g2.jsonl").toPath()),java.nio.charset.StandardCharsets.UTF_8);
-        assertTrue(journal.contains("SIMULATED_A"));device.pressBack();Thread.sleep(300);assertNull(SessionMemory.roi.get(SessionMemory.policy.generation,SystemClock.elapsedRealtime()));
+        assertTrue(journal.contains("SIMULATED_A"));button("Effacer et fermer").click();Thread.sleep(300);assertNull(SessionMemory.roi.get(SessionMemory.policy.generation,SystemClock.elapsedRealtime()));
     }
 
     /** Ordinary UI remains visible above our separately protected synthetic surface. */
@@ -113,7 +113,7 @@ public final class CaptureInstrumentTest {
     @Test public void secureWindow() throws Exception {open(CapturePolicy.Mode.SECURE);accept();depart();JSONObject j=terminal();closed(j);assertEquals(0,matches());}
 
     /** Real consent refusal never starts the service. */
-    @Test public void deniedConsent() throws Exception {open(CapturePolicy.Mode.PUBLIC);device.pressBack();Thread.sleep(500);assertFalse(CaptureService.active);assertEquals("CONSENT_DENIED",CaptureService.lastResult);assertFalse(SessionMemory.policy.active());}
+    @Test public void deniedConsent() throws Exception {open(CapturePolicy.Mode.PUBLIC);device.pressBack();Thread.sleep(500);assertFalse(CaptureService.active);assertEquals("CONSENT_DENIED",CaptureService.lastResult);assertFalse(SessionMemory.policy.active());assertTrue(SessionMemory.label(context,"C",false));assertFalse(SessionMemory.label(context,"A",false));}
 
     /** Owner stop while waiting terminates before buffers and never restarts. */
     @Test public void stopBeforeImage() throws Exception {open(CapturePolicy.Mode.PUBLIC);accept();SessionMemory.cancel(context);JSONObject j=terminal();closed(j);assertEquals("OWNER_STOP",j.getString("outcome"));assertEquals(0,j.getInt("received"));Thread.sleep(3200);assertFalse(CaptureService.active);}

@@ -20,12 +20,13 @@ final class SessionMemory {
     static void cancel(Context c) { policy.close();roi.clear();CaptureService.cancel(c); }
 
     /** Record only an explicit human label; synthetic labels can never become physical outcomes. */
-    static boolean label(Context c,String value,boolean comparable) {
-        if(CaptureService.active||policy.active()||!comparable)return false;
-        if((value.equals("A")||value.equals("B"))&&roi.get(policy.generation,SystemClock.elapsedRealtime())==null)return false;
+    static synchronized boolean label(Context c,String value,boolean comparable) {
+        if(CaptureService.active||policy.active()||CaptureService.lastProof==null)return false;
+        if((value.equals("A")||value.equals("B"))&&(!comparable||roi.get(policy.generation,SystemClock.elapsedRealtime())==null))return false;
         if(!value.equals("A")&&!value.equals("B")&&!value.equals("C")&&!value.equals("INCONCLUSIVE"))return false;
         try {
             JSONObject row=new JSONObject().put("kind","OWNER_LABEL_NOT_AUTOMATIC_SIGNAL").put("generation",policy.generation)
+                .put("attempt",CaptureService.lastProof.optString("attempt")).put("sourceCommit",BuildConfig.SOURCE_COMMIT)
                 .put("label",synthetic?"SIMULATED_"+value:value).put("context",synthetic?"OWN_SYNTHETIC":"OWNER_DECLARED_CONTEXT")
                 .put("elapsedMs",SystemClock.elapsedRealtime()).put("uptimeMs",SystemClock.uptimeMillis()).put("wallMs",System.currentTimeMillis());
             return LocalJournal.append(c,row);

@@ -30,6 +30,7 @@ final class LocalJournal {
     static void rejected(Context context,String category,CapturePolicy.Mode mode) {
         try {
             JSONObject row=new JSONObject().put("attempt",UUID.randomUUID().toString()).put("sequence",1)
+                .put("generation",SessionMemory.policy.generation).put("sourceCommit",BuildConfig.SOURCE_COMMIT)
                 .put("provenance","OWN_CONTROL_CONSENT_OR_VALIDATION_NOT_CAPTURE")
                 .put("mode",mode.name()).put("api",android.os.Build.VERSION.SDK_INT)
                 .put("outcome",category).put("receivedElapsedMs",SystemClock.elapsedRealtime())

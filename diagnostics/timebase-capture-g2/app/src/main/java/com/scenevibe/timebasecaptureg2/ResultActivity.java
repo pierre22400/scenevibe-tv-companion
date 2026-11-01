@@ -52,6 +52,9 @@ public final class ResultActivity extends Activity {
     /** Clear visible and backing pixels before dropping references; no bitmap is persisted. */
     private void wipe() {expiry.removeCallbacksAndMessages(null);if(image!=null)image.setImageDrawable(null);if(bitmap!=null){bitmap.eraseColor(0);bitmap.recycle();bitmap=null;}SessionMemory.roi.clear();}
 
+    /** Losing foreground erases pixels before transition animations or a retained stopped instance. */
+    @Override protected void onPause() {wipe();super.onPause();}
+
     /** Leaving inspection erases it even when Android retains the stopped Activity instance. */
     @Override protected void onStop() {wipe();super.onStop();}
 
