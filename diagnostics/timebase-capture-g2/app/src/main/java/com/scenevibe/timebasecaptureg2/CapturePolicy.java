@@ -5,7 +5,7 @@ package com.scenevibe.timebasecaptureg2;
  * Every time argument is elapsedRealtime milliseconds. No Android token is stored here.
  */
 public final class CapturePolicy {
-    public static final long MAX_CAPTURE_MS=10000, ROI_MS=30000, MAX_DELAY_MS=60000;
+    public static final long MAX_CAPTURE_MS=10000, ROI_MS=300000, MAX_DELAY_MS=60000;
     public static final long INITIALIZATION_MS=250;
     public static final int MAX_DIMENSION=4096;
     public enum Mode { PUBLIC, MIXED, SECURE }

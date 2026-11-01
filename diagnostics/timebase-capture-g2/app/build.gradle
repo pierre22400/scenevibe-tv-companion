@@ -9,8 +9,8 @@ android {
         applicationId 'com.scenevibe.timebasecaptureg2'
         minSdk 31
         targetSdk 35
-        versionCode 2
-        versionName '0.0.2-g2-003a-private-diagnostic'
+        versionCode 3
+        versionName '0.0.3-g2-003b-roi-5min-private-diagnostic'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     buildTypes {

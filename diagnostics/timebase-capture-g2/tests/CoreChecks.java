@@ -36,8 +36,8 @@ public final class CoreChecks {
         rejects(()->PixelProbe.pixel(b,0,0,2,2,4,7));rejects(()->PixelProbe.crop(ByteBuffer.allocate(2),2,2,4,16,new int[]{0,0,2,2}));
         rejects(()->PixelProbe.crop(b,2,2,4,16,new int[]{-1,0,2,2}));
         RoiLease lease=new RoiLease();int[] pixels={1,2,3,4};lease.put(7,pixels,2,2,1000);
-        check(lease.get(8,1001)==null);check(lease.get(7,30999)==pixels);check(lease.get(7,31000)==null);check(Arrays.equals(pixels,new int[4]));
-        pixels=new int[]{5};lease.put(8,pixels,1,1,32000);lease.clear();check(pixels[0]==0);check(lease.get(8,32001)==null);
+        check(lease.get(8,1001)==null);check(lease.get(7,31000)==pixels);check(lease.get(7,300999)==pixels);check(lease.get(7,301000)==null);check(Arrays.equals(pixels,new int[4]));
+        pixels=new int[]{5};lease.put(8,pixels,1,1,302000);lease.clear();check(pixels[0]==0);check(lease.get(8,302001)==null);
         rejects(()->lease.put(9,new int[1],2,2,0));check(new RoiLease().get(8,0)==null);
         int[] pattern=new int[10000];for(int i=0;i<4;i++)pattern[7500+(int)(100*(.2+i*.2))]=PixelProbe.COLORS[i];
         check(PixelProbe.matches(pattern,100,100)==4);check(PixelProbe.matches(new int[10000],100,100)==0);

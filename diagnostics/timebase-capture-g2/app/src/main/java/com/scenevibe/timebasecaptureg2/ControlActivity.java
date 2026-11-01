@@ -35,7 +35,7 @@ public final class ControlActivity extends Activity {
         super.onCreate(state);
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(40,20,40,20);
         TextView info=new TextView(this);info.setTextSize(20);
-        info.setText("PRIVATE DIAGNOSTIC — NOT FOR DISTRIBUTION\nG2 préparation. Initialement désarmé. Aucun essai Sony/Netflix autorisé par cette livraison.\nCapture système du display entier transitoire ; seule la ROI est copiée. Aucune image sauvegardée, réseau ou audio. Inspection volontaire après fermeture, effacement à 30 secondes. Chaque tentative exige un nouveau consentement.");panel.addView(info);
+        info.setText("PRIVATE DIAGNOSTIC — NOT FOR DISTRIBUTION\nG2 préparation. Initialement désarmé. Aucun essai Sony/Netflix autorisé par cette livraison.\nCapture système du display entier transitoire ; seule la ROI est copiée. Aucune image sauvegardée, réseau ou audio. Inspection volontaire après fermeture, effacement à 5 minutes. Chaque tentative exige un nouveau consentement.");panel.addView(info);
         x=field(panel,"X normalisé","0.05");y=field(panel,"Y normalisé","0.10");w=field(panel,"Largeur normalisée","0.90");h=field(panel,"Hauteur normalisée","0.30");
         delay=field(panel,"Délai ms (500–60000)","3000");
         futureContext=new CheckBox(this);futureContext.setText("Contexte externe futur : GO physique distinct et admissibilité favorable déjà obtenus (déclaration humaine)");panel.addView(futureContext);

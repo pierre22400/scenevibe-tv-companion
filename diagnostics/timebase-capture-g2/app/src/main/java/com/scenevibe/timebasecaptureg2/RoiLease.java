@@ -14,7 +14,7 @@ public final class RoiLease {
     /** Begin with no image or generation. */
     public RoiLease() { }
 
-    /** Replace only through a new explicit attempt; retain at most thirty elapsed seconds. */
+    /** Replace only through a new explicit attempt; retain at most five elapsed minutes. */
     public synchronized void put(long gen,int[] data,int w,int h,long now) {
         clear();
         if(data==null||w<1||h<1||(long)w*h!=data.length)throw new IllegalArgumentException("ROI_LAYOUT_INVALID");

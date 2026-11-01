@@ -65,7 +65,7 @@ class BoundaryTests(unittest.TestCase):
         for required in ("FLAG_SECURE", "CaptureService.active", "bitmap.eraseColor(0)", "bitmap.recycle()", "onStop()"):
             self.assertIn(required, result)
         self.assertIn("SIMULATED_", (src / "SessionMemory.java").read_text())
-        self.assertIn("ROI_MS=30000", (src / "CapturePolicy.java").read_text())
+        self.assertIn("ROI_MS=300000", (src / "CapturePolicy.java").read_text())
 
     def test_java_documentation(self):
         """Every new Java method/constructor has adjacent pedagogical documentation."""

@@ -147,10 +147,11 @@ public final class CaptureInstrumentTest {
     /** Returning to preparation while waiting invalidates the generation. */
     @Test public void returnPreparation() throws Exception {open(CapturePolicy.Mode.PUBLIC);accept();depart();Thread.sleep(250);device.pressBack();JSONObject j=terminal();closed(j);assertEquals("OWNER_STOP",j.getString("outcome"));}
 
-    /** Actual thirty-second memory expiration wipes the backing pixels without a new acquisition. */
+    /** Verify ROI survives thirty seconds, then expires and wipes after five elapsed minutes. */
     @Test public void expiry() throws Exception {
         open(CapturePolicy.Mode.PUBLIC);accept();depart();JSONObject j=terminal();closed(j);assertEquals(4,matches());
         int[] held=SessionMemory.roi.get(SessionMemory.policy.generation,SystemClock.elapsedRealtime());assertNotNull(held);
+        Thread.sleep(31000);assertNotNull(SessionMemory.roi.get(SessionMemory.policy.generation,SystemClock.elapsedRealtime()));
         long remaining=SessionMemory.roi.expiresAt-SystemClock.elapsedRealtime();Thread.sleep(Math.max(0,remaining)+150);
         assertNull(SessionMemory.roi.get(SessionMemory.policy.generation,SystemClock.elapsedRealtime()));for(int pixel:held)assertEquals(0,pixel);assertEquals(1,j.getInt("usefulFrames"));
     }
