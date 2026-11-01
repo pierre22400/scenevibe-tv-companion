@@ -37,7 +37,10 @@ public final class CaptureInstrumentTest {
     }
 
     /** Open only the owned preparation screen, scroll to and click its consent control. */
-    private void open(CapturePolicy.Mode mode) throws Exception {
+    private void open(CapturePolicy.Mode mode) throws Exception { open(mode,false); }
+
+    /** Configure an intentionally wrong ROI only to keep an owned projection open for revocation. */
+    private void open(CapturePolicy.Mode mode,boolean negativeRoi) throws Exception {
         context.startActivity(new Intent(context,ControlActivity.class).putExtra("mode",mode.name()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
         UiObject2 button=device.wait(Until.findObject(By.text("CONSENTEMENT ET CONTRÔLE SYNTHÉTIQUE")),4000);
         if(button==null)button=device.findObject(By.text("Consentement et contrôle synthétique"));
@@ -45,7 +48,21 @@ public final class CaptureInstrumentTest {
             device.findObject(By.clazz("android.widget.ScrollView")).scroll(androidx.test.uiautomator.Direction.DOWN,1f);
             button=device.wait(Until.findObject(By.text(Pattern.compile("(?i)Consentement et contrôle synthétique"))),2000);
         }
-        assertNotNull("Owned consent button",button); button.click();
+        assertNotNull("Owned consent button",button);
+        if(negativeRoi) {
+            UiObject2 x=device.findObject(By.desc("X normalisé"));
+            if(x==null) {
+                device.findObject(By.clazz("android.widget.ScrollView")).scroll(androidx.test.uiautomator.Direction.UP,1f);
+                x=device.findObject(By.desc("X normalisé"));
+            }
+            x.setText("0");device.findObject(By.desc("Y normalisé")).setText("0");
+            device.findObject(By.desc("Largeur normalisée")).setText("0.1");device.findObject(By.desc("Hauteur normalisée")).setText("0.1");
+            device.pressBack();
+            device.findObject(By.clazz("android.widget.ScrollView")).scroll(androidx.test.uiautomator.Direction.DOWN,1f);
+            button=device.findObject(By.text(Pattern.compile("(?i)Consentement et contrôle synthétique")));
+            assertNotNull(button);
+        }
+        button.click();
         Thread.sleep(800);
     }
 
@@ -100,6 +117,21 @@ public final class CaptureInstrumentTest {
     @Test public void leaveFixture() throws Exception {
         open(CapturePolicy.Mode.PUBLIC);accept();Thread.sleep(400);device.pressHome();
         JSONObject j=terminal();assertEquals("OWNER_STOP",j.getString("outcome"));assertClosed(j);
+    }
+
+    /** Stop our real public MediaProjection API; reflection reads only this instrument's private field. */
+    @Test public void projectionRevoked() throws Exception {
+        open(CapturePolicy.Mode.PUBLIC,true);accept();
+        java.lang.reflect.Field live=CaptureService.class.getDeclaredField("live"); live.setAccessible(true);
+        java.lang.reflect.Field projection=CaptureService.class.getDeclaredField("projection"); projection.setAccessible(true);
+        android.media.projection.MediaProjection own=null;
+        for(int i=0;i<100;i++) {
+            Object service=live.get(null);
+            if(service!=null)own=(android.media.projection.MediaProjection)projection.get(service);
+            if(own!=null)break;Thread.sleep(50);
+        }
+        assertNotNull("Owned projection did not start",own);own.stop();
+        JSONObject j=terminal();assertEquals(j.toString(),"SESSION_REVOKED",j.getString("outcome"));assertClosed(j);
     }
 
     /** Verify image accounting, terminal ownership and absence of persistent screenshot files. */

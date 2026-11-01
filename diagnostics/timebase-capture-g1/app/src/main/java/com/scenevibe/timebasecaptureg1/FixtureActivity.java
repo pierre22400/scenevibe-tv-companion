@@ -21,6 +21,7 @@ public final class FixtureActivity extends Activity {
     static volatile boolean visible;
     static volatile long drawnUptime;
     static volatile CapturePolicy.Mode shownMode;
+    static volatile boolean surfaceDrawn;
 
     /** Construct the Android-managed fixture without persistent state. */
     public FixtureActivity() { }
@@ -31,7 +32,7 @@ public final class FixtureActivity extends Activity {
         CapturePolicy.Mode mode;
         try { mode=CapturePolicy.Mode.valueOf(getIntent().getStringExtra("mode")); }
         catch (RuntimeException e) { finish(); return; }
-        shownMode=mode; drawnUptime=0;
+        shownMode=mode; drawnUptime=0; surfaceDrawn=false;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().setDecorFitsSystemWindows(false);
         if (mode==CapturePolicy.Mode.SECURE) getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
@@ -61,7 +62,7 @@ public final class FixtureActivity extends Activity {
         Canvas c=null;
         try { c=holder.lockCanvas(); if(c!=null)c.drawColor(Color.MAGENTA); }
         catch (RuntimeException e) { drawnUptime=0; }
-        finally { if(c!=null)holder.unlockCanvasAndPost(c); }
+        finally { if(c!=null) { holder.unlockCanvasAndPost(c); surfaceDrawn=true; } }
     }
 
     /** Mark only this resumed fixture eligible for a G1 acquisition. */

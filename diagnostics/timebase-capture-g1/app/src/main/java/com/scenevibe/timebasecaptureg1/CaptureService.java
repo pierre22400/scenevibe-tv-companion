@@ -39,6 +39,7 @@ public final class CaptureService extends Service {
     public static volatile String lastResult="DISARMED";
     public static volatile JSONObject lastProof;
     public static volatile boolean active;
+    private static volatile CaptureService live;
     private final AtomicBoolean closed=new AtomicBoolean();
     private final CapturePolicy policy=new CapturePolicy();
     private HandlerThread thread;
@@ -62,7 +63,7 @@ public final class CaptureService extends Service {
 
     /** Create a single serial worker, without permanent polling. */
     @Override public void onCreate() {
-        super.onCreate(); thread=new HandlerThread("G1-single-capture"); thread.start(); worker=new Handler(thread.getLooper());
+        super.onCreate(); live=this; thread=new HandlerThread("G1-single-capture"); thread.start(); worker=new Handler(thread.getLooper());
     }
 
     /** No binder authority; only our non-exported explicit service intent is supported. */
@@ -104,7 +105,8 @@ public final class CaptureService extends Service {
     private void begin() {
         if(closed.get())return;
         if(!FixtureActivity.visible||FixtureActivity.shownMode!=mode||FixtureActivity.drawnUptime==0
-            ||SystemClock.uptimeMillis()-FixtureActivity.drawnUptime<400) { finish("WRONG_CONTROL_SCREEN"); return; }
+            ||SystemClock.uptimeMillis()-FixtureActivity.drawnUptime<400
+            ||(mode==CapturePolicy.Mode.MIXED&&!FixtureActivity.surfaceDrawn)) { finish("WRONG_CONTROL_SCREEN"); return; }
         if(!policy.begin(generation,SystemClock.elapsedRealtime())) { finish("ARM_EXPIRED"); return; }
         try {
             Rect bounds=getSystemService(WindowManager.class).getMaximumWindowMetrics().getBounds();
@@ -177,13 +179,14 @@ public final class CaptureService extends Service {
                 .put("bufferReceivedElapsedMs",bufferElapsed).put("closedElapsedMs",SystemClock.elapsedRealtime())
                 .put("imageTimestampBase","NOT_ASSUMED_NOT_USED").put("received",received).put("rejected",rejected)
                 .put("imagesClosed",closedImages).put("markerMatches",markers).put("middleMagenta",middleMagenta)
+                .put("secureSurfaceDrawn",FixtureActivity.surfaceDrawn).put("sequence",1)
                 .put("releaseErrors",errors).put("resourcesClosed",errors==0).put("imagePersisted",false);
             lastProof=j;
             File file=new File(getFilesDir(),"g1.jsonl");
             if(file.length()>1024*1024&&!file.delete())throw new java.io.IOException("JOURNAL_LIMIT");
             try(FileOutputStream stream=new FileOutputStream(file,true)) { stream.write((j.toString()+"\n").getBytes(StandardCharsets.UTF_8)); }
         } catch(Exception e) { lastResult="JOURNAL_UNAVAILABLE"; }
-        active=false; stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); thread.quitSafely();
+        active=false; live=null; stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); thread.quitSafely();
     }
 
     /** Destruction, screen departure and owner stop all terminate the same worker-owned attempt. */

@@ -6,9 +6,9 @@
   <uses-feature android:name="android.software.leanback" android:required="false" />
   <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
   <application android:theme="@android:style/Theme.Material.Light.NoActionBar"
-    android:label="SceneVibe G1 — PRIVATE DIAGNOSTIC" android:icon="@android:drawable/ic_menu_view"
+    android:label="SceneVibe G1 — PRIVATE DIAGNOSTIC" android:icon="@drawable/banner"
     android:banner="@drawable/banner" android:allowBackup="false" android:supportsRtl="true">
-    <activity android:name=".ControlActivity" android:exported="true" android:resizeableActivity="true">
+    <activity android:name=".ControlActivity" android:exported="true" android:resizeableActivity="true" android:windowSoftInputMode="stateAlwaysHidden">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
