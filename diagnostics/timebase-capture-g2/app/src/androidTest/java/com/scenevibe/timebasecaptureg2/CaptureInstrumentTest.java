@@ -100,7 +100,7 @@ public final class CaptureInstrumentTest {
         assertEquals(j.toString(),"FRAME_READY_NOT_CLASSIFIED",j.getString("outcome"));assertEquals(1,j.getInt("usefulFrames"));assertEquals(4,matches());
         assertTrue(j.getLong("triggerElapsedMs")-SessionMemory.policy.waitAt>=3000);
         context.startActivity(new Intent(context,ResultActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        assertNotNull(device.wait(Until.findObject(By.text(Pattern.compile("(?i)Effacer et fermer"))),3000));
+        Thread.sleep(300);assertNotNull(button("Effacer et fermer"));
         assertTrue(SessionMemory.label(context,"A",true));
         String journal=new String(java.nio.file.Files.readAllBytes(new java.io.File(context.getFilesDir(),"g2.jsonl").toPath()),java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(journal.contains("SIMULATED_A"));device.pressBack();Thread.sleep(300);assertNull(SessionMemory.roi.get(SessionMemory.policy.generation,SystemClock.elapsedRealtime()));

@@ -54,6 +54,19 @@ class BoundaryTests(unittest.TestCase):
         for required in ("image.close()", "reader.close()", "display.release()", "projection.stop()", "Arrays.fill(crop,0)", "compareAndSet(false,true)"):
             self.assertIn(required, s)
 
+    def test_inspection_and_scope(self):
+        """Inspection is user-opened only after closure; no service launches or foreground discovery."""
+        src = ROOT / "app/src/main/java/com/scenevibe/timebasecaptureg2"
+        service = (src / "CaptureService.java").read_text()
+        self.assertNotIn("startActivity", service)
+        for forbidden in ("UsageStatsManager", "getRunningTasks", "getActiveSessions", "queryIntentActivities"):
+            self.assertNotIn(forbidden, service)
+        result = (src / "ResultActivity.java").read_text()
+        for required in ("FLAG_SECURE", "CaptureService.active", "bitmap.eraseColor(0)", "bitmap.recycle()", "onStop()"):
+            self.assertIn(required, result)
+        self.assertIn("SIMULATED_", (src / "SessionMemory.java").read_text())
+        self.assertIn("ROI_MS=30000", (src / "CapturePolicy.java").read_text())
+
     def test_java_documentation(self):
         """Every new Java method/constructor has adjacent pedagogical documentation."""
         signature = re.compile(r"^\s*(?:(?:public|private|protected|static|final|synchronized)\s+)+(?:[\w<>?,\[\].]+\s+)?\w+\([^;]*\)\s*(?:throws [^{]+)?\{")

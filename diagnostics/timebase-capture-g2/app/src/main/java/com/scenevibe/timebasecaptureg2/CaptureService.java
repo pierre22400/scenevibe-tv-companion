@@ -54,7 +54,10 @@ public final class CaptureService extends Service {
 
     /** Owner stop invalidates policy immediately, then requests serialized resource closure. */
     public static void cancel(Context c) {
-        SessionMemory.policy.close();SessionMemory.roi.clear();c.stopService(new Intent(c,CaptureService.class));
+        SessionMemory.policy.close();SessionMemory.roi.clear();
+        CaptureService service=live;
+        if(service!=null&&service.worker!=null)service.worker.post(()->service.finish("OWNER_STOP"));
+        else c.stopService(new Intent(c,CaptureService.class));
     }
 
     /** Promote immediately, including rapid-stop cases, then create one serial worker. */
