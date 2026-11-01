@@ -1,0 +1,8 @@
+/** Standalone G2 build: no Companion module, production configuration or secrets. */
+pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = 'SceneVibeTimebaseCaptureG2'
+include ':app'

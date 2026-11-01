@@ -1,0 +1,108 @@
+name: TIMEBASE G2 — owned synthetic capture only
+
+# Essential dedicated qualification entry point. No provider credentials, physical devices or deployment.
+on:
+  push:
+    branches: [work/scenevibe-timebase-resync-003]
+    paths: ['diagnostics/timebase-capture-g2/app/**', 'diagnostics/timebase-capture-g2/tests/**', 'diagnostics/timebase-capture-g2/*.gradle', 'diagnostics/timebase-capture-g2/gradle.properties', '.github/workflows/timebase-capture-g2.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Portable invariants and isolation
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics/timebase-capture-g2/proofs
+          bash diagnostics/timebase-capture-g2/tests/core-checks.sh | tee diagnostics/timebase-capture-g2/proofs/core.log
+          bash diagnostics/timebase-capture-g1/tests/core-checks.sh | tee diagnostics/timebase-capture-g2/proofs/g1-core-rerun.log
+          python3 -B -m unittest discover -s diagnostics/timebase-capture-g2/tests -v 2>&1 | tee diagnostics/timebase-capture-g2/proofs/boundaries.log
+      - name: Standalone build, lint and signature
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          gradle -p diagnostics/timebase-capture-g2 --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+          gradle -p diagnostics/timebase-capture-g1 --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
+          cp diagnostics/timebase-capture-g2/app/build/outputs/apk/debug/app-debug.apk diagnostics/timebase-capture-g2/proofs/scenevibe-timebase-capture-g2-private-diagnostic.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs diagnostics/timebase-capture-g2/proofs/scenevibe-timebase-capture-g2-private-diagnostic.apk > diagnostics/timebase-capture-g2/proofs/signature.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging diagnostics/timebase-capture-g2/proofs/scenevibe-timebase-capture-g2-private-diagnostic.apk > diagnostics/timebase-capture-g2/proofs/apk-badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions diagnostics/timebase-capture-g2/proofs/scenevibe-timebase-capture-g2-private-diagnostic.apk > diagnostics/timebase-capture-g2/proofs/permissions.txt
+          sha256sum diagnostics/timebase-capture-g2/proofs/scenevibe-timebase-capture-g2-private-diagnostic.apk > diagnostics/timebase-capture-g2/proofs/APK-SHA256.txt
+          git rev-parse HEAD > diagnostics/timebase-capture-g2/proofs/COMMIT.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: g2-build-${{ github.run_id }}
+          path: |
+            diagnostics/timebase-capture-g2/proofs/
+            diagnostics/timebase-capture-g2/app/build/reports/lint-results-debug.*
+            diagnostics/timebase-capture-g2/app/build/outputs/apk/debug/app-debug.apk
+            diagnostics/timebase-capture-g2/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            diagnostics/timebase-capture-g1/app/build/outputs/apk/debug/app-debug.apk
+            diagnostics/timebase-capture-g1/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          retention-days: 14
+  capture:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 31
+            target: android-tv
+            arch: x86
+            profile: tv_1080p
+          - api: 35
+            target: default
+            arch: x86_64
+            profile: pixel_2
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: g2-build-${{ github.run_id }}
+          path: diagnostics
+      - name: KVM for disposable emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Actual projection on owned screens, never Netflix or Sony
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          disk-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: |
+            bash diagnostics/timebase-capture-g1/tests/emulator-checks.sh
+            bash diagnostics/timebase-capture-g2/tests/emulator-checks.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: g2-api${{ matrix.api }}-${{ github.run_id }}
+          path: |
+            diagnostics/timebase-capture-g2/proofs/
+            diagnostics/timebase-capture-g1/proofs/
+          retention-days: 14
