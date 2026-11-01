@@ -23,3 +23,13 @@ gradle -p diagnostics/timebase-capture-g1 :app:assembleDebug :app:assembleDebugA
 Le workflow dédié est l'unique ajout hors du répertoire G1 : nécessaire à la compilation et aux bancs émulés, il ne modifie aucun workflow historique. Bancs : Android TV API31 et Android35 standard (ce dernier n'est pas Android TV). Le script de banc rejette les appareils physiques avant installation. Son UI automation ne manipule que notre app et le dialogue système de consentement.
 
 Les tests JVM et les doubles ne démontrent pas MediaProjection. Seuls les résultats ImageReader instrumentés peuvent qualifier la capture de fixture. Aucun résultat n'est une preuve Sony/Netflix. G2 : NOT EXECUTED. Aucun lancement G2, fusion, déploiement ou publication autorisé.
+
+## Livraison qualifiée, 1er novembre 2026
+
+Code/APK : `33e59cf26e5f2b3c077e978c797b0b3b2834706e`. Workflow final [41272817005](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/41272817005) SUCCESS. 47 invariants portables, 6 contrats et 7/7 tests réels par banc API31/API35. Les limites d'injection de panne restent explicites dans la matrice.
+
+- [Rapport G1](TIMEBASE-RESYNC002-RAPPORT-G1.md)
+- [Matrice de sécurité](TIMEBASE-RESYNC002-MATRICE-SECURITE.md)
+- [Reproduction](TIMEBASE-RESYNC002-REPRODUCTION.md)
+- [Préflight G2 non exécuté](TIMEBASE-RESYNC002-PREFLIGHT-G2-SONY.md)
+- [Décision proposée](TIMEBASE-RESYNC002-DECISION-G1.md)
