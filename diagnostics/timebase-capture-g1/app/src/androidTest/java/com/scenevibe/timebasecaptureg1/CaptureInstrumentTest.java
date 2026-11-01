@@ -29,11 +29,14 @@ public final class CaptureInstrumentTest {
     public CaptureInstrumentTest() { }
 
     /** Reject physical hardware before any launch, installation-side action or consent. */
-    @Before public void prepare() {
+    @Before public void prepare() throws Exception {
         assertTrue("EMULATOR ONLY", "ranchu".equals(Build.HARDWARE)||"goldfish".equals(Build.HARDWARE));
         context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         CaptureService.cancel(context); device.pressHome();
+        for(int i=0;i<100&&CaptureService.active;i++)Thread.sleep(20);
+        assertFalse("Previous owned attempt not closed",CaptureService.active);
+        CaptureService.lastProof=null;CaptureService.lastResult="DISARMED";
     }
 
     /** Open only the owned preparation screen, scroll to and click its consent control. */
@@ -57,7 +60,6 @@ public final class CaptureInstrumentTest {
             }
             x.setText("0");device.findObject(By.desc("Y normalisé")).setText("0");
             device.findObject(By.desc("Largeur normalisée")).setText("0.1");device.findObject(By.desc("Hauteur normalisée")).setText("0.1");
-            device.pressBack();
             device.findObject(By.clazz("android.widget.ScrollView")).scroll(androidx.test.uiautomator.Direction.DOWN,1f);
             button=device.findObject(By.text(Pattern.compile("(?i)Consentement et contrôle synthétique")));
             assertNotNull(button);

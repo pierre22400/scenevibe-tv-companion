@@ -36,6 +36,9 @@ public final class CoreChecks {
         rejects(()->PixelProbe.pixel(null,0,0,2,2,4,16));rejects(()->PixelProbe.pixel(bytes,2,0,2,2,4,16));
         rejects(()->PixelProbe.crop(bytes,2,2,4,16,new int[]{-1,0,2,2}));
         rejects(()->PixelProbe.crop(ByteBuffer.allocate(2),2,2,4,16,new int[]{0,0,2,2}));
+        rejects(()->PixelProbe.crop(bytes,1000000,1,4,4000000,new int[]{0,0,1000000,1}));
+        rejects(()->CapturePolicy.roi(0,0,Double.NaN,.5,100,100));
+        rejects(()->CapturePolicy.roi(0,0,.5,Double.POSITIVE_INFINITY,100,100));
         require(PixelProbe.matches(new int[10000],100,100)==0);require(PixelProbe.matches(null,100,100)==0);
         int[] pattern=new int[10000];for(int i=0;i<4;i++)pattern[75*100+(int)(100*(.2+i*.2))]=PixelProbe.COLORS[i];
         require(PixelProbe.matches(pattern,100,100)==4);pattern[75*100+20]=0;require(PixelProbe.matches(pattern,100,100)==3);

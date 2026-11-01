@@ -39,10 +39,17 @@ public final class ControlActivity extends Activity {
         delay=field(panel,"Délai ms (500–5000)","3000");
         button(panel,"Consentement et contrôle synthétique",()->requestConsent());
         button(panel,"Arrêt et révocation",()->CaptureService.cancel(this));
-        button(panel,"Supprimer le journal local",()->{ CaptureService.cancel(this); new java.io.File(getFilesDir(),"g1.jsonl").delete(); result.setText("Suppression demandée ; aucune image stockée."); });
+        button(panel,"Supprimer le journal local",()->deleteJournal());
         for(CapturePolicy.Mode m:CapturePolicy.Mode.values())button(panel,"Choisir "+m,()->{mode=m;info.setText("PRIVATE DIAGNOSTIC — NOT FOR DISTRIBUTION\nMode "+mode+". Capture du display entier, ROI seule traitée, aucun réseau/audio/image persistante. Nouveau consentement requis.");});
         result=new TextView(this); result.setTextSize(20); panel.addView(result);
         ScrollView scroll=new ScrollView(this); scroll.addView(panel); setContentView(scroll);
+    }
+
+    /** Delete only after worker closure, reporting errors instead of racing the final journal write. */
+    private void deleteJournal() {
+        if(CaptureService.active) { CaptureService.cancel(this); result.setText("Arrêt en cours ; réessaie la suppression après fermeture."); return; }
+        java.io.File file=new java.io.File(getFilesDir(),"g1.jsonl");
+        result.setText(!file.exists()||file.delete()?"Journal supprimé ; aucune image stockée.":"Suppression impossible ; réessaie explicitement.");
     }
 
     /** Add a labeled numeric input; validation occurs before opening the system consent. */

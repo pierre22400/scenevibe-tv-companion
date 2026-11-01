@@ -4,7 +4,7 @@ name: TIMEBASE G1 — owned synthetic capture only
 on:
   push:
     branches: [work/scenevibe-timebase-resync-002]
-    paths: ['diagnostics/timebase-capture-g1/**', '.github/workflows/timebase-capture-g1.yml']
+    paths: ['diagnostics/timebase-capture-g1/app/**', 'diagnostics/timebase-capture-g1/tests/**', 'diagnostics/timebase-capture-g1/*.gradle', 'diagnostics/timebase-capture-g1/gradle.properties', '.github/workflows/timebase-capture-g1.yml']
   workflow_dispatch:
 permissions:
   contents: read

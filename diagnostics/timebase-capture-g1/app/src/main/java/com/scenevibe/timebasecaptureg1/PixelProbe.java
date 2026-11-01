@@ -26,6 +26,8 @@ public final class PixelProbe {
 
     /** Copy only a prevalidated rectangle, with a 16-million-pixel upper bound. */
     public static int[] crop(ByteBuffer b, int w, int h, int ps, int rs, int[] r) {
+        // Validate the full layout before allocation, not after allocating an untrusted rectangle.
+        pixel(b,w-1,h-1,w,h,ps,rs);
         if (r == null || r.length != 4 || r[0] < 0 || r[1] < 0 || r[2] > w || r[3] > h
             || r[2] <= r[0] || r[3] <= r[1]) throw new IllegalArgumentException("ROI_INVALID");
         int[] result = new int[Math.multiplyExact(r[2]-r[0], r[3]-r[1])];
