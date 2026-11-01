@@ -1,11 +1,12 @@
 {
-  "softwareVerdict": "PASS SOFTWARE G2 PREPARATION",
-  "physicalG2": "NOT EXECUTED",
-  "decision": "LEGAL REVIEW REQUIRED",
-  "sourceCommit": "4213cb060bb77cd0cd3f986001861acd1ea3b987",
-  "workflowRun": 41286895277,
+  "softwareVerdict": "PASS SOFTWARE 003-A",
+  "newPhysicalQualification003A": "NOT EXECUTED",
+  "originalSonyAttempt": "OWNER_REPORTED_IMAGE_TIMEOUT \u2014 raw journal unavailable",
+  "sourceCommit": "753aa18de4c82d7d608a065cb517b6cb67b60471",
+  "workflowRun": 41295948760,
   "build": "SUCCESS",
-  "g2PortableInvariants": 57,
+  "g2PortableInvariants": 77,
+  "g2ExistingPortableInvariantsRetained": 57,
   "g2BoundaryTests": 7,
   "g1PortableInvariantsRerun": 47,
   "android": [
@@ -13,20 +14,19 @@
       "api": 31,
       "image": "Android TV 12 x86 tv_1080p",
       "g1Tests": 7,
-      "g2Tests": 9,
-      "failures": 0
+      "g2Tests": 10,
+      "failures": 0,
+      "staticFirstFrame": "PASS received=1 rejected=0 useful=1"
     },
     {
       "api": 35,
       "image": "Android standard x86_64 pixel_2",
       "g1Tests": 7,
-      "g2Tests": 9,
-      "failures": 0
+      "g2Tests": 10,
+      "failures": 0,
+      "staticFirstFrame": "PASS received=1 rejected=0 useful=1"
     }
   ],
-  "baselineFilesUnchanged": 562,
-  "existingModified": 0,
-  "existingDeleted": 0,
   "lintErrors": 0,
   "lintWarnings": 5,
   "privateImagesPersisted": false
