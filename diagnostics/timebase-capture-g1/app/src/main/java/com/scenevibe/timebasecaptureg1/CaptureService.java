@@ -53,6 +53,7 @@ public final class CaptureService extends Service {
     private long generation,requestElapsed,requestUptime,requestWall,bufferElapsed;
     private int width,height,received,rejected,closedImages,markers;
     private boolean middleMagenta;
+    private boolean started;
     private final String attempt=UUID.randomUUID().toString();
 
     /** New service instances never restore a token or previous arm state. */
@@ -63,7 +64,7 @@ public final class CaptureService extends Service {
 
     /** Create a single serial worker, without permanent polling. */
     @Override public void onCreate() {
-        super.onCreate(); live=this; thread=new HandlerThread("G1-single-capture"); thread.start(); worker=new Handler(thread.getLooper());
+        super.onCreate(); promote(); live=this; thread=new HandlerThread("G1-single-capture"); thread.start(); worker=new Handler(thread.getLooper());
     }
 
     /** No binder authority; only our non-exported explicit service intent is supported. */
@@ -72,8 +73,14 @@ public final class CaptureService extends Service {
     /** Start visible foreground service before consuming consent; reject process-restoration and overlap. */
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
         if(intent!=null&&"STOP".equals(intent.getAction())) { worker.post(()->finish("OWNER_STOP")); return START_NOT_STICKY; }
-        if(intent==null||active) { stopSelf(); return START_NOT_STICKY; }
+        if(intent==null||started) { worker.post(()->finish("OWNER_STOP")); return START_NOT_STICKY; }
+        started=true;
         active=true; lastResult="ARMED"; lastProof=null;
+        worker.post(()->arm(intent)); return START_NOT_STICKY;
+    }
+
+    /** Promote during creation, before a rapid stop can skip onStartCommand on Android12. */
+    private void promote() {
         NotificationManager nm=getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel("g1","G1 capture ponctuelle",NotificationManager.IMPORTANCE_LOW));
         PendingIntent stop=PendingIntent.getService(this,0,new Intent(this,CaptureService.class).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE);
@@ -81,7 +88,6 @@ public final class CaptureService extends Service {
             .setContentTitle("G1 — écran synthétique uniquement").setContentText("Capture ponctuelle consentie ; arrêt disponible")
             .setOngoing(true).addAction(new Notification.Action.Builder(null,"Arrêter",stop).build()).build();
         startForeground(301,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
-        worker.post(()->arm(intent)); return START_NOT_STICKY;
     }
 
     /** Validate only closed/scalar configuration, discard the original token intent after use. */
@@ -190,5 +196,13 @@ public final class CaptureService extends Service {
     }
 
     /** Destruction, screen departure and owner stop all terminate the same worker-owned attempt. */
-    @Override public void onDestroy() { if(worker!=null)worker.post(()->finish("OWNER_STOP")); super.onDestroy(); }
+    @Override public void onDestroy() {
+        if(worker!=null&&!closed.get()) {
+            java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);
+            worker.post(()->{ try { finish("OWNER_STOP"); } finally { done.countDown(); } });
+            try { if(!done.await(1000,java.util.concurrent.TimeUnit.MILLISECONDS))lastResult="CLOSE_DELAYED"; }
+            catch(InterruptedException e) { Thread.currentThread().interrupt();lastResult="CLOSE_INTERRUPTED"; }
+        }
+        super.onDestroy();
+    }
 }
