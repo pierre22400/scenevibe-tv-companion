@@ -41,6 +41,24 @@ public final class CoreChecks {
         rejects(()->lease.put(9,new int[1],2,2,0));check(new RoiLease().get(8,0)==null);
         int[] pattern=new int[10000];for(int i=0;i<4;i++)pattern[7500+(int)(100*(.2+i*.2))]=PixelProbe.COLORS[i];
         check(PixelProbe.matches(pattern,100,100)==4);check(PixelProbe.matches(new int[10000],100,100)==0);
+        // A first timestamp is not compared to an invented zero predecessor.
+        check(CapturePolicy.timestampRejection(false,0,0)==null);
+        check(CapturePolicy.timestampRejection(false,0,123)==null);
+        check(CapturePolicy.timestampRejection(false,0,-10)==null);
+        check("DUPLICATE_TIMESTAMP".equals(CapturePolicy.timestampRejection(true,0,0)));
+        check("DUPLICATE_TIMESTAMP".equals(CapturePolicy.timestampRejection(true,123,123)));
+        check("NON_MONOTONIC_TIMESTAMP".equals(CapturePolicy.timestampRejection(true,123,122)));
+        check(CapturePolicy.timestampRejection(true,0,1)==null);
+        CapturePolicy one=new CapturePolicy();long single=one.arm(1000,500);check(one.consent(single,1100));one.left();check(one.begin(single,1600,false));
+        check("INITIALIZATION_REJECTED".equals(one.bufferRejection(single,1849)));
+        check("RECEIPT_CLOCK_INVALID".equals(one.bufferRejection(single,1599)));
+        check("STALE_GENERATION".equals(one.bufferRejection(single+1,1850)));
+        check(one.bufferRejection(single,1850)==null);check(one.frame(single,1850));
+        check("USEFUL_FRAME_ALREADY_ACQUIRED".equals(one.bufferRejection(single,1851)));
+        one.close();check("CAPTURE_INACTIVE".equals(one.bufferRejection(single,1851)));
+        single=one.arm(20000,500);check(one.consent(single,20100));one.left();check(one.begin(single,20600,false));
+        check("ACQUISITION_EXPIRED".equals(one.bufferRejection(single,30600)));
+        one.close();check(!one.frame(single,21000));
         System.out.println("PASS "+count+" portable invariants; NOT_ANDROID_CAPTURE");
     }
 }

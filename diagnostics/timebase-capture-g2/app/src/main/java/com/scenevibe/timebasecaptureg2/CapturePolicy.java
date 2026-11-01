@@ -6,6 +6,7 @@ package com.scenevibe.timebasecaptureg2;
  */
 public final class CapturePolicy {
     public static final long MAX_CAPTURE_MS=10000, ROI_MS=30000, MAX_DELAY_MS=60000;
+    public static final long INITIALIZATION_MS=250;
     public static final int MAX_DIMENSION=4096;
     public enum Mode { PUBLIC, MIXED, SECURE }
     public enum State { DISARMED, CONSENT_PENDING, WAITING, CAPTURING, CLOSED }
@@ -41,7 +42,25 @@ public final class CapturePolicy {
 
     /** Reject old generation, initialization callbacks, duplicate useful frames and deadline overrun. */
     public synchronized boolean accepts(long gen,long now) {
-        return gen==generation&&state==State.CAPTURING&&!usefulFrame&&now>=triggeredAt+250&&now-triggeredAt<MAX_CAPTURE_MS;
+        return bufferRejection(gen,now)==null;
+    }
+
+    /** Return a closed technical cause, or null when current generation/window permits one frame. */
+    public synchronized String bufferRejection(long gen,long now) {
+        if(gen!=generation)return "STALE_GENERATION";
+        if(state!=State.CAPTURING)return "CAPTURE_INACTIVE";
+        if(usefulFrame)return "USEFUL_FRAME_ALREADY_ACQUIRED";
+        if(now<triggeredAt)return "RECEIPT_CLOCK_INVALID";
+        if(now-triggeredAt<INITIALIZATION_MS)return "INITIALIZATION_REJECTED";
+        if(now-triggeredAt>=MAX_CAPTURE_MS)return "ACQUISITION_EXPIRED";
+        return null;
+    }
+
+    /** Compare only two observed timestamps from the same source; the first value, including zero, has no predecessor. */
+    public static String timestampRejection(boolean seen,long previous,long current) {
+        if(!seen)return null;
+        if(current==previous)return "DUPLICATE_TIMESTAMP";
+        return current<previous?"NON_MONOTONIC_TIMESTAMP":null;
     }
 
     /** Commit the one logical frame atomically before publishing a ROI. */

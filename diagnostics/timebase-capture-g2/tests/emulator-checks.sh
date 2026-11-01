@@ -11,5 +11,5 @@ adb -s "$serial" shell am instrument -w -r -e class com.scenevibe.timebasecaptur
   com.scenevibe.timebasecaptureg2.test/androidx.test.runner.AndroidJUnitRunner | tee "$probe_root/proofs/instrumentation.log"
 adb -s "$serial" exec-out run-as com.scenevibe.timebasecaptureg2 cat files/g2.jsonl > "$probe_root/proofs/g1-owned-controls.jsonl"
 adb -s "$serial" logcat -d -s AndroidRuntime > "$probe_root/proofs/android-errors.log"
-grep -q 'OK (9 tests)' "$probe_root/proofs/instrumentation.log"
+grep -q 'OK (10 tests)' "$probe_root/proofs/instrumentation.log"
 grep -q 'INSTRUMENTATION_CODE: -1' "$probe_root/proofs/instrumentation.log"

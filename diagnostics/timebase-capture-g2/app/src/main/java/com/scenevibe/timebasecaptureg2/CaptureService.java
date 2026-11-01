@@ -22,7 +22,9 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.view.WindowManager;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -45,8 +47,13 @@ public final class CaptureService extends Service {
     private ImageReader reader;
     private double[] roi;
     private long generation,projectionAt,requestElapsed,bufferElapsed,lastTimestamp;
+    private long readerCreatedElapsed,displayCreatedElapsed,readerGeneration;
     private int width,height,received,rejected,closedImages;
+    private int displayId=-1,decisionLogErrors,decisionsTruncated;
     private boolean started,granted;
+    private boolean timestampSeen;
+    private final LinkedHashMap<String,Integer> rejectionCounts=new LinkedHashMap<>();
+    private final JSONArray bufferDecisions=new JSONArray();
     private final String attempt=UUID.randomUUID().toString();
 
     /** Android creates a fresh service with no consent or image. */
@@ -117,42 +124,82 @@ public final class CaptureService extends Service {
         try {
             Rect bounds=getSystemService(WindowManager.class).getMaximumWindowMetrics().getBounds();
             width=bounds.width();height=bounds.height();CapturePolicy.roi(roi[0],roi[1],roi[2],roi[3],width,height);
-            requestElapsed=SystemClock.elapsedRealtime();lastResult="CAPTURING";
+            requestElapsed=SessionMemory.policy.triggeredAt;lastResult="INITIALIZING";
+            // Preserve the 250-ms barrier before creating the fresh queue, not by losing its only frame.
+            worker.postDelayed(()->openDisplay(),CapturePolicy.INITIALIZATION_MS);
+            worker.postDelayed(()->finish("IMAGE_TIMEOUT"),Math.max(0,requestElapsed+CapturePolicy.MAX_CAPTURE_MS-SystemClock.elapsedRealtime()));
+        } catch(RuntimeException e) { finish("RESOURCE_FAILURE"); }
+    }
+
+    /** Create one new queue/surface after settling, bound only to this generation and virtual display. */
+    private void openDisplay() {
+        if(closed.get())return;
+        String refusal=SessionMemory.policy.bufferRejection(generation,SystemClock.elapsedRealtime());
+        if(refusal!=null) { decision(refusal,0,SystemClock.elapsedRealtime(),generation);finish(refusal);return; }
+        if(SessionMemory.preparationVisible) { finish("PREPARATION_RETURNED");return; }
+        try {
             reader=ImageReader.newInstance(width,height,PixelFormat.RGBA_8888,2);
-            reader.setOnImageAvailableListener(source->read(source),worker);
+            readerCreatedElapsed=SystemClock.elapsedRealtime();readerGeneration=generation;
+            final long boundGeneration=readerGeneration;
+            reader.setOnImageAvailableListener(source->read(source,boundGeneration),worker);
             display=projection.createVirtualDisplay("G2-single-consented-display",width,height,getResources().getDisplayMetrics().densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,reader.getSurface(),null,worker);
             if(display==null) { finish("PROJECTION_UNAVAILABLE");return; }
-            worker.postDelayed(()->finish("IMAGE_TIMEOUT"),CapturePolicy.MAX_CAPTURE_MS);
+            if(display.getDisplay()==null) { finish("DISPLAY_UNAVAILABLE");return; }
+            displayId=display.getDisplay().getDisplayId();displayCreatedElapsed=SystemClock.elapsedRealtime();lastResult="CAPTURING";
         } catch(SecurityException e) { finish("PROJECTION_UNAVAILABLE"); }
         catch(RuntimeException e) { finish("RESOURCE_FAILURE"); }
     }
 
     /** Drain callbacks without retries, ignoring initialization and duplicate timestamps, then copy one ROI. */
     private void read(ImageReader source) {
+        read(source,generation);
+    }
+
+    /** Validate the callback's immutable queue/generation binding before accepting its first or later timestamp. */
+    private void read(ImageReader source,long callbackGeneration) {
         Image image=null;int[] crop=null;String outcome=null;
         try {
             if(closed.get())return;
-            image=source.acquireLatestImage();if(image==null){rejected++;return;}received++;
-            long now=SystemClock.elapsedRealtime(),stamp=image.getTimestamp();
-            boolean duplicate=stamp<=lastTimestamp;lastTimestamp=Math.max(lastTimestamp,stamp);
-            if(received>240) { outcome="IMAGE_TIMEOUT";return; }
-            if(!SessionMemory.policy.accepts(generation,now)||duplicate) { rejected++;return; }
-            if(SessionMemory.preparationVisible) { outcome="PREPARATION_RETURNED";return; }
-            if(image.getWidth()!=width||image.getHeight()!=height||image.getFormat()!=PixelFormat.RGBA_8888||image.getPlanes().length!=1) { outcome="IMAGE_INVALID";return; }
+            long now=SystemClock.elapsedRealtime();
+            if(source!=reader) { decision("SOURCE_READER_MISMATCH",0,now,callbackGeneration);outcome="SOURCE_READER_MISMATCH";return; }
+            if(callbackGeneration!=readerGeneration||callbackGeneration!=generation) { decision("STALE_GENERATION",0,now,callbackGeneration);outcome="STALE_GENERATION";return; }
+            if(display==null||display.getDisplay()==null||display.getDisplay().getDisplayId()!=displayId) { decision("DISPLAY_BINDING_MISMATCH",0,now,callbackGeneration);outcome="DISPLAY_BINDING_MISMATCH";return; }
+            image=source.acquireLatestImage();if(image==null){decision("NO_IMAGE_AVAILABLE",0,now,callbackGeneration);return;}received++;
+            now=SystemClock.elapsedRealtime();long stamp=image.getTimestamp();
+            if(received>240) { decision("BUFFER_LIMIT",stamp,now,callbackGeneration);outcome="IMAGE_TIMEOUT";return; }
+            String refusal=SessionMemory.policy.bufferRejection(callbackGeneration,now);
+            if(refusal!=null) { decision(refusal,stamp,now,callbackGeneration);return; }
+            refusal=CapturePolicy.timestampRejection(timestampSeen,lastTimestamp,stamp);
+            if(refusal!=null) { decision(refusal,stamp,now,callbackGeneration);return; }
+            timestampSeen=true;lastTimestamp=stamp;
+            if(SessionMemory.preparationVisible) { decision("PREPARATION_RETURNED",stamp,now,callbackGeneration);outcome="PREPARATION_RETURNED";return; }
+            if(image.getWidth()!=width||image.getHeight()!=height||image.getFormat()!=PixelFormat.RGBA_8888||image.getPlanes().length!=1) { decision("IMAGE_LAYOUT_INVALID",stamp,now,callbackGeneration);outcome="IMAGE_INVALID";return; }
             Image.Plane p=image.getPlanes()[0];int[] r=CapturePolicy.roi(roi[0],roi[1],roi[2],roi[3],width,height);
             crop=PixelProbe.crop(p.getBuffer(),width,height,p.getPixelStride(),p.getRowStride(),r);
-            if(!SessionMemory.policy.frame(generation,SystemClock.elapsedRealtime())) { outcome="STALE_GENERATION";return; }
+            if(!SessionMemory.policy.frame(generation,SystemClock.elapsedRealtime())) { String cause=SessionMemory.policy.bufferRejection(generation,SystemClock.elapsedRealtime());outcome=cause==null?"FRAME_COMMIT_REFUSED":cause;decision(outcome,stamp,SystemClock.elapsedRealtime(),callbackGeneration);return; }
             bufferElapsed=SystemClock.elapsedRealtime();SessionMemory.roi.put(generation,crop,r[2]-r[0],r[3]-r[1],bufferElapsed);crop=null;
             // Elapsed check on every access also handles suspend or delayed main-loop dispatch.
             new Handler(getMainLooper()).postDelayed(()->SessionMemory.roi.get(generation,SystemClock.elapsedRealtime()),CapturePolicy.ROI_MS);
             outcome="FRAME_READY_NOT_CLASSIFIED";
-        } catch(RuntimeException e) { outcome="IMAGE_INVALID"; }
+            decision("ACCEPTED",stamp,now,callbackGeneration);
+        } catch(RuntimeException e) { decision("IMAGE_READ_OR_CROP_FAILURE",0,SystemClock.elapsedRealtime(),callbackGeneration);outcome="IMAGE_INVALID"; }
         finally {
             if(crop!=null)Arrays.fill(crop,0);
             if(image!=null){image.close();closedImages++;}
             if(outcome!=null)finish(outcome);
         }
+    }
+
+    /** Keep bounded scalar decisions and aggregate rejection causes; never log or retain diagnostic pixels. */
+    private void decision(String reason,long stamp,long now,long callbackGeneration) {
+        if(!"ACCEPTED".equals(reason)){rejected++;rejectionCounts.put(reason,rejectionCounts.getOrDefault(reason,0)+1);}
+        if(bufferDecisions.length()>=16){decisionsTruncated++;return;}
+        try {
+            bufferDecisions.put(new JSONObject().put("index",received).put("decision",reason).put("receiptElapsedMs",now)
+                .put("sinceTriggerMs",now-requestElapsed).put("imageTimestampNs",stamp).put("callbackGeneration",callbackGeneration)
+                .put("readerGeneration",readerGeneration).put("virtualDisplayId",displayId));
+        } catch(org.json.JSONException e){decisionLogErrors++;}
     }
 
     /** Release image-producing resources before publishing a result; only successful ROI may remain. */
@@ -171,6 +218,11 @@ public final class CaptureService extends Service {
                 .put("outcome",lastResult).put("width",width).put("height",height).put("roi",new org.json.JSONArray(roi==null?new double[0]:roi))
                 .put("delayMs",SessionMemory.policy.delay).put("projectionElapsedMs",projectionAt).put("triggerElapsedMs",requestElapsed)
                 .put("bufferElapsedMs",bufferElapsed).put("closedElapsedMs",SystemClock.elapsedRealtime())
+                .put("readerCreatedElapsedMs",readerCreatedElapsed).put("displayCreatedElapsedMs",displayCreatedElapsed)
+                .put("virtualDisplayId",displayId).put("readerGeneration",readerGeneration).put("initializationMs",CapturePolicy.INITIALIZATION_MS)
+                .put("freshnessPolicy","NEW_READER_AND_SINGLE_DISPLAY_AFTER_BARRIER_NO_CROSS_CLOCK_COMPARISON")
+                .put("rejectionCounts",new JSONObject(rejectionCounts)).put("bufferDecisions",bufferDecisions)
+                .put("decisionsTruncated",decisionsTruncated).put("decisionLogErrors",decisionLogErrors)
                 .put("receivedUptimeMs",SystemClock.uptimeMillis()).put("receivedWallMs",System.currentTimeMillis())
                 .put("timestampPolicy","IMAGE_TIMESTAMPS_ONLY_COMPARED_TO_IMAGE_TIMESTAMPS")
                 .put("received",received).put("rejected",rejected).put("imagesClosed",closedImages)

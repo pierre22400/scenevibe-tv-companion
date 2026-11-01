@@ -94,6 +94,20 @@ public final class CaptureInstrumentTest {
         for(String name:context.getFilesDir().list())assertFalse(name.endsWith(".png")||name.endsWith(".jpg")||name.endsWith(".webp"));
     }
 
+    /** Capture an actually immobile owned Activity via MediaProjection, accepting the first received frame only. */
+    @Test public void staticFirstFrame() throws Exception {
+        open(CapturePolicy.Mode.PUBLIC);accept();
+        context.startActivity(new Intent(context,FixtureActivity.class).putExtra("mode","PUBLIC").putExtra("static",true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        JSONObject j=terminal();closed(j);assertFalse(FixtureActivity.animationEnabled);assertTrue(FixtureActivity.drawCount>0);
+        assertEquals(j.toString(),"FRAME_READY_NOT_CLASSIFIED",j.getString("outcome"));assertEquals(4,matches());
+        assertEquals(1,j.getInt("received"));assertEquals(0,j.getInt("rejected"));assertEquals(1,j.getInt("usefulFrames"));
+        assertEquals(SessionMemory.policy.generation,j.getLong("readerGeneration"));assertTrue(j.getInt("virtualDisplayId")>=0);
+        assertTrue(j.getLong("readerCreatedElapsedMs")-j.getLong("triggerElapsedMs")>=250);
+        assertTrue(j.getLong("closedElapsedMs")-j.getLong("triggerElapsedMs")<10000);
+        assertEquals("ACCEPTED",j.getJSONArray("bufferDecisions").getJSONObject(0).getString("decision"));
+        assertEquals(0,j.getJSONObject("rejectionCounts").length());assertEquals(0,j.getInt("decisionLogErrors"));
+    }
+
     /** Positive cross-Activity capture, unique useful frame and human-only simulated label, then erase. */
     @Test public void publicCrossAndInspection() throws Exception {
         open(CapturePolicy.Mode.PUBLIC);accept();depart();JSONObject j=terminal();closed(j);

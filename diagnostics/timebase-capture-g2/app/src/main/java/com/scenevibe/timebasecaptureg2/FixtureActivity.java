@@ -23,6 +23,8 @@ public final class FixtureActivity extends Activity {
     static volatile long drawnUptime;
     static volatile CapturePolicy.Mode shownMode;
     static volatile boolean surfaceDrawn;
+    static volatile boolean animationEnabled;
+    static volatile int drawCount;
 
     /** Construct the Android-managed fixture without persistent state. */
     public FixtureActivity() { }
@@ -34,6 +36,7 @@ public final class FixtureActivity extends Activity {
         try { mode=CapturePolicy.Mode.valueOf(getIntent().getStringExtra("mode")); }
         catch (RuntimeException e) { finish(); return; }
         shownMode=mode; drawnUptime=0; surfaceDrawn=false;
+        animationEnabled=!getIntent().getBooleanExtra("static",false);drawCount=0;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().setDecorFitsSystemWindows(false);
         if (mode==CapturePolicy.Mode.SECURE) getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
@@ -80,6 +83,7 @@ public final class FixtureActivity extends Activity {
         /** Render a fixed clock and four deterministic ROI markers, not an OCR training sample. */
         @Override protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            drawCount++;
             paint.setColor(Color.WHITE); canvas.drawRect(0,0,getWidth(),getHeight()*.5f,paint);
             if(shownMode!=CapturePolicy.Mode.MIXED) {
                 paint.setColor(Color.MAGENTA);
@@ -95,7 +99,7 @@ public final class FixtureActivity extends Activity {
             }
             if(drawnUptime==0)drawnUptime=SystemClock.uptimeMillis();
             // Owned animation supplies fresh frames during initialization, never acquisition polling.
-            if(SystemClock.uptimeMillis()-drawnUptime<15000)postInvalidateDelayed(100);
+            if(animationEnabled&&SystemClock.uptimeMillis()-drawnUptime<15000)postInvalidateDelayed(100);
         }
     }
 }
