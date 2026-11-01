@@ -1,0 +1,8 @@
+# Generated outputs and private signing material are never source or delivery dependencies.
+.gradle/
+build/
+app/build/
+local.properties
+proofs/
+*.jks
+*.keystore
