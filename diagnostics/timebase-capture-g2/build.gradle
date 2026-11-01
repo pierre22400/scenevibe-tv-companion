@@ -1,0 +1,2 @@
+/** Independent Android toolchain, pinned to the previously exercised diagnostic versions. */
+plugins { id 'com.android.application' version '8.7.3' apply false }
