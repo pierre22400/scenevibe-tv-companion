@@ -1,0 +1,33 @@
+{
+  "softwareVerdict": "PASS SOFTWARE G2 PREPARATION",
+  "physicalG2": "NOT EXECUTED",
+  "decision": "LEGAL REVIEW REQUIRED",
+  "sourceCommit": "4213cb060bb77cd0cd3f986001861acd1ea3b987",
+  "workflowRun": 41286895277,
+  "build": "SUCCESS",
+  "g2PortableInvariants": 57,
+  "g2BoundaryTests": 7,
+  "g1PortableInvariantsRerun": 47,
+  "android": [
+    {
+      "api": 31,
+      "image": "Android TV 12 x86 tv_1080p",
+      "g1Tests": 7,
+      "g2Tests": 9,
+      "failures": 0
+    },
+    {
+      "api": 35,
+      "image": "Android standard x86_64 pixel_2",
+      "g1Tests": 7,
+      "g2Tests": 9,
+      "failures": 0
+    }
+  ],
+  "baselineFilesUnchanged": 562,
+  "existingModified": 0,
+  "existingDeleted": 0,
+  "lintErrors": 0,
+  "lintWarnings": 5,
+  "privateImagesPersisted": false
+}

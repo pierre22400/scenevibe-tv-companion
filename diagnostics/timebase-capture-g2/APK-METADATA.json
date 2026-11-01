@@ -1,0 +1,32 @@
+{
+  "filename": "scenevibe-timebase-capture-g2-private-diagnostic.apk",
+  "bytes": 52170,
+  "sha256": "9a58b141a0ce5e4a024fbb2765e68b82fab8f43d5855907d9d7c4967131064fd",
+  "package": "com.scenevibe.timebasecaptureg2",
+  "versionCode": 1,
+  "versionName": "0.0.1-g2-private-diagnostic",
+  "minSdk": 31,
+  "targetSdk": 35,
+  "debuggable": true,
+  "status": "PRIVATE DIAGNOSTIC — NOT FOR DISTRIBUTION",
+  "signing": "Android Debug RSA-2048, diagnostic only, ephemeral CI key not delivered",
+  "certificateSha256": "37e5c807dfbdfbdd0ca834fa9afed384243a2a2d68f415e9c8a2c0a87aa4233a",
+  "m5Distinct": true,
+  "signatureVerification": {
+    "v1": false,
+    "v2": true,
+    "v3": false,
+    "v3.1": false,
+    "v4": false,
+    "sourceStamp": false,
+    "overall": "VERIFIES"
+  },
+  "permissions": [
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
+  ],
+  "sourceCommit": "4213cb060bb77cd0cd3f986001861acd1ea3b987",
+  "qualificationRun": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/41286895277",
+  "pr": "https://github.com/pierre22400/scenevibe-tv-companion/pull/39",
+  "physicalG2": "NOT EXECUTED"
+}
