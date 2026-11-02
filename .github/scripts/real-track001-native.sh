@@ -4,5 +4,6 @@
 set -euo pipefail
 bash .github/scripts/tv-ux002-native.sh
 adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.ManualTrackAndroidTest com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee tv-ux002-native/manual-track001.log
-grep -q '^OK (2 tests)' tv-ux002-native/manual-track001.log
+grep -q '^OK (3 tests)' tv-ux002-native/manual-track001.log
 grep -q '^INSTRUMENTATION_CODE: -1$' tv-ux002-native/manual-track001.log
+adb exec-out run-as com.scenevibe.tvcompanionpoc cat files/realtrack001-service-proof.json > tv-ux002-native/manual-service-proof.json

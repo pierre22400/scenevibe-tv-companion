@@ -17,7 +17,9 @@ Le message d'activation indique les vrais comptes du cache manuel.
 
 Le workflow dédié rejoue la suite JVM commune, les vues, la compilation/lint,
 les 51 cas natifs historiques et deux redémarrages sans modifier leurs assertions,
-puis deux cas Android supplémentaires pour les six événements manuels. Les trois
+puis trois cas Android supplémentaires pour les six événements manuels, dont
+l'admission explicite et les trois TEXT/trois MP3 réellement démarrés par le
+service Android sur une MediaSession appartenant au banc. Les trois
 MP3 de test sont synthétiques et distincts ; aucune voix de Pierre n'est incluse.
 Le réseau Android est une fixture déclarée ; le PostgreSQL/HTTP réel est testé
 dans la PR Cloud. Aucun succès émulé ne vaut preuve Prime/Sony.
