@@ -30,7 +30,9 @@ final class CloudMultimediaAdmission {
                 || !reference.current(SystemClock.elapsedRealtime()))return null;
         try {
             MultimediaPrivateCache.Prepared prepared=reference.prepared;
-            if(!mapped(prepared.profile) || prepared.track.calendar.events().size()!=19 || prepared.track.audio.size()!=3)return null;
+            boolean manual=BuildConfig.REAL_TRACK_E2E_001 && ManualTrackIdentity.matches(prepared.profile);
+            if(!manual && (!mapped(prepared.profile) || prepared.track.calendar.events().size()!=19 || prepared.track.audio.size()!=3))return null;
+            if(manual && (prepared.track.audio.isEmpty() || prepared.track.calendar.events().size()<=prepared.track.audio.size()))return null;
             ScheduledTrack identity=TrackParser.parse(new JSONObject(TvFirst008Wire.utf8(prepared.profile.runtimeBytes)),
                     media->{throw new TrackParser.Invalid("TEXT_ONLY_SOURCE","Unexpected source media");});
             if(ownedMediaSessionFixture)identity=new ScheduledTrack(identity.trackId,BuildConfig.APPLICATION_ID,
