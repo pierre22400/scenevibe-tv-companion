@@ -256,10 +256,29 @@ public final class NetflixManualSyncService extends Service {
         return clock.anchored() ? State.PAUSE : State.PRET;
     }
 
-    /** Format the editorial position for TV viewing. */
+    /**
+     * Format an editorial clock position for TV viewing so the viewer can compare it,
+     * digit for digit, against the time their film shows.
+     *
+     * <p>Below one hour the value is rendered as {@code MM:SS} (e.g. {@code 05:02},
+     * {@code 10:15}); at or above one hour it is rendered as {@code HH:MM:SS} (e.g.
+     * {@code 01:05:15}, {@code 02:13:08}). Ambiguous forms where the minutes field
+     * exceeds 59 (such as {@code 65:15}) are therefore never produced. The same single
+     * helper is used for the command-menu title and for the recalage panel so both read
+     * identically.
+     *
+     * @param ms a non-negative position in milliseconds
+     * @return the padded {@code MM:SS} or {@code HH:MM:SS} representation
+     */
     private static String timeLabel(long ms) {
-        long seconds = ms / 1000;
-        return String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60);
+        long seconds = Math.max(0, ms) / 1000;
+        long hours = seconds / 3600;
+        long minutes = (seconds % 3600) / 60;
+        long remainder = seconds % 60;
+        if (hours > 0) {
+            return String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, remainder);
+        }
+        return String.format(Locale.ROOT, "%02d:%02d", minutes, remainder);
     }
 
     /** Route OPEN_CONTROLS locally without starting a service from the background. */
@@ -474,10 +493,34 @@ public final class NetflixManualSyncService extends Service {
             generation = bound.generation();
         }
 
-        /** Show editorial time, the candidate and the explicitly chosen policy. */
+        /**
+         * Compact single-line status used as the panel's data source and action label:
+         * the frozen current editorial time, the candidate the viewer is building, and
+         * the explicitly chosen post-OK policy. The large current-vs-candidate display is
+         * drawn separately by the panel through {@link #currentLabel()} and
+         * {@link #candidateLabel()}; this string keeps the historical substrings
+         * ("Actuel", "candidat", "reprise après OK" / "reste en pause") intact.
+         */
         @Override public String label() {
             return "EN PAUSE · Actuel " + timeLabel(initial) + " · candidat " + timeLabel(candidate)
                     + (resumeOnCommit && !pauseRequested ? " · reprise après OK" : " · reste en pause");
+        }
+
+        /**
+         * The Track's CURRENT position, projected from the frozen clock snapshot only.
+         * SceneVibe shows where its own track stands and never asserts the film's time.
+         */
+        @Override public String currentLabel() {
+            return timeLabel(initial);
+        }
+
+        /**
+         * The Track's NEW (candidate) position the viewer is dialling in to match the
+         * time displayed by their film. It is the captured candidate, not any detected or
+         * auto-computed film/Track offset.
+         */
+        @Override public String candidateLabel() {
+            return timeLabel(candidate);
         }
 
         /** Clamp the requested change to the verified track horizon. */

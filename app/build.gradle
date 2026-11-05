@@ -118,7 +118,7 @@ android {
             initWith netflixadmission003a
             debuggable false
             applicationIdSuffix ".netflixoverlay001"
-            versionNameSuffix "-multiplatform-manual-sync-001"
+            versionNameSuffix "-multiplatform-product-ux002"
             buildConfigField "boolean", "TVUX_CONTROL_PANEL", "true"
             buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
             signingConfig null
@@ -316,7 +316,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("netflixmanual003b")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(19) }
+        variant.outputs.each { output -> output.versionCode.set(20) }
     }
     onVariants(selector().withBuildType("tvux002")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(realTrack001 ? 29 : 28) }

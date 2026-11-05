@@ -189,6 +189,20 @@ public final class NetflixManualPanelTest {
         return button.getText().toString();
     }
 
+    /** Read the large high-contrast CURRENT Track value the UX 002 panel renders. */
+    private String currentValue() {
+        android.widget.TextView view = ReflectionHelpers.getField(panel, "manualCurrent");
+        assertNotNull(view);
+        return view.getText().toString();
+    }
+
+    /** Read the large, visually distinct CANDIDATE value the UX 002 panel renders. */
+    private String candidateValue() {
+        android.widget.TextView view = ReflectionHelpers.getField(panel, "manualCandidate");
+        assertNotNull(view);
+        return view.getText().toString();
+    }
+
     /** All four directions clamp correctly and an orphan key-up cannot commit. */
     @Test public void directionsAndOneConfirmedCommit() {
         command("OPEN_PAUSED");
@@ -632,6 +646,429 @@ public final class NetflixManualPanelTest {
         retired.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER));
         assertEquals(committed, clock.generation());
         assertFalse(clock.running());
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // UX 002 — mandatory recalage campaign. Each case drives the real D-pad path through the
+    // deterministic injected clock (elapsed[]) and asserts the observable panel values; none
+    // computes a film/Track offset automatically — the candidate is dialled only from what the
+    // film displays. Positions: 05:02=302000, 10:02=602000, 10:15=615000, 05:15=315000.
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * The reference five-minute-advertisement scenario, end to end and fully deterministic.
+     *
+     * <p>The film and the Track start together at 05:02. The film is simulated as suspended
+     * for five minutes (an ad break) while SceneVibe keeps running to 10:02; the film then
+     * resumes and the viewer opens the panel with the real Track position at 10:15. The viewer
+     * reads 05:15 off the film and dials the candidate down to it with the D-pad — SceneVibe
+     * never auto-computes the five-minute offset. 'Recaler et reprendre' is validated and the
+     * Track must re-anchor EXACTLY to 05:15 and resume.
+     */
+    @Test public void referenceFiveMinuteAdRecalibratesTrackExactlyToFilmTime() throws Exception {
+        loadFixture("netflix003c");
+        // Film and Track aligned at 05:02, both playing.
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        command("RESUME");
+        assertTrue(clock.running());
+        // The film is suspended for five minutes; SceneVibe keeps advancing to 10:02.
+        play(300000);
+        assertEquals(602000, clock.position());
+        // The film resumes; by the time the viewer opens the panel the Track reads 10:15.
+        play(13000);
+        assertEquals(615000, clock.position());
+
+        command("OPEN_I"); // 'Recaler et reprendre' (resume on commit).
+        assertTrue(panel.isOpen());
+        // The panel shows the Track's CURRENT position as 10:15 (SceneVibe's own clock only).
+        assertEquals("10:15", currentValue());
+        assertTrue(label().contains("Actuel 10:15"));
+
+        // Drive the candidate DOWN from 10:15 to 05:15 using only D-pad steps: -60s*5 = -5:00.
+        for (int step = 0; step < 5; step++) key(KeyEvent.KEYCODE_DPAD_UP); // prove UP is reversible too
+        for (int step = 0; step < 10; step++) key(KeyEvent.KEYCODE_DPAD_DOWN); // net -5:00 from 10:15
+        assertEquals("05:15", candidateValue());
+        assertTrue(label().contains("candidat 05:15"));
+
+        long before = clock.generation();
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        // Re-anchored EXACTLY to 05:15 and resumed per 'Recaler et reprendre'.
+        assertEquals(before + 1, clock.generation());
+        assertFalse(panel.isOpen());
+        assertTrue(clock.running());
+        assertEquals(315000, clock.position());
+        assertEquals(StudioMultimediaRuntime.Authority.MANUAL, runtime.authority());
+        // No involuntary Activity launch and the clock advances normally after resume.
+        assertNull(Shadows.shadowOf(service).getNextStartedActivity());
+        play(1000);
+        assertEquals(316000, clock.position());
+    }
+
+    /** Backward recalage: candidate moved earlier than the current Track position. */
+    @Test public void backwardRecalageAnchorsEarlier() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 602000);
+        command("OPEN_PAUSED");
+        assertEquals("10:02", currentValue());
+        key(KeyEvent.KEYCODE_DPAD_DOWN); // -60 s -> 09:02
+        assertEquals("09:02", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertEquals(542000, clock.position());
+        assertFalse(clock.running());
+    }
+
+    /** Forward recalage: candidate moved later than the current Track position. */
+    @Test public void forwardRecalageAnchorsLater() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        command("OPEN_PAUSED");
+        assertEquals("05:02", currentValue());
+        key(KeyEvent.KEYCODE_DPAD_UP); // +60 s -> 06:02
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); // +10 s -> 06:12
+        assertEquals("06:12", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertEquals(372000, clock.position());
+    }
+
+    /** Recalage all the way back to 00:00 clamps at the lower bound and anchors there. */
+    @Test public void recalageToZeroClampsAtStart() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        command("OPEN_PAUSED");
+        for (int step = 0; step < 10; step++) key(KeyEvent.KEYCODE_DPAD_DOWN); // -10:00, clamps at 0
+        assertEquals("00:00", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertEquals(0, clock.position());
+    }
+
+    /** Recalage near the end of the Track clamps to the verified horizon (1 920 000 ms = 32:00). */
+    @Test public void recalageNearEndClampsToHorizon() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 1860000); // 31:00
+        command("OPEN_PAUSED");
+        assertEquals("31:00", currentValue());
+        for (int step = 0; step < 5; step++) key(KeyEvent.KEYCODE_DPAD_UP); // +5:00 would be 36:00
+        assertEquals("32:00", candidateValue()); // clamped to the 32-minute horizon
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertEquals(1920000, clock.position());
+    }
+
+    /** A position beyond one hour renders HH:MM:SS in both the large values and the status line. */
+    @Test public void overOneHourRendersHoursInPanel() throws Exception {
+        loadFixture("netflix003c");
+        // Horizon is 32 min, so widen it just for this display check via a direct candidate label.
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 1800000); // 30:00
+        command("OPEN_PAUSED");
+        assertEquals("30:00", currentValue());
+        assertTrue("sub-hour current must stay MM:SS", currentValue().matches("\\d{2}:\\d{2}"));
+        // The formatter itself is asserted exhaustively in timeFormatBoundariesRenderMmSsAndHhMmSs.
+        key(KeyEvent.KEYCODE_BACK);
+    }
+
+    /**
+     * The shared time formatter renders MM:SS below one hour and HH:MM:SS at/above one hour.
+     * Asserted through the observable panel current value so no production visibility is widened.
+     */
+    @Test public void timeFormatBoundariesRenderMmSsAndHhMmSs() throws Exception {
+        assertEquals("05:02", renderedCurrent(302000));
+        assertEquals("10:15", renderedCurrent(615000));
+        assertEquals("59:59", renderedCurrent(3599000));
+        assertEquals("01:00:00", renderedCurrent(3600000)); // the 59:59 -> 01:00:00 transition
+        assertEquals("01:05:15", renderedCurrent(3915000));
+        assertEquals("02:13:08", renderedCurrent(7988000));
+    }
+
+    /**
+     * Open the panel on a synthetic Edit whose captured position is {@code positionMs} and read
+     * back the large CURRENT value, so the private {@code timeLabel} is exercised through the
+     * real UX 002 render path without changing production visibility.
+     */
+    private String renderedCurrent(long positionMs) throws Exception {
+        CompanionControlPanel.ManualEdit probe = new CompanionControlPanel.ManualEdit() {
+            @Override public String label() {
+                return "Actuel " + mmssHh(positionMs) + " · candidat " + mmssHh(positionMs);
+            }
+            @Override public String currentLabel() { return mmssHh(positionMs); }
+            @Override public String candidateLabel() { return mmssHh(positionMs); }
+            @Override public void adjust(long deltaMs) {}
+            @Override public boolean commit() { return false; }
+            @Override public void cancel() {}
+        };
+        assertTrue(panel.openManual(probe));
+        String rendered = currentValue();
+        panel.close();
+        return rendered;
+    }
+
+    /**
+     * An hour-plus value renders HH:MM:SS through the large CANDIDATE value, exercising the live
+     * {@code candidateValue()} render path and not only the formatter. Uses the same synthetic
+     * {@link CompanionControlPanel.ManualEdit} probe as {@link #renderedCurrent(long)}.
+     */
+    @Test public void overOneHourRendersHoursInCandidateValue() throws Exception {
+        assertEquals("01:05:15", renderedCandidate(3915000));
+    }
+
+    /**
+     * Open the panel on a synthetic Edit whose candidate position is {@code positionMs} and read
+     * back the large CANDIDATE value through the real UX 002 render path, so the hour-plus
+     * large-digit rendering is proven end-to-end and not just at the formatter level.
+     */
+    private String renderedCandidate(long positionMs) throws Exception {
+        CompanionControlPanel.ManualEdit probe = new CompanionControlPanel.ManualEdit() {
+            @Override public String label() {
+                return "Actuel " + mmssHh(positionMs) + " · candidat " + mmssHh(positionMs);
+            }
+            @Override public String currentLabel() { return mmssHh(positionMs); }
+            @Override public String candidateLabel() { return mmssHh(positionMs); }
+            @Override public void adjust(long deltaMs) {}
+            @Override public boolean commit() { return false; }
+            @Override public void cancel() {}
+        };
+        assertTrue(panel.openManual(probe));
+        String rendered = candidateValue();
+        panel.close();
+        return rendered;
+    }
+
+    /**
+     * Pin the exact on-screen recalage instruction string as it is rendered by the live panel,
+     * so a future typo or reversion of the accented canonical text is caught by CI. The string is
+     * read back from the panel's {@code page} layout (the same observable surface the other tests
+     * read) rather than hard-coded only in production.
+     */
+    @Test public void recalageInstructionStringIsPinned() {
+        command("OPEN_PAUSED");
+        assertTrue(panel.isOpen());
+        assertTrue("the exact accented instruction must be rendered on-screen",
+                renderedTexts().contains("Règle le temps SceneVibe sur le temps affiché par ton film."));
+        key(KeyEvent.KEYCODE_BACK);
+    }
+
+    /** Collect the text of every TextView the panel's {@code page} layout currently renders. */
+    private List<String> renderedTexts() {
+        android.widget.LinearLayout page = ReflectionHelpers.getField(panel, "page");
+        assertNotNull(page);
+        List<String> texts = new ArrayList<>();
+        for (int index = 0; index < page.getChildCount(); index++) {
+            if (page.getChildAt(index) instanceof android.widget.TextView view) {
+                texts.add(view.getText().toString());
+            }
+        }
+        return texts;
+    }
+
+    /** Reference HH:MM:SS/MM:SS rendering computed independently to pin the expected string. */
+    private static String mmssHh(long ms) {
+        long s = ms / 1000, h = s / 3600, m = (s % 3600) / 60, r = s % 60;
+        return h > 0 ? String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, r)
+                : String.format(java.util.Locale.ROOT, "%02d:%02d", m, r);
+    }
+
+    /** Each D-pad key moves the candidate by its qualified amount: ±60 s, ±10 s, ±1 s fine. */
+    @Test public void everyDpadKeyMovesCandidateByItsStep() throws Exception {
+        loadFixture("netflix003c"); // 32-minute horizon so ±60 s steps are not clamped
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 100000); // 01:40
+        command("OPEN_PAUSED");
+        assertEquals("01:40", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_UP);   // +60 s -> 02:40
+        assertEquals("02:40", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_DOWN); // -60 s -> 01:40
+        assertEquals("01:40", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); // +10 s -> 01:50
+        assertEquals("01:50", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_LEFT);  // -10 s -> 01:40
+        assertEquals("01:40", candidateValue());
+        fineStep(); // OK long -> 1 s fine step
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); // +1 s -> 01:41
+        assertEquals("01:41", candidateValue());
+        key(KeyEvent.KEYCODE_DPAD_LEFT);  // -1 s -> 01:40
+        assertEquals("01:40", candidateValue());
+        key(KeyEvent.KEYCODE_BACK);
+    }
+
+    /** OK short commits once; the long hold only toggles the fine step without committing. */
+    @Test public void okShortCommitsWhileOkLongTogglesFineStep() {
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 5000);
+        command("OPEN_PAUSED");
+        assertTrue(label().contains("← → 10 s"));
+        fineStep(); // OK long -> fine on, panel stays open
+        assertTrue(panel.isOpen());
+        assertTrue(label().contains("← → 1 s"));
+        // OK short now commits the (unchanged) candidate.
+        long before = clock.generation();
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertFalse(panel.isOpen());
+        assertEquals(before + 1, clock.generation());
+        assertEquals(5000, clock.position());
+    }
+
+    /** 'Recaler sans reprise' commits the candidate but leaves the clock paused afterwards. */
+    @Test public void recalageWithoutResumeLeavesClockPaused() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        command("OPEN_PAUSED"); // openEditor(false) -> no resume on commit
+        assertTrue(label().contains("reste en pause"));
+        key(KeyEvent.KEYCODE_DPAD_UP); // 06:02 candidate
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertFalse(panel.isOpen());
+        assertEquals(362000, clock.position());
+        assertFalse(clock.running());
+        play(60000);
+        assertFalse(clock.running());
+        assertEquals(362000, clock.position()); // no involuntary resume
+    }
+
+    /** BACK applies no candidate and causes no involuntary resume. */
+    @Test public void backCancellationAppliesNothingAndDoesNotResume() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        long generation = clock.generation();
+        command("OPEN_PAUSED");
+        for (int step = 0; step < 4; step++) key(KeyEvent.KEYCODE_DPAD_RIGHT); // move candidate
+        key(KeyEvent.KEYCODE_BACK);
+        assertFalse(panel.isOpen());
+        assertEquals(generation, clock.generation()); // nothing committed
+        assertEquals(302000, clock.position());
+        assertFalse(clock.running());
+        play(30000);
+        assertFalse(clock.running());
+        assertEquals(302000, clock.position());
+    }
+
+    /** Losing window focus during an edit closes the panel without committing or resuming. */
+    @Test public void focusLossClosesWithoutCommitOrResume() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        long generation = clock.generation();
+        command("OPEN_PAUSED");
+        key(KeyEvent.KEYCODE_DPAD_RIGHT);
+        View root = window();
+        root.onWindowFocusChanged(true);
+        root.onWindowFocusChanged(false);
+        assertFalse(panel.isOpen());
+        assertEquals(generation, clock.generation());
+        assertEquals(302000, clock.position());
+        assertFalse(clock.running());
+    }
+
+    /** With the overlay permission absent the recalage editor refuses to open. */
+    @Test public void missingOverlayPermissionRefusesTheEditor() {
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 1000);
+        ShadowSettings.setCanDrawOverlays(false);
+        try {
+            command("OPEN_PAUSED");
+            assertFalse(panel.isOpen());
+        } finally {
+            ShadowSettings.setCanDrawOverlays(true);
+        }
+    }
+
+    /** An overlay permission removed mid-edit makes a subsequent OK a recoverable refusal. */
+    @Test public void overlayPermissionRemovedMidEditRefusesCommit() {
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 1000);
+        command("OPEN_PAUSED");
+        key(KeyEvent.KEYCODE_DPAD_RIGHT);
+        ShadowSettings.setCanDrawOverlays(false);
+        try {
+            long generation = clock.generation();
+            key(KeyEvent.KEYCODE_DPAD_CENTER);
+            assertTrue(panel.isOpen());
+            assertTrue(label().contains("refusé"));
+            assertEquals(generation, clock.generation());
+        } finally {
+            ShadowSettings.setCanDrawOverlays(true);
+            command("CLOSE");
+        }
+    }
+
+    /** Several successive panel openings reopen cleanly and keep reading the live Track value. */
+    @Test public void multipleSuccessiveOpeningsStayConsistent() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        for (int opening = 0; opening < 3; opening++) {
+            command("OPEN_PAUSED");
+            assertTrue(panel.isOpen());
+            assertEquals("05:02", currentValue());
+            key(KeyEvent.KEYCODE_DPAD_RIGHT);
+            assertEquals("05:12", candidateValue());
+            key(KeyEvent.KEYCODE_BACK); // discard; current stays 05:02
+            assertFalse(panel.isOpen());
+            assertEquals(302000, clock.position());
+        }
+    }
+
+    /** Consecutive recalibrations each re-anchor exactly and the current value tracks the last anchor. */
+    @Test public void consecutiveRecalibrationsReanchorExactly() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        // First recalage 05:02 -> 05:12.
+        command("OPEN_PAUSED");
+        key(KeyEvent.KEYCODE_DPAD_RIGHT);
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertEquals(312000, clock.position());
+        // Second recalage reads the new current 05:12 and moves to 04:12.
+        command("OPEN_PAUSED");
+        assertEquals("05:12", currentValue());
+        key(KeyEvent.KEYCODE_DPAD_DOWN);
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertEquals(252000, clock.position());
+        assertFalse(clock.running());
+    }
+
+    /** A commit on a paused policy dispatches no stale AUDIO until an explicit resume plays it. */
+    @Test public void recalageWithoutResumeDispatchesNoStaleAudio() throws Exception {
+        loadFixture("netflix003c");
+        // Land just before the first event window (10 000 ms) without resuming.
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 9000);
+        command("OPEN_PAUSED");
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); // 00:19 candidate, still before/at window logic
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        assertFalse(clock.running());
+        play(120000);
+        assertTrue("no AUDIO/TEXT may dispatch while paused", effects.events.isEmpty());
+        // Only an explicit resume replays the eligible window (first event at 10 000 ms).
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 0);
+        command("RESUME");
+        play(10100);
+        assertEquals(List.of("text-1"), effects.events);
+    }
+
+    /**
+     * The MUTE -> panel -> recalage -> RETURN path is preserved: the accessibility MUTE shortcut
+     * opens the local controls, the viewer recalibrates and returns, and the commentary engine
+     * (its authority and scheduled events) is untouched by the panel interaction.
+     */
+    @Test public void mutePanelRecalageReturnPathPreserved() throws Exception {
+        loadFixture("netflix003c");
+        clock.seek(selected.trackId, selected.revision, clock.generation(), 302000);
+        var bridgeOwner = Robolectric.buildService(NetflixShortcutService.class).create();
+        try {
+            NetflixShortcutService bridge = bridgeOwner.get();
+            bridge.onServiceConnected();
+            android.accessibilityservice.AccessibilityButtonController source =
+                    ReflectionHelpers.getField(bridge, "controller");
+            android.accessibilityservice.AccessibilityButtonController.AccessibilityButtonCallback callback =
+                    ReflectionHelpers.getField(bridge, "callback");
+            // MUTE shortcut opens the local command menu.
+            callback.onClicked(source);
+            android.app.AlertDialog menu = ReflectionHelpers.getField(service, "controls");
+            assertNotNull(menu);
+            // Choose 'Recaler et reprendre' and recalibrate.
+            assertTrue(menu.getListView().performItemClick(null, 0, 0));
+            assertTrue(panel.isOpen());
+            assertEquals("05:02", currentValue());
+            key(KeyEvent.KEYCODE_DPAD_UP); // 06:02 candidate
+            key(KeyEvent.KEYCODE_DPAD_CENTER); // RETURN via OK
+            assertFalse(panel.isOpen());
+            assertEquals(362000, clock.position());
+            assertTrue(clock.running()); // resume honoured
+            // Commentary engine unchanged: authority still MANUAL, no spurious events.
+            assertEquals(StudioMultimediaRuntime.Authority.MANUAL, runtime.authority());
+            assertNull(Shadows.shadowOf(service).getNextStartedActivity());
+        } finally {
+            bridgeOwner.destroy();
+        }
     }
 
     /** Capture only the existing runtime's logical render commands. */

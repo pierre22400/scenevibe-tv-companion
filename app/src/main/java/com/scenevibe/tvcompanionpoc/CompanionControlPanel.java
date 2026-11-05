@@ -140,6 +140,18 @@ final class CompanionControlPanel {
     interface ManualEdit {
         /** Show the captured position, candidate and chosen playback policy. */
         String label();
+        /**
+         * Render the Track's CURRENT position (where SceneVibe is now), in large digits,
+         * so the viewer sees the value they are moving away from. SceneVibe projects only
+         * its own clock here; it never claims to know the film's time.
+         */
+        default String currentLabel() { return label(); }
+        /**
+         * Render the Track's NEW (candidate) position, in large digits and visually
+         * distinct from the current value, so the viewer can match it to the time their
+         * film displays before confirming.
+         */
+        default String candidateLabel() { return label(); }
         /** Adjust the bounded candidate without applying it. */
         void adjust(long deltaMs);
         /** Commit the candidate once, returning false on a recoverable refusal. */
@@ -150,6 +162,7 @@ final class CompanionControlPanel {
 
     private ManualEdit manualEdit;
     private boolean manualFine;
+    private TextView manualCurrent,manualCandidate;
     private static final long MANUAL_FINE_HOLD_MS = 700;
 
     /** Attach through the same interactive window and focus policy as the 001-C probe. */
@@ -162,20 +175,53 @@ final class CompanionControlPanel {
         return false;
     }
 
-    /** Use the 001-C interactive shell dimensions and its existing focusable action. */
+    /**
+     * Build the UX 002 recalage layout: it is always the Track that recalibrates onto the
+     * film, never the film onto the Track. The viewer reads the film's on-screen time and
+     * copies it here; SceneVibe never claims to detect the film's position or any offset.
+     *
+     * <p>The panel shows, in large high-contrast digits, the Track's CURRENT position and
+     * the clearly distinguished NEW (candidate) position, the pedagogical instruction, the
+     * pause hint and the active step indicator. The compact status line (with the step
+     * indicator) remains the focusable action whose text drives the historical tests.
+     */
     private void showManual() {
         shell("SceneVibe — recalage Netflix",this::close);
         params.width=Math.min(dp(620),(int)(context.getResources().getDisplayMetrics().widthPixels*.8f));
-        params.height=dp(310);
+        params.height=dp(520);
+        page.addView(label("SCENEVIBE — RECALAGE",22));
+        page.addView(label("POSITION ACTUELLE DE LA TRACK",15));
+        manualCurrent=valueLabel(manualEdit.currentLabel(),0xFF333333);
+        page.addView(manualCurrent);
+        page.addView(label("Règle le temps SceneVibe sur le temps affiché par ton film.",18));
+        page.addView(label("Pour plus de précision, mets de préférence le film en pause.",16));
+        page.addView(label("NOUVELLE POSITION DE LA TRACK",15));
+        manualCandidate=valueLabel(manualEdit.candidateLabel(),0xFF0A5AD4);
+        page.addView(manualCandidate);
         page.addView(label("↑ ↓ 60 s · OK valider · OK long change le pas · BACK annuler",18));
         text=action(manualLabel(),this::commitManualEdit);
         action("Annuler",this::close);
         text.requestFocus();
     }
 
+    /** Draw one large, bold, high-contrast time value so the current and candidate read clearly on a TV. */
+    private TextView valueLabel(String value,int color) {
+        TextView view=label(value,40);view.setTextColor(color);
+        view.setTypeface(view.getTypeface(),android.graphics.Typeface.BOLD);
+        view.setGravity(Gravity.CENTER_HORIZONTAL);
+        return view;
+    }
+
     /** Display the current horizontal step next to the editable candidate. */
     private String manualLabel() {
         return manualEdit.label() + (manualFine ? " · ← → 1 s" : " · ← → 10 s");
+    }
+
+    /** Refresh the focusable status line and the large current/candidate values after any change. */
+    private void refreshManual() {
+        if(text!=null)text.setText(manualLabel());
+        if(manualCurrent!=null)manualCurrent.setText(manualEdit.currentLabel());
+        if(manualCandidate!=null)manualCandidate.setText(manualEdit.candidateLabel());
     }
 
     /** Close only after the owner confirms the commit. */
@@ -193,6 +239,8 @@ final class CompanionControlPanel {
     private void cancelManualEdit() {
         ManualEdit previous=manualEdit;
         manualEdit=null;
+        manualCurrent=null;
+        manualCandidate=null;
         if(previous!=null)previous.cancel();
     }
 
@@ -210,7 +258,7 @@ final class CompanionControlPanel {
                 if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled()){
                     if(event.getEventTime()-event.getDownTime()>=MANUAL_FINE_HOLD_MS){
                         manualFine=!manualFine;
-                        text.setText(manualLabel());
+                        refreshManual();
                     }else commitManualEdit();
                 }
                 return true;
@@ -218,7 +266,7 @@ final class CompanionControlPanel {
         }
         if(event.getAction()==KeyEvent.ACTION_DOWN){
             manualEdit.adjust(delta);
-            text.setText(manualLabel());
+            refreshManual();
         }
         return true;
     }
