@@ -1,6 +1,6 @@
 # MULTIPLATFORM PRODUCT UX 002 : Note de livraison (v20)
 
-Mandat section 13 / addendum 002-A section 6. Fichier unique, sans archive de rapport redondante. Il ne consigne que des résultats réellement exécutés dans le cloud sur la branche `kiro/scenevibe-multiplatform-product-ux-002` (HEAD `4b52d1c`, descendant du gel `867a286`). Aucune revendication de PASS pour ce qui n'a pas été exécuté.
+Mandat section 13 / addendum 002-A section 6. Fichier unique, sans archive de rapport redondante. Il ne consigne que des résultats réellement exécutés dans le cloud sur la pointe de la branche `kiro/scenevibe-multiplatform-product-ux-002` (les commits UX 002 empilés au-dessus du gel stable `867a286`). Aucune revendication de PASS pour ce qui n'a pas été exécuté.
 
 ## 1. Le panneau de recalage
 

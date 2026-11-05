@@ -800,6 +800,64 @@ public final class NetflixManualPanelTest {
         return rendered;
     }
 
+    /**
+     * An hour-plus value renders HH:MM:SS through the large CANDIDATE value, exercising the live
+     * {@code candidateValue()} render path and not only the formatter. Uses the same synthetic
+     * {@link CompanionControlPanel.ManualEdit} probe as {@link #renderedCurrent(long)}.
+     */
+    @Test public void overOneHourRendersHoursInCandidateValue() throws Exception {
+        assertEquals("01:05:15", renderedCandidate(3915000));
+    }
+
+    /**
+     * Open the panel on a synthetic Edit whose candidate position is {@code positionMs} and read
+     * back the large CANDIDATE value through the real UX 002 render path, so the hour-plus
+     * large-digit rendering is proven end-to-end and not just at the formatter level.
+     */
+    private String renderedCandidate(long positionMs) throws Exception {
+        CompanionControlPanel.ManualEdit probe = new CompanionControlPanel.ManualEdit() {
+            @Override public String label() {
+                return "Actuel " + mmssHh(positionMs) + " · candidat " + mmssHh(positionMs);
+            }
+            @Override public String currentLabel() { return mmssHh(positionMs); }
+            @Override public String candidateLabel() { return mmssHh(positionMs); }
+            @Override public void adjust(long deltaMs) {}
+            @Override public boolean commit() { return false; }
+            @Override public void cancel() {}
+        };
+        assertTrue(panel.openManual(probe));
+        String rendered = candidateValue();
+        panel.close();
+        return rendered;
+    }
+
+    /**
+     * Pin the exact on-screen recalage instruction string as it is rendered by the live panel,
+     * so a future typo or reversion of the accented canonical text is caught by CI. The string is
+     * read back from the panel's {@code page} layout (the same observable surface the other tests
+     * read) rather than hard-coded only in production.
+     */
+    @Test public void recalageInstructionStringIsPinned() {
+        command("OPEN_PAUSED");
+        assertTrue(panel.isOpen());
+        assertTrue("the exact accented instruction must be rendered on-screen",
+                renderedTexts().contains("Règle le temps SceneVibe sur le temps affiché par ton film."));
+        key(KeyEvent.KEYCODE_BACK);
+    }
+
+    /** Collect the text of every TextView the panel's {@code page} layout currently renders. */
+    private List<String> renderedTexts() {
+        android.widget.LinearLayout page = ReflectionHelpers.getField(panel, "page");
+        assertNotNull(page);
+        List<String> texts = new ArrayList<>();
+        for (int index = 0; index < page.getChildCount(); index++) {
+            if (page.getChildAt(index) instanceof android.widget.TextView view) {
+                texts.add(view.getText().toString());
+            }
+        }
+        return texts;
+    }
+
     /** Reference HH:MM:SS/MM:SS rendering computed independently to pin the expected string. */
     private static String mmssHh(long ms) {
         long s = ms / 1000, h = s / 3600, m = (s % 3600) / 60, r = s % 60;
