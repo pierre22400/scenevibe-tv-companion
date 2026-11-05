@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="netflix_shortcut_description">Ouvre le panneau SceneVibe lors du raccourci système choisi. Ne lit ni le contenu des fenêtres ni les touches.</string>
+</resources>

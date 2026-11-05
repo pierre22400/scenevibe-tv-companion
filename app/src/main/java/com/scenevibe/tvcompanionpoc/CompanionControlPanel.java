@@ -136,6 +136,93 @@ final class CompanionControlPanel {
         };
     }
 
+    /** Project the isolated manual transaction without granting the panel runtime ownership. */
+    interface ManualEdit {
+        /** Show the captured position, candidate and chosen playback policy. */
+        String label();
+        /** Adjust the bounded candidate without applying it. */
+        void adjust(long deltaMs);
+        /** Commit the candidate once, returning false on a recoverable refusal. */
+        boolean commit();
+        /** Cancel an uncommitted candidate and restore the initial local running policy. */
+        void cancel();
+    }
+
+    private ManualEdit manualEdit;
+    private boolean manualFine;
+    private static final long MANUAL_FINE_HOLD_MS = 700;
+
+    /** Attach through the same interactive window and focus policy as the 001-C probe. */
+    boolean openManual(ManualEdit edit) {
+        if (!BuildConfig.NETFLIX_LOCAL_QUALIFICATION || root != null) return false;
+        manualEdit=java.util.Objects.requireNonNull(edit);
+        manualFine=false;
+        if (attach(false)) return true;
+        cancelManualEdit();
+        return false;
+    }
+
+    /** Use the 001-C interactive shell dimensions and its existing focusable action. */
+    private void showManual() {
+        shell("SceneVibe — recalage Netflix",this::close);
+        params.width=Math.min(dp(620),(int)(context.getResources().getDisplayMetrics().widthPixels*.8f));
+        params.height=dp(310);
+        page.addView(label("↑ ↓ 60 s · OK valider · OK long change le pas · BACK annuler",18));
+        text=action(manualLabel(),this::commitManualEdit);
+        action("Annuler",this::close);
+        text.requestFocus();
+    }
+
+    /** Display the current horizontal step next to the editable candidate. */
+    private String manualLabel() {
+        return manualEdit.label() + (manualFine ? " · ← → 1 s" : " · ← → 10 s");
+    }
+
+    /** Close only after the owner confirms the commit. */
+    private void commitManualEdit() {
+        if(manualEdit==null)return;
+        if(!manualEdit.commit()){
+            text.setText("Recalage refusé · BACK pour fermer");
+            return;
+        }
+        manualEdit=null;
+        close();
+    }
+
+    /** Retire the edit once through the same path as BACK, CLOSE or focus loss. */
+    private void cancelManualEdit() {
+        ManualEdit previous=manualEdit;
+        manualEdit=null;
+        if(previous!=null)previous.cancel();
+    }
+
+    /** Route remote edits after the existing key-pair and cancellation checks. */
+    private boolean manualKey(KeyEvent event) {
+        if(manualEdit==null)return false;
+        long delta;
+        switch(event.getKeyCode()){
+            case KeyEvent.KEYCODE_DPAD_LEFT: delta=manualFine?-1000:-10000; break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: delta=manualFine?1000:10000; break;
+            case KeyEvent.KEYCODE_DPAD_UP: delta=60000; break;
+            case KeyEvent.KEYCODE_DPAD_DOWN: delta=-60000; break;
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+                if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled()){
+                    if(event.getEventTime()-event.getDownTime()>=MANUAL_FINE_HOLD_MS){
+                        manualFine=!manualFine;
+                        text.setText(manualLabel());
+                    }else commitManualEdit();
+                }
+                return true;
+            default: return false;
+        }
+        if(event.getAction()==KeyEvent.ACTION_DOWN){
+            manualEdit.adjust(delta);
+            text.setText(manualLabel());
+        }
+        return true;
+    }
+
     /** Show a single temporary window; any partial add failure is cleaned up and releases input. */
     boolean open() {
         if(root!=null)return passive?activatePrepared():true;
@@ -158,7 +245,7 @@ final class CompanionControlPanel {
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL|WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,PixelFormat.TRANSLUCENT);
         params.gravity=Gravity.END|Gravity.CENTER_VERTICAL;params.setTitle("SceneVibe companion controls");
         configureSize(prepared);
-        if(prepared)showPrepared();else showMain();
+        if(manualEdit!=null)showManual();else if(prepared)showPrepared();else showMain();
         try{host.add(root,params);trace("ATTACHED",-1,-1);if(!prepared)verifyFocusRequest();if(!prepared)root.post(()->{if(root!=null && !passive)text.requestFocus();});handler.postDelayed(refresh,250);return true;}
         catch(RuntimeException refused){close();return false;}
     }
@@ -244,7 +331,7 @@ final class CompanionControlPanel {
         retiring.clearFocus();retiring.setVisibility(View.GONE);
         try{host.releaseFocus(retiring,params);}catch(RuntimeException refused){/* Removal remains mandatory. */}finally{
             try{host.remove(retiring);}catch(RuntimeException alreadyDetached){/* Focus was released first. */}
-            closing=false;confirmRelease(retiring,0);closed.run();
+            closing=false;confirmRelease(retiring,0);cancelManualEdit();closed.run();
         }
     }
     /** Wait only for public detachment/focus evidence; a removal request alone is not CLOSED. */
@@ -376,7 +463,7 @@ final class CompanionControlPanel {
         if(root==null)return;
         if(embedded && embeddedPaused)return;
         if(!embedded && !permission.getAsBoolean()){close();return;}
-        update();handler.postDelayed(refresh,250);
+        if(manualEdit==null)update();handler.postDelayed(refresh,250);
     }
 
     /** Add one full-width action with a stable focus ID. */
@@ -441,6 +528,7 @@ final class CompanionControlPanel {
                 if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled())back();
                 return true;
             }
+            if(manualKey(event))return true;
             return super.dispatchKeyEvent(event);
         }
         /** Unexpected system-window focus loss closes the panel rather than keeping an invisible input owner. */
@@ -450,7 +538,7 @@ final class CompanionControlPanel {
             trace(focused?"WINDOW_FOCUS_GAINED":"WINDOW_FOCUS_LOST",-1,-1);if(!focused)held.clear();
             if(embedded)return;
             if(focused)hadFocus=true;else if(hadFocus && root==this && !passive){
-                if(BuildConfig.TVUX_DEVELOPER_OVERLAY)standby();else close();
+                if(manualEdit!=null)close();else if(BuildConfig.TVUX_DEVELOPER_OVERLAY)standby();else close();
             }
         }
         /** Block platform media fallback while this explicit interactive window owns the remote. */
