@@ -1,0 +1,32 @@
+name: REAL TRACK 001 — readable fixture export
+on:
+  push:
+    branches: [work/scenevibe-real-track-tv-001]
+    paths:
+      - .github/workflows/real-track-fixture-export.yml
+      - qualification/real-track001/export_fixture.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fixture_export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Decode all text and MP3 data and verify source checksums
+        run: |
+          set -euo pipefail
+          python3 -B qualification/real-track001/export_fixture.py
+          (cd fixture-export && sha256sum -c sha256.txt)
+          zip -q -r fixture-realtrack001-claire.zip fixture-export
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scenevibe-real-track001-fixture-claire-${{ github.run_id }}
+          path: |
+            fixture-export/
+            fixture-realtrack001-claire.zip
+          if-no-files-found: error
+          retention-days: 14
