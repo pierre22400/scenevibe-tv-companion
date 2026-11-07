@@ -71,16 +71,19 @@ final class MultimediaCloudClient {
         if(resource!=null)result+="&resourceId="+URLEncoder.encode(resource,"UTF-8");return result;
     }
     /** Read one exact MIME/size-bounded response and preserve raw bytes for digest verification. */
+    /** Accept bounded chunked bytes without a declared length; expected resource sizes and hashes remain mandatory. */
     private byte[] request(String method,String action,Binding binding,String resource,byte[] body,String mime,int maximum,long expected) throws Exception {
         check();
         try(Reply reply=port.open(method,path(action,binding,resource),session.token(),body)) {
             MultimediaDeliveryProfile.require(reply.status==200,"MULTIMEDIA_HTTP_REFUSED");
             String media=reply.mime==null?"":reply.mime.split(";",2)[0].trim();
-            MultimediaDeliveryProfile.require(mime.equals(media) && reply.length>=0 && reply.length<=maximum && (expected<0||reply.length==expected),"HTTP_MIME_OR_SIZE_REFUSED");
+            MultimediaDeliveryProfile.require(mime.equals(media) && reply.length>=-1 && reply.length<=maximum
+                    && (expected<0||reply.length<0||reply.length==expected),"HTTP_MIME_OR_SIZE_REFUSED");
             try(ByteArrayOutputStream bytes=new ByteArrayOutputStream()) {
                 byte[] buffer=new byte[8192];int count;
                 while((count=reply.input.read(buffer))!=-1) {check();MultimediaDeliveryProfile.require(bytes.size()+count<=maximum,"HTTP_BYTE_BUDGET");bytes.write(buffer,0,count);}
-                check();MultimediaDeliveryProfile.require(bytes.size()==reply.length && (expected<0||bytes.size()==expected),"HTTP_TRUNCATED");return bytes.toByteArray();
+                check();MultimediaDeliveryProfile.require((reply.length<0||bytes.size()==reply.length)
+                        && (expected<0||bytes.size()==expected),"HTTP_TRUNCATED");return bytes.toByteArray();
             }
         }
     }
