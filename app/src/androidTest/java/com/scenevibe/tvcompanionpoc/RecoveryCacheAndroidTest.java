@@ -151,6 +151,34 @@ public final class RecoveryCacheAndroidTest {
         assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());
         assertFalse(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);
     }
+    /** Verify the real TV D-pad reveals disabled controls below a long, empty private catalogue. */
+    @Test public void realTrackEmptyCatalogueScrollsPastDisabledBottomActions() throws Exception {
+        assertTrue(BuildConfig.REAL_TRACK_E2E_001);
+        launch();
+        main(() -> {
+            View tracks = find(activity.getWindow().getDecorView(), "Mes Tracks", true);
+            assertNotNull("Mes Tracks missing", tracks);
+            tracks.performClick();
+        });
+        instrument.waitForIdleSync();
+        android.widget.ScrollView scroll = activity.getWindow().getDecorView().findViewWithTag("tv-content-scroll");
+        View restore = find(activity.getWindow().getDecorView(), "Relire le cache multimédia local", true);
+        View activate = find(activity.getWindow().getDecorView(), "Activer TEXT + AUDIO depuis le cache", true);
+        View stop = find(activity.getWindow().getDecorView(), "Arrêter les commentaires", true);
+        assertNotNull(scroll);assertNotNull(restore);assertNotNull(activate);assertNotNull(stop);
+        assertFalse("No real cache must keep activation disabled", activate.isEnabled());
+        main(() -> {
+            scroll.scrollTo(0, 0);
+            assertTrue("Cache restore must remain available", restore.isEnabled());
+            assertTrue(restore.requestFocus());
+            for (int i = 0; i < 4; i++)
+                restore.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN,
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN));
+        });
+        assertTrue("D-pad DOWN must reveal disabled bottom actions", scroll.getScrollY() > 0);
+        assertFalse("Scrolling must not activate playback", TvFirst009TextServiceOwner.multimediaActive());
+    }
+
     /** Build a genuine native public session for this app's debug-only admission target, never Prime. */
     private void metadata(){media.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
             .putString(MediaMetadata.METADATA_KEY_TITLE,"Columbo — Eaux troubles").putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());}

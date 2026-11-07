@@ -138,7 +138,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix realTrack001 ? "-real-track-e2e001-g11" : "-multiplatform-ad-observation001b"
+        versionNameSuffix realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "REAL_TRACK_E2E_001", realTrack001 ? "true" : "false"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "true"
@@ -286,7 +286,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(realTrack001 ? 30 : 28) }
+        variant.outputs.each { output -> output.versionCode.set(realTrack001 ? 31 : 28) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }

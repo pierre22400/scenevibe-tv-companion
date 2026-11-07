@@ -142,7 +142,9 @@ public final class TvShellController {
         scroll = new ScrollView(activity);
         scroll.setTag("tv-content-scroll");
         scroll.setFillViewport(true);
-        scroll.setVerticalScrollBarEnabled(false);
+        // A visible scrollbar hints that off-screen, disabled private-cache actions exist.
+        scroll.setVerticalScrollBarEnabled(BuildConfig.REAL_TRACK_E2E_001);
+        if (BuildConfig.REAL_TRACK_E2E_001) scroll.setScrollbarFadingEnabled(false);
         scroll.setClipToPadding(false);
         scroll.setClipChildren(false);
         scroll.setSmoothScrollingEnabled(false);
@@ -336,6 +338,23 @@ public final class TvShellController {
             if (entry.getKey().equals(key)) current = t;
         }
         if (current == null) return;
+        // D-pad DOWN/UP must reveal clipped disabled cache actions. Vertical menu crossing
+        // remains forbidden for this opt-in profile; LEFT is the explicit sidebar route.
+        if (BuildConfig.REAL_TRACK_E2E_001
+                && navigation.current().screen == TvNavigation.Screen.TRACKS
+                && !key.startsWith("nav-")
+                && (direction == TvFocusSearch.Direction.DOWN || direction == TvFocusSearch.Direction.UP)) {
+            List<TvFocusSearch.Target> content = new ArrayList<>();
+            for (TvFocusSearch.Target candidate : geometry)
+                if (!candidate.key.startsWith("nav-")) content.add(candidate);
+            String destination = TvFocusSearch.next(current, content, direction,
+                    "nav-" + navigation.activeSection().name());
+            if (destination != null) requestFocus(destination);
+            else scroll.scrollBy(0, direction == TvFocusSearch.Direction.DOWN
+                    ? Math.max(ui.dp(96), scroll.getHeight() / 2)
+                    : -Math.max(ui.dp(96), scroll.getHeight() / 2));
+            return;
+        }
         String next = TvFocusSearch.next(current, geometry, direction, "nav-" + navigation.activeSection().name());
         if (next != null) {
             if (!key.startsWith("nav-") && next.startsWith("nav-")) navigation.current().focus = key;

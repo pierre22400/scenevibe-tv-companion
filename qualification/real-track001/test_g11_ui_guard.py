@@ -27,6 +27,8 @@ class RealTrackG11UiGuard(unittest.TestCase):
         self.assertIn('root.setTag("scenevibe-private-multimedia");', controls)
         self.assertIn("if (BuildConfig.REAL_TRACK_E2E_001 && multimediaControls != null)", shell)
         self.assertIn("block(page, multimediaControls, 14);", shell)
+        self.assertIn("scroll.scrollBy(0, direction == TvFocusSearch.Direction.DOWN", shell)
+        self.assertIn("scroll.setVerticalScrollBarEnabled(BuildConfig.REAL_TRACK_E2E_001)", shell)
         self.assertIn("The private cache remains locally readable even without an active Cloud consent.", shell)
         self.assertNotIn("if (accountPanel()) return;\n            introduction(\"Mes Tracks\"", shell)
         self.assertIn("block(page, runtimeControls, 8);", shell)
@@ -34,8 +36,8 @@ class RealTrackG11UiGuard(unittest.TestCase):
     def test_v30_version_and_historical_version_remain_distinct(self):
         """Le versionCode 30 s'applique au seul build REAL TRACK opt-in."""
         gradle = (ROOT / "app/build.gradle").read_text()
-        self.assertIn("output.versionCode.set(realTrack001 ? 30 : 28)", gradle)
-        self.assertIn('"-real-track-e2e001-g11"', gradle)
+        self.assertIn("output.versionCode.set(realTrack001 ? 31 : 28)", gradle)
+        self.assertIn('"-real-track-e2e001-g11-ux1"', gradle)
 
 
 if __name__ == "__main__":
