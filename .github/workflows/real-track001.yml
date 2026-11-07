@@ -43,7 +43,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
-      SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-archc-ode.vercel.app
+      # Pin this REAL TRACK TV candidate to the already qualified G6-G9 Preview,
+      # not the generic staging alias (currently routed to Cloud Android TV002).
+      SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-cloud-tv002-staging-enkt5v3ey-archc-ode.vercel.app
       SIGNING_ENABLED: ${{ github.ref == 'refs/heads/work/scenevibe-real-track-tv-001' && secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 != '' && secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD != '' && secrets.SCENEVIBE_ANDROID_KEY_ALIAS != '' && secrets.SCENEVIBE_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
