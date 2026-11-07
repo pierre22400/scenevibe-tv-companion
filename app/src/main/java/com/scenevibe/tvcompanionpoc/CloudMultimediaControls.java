@@ -36,6 +36,8 @@ final class CloudMultimediaControls {
     CloudMultimediaControls(Activity activity,Supplier<TvFirst008Source> owner) {
         this.activity=activity;this.owner=owner;
         root=new LinearLayout(activity);root.setOrientation(LinearLayout.VERTICAL);
+        // REAL TRACK G11 moves this existing view to Mes Tracks; no duplicate network controls.
+        root.setTag("scenevibe-private-multimedia");
         status=new TextView(activity);status.setTextColor(0xFFFFFFFF);status.setTextSize(17);root.addView(status);
         catalogue=button("Charger le catalogue multimédia privé",this::catalogue);
         restore=button("Relire le cache multimédia local",this::restore);

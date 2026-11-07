@@ -53,6 +53,7 @@ public final class TvShellController {
     private final RuntimeReader runtime;
     private final Runnable openTechnicalDiagnostics;
     private final LinearLayout runtimeControls;
+    private final View multimediaControls;
     private final TvNavigation navigation = new TvNavigation();
     private final Map<String, View> targets = new LinkedHashMap<>();
     private final Map<TvNavigation.Screen, Button> menu = new LinkedHashMap<>();
@@ -70,6 +71,8 @@ public final class TvShellController {
         this.activity = activity;
         this.ui = new TvViews(activity);
         this.runtimeControls = runtimeControls;
+        this.multimediaControls = BuildConfig.REAL_TRACK_E2E_001
+                ? runtimeControls.findViewWithTag("scenevibe-private-multimedia") : null;
         this.runtime = runtime;
         this.openTechnicalDiagnostics = openTechnicalDiagnostics;
         source = TvSourceFactory.create(activity);
@@ -397,6 +400,8 @@ public final class TvShellController {
         restoring = true;
         if(developerPage!=null && developerPage.getParent() instanceof ViewGroup)((ViewGroup)developerPage.getParent()).removeView(developerPage);
         if (runtimeControls.getParent() instanceof ViewGroup) ((ViewGroup) runtimeControls.getParent()).removeView(runtimeControls);
+        if (multimediaControls != null && multimediaControls.getParent() instanceof ViewGroup)
+            ((ViewGroup) multimediaControls.getParent()).removeView(multimediaControls);
         page.removeAllViews(); targets.clear();
         accountStatus = null; diagnosticConnection = null; diagnosticService = null; diagnosticDevice = null;
         for (Map.Entry<TvNavigation.Screen, Button> entry : menu.entrySet()) {
@@ -614,6 +619,17 @@ public final class TvShellController {
 
     /** Shows real absence explicitly and retains withdrawn cards as consultable but not preparable. */
     private void tracks() {
+        if (BuildConfig.REAL_TRACK_E2E_001 && multimediaControls != null) {
+            if (accountPanel()) return;
+            introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue du compte SceneVibe associé à cette TV.");
+            if (source instanceof TvAccountSource)
+                paragraph(page, ((TvAccountSource) source).accountMessage(), 13, 10);
+            paragraph(page, "Choisis une publication privée et confirme son téléchargement. Le cache ne lance aucun commentaire automatiquement.", 13, 8);
+            styleRuntimeControls(multimediaControls, new int[] {0});
+            block(page, multimediaControls, 14);
+            defaultFocus = "runtime-control-0";
+            return;
+        }
         if (accountPanel()) return;
         introduction(s(R.string.tv_tracks), s(R.string.tv_tracks_title), s(R.string.tv_tracks_intro));
         List<TvOffer> offers = source.offers();
