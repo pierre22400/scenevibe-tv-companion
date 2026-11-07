@@ -27,6 +27,8 @@ class RealTrackG11UiGuard(unittest.TestCase):
         self.assertIn('root.setTag("scenevibe-private-multimedia");', controls)
         self.assertIn("if (BuildConfig.REAL_TRACK_E2E_001 && multimediaControls != null)", shell)
         self.assertIn("block(page, multimediaControls, 14);", shell)
+        self.assertIn("The private cache remains locally readable even without an active Cloud consent.", shell)
+        self.assertNotIn("if (accountPanel()) return;\n            introduction(\"Mes Tracks\"", shell)
         self.assertIn("block(page, runtimeControls, 8);", shell)
 
     def test_v30_version_and_historical_version_remain_distinct(self):

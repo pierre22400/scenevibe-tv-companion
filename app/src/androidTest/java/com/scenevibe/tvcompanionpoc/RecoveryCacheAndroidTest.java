@@ -130,13 +130,23 @@ public final class RecoveryCacheAndroidTest {
         await(()->!source.busy() && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ASSOCIATED,"Explicit new association verification failed",10000);
         var renewed=reference();assertNull(CloudMultimediaAdmission.admit(renewed,false));assertNotNull(CloudMultimediaAdmission.admit(renewed,true));assertEquals(downloads,fixture.port.audioRequests);assertFalse(TvFirst009TextServiceOwner.multimediaActive());
     }
+    /** Open the real multimedia controls in their version-owned shell screen; never mock the UI. */
+    private void openMultimediaScreen() {
+        String navigation = BuildConfig.REAL_TRACK_E2E_001 ? "Mes Tracks" : "Réglages";
+        main(() -> {
+            View button = find(activity.getWindow().getDecorView(), navigation, true);
+            assertNotNull("Multimedia navigation missing: " + navigation, button);
+            button.performClick();
+        });
+    }
+
     /** Native Activity destruction and return automatically re-read cache without download or activation. */
     @Test public void actualActivityRecreationRestoresInertCacheAndPreferences() throws Exception {
         int downloads=fixture.port.audioRequests;launch();
-        main(()->{View settings=find(activity.getWindow().getDecorView(),"Réglages",true);assertNotNull(settings);settings.performClick();});
+        openMultimediaScreen();
         await(()->find(activity.getWindow().getDecorView(),"Cache privé vérifié : 16 TEXT + 3 AUDIO",false)!=null,"UI did not restore durable cache",20000);
         main(()->{TvFirst009TextServiceOwner.setMultimediaTextEnabled(false);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);TvFirst009TextServiceOwner.setAdSyncEnabled(true);activity.finish();});instrument.waitForIdleSync();
-        launch();main(()->{View settings=find(activity.getWindow().getDecorView(),"Réglages",true);assertNotNull(settings);settings.performClick();});
+        launch();openMultimediaScreen();
         await(()->find(activity.getWindow().getDecorView(),"Cache privé vérifié : 16 TEXT + 3 AUDIO",false)!=null,"Recreated Activity lost cache presentation",20000);
         assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());
         assertFalse(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);

@@ -620,11 +620,18 @@ public final class TvShellController {
     /** Shows real absence explicitly and retains withdrawn cards as consultable but not preparable. */
     private void tracks() {
         if (BuildConfig.REAL_TRACK_E2E_001 && multimediaControls != null) {
-            if (accountPanel()) return;
-            introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue du compte SceneVibe associé à cette TV.");
-            if (source instanceof TvAccountSource)
-                paragraph(page, ((TvAccountSource) source).accountMessage(), 13, 10);
-            paragraph(page, "Choisis une publication privée et confirme son téléchargement. Le cache ne lance aucun commentaire automatiquement.", 13, 8);
+            // The private cache remains locally readable even without an active Cloud consent.
+            // Only network catalogue/download controls require ASSOCIATED; see CloudMultimediaControls.refresh.
+            introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue et cache de cette TV.");
+            if (source instanceof TvAccountSource) {
+                TvAccountSource account = (TvAccountSource) source;
+                paragraph(page, account.accountMessage(), 13, 10);
+                if (account.accountStage() != TvAccountSource.AccountStage.ASSOCIATED)
+                    action(page, R.string.tv_back_home, false, "tracks-account", () -> {
+                        remember(); navigation.section(TvNavigation.Screen.HOME); render();
+                    });
+            }
+            paragraph(page, "Choisis une publication privée et confirme son téléchargement. Le cache local reste consultable hors connexion et ne lance aucun commentaire automatiquement.", 13, 8);
             styleRuntimeControls(multimediaControls, new int[] {0});
             block(page, multimediaControls, 14);
             defaultFocus = "runtime-control-0";
