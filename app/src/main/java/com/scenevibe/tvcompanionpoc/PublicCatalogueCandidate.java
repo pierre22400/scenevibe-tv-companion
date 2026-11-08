@@ -43,9 +43,14 @@ final class PublicCatalogueCandidate {
         Binding(JSONObject value, String device, String generation, long now) throws Exception {
             JSONObject fields=new JSONObject(value.toString());fields.remove("version");
             MultimediaDeliveryProfile.closed(fields,"profile","commandId","deviceId","generation","trackId","revisionId","packageSha256","state","text","audio","expiresAt");
-            version=value.has("version")?value.getLong("version"):-1;
-            MultimediaDeliveryProfile.require(!value.has("version") || value.get("version") instanceof Number && version>=0
-                    && version<=9007199254740991L && value.getDouble("version")==version,"PUBLIC_COMMAND_VERSION");
+            if(value.has("version")){
+                Object supplied=value.get("version");
+                MultimediaDeliveryProfile.require(supplied instanceof Number,"PUBLIC_COMMAND_VERSION");
+                double number=((Number)supplied).doubleValue();
+                MultimediaDeliveryProfile.require(Double.isFinite(number) && number>=0 && number<=9007199254740991L
+                        && Math.rint(number)==number,"PUBLIC_COMMAND_VERSION");
+                version=((Number)supplied).longValue();
+            }else version=-1;
             MultimediaDeliveryProfile.require("scenevibe.public-tv-command.v1".equals(value.get("profile")),"PUBLIC_COMMAND_PROFILE");
             MultimediaDeliveryProfile.require(java.util.Arrays.asList("requested","cached","armed","failed").contains(value.get("state"))
                     && value.get("text") instanceof Boolean && value.get("audio") instanceof Boolean,"PUBLIC_COMMAND_STATE");
