@@ -68,8 +68,16 @@ public final class TvFirst008Source implements TvAccountSource {
     }
     /** Consumer-safe diagnosis deliberately omits credentials, ids, payloads and exception text. */
     @Override public String accountMessage() {
-        return stage == AccountStage.ASSOCIATED && accountStage() == AccountStage.ERROR
+        String status = stage == AccountStage.ASSOCIATED && accountStage() == AccountStage.ERROR
                 ? "Le consentement a expiré. Vérifie ton compte ; aucun nouvel ajout n’est autorisé." : message;
+        if (!BuildConfig.REAL_TRACK_E2E_001) return status;
+        try {
+            JSONObject saved = state.read("identity");
+            if (saved != null) return status + "\nIdentifiant TV : " + TvFirst008Wire.uuid(saved.optString("deviceId"));
+        } catch (RuntimeException unavailable) {
+            // No failure in presentation may authorize the account or expose a secret.
+        }
+        return status;
     }
     /** The only displayed challenge material is its public code and verification address. */
     @Override public String verification() { return verification; }
@@ -278,7 +286,10 @@ public final class TvFirst008Source implements TvAccountSource {
             currentRevision = TvFirst008Wire.integer(response, "currentRevision", 0); stage = AccountStage.ASSOCIATED;
             if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE)recordMultimediaRevision(id.getString("deviceId"),id.getString("generation"),currentRevision);
             consentDeadline = android.os.SystemClock.elapsedRealtime() + remaining;
-            message = "Compte associé. Consultation et ajout au cache uniquement ; aucun commentaire ni MEDIA."; verification = "";
+            message = BuildConfig.REAL_TRACK_E2E_001
+                    ? "Compte associé. Catalogue multimédia privé ; TEXT et AUDIO exigent une activation locale explicite."
+                    : "Compte associé. Consultation et ajout au cache uniquement ; aucun commentaire ni MEDIA.";
+            verification = "";
         }
         main.postDelayed(() -> {
             final long expiredTicket;
@@ -289,7 +300,9 @@ public final class TvFirst008Source implements TvAccountSource {
             }
             changed(expiredTicket);
         }, remaining);
-        page(ticket, null);
+        // The G11 REAL TRACK profile owns a private multimedia catalogue, not legacy FinalTracks.
+        // The isolated Preview has neither the obsolete /library route nor legacy SQL read privileges.
+        if (!BuildConfig.REAL_TRACK_E2E_001) page(ticket, null);
         restoreReceipt(ticket, id);
     }
     /** Load one bounded page, retain unknown editorial facts, and never fetch executable artifacts here. */

@@ -130,17 +130,58 @@ public final class RecoveryCacheAndroidTest {
         await(()->!source.busy() && source.accountStage()==com.scenevibe.tvcompanionpoc.presentation.TvAccountSource.AccountStage.ASSOCIATED,"Explicit new association verification failed",10000);
         var renewed=reference();assertNull(CloudMultimediaAdmission.admit(renewed,false));assertNotNull(CloudMultimediaAdmission.admit(renewed,true));assertEquals(downloads,fixture.port.audioRequests);assertFalse(TvFirst009TextServiceOwner.multimediaActive());
     }
+    /** Open the real multimedia controls in their version-owned shell screen; never mock the UI. */
+    private void openMultimediaScreen() {
+        String navigation = BuildConfig.REAL_TRACK_E2E_001 ? "Mes Tracks" : "Réglages";
+        main(() -> {
+            View button = find(activity.getWindow().getDecorView(), navigation, true);
+            assertNotNull("Multimedia navigation missing: " + navigation, button);
+            button.performClick();
+        });
+    }
+
     /** Native Activity destruction and return automatically re-read cache without download or activation. */
     @Test public void actualActivityRecreationRestoresInertCacheAndPreferences() throws Exception {
         int downloads=fixture.port.audioRequests;launch();
-        main(()->{View settings=find(activity.getWindow().getDecorView(),"Réglages",true);assertNotNull(settings);settings.performClick();});
+        openMultimediaScreen();
         await(()->find(activity.getWindow().getDecorView(),"Cache privé vérifié : 16 TEXT + 3 AUDIO",false)!=null,"UI did not restore durable cache",20000);
         main(()->{TvFirst009TextServiceOwner.setMultimediaTextEnabled(false);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(true);TvFirst009TextServiceOwner.setAdSyncEnabled(true);activity.finish();});instrument.waitForIdleSync();
-        launch();main(()->{View settings=find(activity.getWindow().getDecorView(),"Réglages",true);assertNotNull(settings);settings.performClick();});
+        launch();openMultimediaScreen();
         await(()->find(activity.getWindow().getDecorView(),"Cache privé vérifié : 16 TEXT + 3 AUDIO",false)!=null,"Recreated Activity lost cache presentation",20000);
         assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertTrue(TvFirst009TextServiceOwner.multimediaAudioEnabled());assertTrue(TvFirst009TextServiceOwner.adSyncEnabled());
         assertFalse(TvFirst009TextServiceOwner.multimediaActive());assertEquals(downloads,fixture.port.audioRequests);
     }
+    /** Verify the real TV D-pad reveals disabled controls below a long, empty private catalogue. */
+    @Test public void realTrackEmptyCatalogueScrollsPastDisabledBottomActions() throws Exception {
+        assertTrue(BuildConfig.REAL_TRACK_E2E_001);
+        launch();
+        main(() -> {
+            View tracks = find(activity.getWindow().getDecorView(), "Mes Tracks", true);
+            assertNotNull("Mes Tracks missing", tracks);
+            tracks.performClick();
+        });
+        instrument.waitForIdleSync();
+        android.widget.ScrollView scroll = activity.getWindow().getDecorView().findViewWithTag("tv-content-scroll");
+        View restore = find(activity.getWindow().getDecorView(), "Relire le cache multimédia local", true);
+        View activate = find(activity.getWindow().getDecorView(), "Activer TEXT + AUDIO depuis le cache", true);
+        View stop = find(activity.getWindow().getDecorView(), "Arrêter les commentaires", true);
+        assertNotNull(scroll);assertNotNull(restore);assertNotNull(activate);assertNotNull(stop);
+        assertFalse("No real cache must keep activation disabled", activate.isEnabled());
+        // Activity-owned offline cache readback is asynchronous. A temporary disabled
+        // button means a local worker is still active, not that recovery is unavailable.
+        await(restore::isEnabled,"Offline cache restore stayed disabled after the local worker",15000);
+        main(() -> {
+            scroll.scrollTo(0, 0);
+            assertTrue("Cache restore must remain available", restore.isEnabled());
+            assertTrue(restore.requestFocus());
+            for (int i = 0; i < 4; i++)
+                restore.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN,
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN));
+        });
+        assertTrue("D-pad DOWN must reveal disabled bottom actions", scroll.getScrollY() > 0);
+        assertFalse("Scrolling must not activate playback", TvFirst009TextServiceOwner.multimediaActive());
+    }
+
     /** Build a genuine native public session for this app's debug-only admission target, never Prime. */
     private void metadata(){media.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
             .putString(MediaMetadata.METADATA_KEY_TITLE,"Columbo — Eaux troubles").putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());}

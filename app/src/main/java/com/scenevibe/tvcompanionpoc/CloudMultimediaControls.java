@@ -36,6 +36,8 @@ final class CloudMultimediaControls {
     CloudMultimediaControls(Activity activity,Supplier<TvFirst008Source> owner) {
         this.activity=activity;this.owner=owner;
         root=new LinearLayout(activity);root.setOrientation(LinearLayout.VERTICAL);
+        // REAL TRACK G11 moves this existing view to Mes Tracks; no duplicate network controls.
+        root.setTag("scenevibe-private-multimedia");
         status=new TextView(activity);status.setTextColor(0xFFFFFFFF);status.setTextSize(17);root.addView(status);
         catalogue=button("Charger le catalogue multimédia privé",this::catalogue);
         restore=button("Relire le cache multimédia local",this::restore);
@@ -161,11 +163,19 @@ final class CloudMultimediaControls {
         refresh();
     }
 
+    /** Décrit les comptes réels du cache manuel sans annoncer une détection publicitaire universelle. */
+    private String activationMessage() {
+        int audio=preparedCache.track.audio.size(),total=preparedCache.track.calendar.events().size();
+        return "Active "+(total-audio)+" TEXT et "+audio+" AUDIO de « "+preparedCache.track.title()+" ». "
+                +"Confirme Columbo — Eaux troubles et l'édition de référence. La protection Prime doit être activée séparément. "
+                +"Si une publicité n'est pas reconnue, suspends les commentaires et recale le temps du film avant de reprendre.";
+    }
+
     /** Require a fresh owner decision; UNKNOWN is never silently converted into editorial evidence. */
     private void confirmActivation(){
         if(preparedCache==null || activate==null || !activate.isEnabled())return;
         TvCompanionDialogs.builder(activity).setTitle("Admission locale TEXT + AUDIO")
-                .setMessage(BuildConfig.ADSYNC_NONDESTRUCTIVE?"Active les 16 TEXT et 3 MP3 du cache pour l'édition de référence Columbo — Eaux troubles. Cette confirmation autorise le démarrage ; les allers-retours et interruptions MEDIA ne la renouvellent pas. Une véritable expiration/révocation reste bloquante. Publicité non observable : suspension manuelle disponible.":BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
+                .setMessage(BuildConfig.REAL_TRACK_E2E_001?activationMessage():BuildConfig.ADSYNC_NONDESTRUCTIVE?"Active les 16 TEXT et 3 MP3 du cache pour l'édition de référence Columbo — Eaux troubles. Cette confirmation autorise le démarrage ; les allers-retours et interruptions MEDIA ne la renouvellent pas. Une véritable expiration/révocation reste bloquante. Publicité non observable : suspension manuelle disponible.":BuildConfig.ADSYNC_PROTOTYPE?"Confirme l'édition de référence de Columbo — Eaux troubles et l'activation des 16 TEXT et 3 tonalités. Pendant une publicité, suspends manuellement les commentaires ; confirme ensuite la reprise et le temps du film. La détection publicitaire automatique n'est pas prouvée.":"Confirme que tu utilises l'édition de référence de Columbo — Eaux troubles, sans publicité, et que tu autorises les 16 commentaires écrits et les 3 tonalités de qualification. Les changements d'édition ou de publicité imposent l'arrêt.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
                     boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
                     if(started){TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);}

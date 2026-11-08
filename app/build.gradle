@@ -14,6 +14,8 @@ if (cloudOrigin && !(cloudOrigin ==~ /https:\/\/[^\/:?#]+/)) {
 
 def enableLanDev = providers.environmentVariable("SCENEVIBE_ENABLE_LAN_DEV").orElse("false").get()
 def enableLanDevLiteral = enableLanDev.equalsIgnoreCase("true") ? "true" : "false"
+// Candidat isolé uniquement ; aucun profil historique n'active implicitement ce raccord.
+def realTrack001 = providers.gradleProperty("scenevibeRealTrack001").orElse("false").get() == "true"
 
 android {
     buildFeatures { buildConfig true }
@@ -40,6 +42,7 @@ android {
         buildConfigField "boolean", "TVUX_CONTROL_PANEL", "false"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "false"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "false"
+        buildConfigField "boolean", "REAL_TRACK_E2E_001", "false"
     }
 
     buildTypes {
@@ -135,7 +138,8 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix "-multiplatform-ad-observation001b"
+        versionNameSuffix realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        buildConfigField "boolean", "REAL_TRACK_E2E_001", realTrack001 ? "true" : "false"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "true"
     }
@@ -220,7 +224,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java"])
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -282,7 +286,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(28) }
+        variant.outputs.each { output -> output.versionCode.set(realTrack001 ? 31 : 28) }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }

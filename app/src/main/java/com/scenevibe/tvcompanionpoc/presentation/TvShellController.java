@@ -53,6 +53,7 @@ public final class TvShellController {
     private final RuntimeReader runtime;
     private final Runnable openTechnicalDiagnostics;
     private final LinearLayout runtimeControls;
+    private final View multimediaControls;
     private final TvNavigation navigation = new TvNavigation();
     private final Map<String, View> targets = new LinkedHashMap<>();
     private final Map<TvNavigation.Screen, Button> menu = new LinkedHashMap<>();
@@ -70,6 +71,8 @@ public final class TvShellController {
         this.activity = activity;
         this.ui = new TvViews(activity);
         this.runtimeControls = runtimeControls;
+        this.multimediaControls = BuildConfig.REAL_TRACK_E2E_001
+                ? runtimeControls.findViewWithTag("scenevibe-private-multimedia") : null;
         this.runtime = runtime;
         this.openTechnicalDiagnostics = openTechnicalDiagnostics;
         source = TvSourceFactory.create(activity);
@@ -139,7 +142,9 @@ public final class TvShellController {
         scroll = new ScrollView(activity);
         scroll.setTag("tv-content-scroll");
         scroll.setFillViewport(true);
-        scroll.setVerticalScrollBarEnabled(false);
+        // A visible scrollbar hints that off-screen, disabled private-cache actions exist.
+        scroll.setVerticalScrollBarEnabled(BuildConfig.REAL_TRACK_E2E_001);
+        if (BuildConfig.REAL_TRACK_E2E_001) scroll.setScrollbarFadingEnabled(false);
         scroll.setClipToPadding(false);
         scroll.setClipChildren(false);
         scroll.setSmoothScrollingEnabled(false);
@@ -333,6 +338,23 @@ public final class TvShellController {
             if (entry.getKey().equals(key)) current = t;
         }
         if (current == null) return;
+        // D-pad DOWN/UP must reveal clipped disabled cache actions. Vertical menu crossing
+        // remains forbidden for this opt-in profile; LEFT is the explicit sidebar route.
+        if (BuildConfig.REAL_TRACK_E2E_001
+                && navigation.current().screen == TvNavigation.Screen.TRACKS
+                && !key.startsWith("nav-")
+                && (direction == TvFocusSearch.Direction.DOWN || direction == TvFocusSearch.Direction.UP)) {
+            List<TvFocusSearch.Target> content = new ArrayList<>();
+            for (TvFocusSearch.Target candidate : geometry)
+                if (!candidate.key.startsWith("nav-")) content.add(candidate);
+            String destination = TvFocusSearch.next(current, content, direction,
+                    "nav-" + navigation.activeSection().name());
+            if (destination != null) requestFocus(destination);
+            else scroll.scrollBy(0, direction == TvFocusSearch.Direction.DOWN
+                    ? Math.max(ui.dp(96), scroll.getHeight() / 2)
+                    : -Math.max(ui.dp(96), scroll.getHeight() / 2));
+            return;
+        }
         String next = TvFocusSearch.next(current, geometry, direction, "nav-" + navigation.activeSection().name());
         if (next != null) {
             if (!key.startsWith("nav-") && next.startsWith("nav-")) navigation.current().focus = key;
@@ -397,6 +419,8 @@ public final class TvShellController {
         restoring = true;
         if(developerPage!=null && developerPage.getParent() instanceof ViewGroup)((ViewGroup)developerPage.getParent()).removeView(developerPage);
         if (runtimeControls.getParent() instanceof ViewGroup) ((ViewGroup) runtimeControls.getParent()).removeView(runtimeControls);
+        if (multimediaControls != null && multimediaControls.getParent() instanceof ViewGroup)
+            ((ViewGroup) multimediaControls.getParent()).removeView(multimediaControls);
         page.removeAllViews(); targets.clear();
         accountStatus = null; diagnosticConnection = null; diagnosticService = null; diagnosticDevice = null;
         for (Map.Entry<TvNavigation.Screen, Button> entry : menu.entrySet()) {
@@ -614,6 +638,24 @@ public final class TvShellController {
 
     /** Shows real absence explicitly and retains withdrawn cards as consultable but not preparable. */
     private void tracks() {
+        if (BuildConfig.REAL_TRACK_E2E_001 && multimediaControls != null) {
+            // The private cache remains locally readable even without an active Cloud consent.
+            // Only network catalogue/download controls require ASSOCIATED; see CloudMultimediaControls.refresh.
+            introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue et cache de cette TV.");
+            if (source instanceof TvAccountSource) {
+                TvAccountSource account = (TvAccountSource) source;
+                paragraph(page, account.accountMessage(), 13, 10);
+                if (account.accountStage() != TvAccountSource.AccountStage.ASSOCIATED)
+                    action(page, R.string.tv_back_home, false, "tracks-account", () -> {
+                        remember(); navigation.section(TvNavigation.Screen.HOME); render();
+                    });
+            }
+            paragraph(page, "Choisis une publication privée et confirme son téléchargement. Le cache local reste consultable hors connexion et ne lance aucun commentaire automatiquement.", 13, 8);
+            styleRuntimeControls(multimediaControls, new int[] {0});
+            block(page, multimediaControls, 14);
+            defaultFocus = "runtime-control-0";
+            return;
+        }
         if (accountPanel()) return;
         introduction(s(R.string.tv_tracks), s(R.string.tv_tracks_title), s(R.string.tv_tracks_intro));
         List<TvOffer> offers = source.offers();
