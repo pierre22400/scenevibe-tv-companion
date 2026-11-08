@@ -30,7 +30,14 @@ public final class ManualTrackIdentityTest {
      * Reproduit exactement le nouvel espace de noms de la source TV-FIRST
      * importée : source originale conservée et numéro d'épisode non inventé.
      */
-    private MultimediaDeliveryProfile imported(java.util.function.Consumer<JSONObject> change) throws Exception {
+    /** Exécute les mutations JSON testées en conservant les exceptions contrôlées d'Android. */
+    @FunctionalInterface private interface TrackMutation {
+        /** Modifie uniquement la copie synthétique du document éditorial. */
+        void apply(JSONObject track) throws Exception;
+    }
+
+    /** Construit un profil importé re-signé localement, sans compte ou cache réel. */
+    private MultimediaDeliveryProfile imported(TrackMutation change) throws Exception {
         JSONObject root=new JSONObject(new String(bytes(),StandardCharsets.UTF_8));
         JSONObject track=new JSONObject(new String(Base64.getDecoder().decode(root.getString("trackBase64")),StandardCharsets.UTF_8));
         track.put("trackId","studio-imported:video-mw7pq0oq-1");
@@ -56,7 +63,7 @@ public final class ManualTrackIdentityTest {
 
     /** Toute autre identité de programme, édition inventée ou namespace ambigu échoue fermée. */
     @Test public void importedSourceRejectsChangedEpisodeAndUnprovenEvidence() throws Exception {
-        for(java.util.function.Consumer<JSONObject> mutation:java.util.List.<java.util.function.Consumer<JSONObject>>of(
+        for(TrackMutation mutation:java.util.List.<TrackMutation>of(
                 track->track.getJSONObject("target").getJSONObject("program").put("programId","another-episode"),
                 track->track.getJSONObject("target").getJSONObject("program").put("episode",5),
                 track->track.getJSONObject("target").getJSONObject("program").put("season",4),
