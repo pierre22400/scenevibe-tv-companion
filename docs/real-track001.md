@@ -1,5 +1,7 @@
 # REAL TRACK TV 001 — candidat isolé
 
+> **Addendum du 8 novembre 2026 : PASS physique Sony v31, 3 TEXT + 3 AUDIO (6/6), reprise après redémarrage PASS déclaré.** Voir [REAL TRACK 001-H — clôture Sony v31](qualification/real-track001/REAL-TRACK-001H-SONY-V31-CLOTURE.md). Le présent document conserve volontairement les références historiques au candidat v29 ; elles ne décrivent plus le dernier APK validé.
+
 Base : PR #35 `90b55c1c9dcb6894a8285c6a1dbe830a584bba8c`.
 Branche : `work/scenevibe-real-track-tv-001`, PR Draft empilée sur la branche #35.
 Le Companion principal et `main` ne sont ni déplacés ni installés par cette mission.
