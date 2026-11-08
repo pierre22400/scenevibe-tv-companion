@@ -45,7 +45,7 @@ public final class ManualTrackIdentityTest {
         program.put("season",JSONObject.NULL);
         program.put("episode",JSONObject.NULL);
         program.put("year",JSONObject.NULL);
-        change.accept(track);
+        change.apply(track);
         byte[] changed=track.toString().getBytes(StandardCharsets.UTF_8);
         root.put("trackBase64",Base64.getEncoder().encodeToString(changed));
         root.getJSONObject("identity").put("trackId",track.getString("trackId"))
