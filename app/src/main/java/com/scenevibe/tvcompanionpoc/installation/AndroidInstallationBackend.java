@@ -36,7 +36,7 @@ public final class AndroidInstallationBackend implements InstallationStore.Backe
      * 003-D additionally accepts its separate multimedia namespace, preserving historical cache files.
      */
     public AndroidInstallationBackend(Context context,String namespace) {
-        if (context==null||namespace==null||!namespace.matches("(?:tvfirst008_cache_|multimedia003d_cache_)[0-9a-f]{32}"))
+        if (context==null||namespace==null||!namespace.matches("(?:tvfirst008_cache_|multimedia003d_cache_|public001b_cache_)[0-9a-f]{32}"))
             throw new IllegalArgumentException("Invalid delivery cache namespace");
         preferences=context.getApplicationContext().getSharedPreferences(namespace,Context.MODE_PRIVATE);
     }

@@ -82,7 +82,13 @@ public final class MainActivity extends Activity {
             developerTab=new DeveloperTab(this,()->presentation.back());
             presentation.setDeveloperPage(developerTab.view());
         }
-        setContentView(presentation.view());
+        if(BuildConfig.PUBLIC_AUTONOMOUS_001B){
+            LinearLayout publicFrame=new LinearLayout(this);publicFrame.setOrientation(LinearLayout.VERTICAL);
+            Button associate=new Button(this);associate.setText("Associer ma TV au catalogue public");associate.setTag("public-associate-tv");
+            associate.setOnClickListener(v->startActivity(new Intent(this,PublicPairingActivity.class)));
+            publicFrame.addView(associate,new LinearLayout.LayoutParams(-1,-2));
+            publicFrame.addView(presentation.view(),new LinearLayout.LayoutParams(-1,0,1));setContentView(publicFrame);
+        }else setContentView(presentation.view());
     }
 
     /**
