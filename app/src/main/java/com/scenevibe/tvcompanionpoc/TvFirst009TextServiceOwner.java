@@ -152,6 +152,12 @@ final class TvFirst009TextServiceOwner {
     /** Stop only this app's existing service; never clear credentials, cache or a Cloud association. */
     static void requestStop(Context context) {
         if (!BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) return;
+        String publicCommand=publicCommand();
+        if(BuildConfig.PUBLIC_AUTONOMOUS_001B && publicCommand!=null){
+            android.content.SharedPreferences preferences=context.getSharedPreferences("public001d_playback",0);
+            preferences.edit().putString("stoppedCommand",publicCommand)
+                    .putLong("stoppedVersion",preferences.getLong("observedVersion",-1)).commit();
+        }
         pending=null;
         record("STOP_REQUESTED",latest.positionMs,false);
         context.stopService(new Intent(context,OverlayService.class));

@@ -161,6 +161,24 @@ public final class PublicAutonomousAndroidTest {
         main(()->TvFirst009TextServiceOwner.setMultimediaTextEnabled(true));fixture.owner().pollOnce();
         assertTrue(fixture.command.getBoolean("text"));assertFalse(fixture.command.getBoolean("audio"));
     }
+    /** Un arrêt local survit aux polls et au propriétaire recréé ; le Web seul peut réactiver. */
+    @Test public void localStopSurvivesPollingAndOwnerRestartUntilWebActivation() throws Exception {
+        nativePermissions();fixture.pair();fixture.download();session("amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e");arm();
+        fixture.command.put("version",20);fixture.owner().pollOnce();
+        String privateBefore=fixture.target.getSharedPreferences("tvfirst008_identity",0).getAll().toString();
+        main(()->TvFirst009TextServiceOwner.requestStop(fixture.target));
+        await(()->!TvFirst009TextServiceOwner.controlBusy(),"Explicit stop was not retained",15000);
+        for(int i=0;i<3;i++)fixture.owner().pollOnce();
+        assertNull(TvFirst009TextServiceOwner.publicCommand());assertFalse(fixture.command.getBoolean("text"));assertFalse(fixture.command.getBoolean("audio"));
+        fixture.owner().close();PublicCompanionOwner restarted=new PublicCompanionOwner(fixture.target,fixture.state,fixture);
+        try{
+            restarted.pollOnce();assertNull(TvFirst009TextServiceOwner.publicCommand());
+            fixture.activate(true,true);fixture.command.put("version",21);restarted.pollOnce();
+            await(TvFirst009TextServiceOwner::multimediaActive,"Web activation did not resume stopped public Track",15000);
+            restarted.pollOnce();assertEquals(fixture.command.getString("commandId"),TvFirst009TextServiceOwner.publicCommand());
+            assertEquals(privateBefore,fixture.target.getSharedPreferences("tvfirst008_identity",0).getAll().toString());assertEquals(1,fixture.claims);
+        }finally{restarted.close();}
+    }
     /** Un titre identique ne peut contourner un mediaId contradictoire. */
     @Test public void incorrectMediaIdKeepsIdentityBlocked() throws Exception {
         nativePermissions();fixture.pair();fixture.download();session("another-episode");arm();main(()->playback(PlaybackState.STATE_PLAYING,19500));

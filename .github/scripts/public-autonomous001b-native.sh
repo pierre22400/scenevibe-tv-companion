@@ -10,7 +10,7 @@ adb install -r app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest
 adb shell appops set com.scenevibe.tvcompanionpoc SYSTEM_ALERT_WINDOW allow
 adb shell cmd notification allow_listener com.scenevibe.tvcompanionpoc/com.scenevibe.tvcompanionpoc.MediaSessionAccessService
 adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.PublicAutonomousAndroidTest com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee public001b-native/public-tests.log
-grep -q '^OK (10 tests)$' public001b-native/public-tests.log
+grep -q '^OK (11 tests)$' public001b-native/public-tests.log
 grep -q '^INSTRUMENTATION_CODE: -1$' public001b-native/public-tests.log
 adb exec-out run-as com.scenevibe.tvcompanionpoc cat files/public001b-native-proof.json > public001b-native/service-proof.json
 # Le parcours privé utilise toujours ses propres références et son ancien consentement.
