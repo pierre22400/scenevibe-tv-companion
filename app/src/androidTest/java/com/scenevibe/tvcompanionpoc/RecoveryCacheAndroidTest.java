@@ -167,6 +167,9 @@ public final class RecoveryCacheAndroidTest {
         View stop = find(activity.getWindow().getDecorView(), "Arrêter les commentaires", true);
         assertNotNull(scroll);assertNotNull(restore);assertNotNull(activate);assertNotNull(stop);
         assertFalse("No real cache must keep activation disabled", activate.isEnabled());
+        // Activity-owned offline cache readback is asynchronous. A temporary disabled
+        // button means a local worker is still active, not that recovery is unavailable.
+        await(restore::isEnabled,"Offline cache restore stayed disabled after the local worker",15000);
         main(() -> {
             scroll.scrollTo(0, 0);
             assertTrue("Cache restore must remain available", restore.isEnabled());
