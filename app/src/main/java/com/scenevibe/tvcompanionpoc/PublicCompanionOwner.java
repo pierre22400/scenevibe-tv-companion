@@ -84,6 +84,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         long remaining=Instant.parse(association.getString("consentExpiresAt")).toEpochMilli()-System.currentTimeMillis();
         if(remaining<=0)throw new IllegalArgumentException("REVOKED");
         grantDeadline=SystemClock.elapsedRealtime()+remaining;revoked=false;
+        if(reference!=null)reference.renewed(grantDeadline);
         if(cache==null){
             cache=new PublicMultimediaCache(context,identity.getString("generation"));prepared=cache.read();
             if(prepared!=null){client.validate(prepared.binding);restorePreferences();}
@@ -121,7 +122,9 @@ final class PublicCompanionOwner implements AutoCloseable {
                 local[0]=TvFirst009TextServiceOwner.multimediaTextEnabled();local[1]=TvFirst009TextServiceOwner.multimediaAudioEnabled();return true;
             });
             if(publicLive && (local[0]!=text || local[1]!=audio)){
-                client.json("device-preferences",new JSONObject().put("commandId",binding.command).put("text",local[0]).put("audio",local[1]));
+                JSONObject preferences=new JSONObject().put("commandId",binding.command).put("text",local[0]).put("audio",local[1]);
+                if(binding.version>=0)preferences.put("expectedVersion",binding.version);
+                client.json("device-preferences",preferences);
                 text=local[0];audio=local[1];
             }
         }

@@ -37,10 +37,15 @@ final class PublicCatalogueCandidate {
     static final class Binding {
         final String device, generation, command, track, revision, digest;
         final long expires;
+        final long version;
         private final String encoded;
         /** Refuse les champs supplémentaires et un profil privé ou une autre possession. */
         Binding(JSONObject value, String device, String generation, long now) throws Exception {
-            MultimediaDeliveryProfile.closed(value,"profile","commandId","deviceId","generation","trackId","revisionId","packageSha256","state","text","audio","expiresAt");
+            JSONObject fields=new JSONObject(value.toString());fields.remove("version");
+            MultimediaDeliveryProfile.closed(fields,"profile","commandId","deviceId","generation","trackId","revisionId","packageSha256","state","text","audio","expiresAt");
+            version=value.has("version")?value.getLong("version"):-1;
+            MultimediaDeliveryProfile.require(!value.has("version") || value.get("version") instanceof Number && version>=0
+                    && version<=9007199254740991L && value.getDouble("version")==version,"PUBLIC_COMMAND_VERSION");
             MultimediaDeliveryProfile.require("scenevibe.public-tv-command.v1".equals(value.get("profile")),"PUBLIC_COMMAND_PROFILE");
             MultimediaDeliveryProfile.require(java.util.Arrays.asList("requested","cached","armed","failed").contains(value.get("state"))
                     && value.get("text") instanceof Boolean && value.get("audio") instanceof Boolean,"PUBLIC_COMMAND_STATE");
