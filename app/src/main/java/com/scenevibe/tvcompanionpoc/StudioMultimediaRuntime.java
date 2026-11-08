@@ -27,6 +27,45 @@ final class StudioMultimediaRuntime {
     private final java.util.Map<Long,String> nativeAttempts=new java.util.HashMap<>();
     private String audioStopReason="NATIVE_PLAYER";
 
+    /** Exclusive temporal authority of the current activation. */
+    enum Authority { UNSYNCED, MEDIA_SESSION, MANUAL }
+
+    private Authority authority = Authority.UNSYNCED;
+    private boolean manualOnly;
+
+    /** Restrict the current local qualification activation to explicit manual observations. */
+    void reserveManual(String activation) {
+        if (!owns(activation) || !BuildConfig.NETFLIX_LOCAL_QUALIFICATION) {
+            throw new IllegalStateException("MANUAL_ACTIVATION_REQUIRED");
+        }
+        manualOnly = true;
+    }
+
+    /** Switch authority and reconcile the existing scheduler at the exact candidate. */
+    void landManual(String activation, long positionMs, boolean rewind) {
+        if (!owns(activation) || !manualOnly) throw new IllegalStateException("MANUAL_ACTIVATION_REQUIRED");
+        scheduler.onManualLanding(positionMs, rewind);
+        authority = Authority.MANUAL;
+    }
+
+    /** Feed only the live manual activation, independently of the MediaSession port. */
+    void observeManual(String activation, long positionMs, boolean playing) {
+        if (owns(activation) && authority == Authority.MANUAL) {
+            scheduler.onManualObservation(positionMs, playing);
+        }
+    }
+
+    /** Check that a clock still owns the current local activation. */
+    boolean ownsManual(String activation) { return owns(activation) && manualOnly; }
+
+    /** Revoke only the matching local activation. */
+    void revokeManual(String activation) {
+        if (owns(activation) && manualOnly) close();
+    }
+
+    /** Expose the current authority for qualification and display. */
+    Authority authority() { return authority; }
+
     /** Retain renderer ports without preparing or starting any local player. */
     StudioMultimediaRuntime(SceneRuntimeController.SceneSink sink,LocalAudioPort port) {
         this(sink,port,false);
@@ -128,14 +167,16 @@ final class StudioMultimediaRuntime {
 
     /** Consume a selected observation from the matching activation without estimating time. */
     void observe(String activation,MediaObservation observation) {
-        if(!owns(activation)) return;
+        if(!owns(activation) || manualOnly) return;
+        authority = Authority.MEDIA_SESSION;
         if(observation==null || !observation.eligible() || observation.positionMs()<0) scheduler.onUnavailable();
         else scheduler.onObservation(observation);
     }
 
     /** Feed actual capture/session evidence to the same scheduler; no position is extrapolated here. */
     void observe(String activation,MediaObservation observation,Object session,long capturedMs,float speed){
-        if(!owns(activation))return;
+        if(!owns(activation) || manualOnly)return;
+        authority = Authority.MEDIA_SESSION;
         if(observation==null || !observation.eligible() || observation.positionMs()<0)scheduler.onUnavailable();
         else scheduler.onObservation(observation,session,capturedMs,speed);
     }
@@ -185,6 +226,7 @@ final class StudioMultimediaRuntime {
     void close() {
         scheduler.clear(); audio.onError(); text.unload();
         token=null; track=null; eligible=false;
+        authority=Authority.UNSYNCED; manualOnly=false;
         nativeAttempts.clear();
     }
 

@@ -43,6 +43,7 @@ android {
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "false"
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "false"
         buildConfigField "boolean", "REAL_TRACK_E2E_001", "false"
+        buildConfigField "boolean", "NETFLIX_LOCAL_QUALIFICATION", "false"
     }
 
     buildTypes {
@@ -100,6 +101,27 @@ android {
             buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
             buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "true"
             signingConfig signingConfigs.debug
+        }
+        // Isolated local admission bench, with no launcher or runtime service.
+        netflixadmission003a {
+            initWith debug
+            applicationIdSuffix ".netflixadmission003a"
+            versionNameSuffix "-netflix-admission-003a"
+            buildConfigField "boolean", "NETFLIX_LOCAL_QUALIFICATION", "true"
+            buildConfigField "String", "CLOUD_ORIGIN", '""'
+            buildConfigField "boolean", "ENABLE_LAN_DEV", "false"
+            buildConfigField "boolean", "TVFIRST_DELIVERY_ONLY", "true"
+            signingConfig null
+        }
+        // Preserve the physically qualified experimental package identity.
+        netflixmanual003b {
+            initWith netflixadmission003a
+            debuggable false
+            applicationIdSuffix ".netflixoverlay001"
+            versionNameSuffix "-multiplatform-manual-sync-001"
+            buildConfigField "boolean", "TVUX_CONTROL_PANEL", "true"
+            buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
+            signingConfig null
         }
         // Distinct unsigned v15 candidate; the qualified v14 variant remains unchanged.
         tvfirst013sony {
@@ -159,6 +181,11 @@ android {
         res.srcDir "src/tvfirst008/res"
         manifest.srcFile "src/tvfirst009sony/AndroidManifest.xml"
     }
+    sourceSets.netflixadmission003a.java.srcDir "src/release/java"
+    sourceSets.netflixmanual003b {
+        java.srcDirs "src/release/java", "src/netflixadmission003a/java"
+        assets.srcDir "src/testNetflixadmission003a/resources"
+    }
     sourceSets.studiomultimedia001.java.srcDir "src/release/java"
     sourceSets.cloudandroid002 {
         java.srcDir "src/tvfirst008/java"
@@ -211,6 +238,9 @@ android {
             forkEvery = 1
             if (providers.gradleProperty("scenevibe009Fixture").isPresent()) {
                 systemProperty "scenevibe009.fixture", providers.gradleProperty("scenevibe009Fixture").get()
+            }
+            if (name == "testNetflixadmission003aUnitTest") {
+                systemProperty "scenevibe.003a.primeFixture", file("src/androidTest/assets/realtrack001").absolutePath
             }
             if (name.toLowerCase().contains("studiomultimedia001")) {
                 systemProperty "scenevibe.multimedia.package", providers.gradleProperty("scenevibeMultimediaPackage").orElse("").get()
@@ -285,6 +315,9 @@ android {
 }
 
 androidComponents {
+    onVariants(selector().withBuildType("netflixmanual003b")) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(19) }
+    }
     onVariants(selector().withBuildType("tvux002")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(realTrack001 ? 31 : 28) }
     }

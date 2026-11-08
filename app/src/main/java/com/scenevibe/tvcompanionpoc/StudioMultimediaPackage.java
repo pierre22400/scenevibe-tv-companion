@@ -57,6 +57,16 @@ final class StudioMultimediaPackage {
         return bytes.clone();
     }
 
+    /** Project the verified editorial horizon for local manual bounds. */
+    long horizonMs() throws Exception {
+        return integer(document.getJSONObject("target"), "horizonMs");
+    }
+
+    /** Project the declared program solely for a detached local selection check. */
+    String declaredProgramId() throws Exception {
+        return document.getJSONObject("target").getJSONObject("program").getString("programId");
+    }
+
     /** UNKNOWN edition or mapping always refuses native MEDIA activation. */
     boolean hasReferencedIdentity() {
         JSONObject target=document.optJSONObject("target");
@@ -67,6 +77,17 @@ final class StudioMultimediaPackage {
 
     /** Parse a bounded package atomically; a partial AUDIO/TEXT subset is never returned. */
     static StudioMultimediaPackage read(byte[] zip,Decoder decoder) throws Exception {
+        return read(zip,decoder,false);
+    }
+
+    /** Validate a declared Netflix package only in the isolated software qualification variant. */
+    static StudioMultimediaPackage readNetflixQualification(byte[] zip,Decoder decoder) throws Exception {
+        require(BuildConfig.NETFLIX_LOCAL_QUALIFICATION,"NETFLIX_QUALIFICATION_VARIANT_REQUIRED");
+        return read(zip,decoder,true);
+    }
+
+    /** Reuse the same document, resource and timeline validators after selecting the profile. */
+    private static StudioMultimediaPackage read(byte[] zip,Decoder decoder,boolean netflixQualification) throws Exception {
         if(zip==null || zip.length>256*1024*1024 || decoder==null) throw invalid("PACKAGE_BUDGET_OR_DECODER_MISSING");
         Map<String,byte[]> files=unzip(zip);
         JSONObject manifest=json(required(files,"manifest.json",1_048_576));
@@ -89,7 +110,20 @@ final class StudioMultimediaPackage {
                 && target.getJSONObject("program").getString("title").equals(identity.getString("title"))
                 && target.getJSONObject("platform").getString("id").equals(identity.getString("platform"))
                 && target.getJSONObject("platform").getString("androidPackage").equals(runtime.getString("targetPackage")),"PROGRAM_IDENTITY_MISMATCH");
-        require("com.amazon.amazonvideo.livingroom".equals(runtime.getString("targetPackage")) && runtime.getBoolean("pauseFreezesDisplay"),"SOURCE_PROFILE_UNSUPPORTED");
+        if (netflixQualification) {
+            require("netflix".equals(identity.getString("platform"))
+                    && "com.netflix.ninja".equals(runtime.getString("targetPackage"))
+                    && runtime.getBoolean("pauseFreezesDisplay"),"NETFLIX_SOURCE_PROFILE_REQUIRED");
+            require(integer(target,"horizonMs")>0
+                    && track.getString("trackId").equals(runtime.getString("trackId"))
+                    && track.getString("trackId").equals(original.sourceId)
+                    && "media".equals(original.clockMode) && "freeze".equals(original.pauseBehavior)
+                    && integer(track,"revision")==integer(runtime,"revision"),"NETFLIX_REFERENCE_MISMATCH");
+            require("UNKNOWN".equals(target.getJSONObject("edition").getString("status"))
+                    && "UNKNOWN".equals(target.getJSONObject("mapping").getString("status")),"NETFLIX_LOCAL_IDENTITY_UNPROVEN_REQUIRED");
+        } else {
+            require("com.amazon.amazonvideo.livingroom".equals(runtime.getString("targetPackage")) && runtime.getBoolean("pauseFreezesDisplay"),"SOURCE_PROFILE_UNSUPPORTED");
+        }
         Map<String,JSONObject> originals=new LinkedHashMap<>();
         JSONArray originalEvents=runtime.getJSONArray("comments");
         for(int i=0;i<originalEvents.length();i++) { JSONObject event=originalEvents.getJSONObject(i); require(originals.put(event.getString("id"),event)==null,"DUPLICATE_SOURCE_ID"); }

@@ -142,6 +142,38 @@ public final class MediaCalendarScheduler {
         deactivate(activationToken);
     }
 
+    /** Reconcile an explicit manual landing without replaying expired windows. */
+    public synchronized void onManualLanding(long positionMs, boolean rewind) {
+        if (calendar == null) return;
+        String token = activationToken;
+        deactivate(token);
+        if (rewind) rearmReplayFrom(positionMs, token);
+        consumeExpiredManualWindows(positionMs);
+        interrupted = true;
+        interruptedPositionMs = -1L;
+        rewindCandidateMs = -1L;
+        replayLandingPending = true;
+        explicitReplayPending = false;
+        restoreTextPending = true;
+        rewindProof.rebase();
+    }
+
+    /** Ignore fully elapsed manual windows even after a delayed owner tick. */
+    public synchronized void onManualObservation(long positionMs, boolean playing) {
+        if (calendar == null) return;
+        consumeExpiredManualWindows(positionMs);
+        onObservation(new MediaObservation(true, positionMs, playing));
+    }
+
+    /** Mark expired events consumed without submitting them to either renderer. */
+    private void consumeExpiredManualWindows(long positionMs) {
+        for (SceneEvent event : calendar.events()) {
+            if (event.startMs() + event.durationMs() <= positionMs) {
+                traverse(event, "MANUAL_WINDOW_PASSED");
+            }
+        }
+    }
+
     /** Apply one already-selected observation with the exact historical branch order. */
     public synchronized void onObservation(MediaObservation observation) {
         onObservation(observation,null,-1,Float.NaN);
