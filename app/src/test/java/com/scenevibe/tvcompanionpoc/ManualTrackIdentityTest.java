@@ -26,6 +26,51 @@ public final class ManualTrackIdentityTest {
         assertEquals(6,track.getJSONArray("events").length());assertEquals(3,profile.resources.size());
         assertEquals(3,profile.resources.stream().map(row->row.sha256).distinct().count());
     }
+    /**
+     * Reproduit exactement le nouvel espace de noms de la source TV-FIRST
+     * importée : source originale conservée et numéro d'épisode non inventé.
+     */
+    private MultimediaDeliveryProfile imported(java.util.function.Consumer<JSONObject> change) throws Exception {
+        JSONObject root=new JSONObject(new String(bytes(),StandardCharsets.UTF_8));
+        JSONObject track=new JSONObject(new String(Base64.getDecoder().decode(root.getString("trackBase64")),StandardCharsets.UTF_8));
+        track.put("trackId","studio-imported:video-mw7pq0oq-1");
+        JSONObject program=track.getJSONObject("target").getJSONObject("program");
+        program.put("season",JSONObject.NULL);
+        program.put("episode",JSONObject.NULL);
+        program.put("year",JSONObject.NULL);
+        change.accept(track);
+        byte[] changed=track.toString().getBytes(StandardCharsets.UTF_8);
+        root.put("trackBase64",Base64.getEncoder().encodeToString(changed));
+        root.getJSONObject("identity").put("trackId",track.getString("trackId"))
+                .put("snapshotSha256",MultimediaDeliveryProfile.hash(changed));
+        return new MultimediaDeliveryProfile(root.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** La source importée reste une révision privée, distincte de la source manuelle historique. */
+    @Test public void importedSixEventsMatchTheKnownColumboWithoutInventedSeasonOrEdition() throws Exception {
+        MultimediaDeliveryProfile profile=imported(track->{});
+        assertFalse(ManualTrackIdentity.matches(profile));
+        assertTrue(ImportedTrackIdentity.matches(profile));
+        assertFalse(CloudMultimediaAdmission.mapped(profile));
+    }
+
+    /** Toute autre identité de programme, édition inventée ou namespace ambigu échoue fermée. */
+    @Test public void importedSourceRejectsChangedEpisodeAndUnprovenEvidence() throws Exception {
+        for(java.util.function.Consumer<JSONObject> mutation:java.util.List.<java.util.function.Consumer<JSONObject>>of(
+                track->track.getJSONObject("target").getJSONObject("program").put("programId","another-episode"),
+                track->track.getJSONObject("target").getJSONObject("program").put("episode",5),
+                track->track.getJSONObject("target").getJSONObject("program").put("season",4),
+                track->track.getJSONObject("target").getJSONObject("program").put("year",1975),
+                track->track.getJSONObject("target").getJSONObject("platform").put("androidPackage","wrong.package"),
+                track->track.getJSONObject("target").put("horizonMs",5884769),
+                track->track.getJSONObject("target").getJSONObject("edition").put("status","EVIDENCE_REFERENCED"),
+                track->track.getJSONObject("target").getJSONObject("mapping").put("status","EVIDENCE_REFERENCED"),
+                track->track.put("trackId","studio-manual:changed"),
+                track->track.put("trackId","studio-imported:"),
+                track->track.getJSONArray("events").put(new JSONObject().put("type","VIDEO"))
+        ))assertFalse(ImportedTrackIdentity.matches(imported(mutation)));
+    }
+
     /** Une empreinte recalculée sur un autre épisode n'accorde pas la référence locale. */
     @Test public void changedEpisodeRemainsRefusedEvenWithFreshContentHash() throws Exception {
         JSONObject root=new JSONObject(new String(bytes(),StandardCharsets.UTF_8));

@@ -92,7 +92,7 @@ final class TvFirst009TextServiceOwner {
             switch(event) {
                 case "PERMISSION_REQUIRED": case "COLUMBO_CACHE_NOT_READY": case "SERVICE_START_FAILED":
                 case "FOREGROUND_SERVICE_FAILED": case "EXPLICIT_START_REQUIRED": case "START_PROOF_INVALID":
-                case "CACHE_OR_PERMISSION_UNAVAILABLE": case "MEDIA_IDENTITY_BLOCKED": case "POSITION_UNKNOWN":
+                case "CACHE_OR_PERMISSION_UNAVAILABLE": case "MEDIA_IDENTITY_BLOCKED": case "CLOUD_SOURCE_ADMISSION_BLOCKED": case "POSITION_UNKNOWN":
                 case "MEDIA_CLOCK_UNUSABLE": case "CACHE_OR_CONSENT_INVALID": case "SESSION_UNAVAILABLE":
                 case "CAPTURE_TIMEOUT": case "RUNTIME_FAILED": case "MEDIA_UNAVAILABLE": case "MEDIA_CLOCK_INVALID":
                 case "MEDIA_IDENTITY_INVALID": case "CONSENT_CLOCK_INVALID": case "CONSENT_EXPIRED":
@@ -168,7 +168,7 @@ final class TvFirst009TextServiceOwner {
         TvFirst008Source.MultimediaReference reference=source==null?null:source.confirmedMultimediaReference(prepared);
         if(reference==null){record("CACHE_OR_CONSENT_REQUIRED",-1,false);return false;}
         CloudMultimediaAdmission admitted=CloudMultimediaAdmission.admit(reference,ownerConfirmedReferenceEdition);
-        if(admitted==null){record("MEDIA_IDENTITY_BLOCKED",-1,false);return false;}
+        if(admitted==null){record("CLOUD_SOURCE_ADMISSION_BLOCKED",-1,false);return false;}
         Pending request=new Pending(admitted);pending=request;record("START_REQUESTED",-1,false);
         try{activity.startForegroundService(new Intent(activity,OverlayService.class).setAction(MULTIMEDIA_START).putExtra(EXTRA,request.nonce));return true;}
         catch(RuntimeException refused){pending=null;record("SERVICE_START_FAILED",-1,false);return false;}
@@ -612,6 +612,7 @@ final class TvFirst009TextServiceOwner {
         String explanation;
         switch(current.code) {
             case "CACHE_OR_CONSENT_REQUIRED": explanation="Vérifie le compte et la révision du cache avant une nouvelle admission.";break;
+            case "CLOUD_SOURCE_ADMISSION_BLOCKED": explanation="Track téléchargée mais source éditoriale non admise par cette version de SceneVibe. Aucun commentaire. Ne pas modifier le cache ou l'identité du film.";break;
             case "MEDIA_IDENTITY_INVALID": case "MEDIA_IDENTITY_BLOCKED": explanation="Épisode non reconnu : métadonnées absentes ou différentes. Aucun commentaire.";break;
             case "POSITION_UNKNOWN": explanation="Position MEDIA inconnue. Aucun commentaire.";break;
             case "MEDIA_CLOCK_INVALID": case "MEDIA_CLOCK_UNUSABLE": explanation="Horloge MEDIA inutilisable. Aucun commentaire.";break;
