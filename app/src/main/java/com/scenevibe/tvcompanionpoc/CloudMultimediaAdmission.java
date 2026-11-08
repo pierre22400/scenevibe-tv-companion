@@ -16,13 +16,51 @@ final class CloudMultimediaAdmission {
     static final String RUNTIME="061ae038ee56e528d4a05531579d06c82c89c630f93ab31d0e0f3848b361468c";
     static final String MANIFEST="9b034c30a6d68a8f822dd39696fe95cc8435450ba3c1deaeb0ce910bffb71554";
     final TvFirst008Source.MultimediaReference reference;
+    private final PublicRuntimeReference publicReference;
     final ScheduledTrack identity;
     final String activation=java.util.UUID.randomUUID().toString();
 
     /** Retain one validated current cache; no public constructor can manufacture a permit. */
     private CloudMultimediaAdmission(TvFirst008Source.MultimediaReference reference,ScheduledTrack identity) {
-        this.reference=reference;this.identity=identity;
+        this.reference=reference;this.identity=identity;this.publicReference=null;
     }
+
+    /** Conserve une autorité publique explicite sans fabriquer de référence privée. */
+    private CloudMultimediaAdmission(PublicRuntimeReference reference,ScheduledTrack identity){
+        this.reference=null;this.publicReference=reference;this.identity=identity;
+    }
+
+    /** Admission publique automatique après code TV : cache et programme exacts restent obligatoires. */
+    static CloudMultimediaAdmission admitPublic(PublicRuntimeReference reference){
+        if(!BuildConfig.PUBLIC_AUTONOMOUS_001B || !BuildConfig.CLOUD_MULTIMEDIA_SERVICE || reference==null || !reference.current(SystemClock.elapsedRealtime()))return null;
+        try{
+            PublicMultimediaCache.Prepared prepared=reference.prepared;
+            JSONObject track=new JSONObject(TvFirst008Wire.utf8(prepared.profile.trackBytes));
+            if(!prepared.binding.track.equals(track.getString("trackId")) || prepared.track.audio.isEmpty()
+                    || prepared.track.calendar.events().size()<=prepared.track.audio.size())return null;
+            ScheduledTrack identity=TrackParser.parse(new JSONObject(TvFirst008Wire.utf8(prepared.profile.runtimeBytes)),
+                    media->{throw new TrackParser.Invalid("TEXT_ONLY_SOURCE","Unexpected source media");});
+            if(!"prime_video".equals(identity.mediaIdentity.platform) || !"com.amazon.amazonvideo.livingroom".equals(identity.targetPackage))return null;
+            if(ownedMediaSessionFixture)identity=new ScheduledTrack(identity.trackId,BuildConfig.APPLICATION_ID,identity.mediaIdentity,identity.comments,identity.pauseFreezesDisplay);
+            return new CloudMultimediaAdmission(reference,identity);
+        }catch(Exception refused){return null;}
+    }
+
+    /** Réutilise le matcher privé ; le public refuse en plus un mediaId absent ou contradictoire. */
+    boolean matches(MediaSessionProbe.Snapshot snapshot){
+        if(publicReference!=null && (snapshot==null || snapshot.mediaId==null || !identity.mediaIdentity.videoId.equals(snapshot.mediaId.trim())))return false;
+        return MediaIdentityMatcher.matches(identity,snapshot);
+    }
+    /** Fournit le même calendrier et les mêmes ressources aux moteurs historiques. */
+    StudioMultimediaPackage track(){return publicReference==null?reference.prepared.track:publicReference.prepared.track;}
+    /** Résout uniquement une ressource du cache vérifié, sans changement du port AUDIO. */
+    java.io.File resource(String id) throws Exception {return publicReference==null?reference.prepared.resource(id):publicReference.prepared.resource(id);}
+    /** Sérialise les effets avec leur autorité privée ou publique respective. */
+    boolean whileCurrent(long now,Runnable effect){return publicReference==null?reference.whileCurrent(now,effect):publicReference.whileCurrent(now,effect);}
+    /** Conserve les diagnostics de validité de chaque namespace. */
+    String invalidReason(long now){return publicReference==null?reference.invalidReason(now):publicReference.invalidReason(now);}
+    /** Identifie le propriétaire public sans exposer de token ou d'affectation privée. */
+    String publicCommand(){return publicReference==null?null:publicReference.prepared.binding.command;}
 
     /** Verify exact source mapping before accepting the separate, per-start owner confirmation. */
     static CloudMultimediaAdmission admit(TvFirst008Source.MultimediaReference reference,boolean ownerConfirmedReferenceEdition) {
@@ -52,7 +90,7 @@ final class CloudMultimediaAdmission {
     }
 
     /** Revoke local effects when a different cache, generation or consent supersedes this permit. */
-    boolean current() {return reference.current(SystemClock.elapsedRealtime());}
+    boolean current() {return publicReference==null?reference.current(SystemClock.elapsedRealtime()):publicReference.current(SystemClock.elapsedRealtime());}
 
     /** Instrumentation may observe its OWN native MediaSession; a non-debuggable APK rejects this seam. */
     static void useOwnedMediaSessionFixture(boolean enabled) {

@@ -101,7 +101,7 @@ final class StudioMultimediaRuntime {
     /** Native service entry requires a current, explicit cache/edition admission rather than a software label. */
     void loadAdmittedCloud(CloudMultimediaAdmission admission) {
         if(admission==null || !admission.current())throw new IllegalStateException("CURRENT_NATIVE_ADMISSION_REQUIRED");
-        load(admission.reference.prepared.track,admission.activation);
+        load(admission.track(),admission.activation);
     }
 
     /** Share the already-qualified scheduler/renderers after the caller's distinct admission boundary. */

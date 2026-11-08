@@ -68,7 +68,7 @@ final class CloudMultimediaSession {
         }));
         audio=new AndroidLocalAudioPort(id->{
             if(!current())throw new java.io.IOException("CURRENT_ADMISSION_REQUIRED");
-            try{preparingResource=id;audioPreparations++;if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)trace("AUDIO_PREPARE_REQUESTED","count="+audioPreparations);return admission.reference.prepared.resource(id);}
+            try{preparingResource=id;audioPreparations++;if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)trace("AUDIO_PREPARE_REQUESTED","count="+audioPreparations);return admission.resource(id);}
             catch(Exception refused){throw new java.io.IOException("VERIFIED_RESOURCE_UNAVAILABLE");}
         },this::startAudible,BuildConfig.ADSYNC_NONDESTRUCTIVE?this::nativeAudio:null);
         runtime=new StudioMultimediaRuntime(new SceneRuntimeController.SceneSink() {
@@ -76,7 +76,7 @@ final class CloudMultimediaSession {
             @Override public boolean preflight(OverlayManifest.Scene scene){boolean allowed=effectsAllowed() && renderer.preflight(scene);
                 trace(allowed?"TEXT_EVENT_ELIGIBLE":"TEXT_RENDER_REFUSED",allowed?"":"guard="+effectRefusal());return allowed;}
             /** Request the original TEXT window through the physically qualified renderer. */
-            @Override public void show(OverlayManifest.Scene scene){admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{
+            @Override public void show(OverlayManifest.Scene scene){admission.whileCurrent(SystemClock.elapsedRealtime(),()->{
                 if(effectsAllowed()){publish("TEXT_RENDER_REQUESTED");
                     try{renderer.render(scene);}catch(RuntimeException refused){trace("TEXT_RENDER_FAILED",refused instanceof SecurityException?"guard=ANDROID_WINDOW_PERMISSION":"guard=ANDROID_WINDOW_OR_VIEW");throw refused;}
                     pendingScene=scene.id;
@@ -99,7 +99,7 @@ final class CloudMultimediaSession {
             @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot){observe(snapshot);}
             /** A disappearing session cannot leave either type of comment active. */
             @Override public void onUnavailable(){unavailable("SESSION_UNAVAILABLE");}
-        },null,250L,BuildConfig.TVUX_CONTROL_PANEL?snapshot->MediaIdentityMatcher.matches(admission.identity,snapshot):null);
+        },null,250L,BuildConfig.TVUX_CONTROL_PANEL?snapshot->admission.matches(snapshot):null);
         try{probe.start();main.postDelayed(watchdog,250);}
         catch(RuntimeException refused){close();throw refused;}
     }
@@ -127,7 +127,7 @@ final class CloudMultimediaSession {
     private void updateAdReader(){
         if(adObservationRequested || adProtection.status().enabled){
             if(adObservation==null){adObservation=new AdObservationProbe(admission.identity.targetPackage,
-                    snapshot->MediaIdentityMatcher.matches(admission.identity,snapshot),adObservationRequested);probe.setControllerObserver(adObservation);}
+                    snapshot->admission.matches(snapshot),adObservationRequested);probe.setControllerObserver(adObservation);}
             adObservation.setDiagnosticsEnabled(adObservationRequested);
             adObservation.setProtectionSink(adProtection.status().enabled && qualifiedProtectionTarget()?new AdObservationProbe.ProtectionSink(){
                 /** Close the local effect fence on this main-thread metadata callback. */
@@ -171,7 +171,7 @@ final class CloudMultimediaSession {
     void setDiagnosticObserver(MediaSessionProbe.ControllerObserver diagnostic){probe.setDiagnosticObserver(diagnostic);}
     /** Report the existing track match honestly; a mismatch does not prevent read-only investigation. */
     com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility diagnosticCompatibility(MediaSessionProbe.Snapshot snapshot){
-        return MediaIdentityMatcher.matches(admission.identity,snapshot)?com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility.MATCH:
+        return admission.matches(snapshot)?com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility.MATCH:
                 com.scenevibe.tvcompanionpoc.ad.MultiPlatformObservationLog.Compatibility.MISMATCH;
     }
 
@@ -188,6 +188,7 @@ final class CloudMultimediaSession {
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
+        if(admission.publicCommand()!=null && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
         if(!adProtection.status().allow){applyAdProtection(adProtection.status());return;}
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
         boolean usable=snapshot!=null && selected!=null && selected.eligible() && snapshot.positionMs>=0
@@ -314,7 +315,7 @@ final class CloudMultimediaSession {
     private void publish(String code){if(observer!=null)observer.changed(code,position,active);}
 
     /** Identify the exact closed authority boundary without erasing any cached file or logging identities. */
-    private void retireInvalidAuthority(){String reason=BuildConfig.ADSYNC_NONDESTRUCTIVE?admission.reference.invalidReason(SystemClock.elapsedRealtime()):"";
+    private void retireInvalidAuthority(){String reason=BuildConfig.ADSYNC_NONDESTRUCTIVE?admission.invalidReason(SystemClock.elapsedRealtime()):"";
         if(reason.isEmpty())reason=!Settings.canDrawOverlays(context)?"OVERLAY_PERMISSION_REQUIRED":!NotificationAccess.isGranted(context)?"MEDIA_PERMISSION_REQUIRED":"CACHE_OR_CONSENT_INVALID";
         close();publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?reason:"CACHE_OR_CONSENT_INVALID");}
 
@@ -343,11 +344,11 @@ final class CloudMultimediaSession {
     }
     /** Observe the admitted audio event by ordinal, without exposing its resource identifier. */
     com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.AudioDiagnostics audioDiagnostics(int ordinal){
-        int index=0;for(String id:admission.reference.prepared.track.audio.keySet())if(++index==ordinal)return runtime.audioDiagnostics(id);return null;
+        int index=0;for(String id:admission.track().audio.keySet())if(++index==ordinal)return runtime.audioDiagnostics(id);return null;
     }
 
     /** Start only if the audible effect actually ran under the current receipt/permission/MEDIA fence. */
-    private boolean startAudible(Runnable effect){boolean[] ran={false};admission.reference.whileCurrent(SystemClock.elapsedRealtime(),()->{
+    private boolean startAudible(Runnable effect){boolean[] ran={false};admission.whileCurrent(SystemClock.elapsedRealtime(),()->{
         if(effectsAllowed()){effect.run();ran[0]=true;}});return ran[0];}
 
     /** Correlate native acknowledgements by attempt; repeated resources are real new playbacks, never deduplicated diagnostics. */
@@ -372,6 +373,8 @@ final class CloudMultimediaSession {
     String audioState(){return audio.state().name();}
     /** Let the existing service retire itself when its admitted lifetime ends. */
     boolean isActive(){return active;}
+    /** Distingue une session publique des restitutions privées préservées. */
+    String publicCommand(){return admission.publicCommand();}
 
     /** A missing OS permission blocks every effect, retaining only the still-current admission and cache. */
     private boolean holdForPermissions(){
@@ -383,7 +386,7 @@ final class CloudMultimediaSession {
     /** Explain the first closed native boundary without private metadata or a fallback permission. */
     private String effectRefusal(){
         if(!active)return "SERVICE_STOPPED";
-        String invalid=admission.reference.invalidReason(SystemClock.elapsedRealtime());if(!invalid.isEmpty())return invalid;
+        String invalid=admission.invalidReason(SystemClock.elapsedRealtime());if(!invalid.isEmpty())return invalid;
         if(!Settings.canDrawOverlays(context))return "OVERLAY_PERMISSION_REQUIRED";
         if(!NotificationAccess.isGranted(context))return "MEDIA_PERMISSION_REQUIRED";
         if(!adProtection.status().allow)return "AD_"+adProtection.status().state+"_"+adProtection.status().reason;

@@ -174,10 +174,23 @@ final class TvFirst009TextServiceOwner {
         catch(RuntimeException refused){pending=null;record("SERVICE_START_FAILED",-1,false);return false;}
     }
 
+    /** L'action Web après le code TV est l'unique décision ; aucun dialogue local n'est ajouté. */
+    static boolean requestPublicStart(Context context,PublicRuntimeReference reference) {
+        if(!BuildConfig.PUBLIC_AUTONOMOUS_001B || Looper.myLooper()!=Looper.getMainLooper() || controlBusy())return false;
+        if(!Settings.canDrawOverlays(context) || !NotificationAccess.isGranted(context)){record("PERMISSION_REQUIRED",-1,false);return false;}
+        CloudMultimediaAdmission admitted=CloudMultimediaAdmission.admitPublic(reference);
+        if(admitted==null){record("CLOUD_SOURCE_ADMISSION_BLOCKED",-1,false);return false;}
+        Pending request=new Pending(admitted);pending=request;record("START_REQUESTED",-1,false);
+        try{context.startForegroundService(new Intent(context,OverlayService.class).setAction(MULTIMEDIA_START).putExtra(EXTRA,request.nonce));return true;}
+        catch(RuntimeException refused){pending=null;record("SERVICE_START_FAILED",-1,false);return false;}
+    }
+
     /** Read the same requested switches from either surface; opening a view never resets them. */
     static boolean multimediaTextEnabled(){return multimediaTextPreference;}
     /** AUDIO state belongs to the service owner, not a second Settings/panel preference. */
     static boolean multimediaAudioEnabled(){return multimediaAudioPreference;}
+    /** Retourne seulement la commande de la session publique réellement ouverte. */
+    static String publicCommand(){return liveInstance==null || liveInstance.multimedia==null || !liveInstance.multimedia.isActive()?null:liveInstance.multimedia.publicCommand();}
 
     /** Reuse a system-owned PendingIntent to the non-exported service, without launching MainActivity. */
     static PendingIntent panelIntent(Context context) {

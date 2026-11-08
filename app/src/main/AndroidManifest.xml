@@ -33,6 +33,12 @@
       android:name=".DiagnosticsActivity"
       android:exported="false" />
 
+    <!-- Local entry only; build gate keeps the anonymous viewer path experimental. -->
+    <activity android:name=".PublicPairingActivity" android:exported="false" />
+    <service android:name=".PublicCompanionService" android:exported="false" android:foregroundServiceType="specialUse">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started public commentary delivery and association" />
+    </service>
+
     <service
       android:name=".MediaSessionAccessService"
       android:label="SceneVibe media-session access"
