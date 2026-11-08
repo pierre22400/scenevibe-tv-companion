@@ -108,7 +108,7 @@ final class PublicCompanionOwner implements AutoCloseable {
                 reference=null;return;
             }
             status="Téléchargement et vérification TEXT/AUDIO…";
-            try{prepared=cache.download(client,binding,()->false);status="Track téléchargée et vérifiée.";}
+            try{prepared=cache.download(client,binding,this::sessionBusy);status="Track téléchargée et vérifiée.";}
             catch(Exception refused){try{client.receipt(binding,"failed");}catch(Exception ignored){/* A revoked grant cannot acknowledge even failure. */}throw refused;}
             return;
         }
@@ -130,6 +130,12 @@ final class PublicCompanionOwner implements AutoCloseable {
             if(!"armed".equals(command.getString("state")))client.receipt(binding,"armed");
             status="Réglages appliqués · TEXT "+(text?"ON":"OFF")+" · AUDIO "+(audio?"ON":"OFF");
         }
+    }
+
+    /** Recontrôle aussi les sessions démarrées pendant le téléchargement ; une UI indisponible ferme le commit. */
+    private boolean sessionBusy(){
+        if(closed)return true;
+        try{return onMain(TvFirst009TextServiceOwner::controlBusy);}catch(Exception unavailable){return true;}
     }
 
     /** Relit des préférences déjà choisies sur le Web, sans demander d'autorisation après redémarrage. */

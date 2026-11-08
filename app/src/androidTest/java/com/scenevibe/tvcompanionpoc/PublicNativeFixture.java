@@ -25,6 +25,7 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
     String device=UUID.randomUUID().toString(),generation=UUID.randomUUID().toString();
     String token="PUBLIC_FIXTURE_POSSESSION_"+UUID.randomUUID().toString().replace("-","");
     String challengeId,secret,code;
+    final String grantExpires=Instant.now().plusSeconds(86400).toString();
     boolean claimed,expired,revoked,corrupt,truncated,withdrawn;
     int audioRequests,cacheReceipts,armReceipts,claims;
     JSONObject command;
@@ -85,12 +86,12 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
             if(expired){expired=false;return bytes(new JSONObject().put("status","expired"));}
             if(!claimed)return bytes(new JSONObject().put("status","open"));
             return bytes(new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("status","claimed").put("deviceId",device).put("generation",generation).put("deviceToken",token)
-                    .put("consentExpiresAt",Instant.now().plusSeconds(86400).toString()));
+                    .put("consentExpiresAt",grantExpires));
         }
         if(revoked)throw new IllegalArgumentException("REVOKED");
         if(!claimed || !device.equals(body.optString("deviceId")) || !generation.equals(body.optString("generation")) || !token.equals(bearer))throw new IllegalArgumentException("POSSESSION_REFUSED");
         if(action.equals("association"))return bytes(new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("deviceId",device).put("generation",generation)
-                .put("consentExpiresAt",Instant.now().plusSeconds(86400).toString()));
+                .put("consentExpiresAt",grantExpires));
         if(action.equals("poll"))return bytes(new JSONObject().put("commands",command==null?new JSONArray():new JSONArray().put(new JSONObject(command.toString()))));
         if(withdrawn)throw new IllegalArgumentException("PUBLIC_WITHDRAWN");
         if(action.equals("validate-cache")){
@@ -108,7 +109,9 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
         }
         if(action.equals("receipt")){
             if(!command.get("revisionId").equals(body.get("revisionId")) || !command.get("packageSha256").equals(body.get("packageSha256")))throw new IllegalArgumentException("RECEIPT_REFUSED");
-            String status=body.getString("state");command.put("state",status);if(status.equals("cached"))cacheReceipts++;if(status.equals("armed"))armReceipts++;
+            String status=body.getString("state");
+            if(status.equals("cached") && command.getString("state").equals("requested"))command.put("expiresAt",grantExpires);
+            command.put("state",status);if(status.equals("cached"))cacheReceipts++;if(status.equals("armed"))armReceipts++;
             return bytes(new JSONObject(command.toString()));
         }
         throw new IllegalArgumentException("PUBLIC_FIXTURE_ROUTE_REFUSED");

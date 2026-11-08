@@ -111,6 +111,7 @@ public final class PublicAutonomousAndroidTest {
         String privateBefore=fixture.target.getSharedPreferences("tvfirst008_identity",0).getAll().toString();
         fixture.pair();fixture.download();PublicMultimediaCache.Prepared p=fixture.cache().read();
         assertEquals(6,p.track.calendar.events().size());assertEquals(3,p.track.audio.size());assertEquals(3,fixture.audioRequests);assertEquals(1,fixture.cacheReceipts);
+        assertEquals(fixture.grantExpires,fixture.command.getString("expiresAt"));
         java.util.Set<String> hashes=new java.util.HashSet<>();
         for(MultimediaDeliveryProfile.Resource r:p.profile.resources){byte[] bytes=Files.readAllBytes(p.resource(r.id).toPath());hashes.add(MultimediaDeliveryProfile.hash(bytes));assertEquals(3000,new AndroidStudioAudioInspector(fixture.target).decodedDurationMs(bytes));}
         assertEquals(3,hashes.size());assertEquals(privateBefore,fixture.target.getSharedPreferences("tvfirst008_identity",0).getAll().toString());
