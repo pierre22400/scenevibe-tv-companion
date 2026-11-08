@@ -191,6 +191,8 @@ final class TvFirst009TextServiceOwner {
     static boolean multimediaAudioEnabled(){return multimediaAudioPreference;}
     /** Retourne seulement la commande de la session publique réellement ouverte. */
     static String publicCommand(){return liveInstance==null || liveInstance.multimedia==null || !liveInstance.multimedia.isActive()?null:liveInstance.multimedia.publicCommand();}
+    /** Permet l'installation différée uniquement après un arrêt MEDIA observé. */
+    static boolean publicMediaEnded(){return publicCommand()!=null && liveInstance.multimedia.publicMediaEnded();}
 
     /** Reuse a system-owned PendingIntent to the non-exported service, without launching MainActivity. */
     static PendingIntent panelIntent(Context context) {

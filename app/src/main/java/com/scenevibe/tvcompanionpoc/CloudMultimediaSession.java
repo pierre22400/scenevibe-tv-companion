@@ -48,6 +48,7 @@ final class CloudMultimediaSession {
     private boolean textEnabled,audioEnabled;
     private int nativeAudioStarts;
     private String closureReason="CALENDAR_EXPIRE_OR_REPLACE";
+    private boolean publicMediaEnded;
 
     /** Compose real application ports only after the owner's separate explicit admission. */
     static CloudMultimediaSession open(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
@@ -188,6 +189,7 @@ final class CloudMultimediaSession {
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
+        if(admission.publicCommand()!=null && snapshot!=null)publicMediaEnded=snapshot.state==PlaybackState.STATE_STOPPED;
         if(admission.publicCommand()!=null && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
         if(!adProtection.status().allow){applyAdProtection(adProtection.status());return;}
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
@@ -375,6 +377,8 @@ final class CloudMultimediaSession {
     boolean isActive(){return active;}
     /** Distingue une session publique des restitutions privées préservées. */
     String publicCommand(){return admission.publicCommand();}
+    /** Seul un STOP publié par MEDIA termine automatiquement l'épinglage, jamais une pause ou perte réseau. */
+    boolean publicMediaEnded(){return publicMediaEnded;}
 
     /** A missing OS permission blocks every effect, retaining only the still-current admission and cache. */
     private boolean holdForPermissions(){

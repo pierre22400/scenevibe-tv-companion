@@ -35,7 +35,7 @@ final class PublicCloudClient {
         }
         /** Envoie une action fermée et vérifie MIME, taille, longueur et octets chunked. */
         @Override public byte[] request(String action,JSONObject body,String token) throws Exception {
-            if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
+            if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache|device-preferences"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
             byte[] request=body.toString().getBytes(StandardCharsets.UTF_8);
             if(request.length>16_384)throw new IllegalArgumentException("PUBLIC_REQUEST_BUDGET");
             HttpsURLConnection connection=(HttpsURLConnection)URI.create(origin+"/api/autonomous/"+action).toURL().openConnection();

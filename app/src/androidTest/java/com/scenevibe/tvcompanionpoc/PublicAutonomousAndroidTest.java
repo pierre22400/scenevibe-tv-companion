@@ -157,6 +157,8 @@ public final class PublicAutonomousAndroidTest {
         Files.write(new java.io.File(fixture.target.getFilesDir(),"public001b-native-proof.json").toPath(),proof.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
         fixture.activate(false,false);fixture.owner().pollOnce();assertEquals("armed",fixture.command.getString("state"));
         assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaAudioEnabled());
+        main(()->TvFirst009TextServiceOwner.setMultimediaTextEnabled(true));fixture.owner().pollOnce();
+        assertTrue(fixture.command.getBoolean("text"));assertFalse(fixture.command.getBoolean("audio"));
     }
     /** Un titre identique ne peut contourner un mediaId contradictoire. */
     @Test public void incorrectMediaIdKeepsIdentityBlocked() throws Exception {
@@ -170,5 +172,8 @@ public final class PublicAutonomousAndroidTest {
         PublicMultimediaCache.Prepared before=fixture.cache().read();fixture.select();fixture.owner().pollOnce();
         assertEquals("requested",fixture.command.getString("state"));assertTrue(before.binding.same(fixture.cache().read().binding));
         assertEquals(before.binding.command,TvFirst009TextServiceOwner.publicCommand());assertEquals(1,fixture.cacheReceipts);
+        main(()->playback(PlaybackState.STATE_STOPPED,0));await(TvFirst009TextServiceOwner::publicMediaEnded,"MEDIA stop not observed",10000);
+        fixture.owner().pollOnce();await(()->!TvFirst009TextServiceOwner.controlBusy(),"Previous public session not retired",15000);
+        fixture.owner().pollOnce();assertEquals(2,fixture.cacheReceipts);assertFalse(before.binding.same(fixture.cache().read().binding));
     }
 }

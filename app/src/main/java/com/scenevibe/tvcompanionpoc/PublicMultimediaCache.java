@@ -52,7 +52,7 @@ final class PublicMultimediaCache {
     /** Compose un namespace Android public par génération sans lire ni modifier le cache privé. */
     PublicMultimediaCache(Context context,String generation) throws Exception {
         this(new File(context.getFilesDir(),"public001b/"+TvFirst008Wire.uuid(generation)),
-                new InstallationStore(new AndroidInstallationBackend(context,"public001b_cache_"+generation)),new AndroidStudioAudioInspector(context));
+                new InstallationStore(new AndroidInstallationBackend(context,"public001b_cache_"+generation.replace("-",""))),new AndroidStudioAudioInspector(context));
     }
     /** Port de stockage partagé avec les bancs JVM ; les règles et parseurs restent identiques. */
     PublicMultimediaCache(File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder) throws Exception {

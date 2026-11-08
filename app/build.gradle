@@ -289,7 +289,10 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("tvux002")) { variant ->
-        variant.outputs.each { output -> output.versionCode.set(publicAutonomous001b ? 32 : realTrack001 ? 31 : 28) }
+        variant.outputs.each { output ->
+            output.versionCode.set(realTrack001 ? 31 : 28)
+            if (publicAutonomous001b) output.versionCode.set(32)
+        }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
         variant.outputs.each { output -> output.versionCode.set(19) }

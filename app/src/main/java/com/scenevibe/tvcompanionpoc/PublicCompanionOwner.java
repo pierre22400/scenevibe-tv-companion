@@ -95,7 +95,12 @@ final class PublicCompanionOwner implements AutoCloseable {
         PublicCatalogueCandidate.Binding binding=new PublicCatalogueCandidate.Binding(command,identity.getString("deviceId"),identity.getString("generation"),System.currentTimeMillis());
         if("requested".equals(command.getString("state"))){
             boolean busy=onMain(()->TvFirst009TextServiceOwner.controlBusy());
-            if(busy && (prepared==null || prepared.binding.track.equals(binding.track))){status="Nouvelle révision en attente · lecture actuelle conservée.";return;}
+            if(busy && (prepared==null || prepared.binding.track.equals(binding.track))){
+                if(onMain(TvFirst009TextServiceOwner::publicMediaEnded)){
+                    onMain(()->{TvFirst009TextServiceOwner.requestStop(context);return true;});reference=null;
+                }
+                status="Nouvelle révision en attente · lecture actuelle conservée.";return;
+            }
             if(busy){
                 if(!onMain(()->{if(TvFirst009TextServiceOwner.publicCommand()!=null){TvFirst009TextServiceOwner.requestStop(context);return true;}return false;})){
                     status="Track publique en attente · session privée conservée.";return;
@@ -110,6 +115,16 @@ final class PublicCompanionOwner implements AutoCloseable {
         if(prepared==null || !binding.same(prepared.binding))return;
         client.validate(binding);
         boolean text=command.getBoolean("text"),audio=command.getBoolean("audio");
+        if("armed".equals(command.getString("state"))){
+            boolean[] local={text,audio};boolean publicLive=onMain(()->{
+                if(!binding.command.equals(TvFirst009TextServiceOwner.publicCommand()))return false;
+                local[0]=TvFirst009TextServiceOwner.multimediaTextEnabled();local[1]=TvFirst009TextServiceOwner.multimediaAudioEnabled();return true;
+            });
+            if(publicLive && (local[0]!=text || local[1]!=audio)){
+                client.json("device-preferences",new JSONObject().put("commandId",binding.command).put("text",local[0]).put("audio",local[1]));
+                text=local[0];audio=local[1];
+            }
+        }
         if(apply(text,audio)){
             state.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",text).put("audio",audio));
             if(!"armed".equals(command.getString("state")))client.receipt(binding,"armed");

@@ -101,6 +101,7 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
         }
         if(command==null || !command.getString("commandId").equals(body.optString("commandId")))throw new IllegalArgumentException("COMMAND_REFUSED");
         if(action.equals("package"))return truncated?java.util.Arrays.copyOf(profile,profile.length/2):profile.clone();
+        if(action.equals("device-preferences")){command.put("text",body.getBoolean("text")).put("audio",body.getBoolean("audio"));return bytes(new JSONObject(command.toString()));}
         if(action.equals("resource")){
             String hash=resourceIds.get(body.getString("resourceId"));if(hash==null)throw new IllegalArgumentException("RESOURCE_REFUSED");
             byte[] data=resources.get(hash).clone();audioRequests++;if(corrupt)data[0]^=1;return data;
@@ -117,6 +118,6 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
     /** Ferme seulement le worker et les données synthétiques de ce test. */
     void close(boolean remove) throws Exception {
         if(owner!=null)owner.close();
-        if(remove){ManualNativeFixture.remove(new java.io.File(target.getFilesDir(),"public001b/"+generation));target.getSharedPreferences(namespace,0).edit().clear().commit();target.getSharedPreferences("public001b_cache_"+generation,0).edit().clear().commit();}
+        if(remove){ManualNativeFixture.remove(new java.io.File(target.getFilesDir(),"public001b/"+generation));target.getSharedPreferences(namespace,0).edit().clear().commit();target.getSharedPreferences("public001b_cache_"+generation.replace("-",""),0).edit().clear().commit();}
     }
 }
