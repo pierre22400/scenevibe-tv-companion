@@ -14,7 +14,8 @@ final class PublicRuntimeReference {
     private final PublicMultimediaCache cache;
     private final TvFirst008State state;
     private final BooleanSupplier valid;
-    private final long issued=SystemClock.elapsedRealtime(),deadline;
+    private final long issued=SystemClock.elapsedRealtime();
+    private long deadline;
     private final Object lock=new Object();
 
     /** Capture la possession courante et son expiration monotone après vérification Cloud. */
@@ -34,6 +35,8 @@ final class PublicRuntimeReference {
     }
     /** La validité technique ne dépend jamais d'une case de consentement locale. */
     boolean current(long now){return invalidReason(now).isEmpty();}
+    /** Prolonge seulement depuis une revalidation de possession Cloud de même génération. */
+    void renewed(long verifiedDeadline){synchronized(lock){if(valid.getAsBoolean() && verifiedDeadline>SystemClock.elapsedRealtime())deadline=verifiedDeadline;}}
     /** Sérialise un effet avec le contrôle complet, comme le chemin privé 008. */
     boolean whileCurrent(long now,Runnable effect){synchronized(lock){if(!current(now))return false;effect.run();return true;}}
 }

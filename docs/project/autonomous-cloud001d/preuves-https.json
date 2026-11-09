@@ -1,0 +1,107 @@
+{
+  "scope": "SOFTWARE_READY_PHYSICAL_SONY_PRIME_NOT_EXECUTED",
+  "asOf": "2026-11-09",
+  "cloud": {
+    "runtimeSource": "f471e0147bf31ffae183f6a4c4d5809b40b684aa",
+    "testedSource": "04ba25ca88cae7cda5fa7e45e17c8efeb5c05d20",
+    "run": 42574225462,
+    "cases": 820,
+    "skipped": 0,
+    "failed": 0,
+    "typecheck": "PASS",
+    "webBuild": "PASS",
+    "compactBuild": "PASS",
+    "artifacts": [
+      {
+        "id": 13654925909,
+        "name": "autonomous-preview001c-multimedia-04ba25ca88cae7cda5fa7e45e17c8efeb5c05d20",
+        "digest": "sha256:35685a6fbb1705eb631e9600f1ca63526a5a4081032b9cdd15a985c4aedb3883"
+      },
+      {
+        "id": 13654637077,
+        "name": "autonomous-preview001c-historical-04ba25ca88cae7cda5fa7e45e17c8efeb5c05d20",
+        "digest": "sha256:f12f6861a8a67954f79835d8ca393aa386b9bc0e0c2f22f1d62b79327db82270"
+      },
+      {
+        "id": 13654338145,
+        "name": "autonomous-preview001c-hosted-04ba25ca88cae7cda5fa7e45e17c8efeb5c05d20",
+        "digest": "sha256:14505658b921dad3c1d004871221614a56a3016667120e48cdf63a64b54b099e"
+      },
+      {
+        "id": 13653844384,
+        "name": "autonomous-preview001c-autonomous-04ba25ca88cae7cda5fa7e45e17c8efeb5c05d20",
+        "digest": "sha256:2cc14a646d7558cf4a26274141551b5843dd62c4da2eb9bf5d4e24678329b83b"
+      }
+    ]
+  },
+  "web": {
+    "source": "7a112e96fb1b60f5491d1b5c81c590437c8cae67",
+    "run": 42572935848,
+    "observations": 20,
+    "scope": "REAL_HTTPS_JS_RECEIVER_PC_AND_MOBILE_VIEWPORT_NOT_PHYSICAL_PHONE",
+    "artifact": {
+      "id": 13654197696,
+      "name": "autonomous001d-real-https-web-42572935848",
+      "size_in_bytes": 326726,
+      "url": "https://api.github.com/repos/pierre22400/interface-scenevibe/actions/artifacts/13654197696",
+      "archive_download_url": "https://api.github.com/repos/pierre22400/interface-scenevibe/actions/artifacts/13654197696/zip",
+      "expired": false,
+      "created_at": "2026-11-09T06:32:33Z",
+      "expires_at": "2026-11-23T06:32:32Z",
+      "updated_at": "2026-11-09T06:32:33Z",
+      "digest": "sha256:c20e45c5570b269c11d184addd23040cb20c89553c37c059c36c46b062f554bf",
+      "workflow_run": {
+        "id": 42572935848,
+        "repository_id": 1368378310,
+        "head_repository_id": 1368378310,
+        "head_branch": "work/scenevibe-autonomous-https-001d",
+        "head_sha": "7a112e96fb1b60f5491d1b5c81c590437c8cae67"
+      }
+    },
+    "images": [
+      "libfile_74638e58b2a081919d1f6237e435e1f5",
+      "libfile_e35abaa461ec81919f1980044f9fd7cb"
+    ]
+  },
+  "android": {
+    "source": "3a24849603f0e88f60946b870cb7b30b327da26c",
+    "run": 42574624772,
+    "cases": 1,
+    "scope": "REAL_HTTPS_ANDROID_TV_EMULATOR_OWN_MEDIA_SESSION_NOT_PRIME_SONY",
+    "artifact": {
+      "id": 13654641972,
+      "name": "scenevibe-autonomous-cloud001d-https-42574624772",
+      "size_in_bytes": 2384,
+      "url": "https://api.github.com/repos/pierre22400/scenevibe-tv-companion/actions/artifacts/13654641972",
+      "archive_download_url": "https://api.github.com/repos/pierre22400/scenevibe-tv-companion/actions/artifacts/13654641972/zip",
+      "expired": false,
+      "created_at": "2026-11-09T06:44:58Z",
+      "expires_at": "2026-11-23T06:44:58Z",
+      "updated_at": "2026-11-09T06:44:58Z",
+      "digest": "sha256:688a138d560bd036b725c67eb974c5f404b8c1f56335ad420073244eebc06015",
+      "workflow_run": {
+        "id": 42574624772,
+        "repository_id": 1385340785,
+        "head_repository_id": 1385340785,
+        "head_branch": "work/scenevibe-autonomous-https-001d",
+        "head_sha": "3a24849603f0e88f60946b870cb7b30b327da26c"
+      }
+    },
+    "signedApkSource": "28e7af87119001598cf6ec7a6e230fa31b047940",
+    "signedApkRuntimeChanges": [],
+    "sha256": "668ee90c882237e4883689720a39fdda6543c026ca8422859a2f42dfbb8569d4"
+  },
+  "deployment": {
+    "id": "dpl_7at1M2WVvjCXpiDu6KGUhTJ2bnoN",
+    "project": "prj_NWywaKmj71Y1Hb3RHCfZimykqryx",
+    "environment": "preview",
+    "origin": "https://scenevibe-autonomous001d-qual-preview.vercel.app"
+  },
+  "incidentChecks": {
+    "unique": 14,
+    "receiverCorruption": "INJECTED_AFTER_REAL_HTTPS",
+    "providerPersistedCorruption": "NOT_EXECUTED",
+    "expiry": "SQL_CONTROLLED_SYNTHETIC_FIXTURES",
+    "restart": "NEW_DEPLOYMENT_SAME_RUNTIME"
+  }
+}

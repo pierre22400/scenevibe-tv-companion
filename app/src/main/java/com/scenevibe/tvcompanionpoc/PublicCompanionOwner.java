@@ -84,6 +84,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         long remaining=Instant.parse(association.getString("consentExpiresAt")).toEpochMilli()-System.currentTimeMillis();
         if(remaining<=0)throw new IllegalArgumentException("REVOKED");
         grantDeadline=SystemClock.elapsedRealtime()+remaining;revoked=false;
+        if(reference!=null)reference.renewed(grantDeadline);
         if(cache==null){
             cache=new PublicMultimediaCache(context,identity.getString("generation"));prepared=cache.read();
             if(prepared!=null){client.validate(prepared.binding);restorePreferences();}
@@ -114,6 +115,21 @@ final class PublicCompanionOwner implements AutoCloseable {
         }
         if(prepared==null || !binding.same(prepared.binding))return;
         client.validate(binding);
+        android.content.SharedPreferences playback=context.getSharedPreferences("public001d_playback",0);
+        boolean stopped=binding.command.equals(playback.getString("stoppedCommand",""));
+        if(stopped && "cached".equals(command.getString("state"))
+                && (binding.version<0 || binding.version>playback.getLong("stoppedVersion",-1))){
+            playback.edit().remove("stoppedCommand").remove("stoppedVersion").commit();stopped=false;
+        }
+        if(stopped){
+            if("armed".equals(command.getString("state")) && (command.getBoolean("text") || command.getBoolean("audio"))){
+                JSONObject preferences=new JSONObject().put("commandId",binding.command).put("text",false).put("audio",false);
+                if(binding.version>=0)preferences.put("expectedVersion",binding.version);
+                client.json("device-preferences",preferences);
+            }
+            state.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",false).put("audio",false));
+            status="Commentaires arrêtés · réactivation disponible depuis le catalogue.";return;
+        }
         boolean text=command.getBoolean("text"),audio=command.getBoolean("audio");
         if("armed".equals(command.getString("state"))){
             boolean[] local={text,audio};boolean publicLive=onMain(()->{
@@ -121,11 +137,13 @@ final class PublicCompanionOwner implements AutoCloseable {
                 local[0]=TvFirst009TextServiceOwner.multimediaTextEnabled();local[1]=TvFirst009TextServiceOwner.multimediaAudioEnabled();return true;
             });
             if(publicLive && (local[0]!=text || local[1]!=audio)){
-                client.json("device-preferences",new JSONObject().put("commandId",binding.command).put("text",local[0]).put("audio",local[1]));
+                JSONObject preferences=new JSONObject().put("commandId",binding.command).put("text",local[0]).put("audio",local[1]);
+                if(binding.version>=0)preferences.put("expectedVersion",binding.version);
+                client.json("device-preferences",preferences);
                 text=local[0];audio=local[1];
             }
         }
-        if(apply(text,audio)){
+        if(apply(text,audio,binding.version)){
             state.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",text).put("audio",audio));
             if(!"armed".equals(command.getString("state")))client.receipt(binding,"armed");
             status="Réglages appliqués · TEXT "+(text?"ON":"OFF")+" · AUDIO "+(audio?"ON":"OFF");
@@ -141,13 +159,19 @@ final class PublicCompanionOwner implements AutoCloseable {
     /** Relit des préférences déjà choisies sur le Web, sans demander d'autorisation après redémarrage. */
     private void restorePreferences() throws Exception {
         JSONObject preferences=state.read("publicPreferences");
-        if(preferences!=null && prepared.binding.command.equals(preferences.optString("commandId")))apply(preferences.getBoolean("text"),preferences.getBoolean("audio"));
+        if(prepared.binding.command.equals(context.getSharedPreferences("public001d_playback",0).getString("stoppedCommand","")))return;
+        if(preferences!=null && prepared.binding.command.equals(preferences.optString("commandId")))apply(preferences.getBoolean("text"),preferences.getBoolean("audio"),prepared.binding.version);
     }
 
     /** Applique sur le propriétaire UI réel ; le reçu attend l'état natif effectivement pris en compte. */
-    private boolean apply(boolean text,boolean audio) throws Exception {
+    private boolean apply(boolean text,boolean audio,long version) throws Exception {
         if(reference==null || !reference.prepared.binding.same(prepared.binding))reference=new PublicRuntimeReference(prepared,cache,state,grantDeadline,()->!closed && !revoked);
         return onMain(()->{
+            android.content.SharedPreferences playback=context.getSharedPreferences("public001d_playback",0);
+            if(prepared.binding.command.equals(playback.getString("stoppedCommand","")))return false;
+            long observed=prepared.binding.command.equals(playback.getString("observedCommand",""))
+                    ?Math.max(version,playback.getLong("observedVersion",-1)):version;
+            playback.edit().putString("observedCommand",prepared.binding.command).putLong("observedVersion",observed).commit();
             String live=TvFirst009TextServiceOwner.publicCommand();
             if(TvFirst009TextServiceOwner.controlBusy() && !prepared.binding.command.equals(live)){status="Session actuelle conservée.";return false;}
             if(!text && !audio && live==null)return true;

@@ -1,0 +1,118 @@
+{
+  "source": "28e7af87119001598cf6ec7a6e230fa31b047940",
+  "workflow": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42527931204",
+  "jobs": [
+    {
+      "id": 128875586454,
+      "name": "native_retained",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128875586635,
+      "name": "windows_capture",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128875586654,
+      "name": "native",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128875586657,
+      "name": "software",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128875587492,
+      "name": "native_https",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ],
+  "jvm": {
+    "cases": 1415,
+    "passed": 1414,
+    "failures": 0,
+    "skipped": 1,
+    "notExecuted": "M1CloudInteropTest.originalColumboProjectionIsInstallable",
+    "reason": "SCENEVIBE_M1_SONY_FIXTURES absent, optional private editorial fixture preserved"
+  },
+  "robolectric": {
+    "cases": 25,
+    "passed": 25,
+    "failures": 0,
+    "skipped": 0
+  },
+  "nativePublic": {
+    "scope": "OWN_ANDROID_MEDIA_SESSION_AND_TRANSPORT_FIXTURE_NOT_PRIME_SONY_OR_PROVIDER",
+    "cases": 11,
+    "passed": 11,
+    "privateCases": 3,
+    "restartPhases": 3,
+    "newStopCase": "localStopSurvivesPollingAndOwnerRestartUntilWebActivation",
+    "textWindowsAttached": 3,
+    "audioResourcesStarted": 3
+  },
+  "nativeRetained": {
+    "scope": "PUBLIC_AND_HOSTED_FLAGS_FALSE_OWN_EMULATOR_NOT_SONY",
+    "cases": 52,
+    "passed": 52,
+    "privateCases": 3,
+    "restartPhases": 2,
+    "idleSmokeCases": 1
+  },
+  "windows": {
+    "powershell5": 11,
+    "powershell7": 11,
+    "scope": "OWN_SYNTHETIC_ADB_NOT_REAL_DEVICE"
+  },
+  "apk": {
+    "file": "scenevibe-autonomous-cloud001d-v33-signed.apk",
+    "bytes": 2729678,
+    "sha256": "668ee90c882237e4883689720a39fdda6543c026ca8422859a2f42dfbb8569d4",
+    "package": "com.scenevibe.tvcompanionpoc",
+    "versionCode": 33,
+    "versionName": "0.8.2-tv-release-hardening-autonomous-cloud001d-v33",
+    "debuggable": false,
+    "certificateSha256": "f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c",
+    "schemesVerified": [
+      "v2",
+      "v3"
+    ],
+    "libraryFileId": "libfile_f5c86bba44e88191a8672406eef02cec",
+    "compiledOrigin": "https://scenevibe-autonomous001d-qual-preview.vercel.app"
+  },
+  "artifacts": [
+    {
+      "id": 13636775265,
+      "name": "scenevibe-autonomous-cloud001d-42527931204",
+      "digest": "sha256:46a366c43cd768928c29d9a03e4d48442a1eaa2235c7168f724f130caf3bbbb7",
+      "size_in_bytes": 5355785
+    },
+    {
+      "id": 13636540368,
+      "name": "scenevibe-multiplatform-windows-42527931204",
+      "digest": "sha256:e9959ee068f18e748cdefcd3d0ef5da87dbb253784b8997580ec4a4d2972dcfa",
+      "size_in_bytes": 2190
+    },
+    {
+      "id": 13636237984,
+      "name": "scenevibe-autonomous-cloud001d-native-42527931204",
+      "digest": "sha256:114a14855aff27abff16e4419fe105394a2a3b0913cb4dfbe38a1fb87710c3b7",
+      "size_in_bytes": 3362
+    },
+    {
+      "id": 13636102924,
+      "name": "scenevibe-private-v31-retained-42527931204",
+      "digest": "sha256:621440b4ecab926ee90f65a629818c252a0b5009e288d2f57653c4516c684a7b",
+      "size_in_bytes": 659796
+    }
+  ],
+  "httpsProvider": "NOT_EXECUTED",
+  "physicalSony": "NOT_EXECUTED",
+  "globalAcceptance": "BLOCKED"
+}

@@ -77,4 +77,14 @@ public final class PublicCatalogueCandidateTest {
     @Test public void activeSessionPreventsReplacement() throws Exception {port.active=true;refuse(()->candidate.download(binding()));assertEquals(0,port.commits);}
     /** Le grant reste vérifié après l'unique association, sans nouvelle action humaine. */
     @Test public void revokedPossessionPreventsPreferences() throws Exception {var p=candidate.download(binding());port.revoked=true;refuse(()->candidate.arm(p,true,true));assertFalse(port.preferences);}
+    /** La version CAS reste une coordonnée de commande, distincte du binding immuable de cache. */
+    @Test public void versionedCommandPreservesPublicCacheBinding() throws Exception {
+        command.put("version",7);var initial=binding();assertEquals(7,initial.version);
+        var p=candidate.download(initial);command.put("version",8);assertTrue(initial.same(binding()));
+        candidate.arm(p,true,true);assertTrue(port.preferences);
+    }
+    /** Aucune chaîne, fraction, valeur négative ou valeur hors entier JSON sûr ne devient une version CAS. */
+    @Test public void invalidCommandVersionsAreRefused() throws Exception {
+        for(Object value:new Object[]{"1",1.5,-1,true,9007199254740992L}){command.put("version",value);refuse(()->binding());}
+    }
 }
