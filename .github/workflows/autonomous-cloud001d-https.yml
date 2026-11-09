@@ -1,0 +1,56 @@
+name: AUTONOMOUS CLOUD 001-D owner-authorized HTTPS acceptance
+# Dedicated runner emulator; owner GO received 2026-11-09. No Sony, private data or provider credentials.
+on:
+  push:
+    branches: [work/scenevibe-autonomous-https-001d]
+permissions:
+  contents: read
+env:
+  ORG_GRADLE_PROJECT_scenevibeRealTrack001: "true"
+  ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: "true"
+  ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: "true"
+jobs:
+  native_https:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile isolated native fixtures with no Cloud origin
+        run: gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true assembleTvux002 assembleTvux002AndroidTest
+      - name: Owned emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Real HTTPS to owned Android emulator, never Sony or Prime
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: bash .github/scripts/autonomous-cloud001d-https-native.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-autonomous-cloud001d-https-${{ github.run_id }}
+          path: |
+            public001d-https/
+          if-no-files-found: error
+          retention-days: 14
