@@ -1,57 +1,58 @@
-# AUTONOMOUS CLOUD 001-D — candidat TV v33, qualification HTTPS bloquée
+# AUTONOMOUS CLOUD 001-D — réception Android HTTPS, 9 novembre 2026
 
-Campagne du 8 novembre 2026. **Verdict global : BLOCKED. Aucun essai Sony exécuté ; le candidat n'est pas READY FOR PHYSICAL SONY QUALIFICATION.**
+**READY FOR PHYSICAL SONY QUALIFICATION côté logiciel. Sony et Prime : NOT EXECUTED. STOP installation Sony maintenu.**
 
-PR Draft [#46](https://github.com/pierre22400/scenevibe-tv-companion/pull/46), branche `work/scenevibe-autonomous-cloud-tv-001d`, issue de la référence documentaire v32 `c074d42371d24b1646c5ef065c534f70924ecda5`. Source logicielle finale : `28e7af87119001598cf6ec7a6e230fa31b047940`. La publication documentaire ultérieure est séparée de la source de compilation.
+L'APK expérimental v33 signé M5 est compatible avec le contrat public de l'origine de campagne. Le banc Android réel confirme le code visible, son acceptation unique, le cache complet, l'application TEXT/AUDIO et trois fenêtres TEXT / trois ressources AUDIO démarrées. La MediaSession est possédée par le test ; ce résultat ne qualifie pas Prime.
 
-## Adaptation du Companion
+## Sources et artefact
 
-L'APK v32 signé demeure inchangé. Son ancienne origine Preview n'héberge pas la composition publique de cette campagne : il n'est pas annoncé utilisable tel quel. La v31 reste la référence physique du parcours privé.
-
-Un nouvel opt-in `scenevibeAutonomousHosted001d`, désactivé par défaut, sélectionne la v33 et active le public. Les variantes v31/v32 et les options historiques restent disponibles. La variante de livraison conserve le package `com.scenevibe.tvcompanionpoc` et le certificat M5.
-
-| Métadonnée | Valeur |
+| Élément | Référence exacte |
 | --- | --- |
-| VersionCode | `33` |
-| VersionName | `0.8.2-tv-release-hardening-autonomous-cloud001d-v33` |
-| Origine figée | `https://scenevibe-autonomous001d-qual-preview.vercel.app` |
-| Certificat SHA-256 exigé | `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c` |
-| APK signé | [scenevibe-autonomous-cloud001d-v33-signed.apk](https://chatgpt.com/library?file_id=libfile_f5c86bba44e88191a8672406eef02cec&account_id=personal) |
+| Source applicative v33 signée | `28e7af87119001598cf6ec7a6e230fa31b047940` |
+| Réception HTTPS finale | `3a24849603f0e88f60946b870cb7b30b327da26c` ; branche `work/scenevibe-autonomous-https-001d` |
+| CI Android HTTPS | [42574624772](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42574624772), un scénario instrumenté complet PASS |
+| Différence avec l'APK | Tests d'attente UI, workflow et documents ; **aucun changement de `app/src/main` ni de `app/build.gradle`**, comparaison Git effectuée |
+| Origine | `https://scenevibe-autonomous001d-qual-preview.vercel.app` |
+| Package / version | `com.scenevibe.tvcompanionpoc`, versionCode `33`, `0.8.2-tv-release-hardening-autonomous-cloud001d-v33` |
+| Certificat M5 SHA-256 | `f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c` |
 | SHA-256 APK | `668ee90c882237e4883689720a39fdda6543c026ca8422859a2f42dfbb8569d4` |
-| Taille APK | 2 729 678 octets |
+| APK | [scenevibe-autonomous-cloud001d-v33-signed.apk](https://chatgpt.com/library?file_id=libfile_f5c86bba44e88191a8672406eef02cec&account_id=personal) ; 2 729 678 octets |
 
-La signature CI `apksigner` vérifie les schémas v2 et v3, un seul signataire RSA 4096 et le certificat M5 exigé. L'archive GitHub de livraison a été recontrôlée par SHA-256 (`46a366c43cd768928c29d9a03e4d48442a1eaa2235c7168f724f130caf3bbbb7`), puis l'empreinte des octets APK comparée au reçu CI. Le package, le versionCode, le versionName, l'absence de `debuggable`, la source et la présence de l'origine dans le DEX ont été vérifiés. Voir `apksigner-verify.txt`, `apk-badging.txt`, `source-commit.txt` et `SHA256SUMS.txt`.
+L'APK livré n'est ni remplacé ni modifié. Les preuves `apksigner-verify.txt` et `apk-badging.txt` conservées vérifient v2/v3, un seul signataire M5, le package, la version et l'absence de debuggable. Les octets APK et l'origine compilée ont été vérifiés lors de la livraison. Le test utilise une variante native de qualification avec sa propre MediaSession ; il n'est pas présenté comme une installation du fichier signé sur une Sony.
 
-La version de journal reçue est contrôlée comme entier sûr, puis renvoyée dans les reçus et changements de préférences. Elle ne modifie pas l'identité immuable du cache. Les erreurs de type JSON refusées restent stables ; les assertions des deux nouveaux tests JVM ne sont pas affaiblies.
+## Résultats
 
-Le grant est revalidé dans le poll HTTPS existant ; sa nouvelle deadline monotone alimente la même référence runtime. Ce mécanisme n'ajoute ni code, ni compte, ni confirmation TV.
+| Niveau | Résultat et portée |
+| --- | --- |
+| JVM de la source applicative | 1 414 PASS / 1 415 ; un ancien cas optionnel privé `M1CloudInteropTest.originalColumboProjectionIsInstallable` NOT EXECUTED faute de `SCENEVIBE_M1_SONY_FIXTURES`, aucun test retiré |
+| Robolectric | 25/25 PASS |
+| Android local public | 11 cas PASS, 3 privés et 3 phases de redémarrage ; arrêt volontaire conservé ; réseau fixture distinct du fournisseur |
+| Historique privé, options public/Hosted désactivées | 52 cas natifs, 3 cas REAL TRACK, 2 phases de redémarrage, 1 smoke de service inactif PASS |
+| Windows | 11 cas PowerShell 5 et 11 PowerShell 7 PASS avec ADB synthétique |
+| CI de cette référence applicative | [42527931204](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42527931204), preuves déjà conservées dans `preuves-ci.json` |
+| Android HTTPS réel | **PASS** : code visible, un code consommé, réemploi refusé, KeyStore/cache natifs, paquet SHA vérifié, 3 MP3 décodés, TEXT/AUDIO armés, 3 TEXT attachés / 3 AUDIO STARTED |
+| Web HTTPS PC et viewport mobile | 20 observations PASS ; récepteur JS distinct de l'Android ; preuves dans le rapport Cloud |
+| Sony / Prime / téléphone physique | **NOT EXECUTED** |
 
-L'arrêt local d'une session publique est mémorisé dans un espace public séparé, avec la version observée. Les polls et la recréation du propriétaire ne redémarrent pas cette session. Une activation Web ultérieure, de version plus récente dans le protocole Hosted, permet de reprendre directement. Le test Android ajoute ce cas sans retirer les dix cas publics précédents. Les demandes de changement de Track continuent à préserver une session privée active.
+Le reçu `https-native-proof.json` et `https-native-instrumentation.log` ont été extraits après comparaison du digest ZIP GitHub `688a138d560bd036b725c67eb974c5f404b8c1f56335ad420073244eebc06015`. Le log contient `OK (1 test)` ; le JSON confirme `codeAccepted=1`, `extraApplicationApprovals=0`, `textWindowsAttached=3`, `audioResourcesStarted=3` et TLS Android par défaut, sans remplacement de confiance.
 
-## Essais et preuves
+Les premiers essais ont échoué sur le chargement natif Cloud, puis sur la synchronisation d'une assertion de libellé TV. Le banc attend désormais le texte réellement affiché via son helper existant sur le Looper ; les assertions n'ont pas été retirées. Le résultat final est celui du run ci-dessus. Ces changements du banc n'ajoutent aucun écran ou geste spectateur.
 
-CI finale : [42527931204](https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42527931204). Les quatre jobs exécutés sont PASS ; le cinquième, `native_https`, est SKIPPED et reste NOT EXECUTED dans la réception. Résultats exacts consignés dans `preuves-ci.json` et `SHA256SUMS.txt`.
+Le correctif du banc et son workflow sont proposés dans la [PR Draft #47](https://github.com/pierre22400/scenevibe-tv-companion/pull/47), empilée sur cette PR #46 et non fusionnée. Les fichiers `preuves-ci.json` et `public-native-tests.log` conservent les références locales du 8 novembre ; `preuves-https.json` et `https-native-*` sont les nouvelles preuves fournisseur du 9 novembre.
 
-| Niveau | Verdict actuel | Limite |
-| --- | --- | --- |
-| JVM | PASS avec un cas optionnel NOT EXECUTED | 1 414 PASS / 1 415 ; `M1CloudInteropTest.originalColumboProjectionIsInstallable` ignoré faute de fixtures privées `SCENEVIBE_M1_SONY_FIXTURES` ; aucun test retiré |
-| Robolectric | PASS | 25/25, XML vérifiés ; ne vaut pas exécution sur Sony |
-| Compilation/lint et signature M5 | PASS | Variante v33 et variantes historiques compilées ; preuves de signature ci-dessus |
-| Android public sur émulateur, vraie API Android et réseau fixture | PASS | Onze cas dont arrêt/poll/recréation, trois cas privés et trois phases de redémarrage ; propre MediaSession, pas Prime |
-| Historique privé sur émulateur, public désactivé | PASS | 52 cas natifs, 3 cas REAL TRACK privés, 2 phases de redémarrage et 1 smoke de service inactif ; options public/Hosted désactivées ; aucune installation Sony |
-| Capture Windows PowerShell 5/7 | PASS | Onze tests sur chaque moteur ; ADB synthétique possédé par le test, aucun appareil réel |
-| Nouveau `PublicHostedAndroidTest` | NOT EXECUTED | Compilé ; job `native_https` optionnel laissé désactivé |
-| Dialogue Companion contre l'origine fournisseur figée | NOT EXECUTED | Catalogue vide : pas de média synthétique fournisseur à télécharger |
-| Sony BRAVIA / Prime | NOT EXECUTED | STOP installation physique maintenu |
+## Cloud réellement utilisé
 
-Le test HTTPS préparé utilise le vrai transport `PublicCloudClient.Https`, l'Activity d'association, le service, AndroidKeyStore, le cache réel et MediaCodec. Il prévoit l'association par code, son refus en cas de réemploi, le téléchargement complet et trois TEXT/trois AUDIO dans une MediaSession de test. Il n'a pas été lancé : aucun de ces résultats fournisseur n'est annoncé PASS.
+Le [rapport Cloud #57](https://github.com/pierre22400/interface-scenevibe/blob/work/scenevibe-autonomous-cloud-001d/docs/project/autonomous-cloud001d/RAPPORT.md) identifie le nouveau projet Neon, le bucket privé et le projet Vercel isolés. Le code servi est `f471e0147bf31ffae183f6a4c4d5809b40b684aa`, après corrections de résolution Node des outils gelés et chargement différé. CI Cloud finale `04ba25c…` : 820 tests PASS, zéro skip, TypeScript et deux builds PASS.
 
-Les essais locaux Android prouvent les fenêtres attachées et les ressources audio démarrées sur émulateur. Ils ne constituent ni une preuve d'écoute physique, ni une qualification Prime, ni une preuve du trajet HTTPS fournisseur.
+La Track Android stable est `track-724ebdcee0158a6220e6a85b351698528fec1086`, révision `pc3-revision-3a2c9dc0ad5bd152ff7ea42ff5709ea540e7e2dd`, SHA paquet `dc7cef89a7f5489afc6870e6c706f0b23fa88858346269b54581c59043bca8ea`. La Track Web a également reçu une nouvelle révision publique 4 TEXT/3 AUDIO après sauvegarde ordinaire, sans republication manuelle.
 
-Le premier run intermédiaire a révélé un refus de type JSON dont l'exception différait du contrat de validation attendu ; il a été corrigé en conservant les assertions. Le correctif d'arrêt volontaire a ensuite été ajouté et qualifié dans la source finale. Les résultats intermédiaires ne sont pas présentés comme les preuves de cette source finale.
+Les incidents de réception HTTPS et les expirations/révocations SQL de fixtures sont décrits avec leur portée exacte dans le rapport Cloud. Ils ne deviennent pas des essais physiques Android/Sony. Les objets persistés du bucket n'ont pas été corrompus pour ces tests.
 
-## Blocage Cloud et préservation
+## Limites et suite physique
 
-La PR [Cloud #57](https://github.com/pierre22400/interface-scenevibe/pull/57) fournit la composition isolée. Le nouveau Preview répond à GET catalogue avec une liste vide. Le contrôle automatique d'autorisation a refusé l'exécution de l'ensemencement synthétique en conservant le STOP précédent malgré le GO du fichier joint. Aucune mutation de contournement n'est tentée via le job Android HTTPS. La compatibilité opérationnelle Cloud/Companion reste donc non démontrée.
+- La référence v31 demeure celle du parcours privé physiquement qualifié. Sa compatibilité avec la distribution publique n'est pas annoncée. La v32 conserve son ancienne origine et n'est pas modifiée.
+- Aucun effet réellement affiché sur Sony, entendu sur une TV physique ou synchronisé pendant Prime n'est annoncé PASS. Métadonnées, édition, focus, permissions, publicités et firmware doivent être observés physiquement.
+- Les durées longues sont exercées par horloge injectée ou dates SQL de fixtures, pas par plusieurs mois d'attente. L'association peut expirer après trente jours d'inactivité ou quatre-vingt-dix jours absolus ; un grant court valide est renouvelé automatiquement avec preuve de possession.
+- Aucune fusion, installation Sony, suppression de données/cache TV ou modification des ressources privées existantes.
 
-Les APK v31/v32, leurs références et les données privées existantes ne sont pas modifiés. Aucune installation physique, suppression de cache/données, fusion ou changement de Production existante. Voir [PROTOCOLE-SONY.md](PROTOCOLE-SONY.md) pour la réception future et la récupération : aucun downgrade forcé, éventuel build v31 de récupération signé M5 avec versionCode supérieur à 33, à préparer et qualifier séparément.
+Voir [PROTOCOLE-SONY.md](PROTOCOLE-SONY.md) : préserver et rejouer le parcours privé avant mise à jour ; ne pas désinstaller ou forcer un downgrade 33→31. Une éventuelle récupération fondée sur v31, même M5 et versionCode supérieur au maximum installé (au moins 34 après 33), reste à préparer et qualifier séparément. **Aucun APK de récupération déjà qualifié n'est livré.**

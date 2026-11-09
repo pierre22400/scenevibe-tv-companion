@@ -1,11 +1,11 @@
 # AUTONOMOUS CLOUD 001-D — protocole Sony préparé, non exécuté
 
-**STOP avant installation Sony. Le candidat n'est pas READY FOR PHYSICAL SONY QUALIFICATION.** Le catalogue HTTPS de campagne est vide et le dialogue natif contre ce fournisseur n'est pas qualifié. Ce protocole n'annonce aucun PASS physique.
+**READY FOR PHYSICAL SONY QUALIFICATION côté logiciel — STOP avant installation Sony.** Le catalogue contient les deux Tracks synthétiques ; la réception HTTPS Web et Android émulateur est PASS depuis le 9 novembre 2026. Ce protocole n'annonce aucun PASS physique.
 
 ## Conditions avant toute campagne physique
 
-1. Lever le blocage des seules publications synthétiques sur les ressources listées dans le rapport Cloud #57. Obtenir les preuves réelles du parcours HTTPS, des trois TEXT/trois AUDIO, du cache et des refus de sécurité.
-2. Exécuter le job Android `native_https` sur émulateur : vrai transport HTTPS, Activity code TV, AndroidKeyStore, cache et MediaCodec. Conserver son rapport. Une MediaSession possédée par le test ne qualifie pas Prime.
+1. Relire les preuves de la réception logicielle du 9 novembre dans les rapports Cloud #57 et TV #46. Recontrôler l'origine, les révisions synthétiques offertes et la disponibilité avant la campagne.
+2. Le job Android HTTPS a réussi : run `42574624772`, un code, cache natif relu, trois fenêtres TEXT et trois AUDIO démarrés. Conserver son rapport. Une MediaSession possédée par le test ne qualifie pas Prime.
 3. Vérifier la source, le package `com.scenevibe.tvcompanionpoc`, le versionCode 33, le certificat M5 et le SHA-256 de l'APK signé livré. Aucun remplacement silencieux de l'artefact v32 ou v31.
 4. Disposer d'une autorisation propriétaire distincte avant installation physique. La décision actuelle autorise le développement et la signature, pas cette installation.
 
