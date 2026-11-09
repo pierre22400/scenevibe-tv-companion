@@ -88,7 +88,7 @@ public final class PublicHostedAndroidTest {
         await(()->PublicCompanionService.current()!=null && PublicCompanionService.current().code().matches("[0-9]{6}"),"Real HTTPS code unavailable",90000);
         String code=PublicCompanionService.current().code();
         AtomicBoolean shown=new AtomicBoolean();main(()->shown.set(code.contentEquals(((android.widget.TextView)activity.getWindow().getDecorView().findViewWithTag("public-tv-code")).getText())));
-        await(()->{main(()->shown.set(code.contentEquals(((android.widget.TextView)activity.getWindow().getDecorView().findViewWithTag("public-tv-code")).getText())));return shown.get();},"Code not actually displayed",15000);
+        await(()->{shown.set(code.contentEquals(((android.widget.TextView)activity.getWindow().getDecorView().findViewWithTag("public-tv-code")).getText()));return shown.get();},"Code not actually displayed",15000);
         assertTrue("Code not actually displayed",shown.get());
         web("/api/autonomous/pair",new JSONObject().put("userCode",code).put("consent",true),200);
         await(()->PublicCompanionService.current().code().isEmpty(),"Code not consumed automatically",90000);
