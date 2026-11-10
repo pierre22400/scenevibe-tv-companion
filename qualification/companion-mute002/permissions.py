@@ -34,6 +34,10 @@ def shortcut_service(aapt, apk):
         raise AssertionError("Unapproved additional accessibility service")
     if "netflixoverlay001" in authorized[0] or "NetflixShortcutService" in authorized[0]:
         raise AssertionError("Experimental component must not be imported")
+    for name in ("PublicCompanionService", "OverlayService"):
+        declared = [service for service in services if name in service]
+        if len(declared) != 1 or "foregroundServiceType" not in declared[0] or "0x40000000" not in declared[0]:
+            raise AssertionError("Existing specialUse foreground type must remain intact: " + name)
     return "com.scenevibe.tvcompanionpoc/com.scenevibe.tvcompanionpoc.CompanionShortcutService"
 
 

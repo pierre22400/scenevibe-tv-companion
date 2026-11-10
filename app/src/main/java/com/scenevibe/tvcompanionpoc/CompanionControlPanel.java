@@ -402,7 +402,7 @@ final class CompanionControlPanel {
         retiring.clearFocus();retiring.setVisibility(View.GONE);
         try{host.releaseFocus(retiring,params);}catch(RuntimeException refused){/* Removal remains mandatory. */}finally{
             try{host.remove(retiring);}catch(RuntimeException alreadyDetached){/* Focus was released first. */}
-            closing=false;confirmRelease(retiring,0);closed.run();
+            closing=false;shortcutRoute=false;confirmRelease(retiring,0);closed.run();
         }
     }
     /** Wait only for public detachment/focus evidence; a removal request alone is not CLOSED. */
@@ -540,6 +540,7 @@ final class CompanionControlPanel {
 
     /** Log only SceneVibe window policy and remote key codes; no account, content, session or third-party tree. */
     private void trace(String event,int key,int action) {
+        if(shortcutRoute && key>=0)return; // MUTE retains lifecycle and counters, never a per-key journal.
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY && !embedded)Log.i("SceneVibeControls","event="+event+" mode="+(passive?"PASSIVE":"INTERACTIVE")
                 +" focus="+hasInputFocus()+" flags="+(params==null?0:params.flags)+" key="+key+" action="+action);
     }

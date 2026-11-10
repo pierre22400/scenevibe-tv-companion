@@ -5,6 +5,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
     <application android:usesCleartextTraffic="false">
         <receiver android:name=".BootReceiver" android:enabled="false" />
+        <!-- Repeat the already inherited public FGS type for lint's variant-manifest model. -->
+        <service
+            android:name=".PublicCompanionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
         <!-- Stable principal-package target; enabled only in the explicitly requested MUTE candidate. -->
         <service
             android:name=".CompanionShortcutService"

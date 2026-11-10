@@ -67,6 +67,29 @@ public final class CompanionRecalibrationPanelTest {
     @Test public void timeFormatIsUnambiguous(){assertEquals("59:59",CloudMultimediaSession.formatTrackTime(3599000));assertEquals("01:00:00",CloudMultimediaSession.formatTrackTime(3600000));assertEquals("01:05:15",CloudMultimediaSession.formatTrackTime(3915000));}
     /** Keep the selected pause policy visible to the viewer. */
     @Test public void withoutResumeIsASeparateExplicitCommand(){edit.resume=false;panel.openManual(edit);assertNotNull(text(host.view,"Recaler sans reprise"));assertNull(text(host.view,"Recaler et reprendre"));}
+    /** Closing a shortcut route must restore the historical in-window Back navigation on the same panel. */
+    @Test public void shortcutClosePreservesTheNextOrdinaryRoute(){
+        CompanionControlPanel.Commands commands=new CompanionControlPanel.Commands(){
+            /** Supply only bounded active switches for actual View navigation. */
+            @Override public CompanionControlPanel.Snapshot snapshot(){return new CompanionControlPanel.Snapshot(true,true,true,"MEDIA compatible");}
+            /** This navigation test never changes the TEXT preference. */
+            @Override public void text(boolean enabled){}
+            /** This navigation test never changes the AUDIO preference. */
+            @Override public void audio(boolean enabled){}
+            /** This navigation test never suspends effects. */
+            @Override public void suspend(){}
+            /** This navigation test never resumes effects. */
+            @Override public void resume(){}
+            /** Legacy calibration is not used by this navigation-only case. */
+            @Override public AdSyncController.Calibration calibrate(long time,boolean seek){return AdSyncController.Calibration.COMPANION_INACTIVE;}
+            /** Advertise only the native recalage menu under test. */
+            @Override public boolean supportsManualRecalibration(){return true;}
+        };
+        panel=new CompanionControlPanel(activity,commands,host,()->true);
+        assertTrue(panel.openFromShortcut());panel.back();assertFalse(panel.isOpen());
+        assertTrue(panel.open());((Button)text(host.view,"Recaler sur le temps du film")).performClick();
+        panel.back();assertTrue(panel.isOpen());assertNotNull(text(host.view,"Recaler sur le temps du film"));
+    }
     /** Record the one system overlay and mandatory synchronous focus release. */
     private static final class Host implements CompanionControlPanel.WindowHost {
         View view;WindowManager.LayoutParams params;int adds;boolean released;

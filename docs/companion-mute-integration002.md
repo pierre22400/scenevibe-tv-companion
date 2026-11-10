@@ -4,7 +4,7 @@ Décision propriétaire du 10 novembre 2026 et amendement 001 : le paramétrage 
 
 ## Base et périmètre
 
-La branche est créée directement depuis #47, commit `3a24849603f0e88f60946b870cb7b30b327da26c`. #48 reste Draft et n'est pas un ancêtre de cette branche. Ses seules parties éventuellement réutilisées concernent la projection temporelle et les widgets de recalage, après vérification. Son ouverture par notification ou retour dans SceneVibe ne constitue pas le déclencheur de cette livraison.
+La branche est créée directement depuis #47, commit `3a24849603f0e88f60946b870cb7b30b327da26c`. #48 reste Draft et n'est pas un ancêtre de cette branche. Ses seules parties réutilisées concernent la projection temporelle et les widgets de recalage, après vérification. Son ouverture par notification ou retour dans SceneVibe ne constitue pas le déclencheur de cette livraison.
 
 ## Composant et affectation système
 
@@ -24,6 +24,14 @@ Raccourci MUTE attribué par Android → `AccessibilityButtonController.Accessib
 Le service est protégé par `android.permission.BIND_ACCESSIBILITY_SERVICE`. Il demande uniquement `flagRequestAccessibilityButton`, zéro type d'événement, aucun contenu de fenêtre, aucune interception de touche et aucun geste. La connexion ne lance pas de Track. Sans service de restitution, horloge exploitable ou admission courante, le callback est refusé sans créer une nouvelle session ni demander de permission.
 
 Les marqueurs `SceneVibeMute002` distinguent connexion, callback reçu, demande de fenêtre acceptée, doublon et refus. Les journaux de fenêtre existants distinguent attachement, focus réellement reçu et libération. Les logs ne contiennent pas les touches ordinaires, les fenêtres des plateformes, les credentials ou le contenu éditorial.
+
+## Horloge et recalage
+
+Le panneau réutilise les widgets PRODUCT UX 002 et la projection `AdSyncController` du Companion principal. Aucun mécanisme d’entrée de #48 n’est importé. CURRENT/NEW, pas 60/10/1 seconde, OK court, OK long et BACK agissent sur une transaction détachée ; seule une validation encore admise modifie la projection. Le calendrier TEXT/AUDIO et le lecteur MP3 restent ceux de la session privée ou publique courante. Le choix sans reprise garde la Track en pause ; le choix avec reprise attend une observation MEDIA PLAYING éligible et n’envoie pas PLAY au film.
+
+Les parcours de cache, association, reçus, clients Cloud et interface principale de #47 ne sont pas réécrits. La fermeture remet à zéro la route MUTE, pour préserver ensuite la navigation ordinaire du même panneau. Les diagnostics MUTE conservent les compteurs et le cycle de vie, sans journal de chaque touche du panneau.
+
+Le type `specialUse` du service public, déjà présent dans le manifeste principal et constaté dans l’APK compilé, est redéclaré à l’identique dans les fragments de variante pour le modèle lint. Le contrôle de l’APK compilé exige ce type pour les deux services de premier plan existants. Aucun type de service de premier plan ou permission supplémentaire n’est ajouté au service d’accessibilité.
 
 ## Nature des tests
 
