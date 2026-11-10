@@ -1,0 +1,34 @@
+name: PRODUCT UX 002 frozen source regression
+on:
+  push:
+    branches: [work/scenevibe-companion-integration-001-ux-reference]
+permissions:
+  contents: read
+jobs:
+  product_ux002:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 07fda5229611d412e849cc82ca8cd8594d16955f
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Exact historical PRODUCT UX 002 panel and launcher tests
+        run: gradle --no-daemon --max-workers=2 testNetflixmanual003bUnitTest --tests '*NetflixManualPanelTest' --tests '*NetflixManualLaunchActivityTest'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: scenevibe-product-ux002-reference-${{ github.run_id }}
+          path: app/build/test-results/**/*.xml
+          if-no-files-found: error
+          retention-days: 14
