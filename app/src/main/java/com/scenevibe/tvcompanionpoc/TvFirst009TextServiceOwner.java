@@ -440,6 +440,12 @@ final class TvFirst009TextServiceOwner {
             @Override public void resume(){if(multimediaActive()){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE && !adSyncEnabled())setAdSyncEnabled(true);resumeMultimediaComments();}}
             /** Refresh and diagnose using the actual live service, without a new admission. */
             @Override public AdSyncController.Calibration calibrate(long time,boolean seek){return calibrateMultimediaResult(time,seek);}
+            /** The integrated main Companion supplies the actual private/public Track-clock port. */
+            @Override public boolean supportsManualRecalibration(){return BuildConfig.COMPANION_INTEGRATION_001;}
+            /** Bind the edit to the current service session; no experimental Netflix clock is constructed. */
+            @Override public CompanionControlPanel.ManualEdit beginManualEdit(boolean resume){
+                return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.beginManualEdit(resume);
+            }
         };
     }
 
@@ -470,6 +476,8 @@ final class TvFirst009TextServiceOwner {
     static com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.AudioDiagnostics multimediaAudioDiagnostics(int ordinal){return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.audioDiagnostics(ordinal);}
     /** Report only the local comment-player lifecycle, never the platform player's transport object. */
     static String multimediaAudioState(){return liveInstance==null || liveInstance.multimedia==null?"IDLE":liveInstance.multimedia.audioState();}
+    /** Read the single current Track clock without exposing an admission or any video-player control. */
+    static long multimediaTrackPosition(){return liveInstance==null || liveInstance.multimedia==null?-1:liveInstance.multimedia.trackPosition();}
 
     /** Return whether a multimedia service already owns a current admitted lifetime. */
     static boolean multimediaActive(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.isActive();}
@@ -520,6 +528,13 @@ final class TvFirst009TextServiceOwner {
 
     /** Reject null, boot, replacement, legacy, replayed and expired requests; never restore a permit from disk. */
     int start(Intent intent) {
+        if(BuildConfig.COMPANION_INTEGRATION_001 && multimediaActive() && intent!=null
+                && (SHOW_INTERACTIVE.equals(intent.getAction()) || SHOW_CONTROLS.equals(intent.getAction()))){
+            if(foreground && multimediaActive() && Settings.canDrawOverlays(service)){
+                ensureControlPanel();controlPanel.open();
+            }
+            return Service.START_NOT_STICKY;
+        }
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && intent!=null && SHOW_INTERACTIVE.equals(intent.getAction())){
             if(foreground && developer.enabled() && Settings.canDrawOverlays(service)){
                 ensureControlPanel();if(controlPanel.prepare()){developer.prepared();String ticket=developer.begin(SystemClock.elapsedRealtime(),true);

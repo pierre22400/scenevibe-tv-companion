@@ -19,6 +19,10 @@ import org.json.JSONObject;
 final class AdSyncTestFixture {
     /** Compose the actual existing runtime/renderers over explicit test drawing and local audio ports. */
     static StudioMultimediaRuntime runtime(SceneRuntimeController.SceneSink drawing,LocalAudioPort port) throws Exception {
+        return runtime(drawing,port,false);
+    }
+    /** Select the retained principal replay policy for native-panel integration tests only. */
+    static StudioMultimediaRuntime runtime(SceneRuntimeController.SceneSink drawing,LocalAudioPort port,boolean replay) throws Exception {
         List<OverlayManifest.Scene> scenes=List.of(
                 new OverlayManifest.Scene("text1",1000,1000,List.of()),
                 new OverlayManifest.Scene("text2",5000,1000,List.of()));
@@ -33,7 +37,7 @@ final class AdSyncTestFixture {
         constructor.setAccessible(true);
         StudioMultimediaPackage track=constructor.newInstance(new JSONObject().put("trackId","synthetic").put("revision",1),
                 "synthetic-software-only",new MediaCalendar(events,true),manifest,audio,Map.of());
-        StudioMultimediaRuntime runtime=new StudioMultimediaRuntime(drawing,port);
+        StudioMultimediaRuntime runtime=new StudioMultimediaRuntime(drawing,port,replay,replay,null);
         runtime.loadForSoftwareQualification(track,"synthetic-activation");return runtime;
     }
     /** Prevent accidental stateful fixture ownership. */
