@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-11-10T11:01:20" hostname="runnervm7aw5e" time="6.671">
+  <properties/>
+  <testcase name="nestedBackAndClosePreserveCommands" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="4.299"/>
+  <testcase name="mainActivityContainsDeveloperTabAsNormalViews" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.661"/>
+  <testcase name="transportKeysAreConsumedByThePanel" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.084"/>
+  <testcase name="embeddedControlsDoNotBecomeAnOverlay" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.075"/>
+  <testcase name="promotionRetainsTheWindow" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.086"/>
+  <testcase name="absentPlayerCannotTriggerLateFocus" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.038"/>
+  <testcase name="mediaWaitOriginIsBoundToThisLaunch" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.037"/>
+  <testcase name="parkingRetainsRootAndSwitches" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.066"/>
+  <testcase name="developerNavigationDoesNotActivateAnything" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.321"/>
+  <testcase name="orphanReleasesDoNotCloseOrToggle" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.067"/>
+  <testcase name="monitorCanParkWithoutChangingTheTrack" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.068"/>
+  <testcase name="focusIsIndependentFromActivation" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.096"/>
+  <testcase name="unavailableIsNeitherOffNorActionable" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.052"/>
+  <testcase name="closeCallbackDoesNotDisableMode" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.055"/>
+  <testcase name="threeSwitchesExposeCheckedAndVisibleRedOnOnly" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.069"/>
+  <testcase name="activityAndOverlayUseIdenticalCommands" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.076"/>
+  <testcase name="readinessRequiresANewCompatibleCapture" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.048"/>
+  <testcase name="anUnconfirmedRequestTimesOutToPassive" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.059"/>
+  <testcase name="stalePausedAndInvalidReadinessAreRefused" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.063"/>
+  <testcase name="passiveExpansionDoesNotRequestInput" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.068"/>
+  <testcase name="commandsAreNotAccessibleSwitches" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.073"/>
+  <testcase name="embeddedAndOverlayDrawTheSameSwitchState" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.08"/>
+  <testcase name="activeTrackCanWaitForThePlayer" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.035"/>
+  <testcase name="prepareIsNotFocusableOrTouchable" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.035"/>
+  <testcase name="failedPromotionReleasesWindow" classname="com.scenevibe.tvcompanionpoc.DeveloperPanelTest" time="0.055"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

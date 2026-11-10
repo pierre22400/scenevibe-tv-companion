@@ -1,0 +1,23 @@
+{
+  "sameUsesPermissions": true,
+  "baseline": [
+    "permission: com.scenevibe.tvcompanionpoc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+    "uses-permission: name='android.permission.FOREGROUND_SERVICE'",
+    "uses-permission: name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'",
+    "uses-permission: name='android.permission.INTERNET'",
+    "uses-permission: name='android.permission.SYSTEM_ALERT_WINDOW'",
+    "uses-permission: name='com.scenevibe.tvcompanionpoc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'"
+  ],
+  "candidate": [
+    "permission: com.scenevibe.tvcompanionpoc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+    "uses-permission: name='android.permission.FOREGROUND_SERVICE'",
+    "uses-permission: name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'",
+    "uses-permission: name='android.permission.INTERNET'",
+    "uses-permission: name='android.permission.SYSTEM_ALERT_WINDOW'",
+    "uses-permission: name='com.scenevibe.tvcompanionpoc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'"
+  ],
+  "approvedNewService": "com.scenevibe.tvcompanionpoc/com.scenevibe.tvcompanionpoc.CompanionShortcutService",
+  "bindingPermission": "android.permission.BIND_ACCESSIBILITY_SERVICE",
+  "initialAndroidConfiguration": "AUTHORIZED_NONBLOCKING",
+  "sonyConfiguration": "NOT_EXECUTED"
+}

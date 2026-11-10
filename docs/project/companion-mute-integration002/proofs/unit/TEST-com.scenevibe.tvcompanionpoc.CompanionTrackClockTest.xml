@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-10T10:58:51" hostname="runnervm7aw5e" time="0.003">
+  <properties/>
+  <testcase name="historicalOffsetLimitIsPreserved" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.001"/>
+  <testcase name="pausedRecalageDoesNotDriftOrResume" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="staleCaptureRefusesRecalage" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="invalidTimeRefusesWithoutPartialCommit" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="incompatibleIdentityRefusesRecalage" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="recalageWorksWithoutEnablingAnotherSetting" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.001"/>
+  <testcase name="manualResumeNeverCommandsOrFakesFilmPlayback" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="pausedTrackResumesAtItsOwnAnchor" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="missingMediaRefusesRecalage" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <testcase name="historicalCalibrationDoesNotAcquireNewAuthority" classname="com.scenevibe.tvcompanionpoc.CompanionTrackClockTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

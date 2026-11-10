@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-10T11:01:15" hostname="runnervm7aw5e" time="2.173">
+  <properties/>
+  <testcase name="connectionDoesNotActivateAnything" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="1.961"/>
+  <testcase name="syntheticCallbackFailsClosedWithoutTrack" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="0.056"/>
+  <testcase name="ordinaryEventsCannotTriggerThePanel" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="0.036"/>
+  <testcase name="manifestProtectsTheSystemBinding" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="0.034"/>
+  <testcase name="unboundSyntheticCallbackIsInert" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="0.029"/>
+  <testcase name="retiredSyntheticCallbackCannotReopen" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="0.027"/>
+  <testcase name="wrongControllerIsRefused" classname="com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest" time="0.026"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

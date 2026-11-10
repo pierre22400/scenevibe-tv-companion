@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "scope": "CHROMIUM_390x844_REAL_HTTP_EXACT_ASSETS_RECORDING_OWNER_NOT_ANDROID_OR_PRIME",
+  "pairing": true,
+  "channelSwitches": true,
+  "manualSuspendResume": true,
+  "singlePauseActualState": true,
+  "optionalReplay": true,
+  "adProtectionIndependentSwitch": true,
+  "adObservationOptIn": true,
+  "multiPlatformSeparateCampaigns": true,
+  "explicitHumanLabels": true,
+  "platformLockedWhileCampaignActive": true,
+  "multiLabelsDoNotArmGuard": true,
+  "ownerAnnotationsNotDetection": true,
+  "commandsAfter110Minutes": true,
+  "deadline120Minutes": true,
+  "clock": "INJECTED_MONOTONIC_NOT_TWO_WALL_CLOCK_HOURS",
+  "noExternalRequests": true,
+  "noPersistentToken": true,
+  "pageErrors": 0
+}

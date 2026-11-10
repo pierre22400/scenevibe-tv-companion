@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-10T11:01:11" hostname="runnervm7aw5e" time="4.06">
+  <properties/>
+  <testcase name="shortOkCommitsExactlyOnce" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="3.021"/>
+  <testcase name="projectsCurrentAndCandidateInMainPackage" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.129"/>
+  <testcase name="timeFormatIsUnambiguous" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.065"/>
+  <testcase name="focusLossCancelsWithoutPartialCommit" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.076"/>
+  <testcase name="shortcutClosePreservesTheNextOrdinaryRoute" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.167"/>
+  <testcase name="withoutResumeIsASeparateExplicitCommand" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.079"/>
+  <testcase name="backCancelsCandidate" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.11"/>
+  <testcase name="selectedCancelButtonDoesNotCommit" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.073"/>
+  <testcase name="duplicateOpenCannotCreateASecondWindow" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.058"/>
+  <testcase name="refusedCommitDoesNotCloseOrResume" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.057"/>
+  <testcase name="dpadEditsOnlyTheCandidate" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.059"/>
+  <testcase name="longOkChangesFineStepOnly" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.065"/>
+  <testcase name="orphanReleaseDoesNotCommit" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.052"/>
+  <testcase name="absentExistingPermissionFailsClosed" classname="com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest" time="0.042"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

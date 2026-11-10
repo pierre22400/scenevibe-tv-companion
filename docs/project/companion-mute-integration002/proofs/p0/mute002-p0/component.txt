@@ -1,0 +1,18 @@
+          Action: "android.service.notification.NotificationListenerService"
+      android.accessibilityservice.AccessibilityService:
+        2897846 com.scenevibe.tvcompanionpoc/.CompanionShortcutService filter 351ba07 permission android.permission.BIND_ACCESSIBILITY_SERVICE
+          Action: "android.accessibilityservice.AccessibilityService"
+
+Domain verification status:
+
+Permissions:
+  Permission [com.scenevibe.tvcompanionpoc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (abb7f5a):
+    sourcePackage=com.scenevibe.tvcompanionpoc
+    uid=10080 gids=[] type=0 prot=signature
+    perm=PermissionInfo{c3ed58b com.scenevibe.tvcompanionpoc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+
+Registered ContentProviders:
+  com.scenevibe.tvcompanionpoc/androidx.startup.InitializationProvider:
+    User 0: ceDataInode=123838 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false
+    User 0:
+  User 0:

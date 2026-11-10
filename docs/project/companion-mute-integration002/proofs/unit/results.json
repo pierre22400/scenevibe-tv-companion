@@ -1,0 +1,1118 @@
+{
+  "groups": {
+    "testDebugUnitTest": {
+      "tests": 1431,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "testTvux002UnitTest": {
+      "tests": 46,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "classes": [
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdEvidenceDetectorTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdObservationPrivacyTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdProtectionControllerTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdProtectionSonyReplayTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdSyncControllerTest",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdSyncFreshCaptureTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdSyncRuntimeTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AdSyncRecoveryTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AutostartPolicyTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.AssignmentMutationGateTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudActivationDiagnosticsTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudClientRestartAfterResetTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudDeviceCredentialsTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudManifestCacheTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudProtocolTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudResetAsyncTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudResetTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CloudTrackRepositoryTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CommentaryServerAuthTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CompanionTrackClockTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CompanionTrackRuntimeTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.ConsumerModeTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.DeveloperFocusStateTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.DeveloperOverlayStateTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.DiagnosticsNoSecretTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.DisplayCountdownTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.InstallationIdentityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.LocalDeveloperServerTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M1CloudInteropTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "skippedTests": [
+        "originalColumboProjectionIsInstallable"
+      ]
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseAAtomicStoreTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseAIdentityTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseAInstallationTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseATransportTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseBSideEffectTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseCCompatibilityTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseDArmTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseDCompatibilityEdgeTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseDDifferentialTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseDLegacyHandlerTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseDManifestedHandlerTest",
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseDRegistryTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseEHistoricalInstallerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseEVideoFailureTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseEVideoInstallerTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFAdapterTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFCapabilityDiagnosticsTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFAdapterRejectionTest",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFClearStoreTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFCloudClientTest",
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFCorruptionTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFHistoricalRedeliveryTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFNonArmedTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFOwnerGateTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFResetTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFRuntimeTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseFRuntimeFailureTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGArmFailureTest",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGBootTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGCloudAfterRestoreTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGDiagnosticsStateTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGDiagnosticsTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGResetTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGRestoreFailureTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGStartupStateTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4PhaseGStartupTest",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M4SonyReadFailureTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5CandidateDifferentialTest",
+      "tests": 82,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5JournalComparatorTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5LegacyOracleCorpusTest",
+      "tests": 92,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5NegativeSensitivityTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5SchedulerDirectTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5SinkFailureDifferentialTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5VideoCutoverTest",
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5VideoProjectionTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.M5VideoObservationAdapterTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.ManifestInstallAckDecisionTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.ManualTrackIdentityTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MediaSessionProbeSamplingTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MediaSyncedTrackSchedulerExpiryTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MediaSyncedTrackSchedulerIdentityTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MultiPlatformObservationTest",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MultiPlatformTransitionTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MultimediaChunkedTransportTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.MultimediaTransportOriginTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.OverlayArmedNotVisibleTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.OverlayManifestParserTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.PairingPolicyTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.PublicCatalogueCandidateTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.Runtime003SelectionTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.Runtime004RuntimeTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.SceneRendererPreflightTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.SceneRuntimeControllerTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.SecretStoreMigrationTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.TvFirstDefaultServiceTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.VideoOverlayManifestBridgeTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.audio.AudioCorrectionsTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.audio.AudioEventTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.audio.SceneVibeAudioRendererTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.calendar.M5MediaCalendarTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.calendar.M5MediaObservationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.calendar.M5SceneEventTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.calendar.Runtime003CalendarTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.calendar.Runtime004CalendarTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.AndroidInstallationBackendTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.InstallationModelTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.InstallationRegistryTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.InstallationStoreTest",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.M4SonyPreferenceTransportTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.PackageInstallerFailureTest",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.PackageInstallerReadbackTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.PackageInstallerTest",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.installation.TvCapabilitiesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.presentation.TvFocusSearchTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.presentation.TvNativeViewsTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.presentation.TvNavigationTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.presentation.TvPreparationTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.tvfirst.MediaEvidenceTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.tvfirst.PassiveMediaReaderTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testDebugUnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.tvfirst.ObservationDiagnosticsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testTvux002UnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CompanionRecalibrationPanelTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testTvux002UnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.CompanionShortcutServiceTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    },
+    {
+      "group": "testTvux002UnitTest",
+      "class": "com.scenevibe.tvcompanionpoc.DeveloperPanelTest",
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skippedTests": []
+    }
+  ]
+}

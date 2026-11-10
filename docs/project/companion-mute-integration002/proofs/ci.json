@@ -1,0 +1,81 @@
+{
+  "source": "01da23263c0d042192d536c2ed497b6b34daecc1",
+  "run": {
+    "id": 42803530873,
+    "head": "01da23263c0d042192d536c2ed497b6b34daecc1",
+    "conclusion": "success",
+    "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873"
+  },
+  "p0": {
+    "id": 42803531229,
+    "head": "01da23263c0d042192d536c2ed497b6b34daecc1",
+    "conclusion": "success",
+    "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803531229"
+  },
+  "jobs": [
+    {
+      "id": 129786829400,
+      "name": "software",
+      "conclusion": "success",
+      "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873/job/129786829400"
+    },
+    {
+      "id": 129786829573,
+      "name": "native",
+      "conclusion": "success",
+      "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873/job/129786829573"
+    },
+    {
+      "id": 129786829808,
+      "name": "windows_capture",
+      "conclusion": "success",
+      "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873/job/129786829808"
+    },
+    {
+      "id": 129786829949,
+      "name": "native_retained",
+      "conclusion": "success",
+      "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873/job/129786829949"
+    },
+    {
+      "id": 129786832455,
+      "name": "native_https",
+      "conclusion": "skipped",
+      "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873/job/129786832455"
+    },
+    {
+      "id": 129789451993,
+      "name": "signed_upgrade",
+      "conclusion": "success",
+      "url": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42803530873/job/129789451993"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 13758515153,
+      "name": "scenevibe-autonomous-cloud001d-42803530873",
+      "sha256": "sha256:6b24ce091f0bab500598adac30891c14d831b6eaa9749cbb59662c70c90517f6"
+    },
+    {
+      "id": 13757665087,
+      "name": "scenevibe-multiplatform-windows-42803530873",
+      "sha256": "sha256:f520861ec29bae28b2b5b44f626a1534a261b46cd854eb8b3a3bff48ea8bb8aa"
+    },
+    {
+      "id": 13757294003,
+      "name": "scenevibe-autonomous-cloud001d-native-42803530873",
+      "sha256": "sha256:43b7697e7d8167091c2347cbf0e3c13ca9311d09e6f6e47a8b88fb493ed83c9e"
+    },
+    {
+      "id": 13757004521,
+      "name": "scenevibe-private-v31-retained-42803530873",
+      "sha256": "sha256:855e535ca3112a89fb0ee0e4cb57ebef120a8cd5b0a453b444576e1e7d124e8d"
+    },
+    {
+      "id": 13756999199,
+      "name": "scenevibe-mute002-signed-upgrade-42803530873",
+      "sha256": "sha256:5605d4c891e5daf3550083daf7a5a253ad7e54429c6a00206afcad63e2fe5fba"
+    }
+  ],
+  "apkLibraryId": "libfile_f99201b69b6881918b7b4d5412dd085e"
+}

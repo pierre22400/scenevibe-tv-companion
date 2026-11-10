@@ -1,0 +1,27 @@
+test_allowlist_privacy_and_markdown (test_campaign_analysis.CampaignAnalysisTests.test_allowlist_privacy_and_markdown)
+Private unknown values, custom event names and raw publisher strings never enter the JSON or Markdown export. ... ok
+test_archived_negative_fixtures (test_campaign_analysis.CampaignAnalysisTests.test_archived_negative_fixtures)
+Execute every explicit synthetic scenario, including fake ads, ordinary controls and unavailable data. ... ok
+test_complete_capture_and_sequence_conflicts (test_campaign_analysis.CampaignAnalysisTests.test_complete_capture_and_sequence_conflicts)
+Conflicting rows sharing a sequence are retained, while only byte-equivalent decoded JSON is deduplicated. ... ok
+test_numeric_progress_speed_and_jitter (test_campaign_analysis.CampaignAnalysisTests.test_numeric_progress_speed_and_jitter)
+Constant speed two and 20ms jitter produce a finite residual, never an advertising boundary. ... ok
+test_partial_and_nonfinite_lines_are_audited (test_campaign_analysis.CampaignAnalysisTests.test_partial_and_nonfinite_lines_are_audited)
+Malformed partial lines and nonfinite JSON numbers are counted as ignored without changing valid facts. ... ok
+test_partial_repeated_and_missing_annotations (test_campaign_analysis.CampaignAnalysisTests.test_partial_repeated_and_missing_annotations)
+Repeated owner labels, missing DISABLED and short context are reported without manufactured boundaries. ... ok
+test_platform_and_campaign_separation (test_campaign_analysis.CampaignAnalysisTests.test_platform_and_campaign_separation)
+Successive campaigns and two target platforms cannot share position anchors or owner labels. ... ok
+test_session_loss_prevents_continuity (test_campaign_analysis.CampaignAnalysisTests.test_session_loss_prevents_continuity)
+Loss invalidates diagnostic comparison history even if the next supplied ordinal is reused. ... ok
+test_uncomparable_pairs (test_campaign_analysis.CampaignAnalysisTests.test_uncomparable_pairs)
+Changed session/state/speed/identity, stale timestamps and absent positions stay explicitly incomparable. ... ok
+test_complete_encodings_and_overlap (test_capture.CaptureTests.test_complete_encodings_and_overlap)
+UTF-16 and UTF-8 sources remain hashable and duplicates cannot become a second campaign. ... ok
+test_powershell_capture_with_owned_fake_adb (test_capture.CaptureTests.test_powershell_capture_with_owned_fake_adb)
+Exercise the shipped PowerShell script with paths containing spaces, filtered JSONL and preserved old files. ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 5.538s
+
+OK

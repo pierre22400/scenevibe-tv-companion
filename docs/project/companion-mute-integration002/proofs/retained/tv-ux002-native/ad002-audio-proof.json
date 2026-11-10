@@ -1,0 +1,1 @@
+{"scope":"ACTUAL_SERVICE_AND_DECODER_OWN_MEDIA_NOT_PRIME_SONY","audio":[{"ordinal":1,"nativeStarts":2,"positiveFlagToObservedStopMs":458},{"ordinal":2,"nativeStarts":2,"positiveFlagToObservedStopMs":502},{"ordinal":3,"nativeStarts":2,"positiveFlagToObservedStopMs":504}],"noCatchup":true,"guardIndependentOfObservation":true,"targetTransportCalls":0,"extraDownloads":0}
