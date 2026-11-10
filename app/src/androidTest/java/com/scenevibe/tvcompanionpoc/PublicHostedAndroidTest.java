@@ -122,6 +122,20 @@ public final class PublicHostedAndroidTest {
         JSONObject proof=new JSONObject().put("scope","ANDROID_TV_EMULATOR_REAL_HTTPS_OWN_MEDIA_SESSION_NOT_SONY_PRIME").put("origin",ORIGIN)
             .put("packageSha256",prepared.binding.digest).put("codeAccepted",1).put("extraApplicationApprovals",0).put("textWindowsAttached",texts).put("audioResourcesStarted",audios)
             .put("nativeCacheReadback",true).put("tls","ANDROID_DEFAULT_TRUST_NO_OVERRIDE");
+        if(BuildConfig.COMPANION_INTEGRATION_001){
+            long landing=prepared.track.audio.values().iterator().next().startMs()+500;
+            main(()->playback(PlaybackState.STATE_PAUSED,300000));
+            await(()->TvFirst009TextServiceOwner.multimediaTrackPosition()==300000,"MEDIA anchor before manual recalage unavailable",15000);
+            int priorStarts=TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts();
+            main(()->{
+                var edit=TvFirst009TextServiceOwner.panelCommands().beginManualEdit(true);assertNotNull(edit);
+                edit.adjust(landing-TvFirst009TextServiceOwner.multimediaTrackPosition());assertTrue(edit.commit());
+            });
+            await(()->TvFirst009TextServiceOwner.multimediaTrackPosition()==landing,"Real public Track did not reanchor",15000);
+            main(()->playback(PlaybackState.STATE_PLAYING,300000));
+            await(()->TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts()>priorStarts,"Recalage inside public AUDIO did not start the existing native MP3 port",15000);
+            proof.put("manualRecalageOnPublicClock",true).put("nativeAudioAfterRecalage",true).put("newAuthorizations",0);
+        }
         Files.write(new java.io.File(target.getFilesDir(),"public001d-https-proof.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -52,6 +52,10 @@ final class CompanionControlPanel {
         void resume();
         /** Apply a user-confirmed film position, reporting a specific refusal. */
         AdSyncController.Calibration calibrate(long time,boolean seek);
+        /** Advertise a real Track-clock port rather than synthesizing an experimental clock. */
+        default boolean supportsManualRecalibration(){return false;}
+        /** Capture a cancellable edit of the currently admitted private or public Track. */
+        default ManualEdit beginManualEdit(boolean resume){return null;}
     }
 
     /** Future channels can extend this surface; no interlude engine or state is invented. */
@@ -136,6 +140,151 @@ final class CompanionControlPanel {
         };
     }
 
+    /** Project the isolated manual transaction without granting the panel runtime ownership. */
+    interface ManualEdit {
+        /** Show the captured position, candidate and chosen playback policy. */
+        String label();
+        /** Select the already chosen command, without changing playback while editing. */
+        default boolean resumeOnCommit(){return true;}
+        /**
+         * Render the Track's CURRENT position (where SceneVibe is now), in large digits,
+         * so the viewer sees the value they are moving away from. SceneVibe projects only
+         * its own clock here; it never claims to know the film's time.
+         */
+        default String currentLabel() { return label(); }
+        /**
+         * Render the Track's NEW (candidate) position, in large digits and visually
+         * distinct from the current value, so the viewer can match it to the time their
+         * film displays before confirming.
+         */
+        default String candidateLabel() { return label(); }
+        /** Adjust the bounded candidate without applying it. */
+        void adjust(long deltaMs);
+        /** Commit the candidate once, returning false on a recoverable refusal. */
+        boolean commit();
+        /** Cancel an uncommitted candidate and restore the initial local running policy. */
+        void cancel();
+    }
+
+    private ManualEdit manualEdit;
+    private boolean manualFine;
+    private TextView manualCurrent,manualCandidate,manualStep;
+    private static final long MANUAL_FINE_HOLD_MS = 700;
+
+    /** Attach through the same interactive window and focus policy as the 001-C probe. */
+    boolean openManual(ManualEdit edit) {
+        if (!BuildConfig.COMPANION_INTEGRATION_001 || manualEdit != null) return false;
+        manualEdit=java.util.Objects.requireNonNull(edit);
+        manualFine=false;
+        if(root!=null){
+            if(passive && !presentPrepared(true)){cancelManualEdit();return false;}
+            showManual();
+            try{if(!embedded)host.update(root,params);return true;}
+            catch(RuntimeException refused){close();return false;}
+        }
+        if (attach(false)) return true;
+        cancelManualEdit();
+        return false;
+    }
+
+    /**
+     * Build the UX 002 recalage layout: it is always the Track that recalibrates onto the
+     * film, never the film onto the Track. The viewer reads the film's on-screen time and
+     * copies it here; SceneVibe never claims to detect the film's position or any offset.
+     *
+     * <p>The panel shows, in large high-contrast digits, the Track's CURRENT position and
+     * the clearly distinguished NEW (candidate) position, the pedagogical instruction, the
+     * pause hint and the active step indicator. The compact status line (with the step
+     * indicator) remains the focusable action whose text drives the historical tests.
+     */
+    private void showManual() {
+        calibration=true;
+        shell("SceneVibe — recalage",this::close);
+        if(params!=null)params.width=Math.min(dp(620),(int)(context.getResources().getDisplayMetrics().widthPixels*.8f));
+        if(params!=null)params.height=Math.min(dp(600),(int)(context.getResources().getDisplayMetrics().heightPixels*.9f));
+        page.addView(label("SCENEVIBE — RECALAGE",22));
+        page.addView(label("POSITION ACTUELLE DE LA TRACK",15));
+        manualCurrent=valueLabel(manualEdit.currentLabel(),0xFF333333);
+        page.addView(manualCurrent);
+        page.addView(label("Règle le temps SceneVibe sur le temps affiché par ton film.",18));
+        page.addView(label("Pour plus de précision, mets de préférence le film en pause.",16));
+        page.addView(label("NOUVELLE POSITION DE LA TRACK",15));
+        manualCandidate=valueLabel(manualEdit.candidateLabel(),0xFF0A3970);
+        page.addView(manualCandidate);
+        page.addView(label("↑ ↓ 60 s · OK valider · OK long change le pas · BACK annuler",18));
+        manualStep=label(manualLabel(),16);page.addView(manualStep);
+        text=action(manualEdit.resumeOnCommit()?"Recaler et reprendre":"Recaler sans reprise",this::commitManualEdit);
+        action("Annuler",this::close);
+        text.requestFocus();
+    }
+
+    /** Draw one large, bold, high-contrast time value so the current and candidate read clearly on a TV. */
+    private TextView valueLabel(String value,int color) {
+        TextView view=label(value,40);view.setTextColor(color);
+        view.setTypeface(view.getTypeface(),android.graphics.Typeface.BOLD);
+        view.setGravity(Gravity.CENTER_HORIZONTAL);
+        return view;
+    }
+
+    /** Display the current horizontal step next to the editable candidate. */
+    private String manualLabel() {
+        return manualEdit.label() + (manualFine ? " · ← → 1 s" : " · ← → 10 s");
+    }
+
+    /** Refresh the focusable status line and the large current/candidate values after any change. */
+    private void refreshManual() {
+        if(manualStep!=null)manualStep.setText(manualLabel());
+        if(manualCurrent!=null)manualCurrent.setText(manualEdit.currentLabel());
+        if(manualCandidate!=null)manualCandidate.setText(manualEdit.candidateLabel());
+    }
+
+    /** Close only after the owner confirms the commit. */
+    private void commitManualEdit() {
+        if(manualEdit==null)return;
+        if(!manualEdit.commit()){
+            text.setText("Recalage refusé · BACK pour fermer");
+            return;
+        }
+        manualEdit=null;
+        close();
+    }
+
+    /** Retire the edit once through the same path as BACK, CLOSE or focus loss. */
+    private void cancelManualEdit() {
+        ManualEdit previous=manualEdit;
+        manualEdit=null;
+        manualCurrent=null;
+        manualCandidate=null;manualStep=null;
+        if(previous!=null)previous.cancel();
+    }
+
+    /** Route remote edits after the existing key-pair and cancellation checks. */
+    private boolean manualKey(KeyEvent event) {
+        if(manualEdit==null)return false;
+        long delta;
+        switch(event.getKeyCode()){
+            case KeyEvent.KEYCODE_DPAD_LEFT: delta=manualFine?-1000:-10000; break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: delta=manualFine?1000:10000; break;
+            case KeyEvent.KEYCODE_DPAD_UP: delta=60000; break;
+            case KeyEvent.KEYCODE_DPAD_DOWN: delta=-60000; break;
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+                if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled()){
+                    if(event.getEventTime()-event.getDownTime()>=MANUAL_FINE_HOLD_MS){
+                        manualFine=!manualFine;
+                        refreshManual();
+                    }else if(root!=null && root.findFocus() instanceof Button)((Button)root.findFocus()).performClick();
+                }
+                return true;
+            default: return false;
+        }
+        if(event.getAction()==KeyEvent.ACTION_DOWN){
+            manualEdit.adjust(delta);
+            refreshManual();
+        }
+        return true;
+    }
+
     /** Show a single temporary window; any partial add failure is cleaned up and releases input. */
     boolean open() {
         if(root!=null)return passive?activatePrepared():true;
@@ -182,12 +331,13 @@ final class CompanionControlPanel {
     private void verifyFocusRequest(){
         if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)return;PanelRoot requested=root;
         handler.postDelayed(()->{if(root==requested && !passive && focusState.state()==DeveloperFocusState.State.INTERACTIVE_REQUESTED
-                && !requested.hasWindowFocus()){trace("FOCUS_REFUSED",-1,-1);standby();}},1500);
+                && !requested.hasWindowFocus()){trace("FOCUS_REFUSED",-1,-1);if(manualEdit!=null)close();else standby();}},1500);
     }
 
     /** Release focus while retaining the same window and every business switch. */
     void standby() {
         if(root==null || embedded || (passive && !monitoring))return;
+        cancelManualEdit();
         passive=true;monitoring=false;focusState.passive();root.held.clear();configureSize(true);root.clearFocus();showPrepared();
         try{host.update(root,params);trace("PARKED",-1,-1);parked.run();}catch(RuntimeException refused){close();}
     }
@@ -219,7 +369,7 @@ final class CompanionControlPanel {
     /** Refresh the ordinary Activity widgets on return, without changing the service window. */
     void resumeEmbedded(){if(embedded && root!=null){embeddedPaused=false;handler.removeCallbacks(refresh);tick();}}
     /** Back from the application sidebar can first dismiss an open local recalage form. */
-    boolean closeChild(){if(root!=null && calibration){showMain();return true;}return false;}
+    boolean closeChild(){if(root!=null && calibration){cancelManualEdit();showMain();return true;}return false;}
     /** Observe actual input ownership rather than equating a requested window with gained focus. */
     boolean hasInputFocus(){return root!=null && !passive && root.hasWindowFocus();}
     /** Distinguish the actual WM callback from a merely requested focusable flag. */
@@ -238,7 +388,7 @@ final class CompanionControlPanel {
     /** Back and every close cross remove only this window, preserving service/session and switches. */
     void close() {
         if(root==null || closing)return;
-        closing=true;handler.removeCallbacks(refresh);
+        closing=true;handler.removeCallbacks(refresh);cancelManualEdit();
         PanelRoot retiring=root;if(!embedded)focusState.releasing();trace("CLOSING",-1,-1);retiring.held.clear();root=null;
         if(embedded){root=retiring;retiring.clearFocus();closing=false;embeddedDismiss.run();return;}
         retiring.clearFocus();retiring.setVisibility(View.GONE);
@@ -259,7 +409,7 @@ final class CompanionControlPanel {
     boolean isOpen(){return root!=null;}
 
     /** Pop the in-window form before closing the main panel; neither action stops comments. */
-    void back(){if(calibration)showMain();else close();}
+    void back(){if(manualEdit!=null)close();else if(calibration)showMain();else close();}
 
     /** Rebuild only on a route change, keeping live status refresh from moving D-pad focus. */
     private void shell(String title,Runnable dismiss) {
@@ -278,6 +428,7 @@ final class CompanionControlPanel {
 
     /** Render requested switches from the same owner used by the main application's Settings. */
     private void showMain() {
+        if(manualEdit!=null){showManual();return;}
         calibration=false;shell(BuildConfig.TVUX_DEVELOPER_OVERLAY?(monitoring?"Développeur · passif":"Développeur"):"SceneVibe",this::close);
         status=label("",19);page.addView(status);
         text=action("Commentaires écrits",()->{commands.text(!commands.snapshot().text);update();});
@@ -295,6 +446,13 @@ final class CompanionControlPanel {
 
     /** Provide an on-screen D-pad keypad; no IME, mouse or physical keyboard is required. */
     private void showCalibration() {
+        if(BuildConfig.COMPANION_INTEGRATION_001 && commands.supportsManualRecalibration()){
+            calibration=true;shell("Recalage SceneVibe",this::showMain);
+            page.addView(label("Règle le temps SceneVibe sur le temps affiché par ton film.",18));
+            text=action("Recaler et reprendre",()->beginTrackEdit(true));
+            action("Recaler sans reprise",()->beginTrackEdit(false));
+            action("Annuler",this::showMain);text.requestFocus();return;
+        }
         calibration=true;digits="";shell("Temps du film",this::showMain);
         page.addView(label("Confirme que le film a repris. Saisis mm:ss ou hh:mm:ss. Correction locale : ±1 heure.",18));
         time=label("mm:ss ou hh:mm:ss",26);time.setContentDescription("Temps saisi");page.addView(time);
@@ -326,6 +484,13 @@ final class CompanionControlPanel {
         });
         message=label("Le recalage ne modifie ni le film ni la track.",17);page.addView(message);
         cells[0].requestFocus();
+    }
+
+    /** Open the reused PRODUCT UX 002 widgets only when the real admitted owner supplies an edit. */
+    private void beginTrackEdit(boolean resume){
+        ManualEdit edit=commands.beginManualEdit(resume);
+        if(edit==null){feedback="Recalage indisponible : attends une Track et une capture MEDIA compatibles.";showMain();return;}
+        if(!openManual(edit))edit.cancel();
     }
 
     /** Edit only a bounded local string; rejected input leaves the same form available for correction. */
@@ -376,7 +541,7 @@ final class CompanionControlPanel {
         if(root==null)return;
         if(embedded && embeddedPaused)return;
         if(!embedded && !permission.getAsBoolean()){close();return;}
-        update();handler.postDelayed(refresh,250);
+        if(manualEdit==null)update();else refreshManual();handler.postDelayed(refresh,250);
     }
 
     /** Add one full-width action with a stable focus ID. */
@@ -441,6 +606,7 @@ final class CompanionControlPanel {
                 if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled())back();
                 return true;
             }
+            if(manualKey(event))return true;
             return super.dispatchKeyEvent(event);
         }
         /** Unexpected system-window focus loss closes the panel rather than keeping an invisible input owner. */
@@ -450,7 +616,7 @@ final class CompanionControlPanel {
             trace(focused?"WINDOW_FOCUS_GAINED":"WINDOW_FOCUS_LOST",-1,-1);if(!focused)held.clear();
             if(embedded)return;
             if(focused)hadFocus=true;else if(hadFocus && root==this && !passive){
-                if(BuildConfig.TVUX_DEVELOPER_OVERLAY)standby();else close();
+                if(manualEdit!=null)close();else if(BuildConfig.TVUX_DEVELOPER_OVERLAY)standby();else close();
             }
         }
         /** Block platform media fallback while this explicit interactive window owns the remote. */

@@ -152,6 +152,53 @@ public final class ManualTrackAndroidTest {
                 .put("extraDownloads",fixture.port.audioRequests-downloads).put("historicalAck",0)
                 .put("admissionNeedsOwnerConsent",true).put("historicalCorpusMapping",false);
         Files.write(new File(target.getFilesDir(),"realtrack001-service-proof.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
+        if(BuildConfig.COMPANION_INTEGRATION_001)exerciseIntegratedPanel();
+    }
+
+    /** Exercise the existing notification capability and actual D-pad window without any new permission or setup. */
+    private void exerciseIntegratedPanel() throws Exception {
+        UiDevice remote=UiDevice.getInstance(instrument);
+        main(()->{TvFirst009TextServiceOwner.setDeveloperMode(fixture.target,false);TvFirst009TextServiceOwner.setAdSyncEnabled(false);playback(PlaybackState.STATE_PAUSED,30000);});
+        await(()->TvFirst009TextServiceOwner.multimediaTrackPosition()==30000,"Main Track clock not captured",10000);
+        openRecalage(remote,false);
+        remote.pressDPadLeft();remote.pressDPadCenter();
+        await(()->!TvFirst009TextServiceOwner.developerHasFocus() && TvFirst009TextServiceOwner.multimediaTrackPosition()==20000,"Paused recalage not committed",10000);
+        Thread.sleep(500);assertEquals(20000,TvFirst009TextServiceOwner.multimediaTrackPosition());
+        openRecalage(remote,true);remote.pressDPadRight();remote.pressBack();
+        await(()->!TvFirst009TextServiceOwner.developerHasFocus(),"BACK retained focus",10000);
+        assertEquals("Canceled candidate must not move the Track",20000,TvFirst009TextServiceOwner.multimediaTrackPosition());
+        openRecalage(remote,true);remote.pressDPadUp();remote.pressDPadCenter();
+        await(()->!TvFirst009TextServiceOwner.developerHasFocus() && TvFirst009TextServiceOwner.multimediaTrackPosition()==80000,"Resumed recalage not applied",10000);
+        assertEquals(PlaybackState.STATE_PAUSED,media.getController().getPlaybackState().getState());
+        assertEquals(30000,media.getController().getPlaybackState().getPosition());
+        assertFalse(TvFirst009TextServiceOwner.adSyncEnabled());assertTrue(android.provider.Settings.canDrawOverlays(fixture.target));
+        assertTrue(NotificationAccess.isGranted(fixture.target));
+        await(activity::hasWindowFocus,"Closing the panel did not restore the original Activity input",10000);
+        main(()->assertTrue(activity.launchTrackRecalibration(new Intent(activity,DeveloperViewerFixtureActivity.class))));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.resumed
+                && TvFirst009TextServiceOwner.developerHasFocus(),"Remote app command did not return to the owned viewer and open the overlay",10000);
+        remote.pressBack();
+        await(()->DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Remote app command did not release input to the owned viewer",10000);
+        main(()->DeveloperViewerFixtureActivity.current.finish());
+        JSONObject proof=new JSONObject().put("scope","OWN_ANDROID_MEDIA_SESSION_NOT_SONY_PRIME").put("notificationCapability",true)
+                .put("normalAppRemoteCommand",true)
+                .put("developerModeRequired",false).put("newPermissions",0).put("extraPairing",0).put("dpadAndBack",true)
+                .put("pausedTrackMs",20000).put("resumedTrackMs",80000).put("nativeMediaUnchanged",true);
+        Files.write(new File(fixture.target.getFilesDir(),"companion-integration001-panel.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Open the system-issued service PendingIntent, then choose the explicit pause policy with the remote. */
+    private void openRecalage(UiDevice remote,boolean resume) throws Exception {
+        main(()->{try{TvFirst009TextServiceOwner.panelIntent(fixture.target).send();}catch(android.app.PendingIntent.CanceledException refused){throw new AssertionError(refused);}});
+        await(TvFirst009TextServiceOwner::developerHasFocus,"Existing notification did not open the main overlay",10000);
+        for(int i=0;i<10;i++){
+            if(remote.hasObject(androidx.test.uiautomator.By.text("Recaler sur le temps du film").focused(true)))break;
+            remote.pressDPadDown();remote.waitForIdle();
+        }
+        assertTrue(remote.hasObject(androidx.test.uiautomator.By.text("Recaler sur le temps du film").focused(true)));
+        remote.pressDPadCenter();remote.waitForIdle();
+        if(!resume)remote.pressDPadDown();remote.pressDPadCenter();remote.waitForIdle();
+        assertNotNull(remote.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("NOUVELLE POSITION DE LA TRACK")),5000));
     }
     /** Décode et relit les six événements après une publication atomique Android. */
     @Test public void nativeDecodeAndOfflineReadbackPreserveAllSixEvents() throws Exception {

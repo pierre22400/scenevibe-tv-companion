@@ -45,6 +45,12 @@ final class CloudMultimediaControls {
         if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){
             activate=button("Activer TEXT + AUDIO depuis le cache",this::confirmActivation);
             stop=button("Arrêter les commentaires",()->{TvFirst009TextServiceOwner.requestStop(activity);refresh();});
+            if(BuildConfig.COMPANION_INTEGRATION_001 && activity instanceof MainActivity){
+                button("Recaler pendant le film",()->{
+                    result=((MainActivity)activity).launchTrackRecalibration()?"Retour au lecteur et ouverture du panneau demandés.":
+                            "Recalage indisponible : attends une Track active et le lecteur installé.";refresh();
+                });
+            }
             if(!BuildConfig.TVUX_DEVELOPER_OVERLAY){
             textToggle=button("Commentaires écrits : ON",()->{textEnabled=!TvFirst009TextServiceOwner.multimediaTextEnabled();TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);refresh();});
             audioToggle=button("Commentaires audio : ON",()->{audioEnabled=!TvFirst009TextServiceOwner.multimediaAudioEnabled();TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);refresh();});

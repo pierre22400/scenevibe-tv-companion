@@ -18,6 +18,10 @@ def enableLanDevLiteral = enableLanDev.equalsIgnoreCase("true") ? "true" : "fals
 def hostedAutonomous001d = providers.gradleProperty("scenevibeAutonomousHosted001d").orElse("false").get() == "true"
 def publicAutonomous001b = providers.gradleProperty("scenevibePublicAutonomous001b").orElse("false").get() == "true" || hostedAutonomous001d
 def realTrack001 = providers.gradleProperty("scenevibeRealTrack001").orElse("false").get() == "true"
+def companionIntegration001 = providers.gradleProperty("scenevibeCompanionIntegration001").orElse("false").get() == "true"
+if (companionIntegration001 && (!hostedAutonomous001d || !realTrack001)) {
+    throw new GradleException("Companion integration requires the retained private and hosted autonomous profiles")
+}
 
 android {
     buildFeatures { buildConfig true }
@@ -46,6 +50,7 @@ android {
         buildConfigField "boolean", "ADSYNC_NONDESTRUCTIVE", "false"
         buildConfigField "boolean", "REAL_TRACK_E2E_001", "false"
         buildConfigField "boolean", "PUBLIC_AUTONOMOUS_001B", "false"
+        buildConfigField "boolean", "COMPANION_INTEGRATION_001", "false"
     }
 
     buildTypes {
@@ -141,7 +146,8 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix companionIntegration001 ? "-companion-integration001-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        buildConfigField "boolean", "COMPANION_INTEGRATION_001", companionIntegration001 ? "true" : "false"
         buildConfigField "boolean", "REAL_TRACK_E2E_001", realTrack001 ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_AUTONOMOUS_001B", publicAutonomous001b ? "true" : "false"
         buildConfigField "boolean", "TVUX_DEVELOPER_OVERLAY", "true"
@@ -228,7 +234,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java"])
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -294,6 +300,7 @@ androidComponents {
             output.versionCode.set(realTrack001 ? 31 : 28)
             if (publicAutonomous001b) output.versionCode.set(32)
             if (hostedAutonomous001d) output.versionCode.set(33)
+            if (companionIntegration001) output.versionCode.set(32)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->

@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=SceneVibe TV, OU=Release, O=SceneVibe, C=FR
+Signer #1 certificate SHA-256 digest: f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c
+Signer #1 certificate SHA-1 digest: 2bb9575eec8d42fc3e370752893403bbaf11445d
+Signer #1 certificate MD5 digest: b9497101b2c0029391fbb7d0b40911c9
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: 69976f6df688b5236dac0502f6aedc43cd260c40f1a8008fd15e87a12f13b0d4
+Signer #1 public key SHA-1 digest: a01edbb503563ef8d495ca9b5657fb68748b3ab4
+Signer #1 public key MD5 digest: 15c58505c146de2263966139f1066a61

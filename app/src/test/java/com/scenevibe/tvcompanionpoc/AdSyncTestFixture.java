@@ -19,6 +19,10 @@ import org.json.JSONObject;
 final class AdSyncTestFixture {
     /** Compose the actual existing runtime/renderers over explicit test drawing and local audio ports. */
     static StudioMultimediaRuntime runtime(SceneRuntimeController.SceneSink drawing,LocalAudioPort port) throws Exception {
+        return runtime(drawing,port,false);
+    }
+    /** Select the retained principal replay policy for native-panel integration tests only. */
+    static StudioMultimediaRuntime runtime(SceneRuntimeController.SceneSink drawing,LocalAudioPort port,boolean replay) throws Exception {
         List<OverlayManifest.Scene> scenes=List.of(
                 new OverlayManifest.Scene("text1",1000,1000,List.of()),
                 new OverlayManifest.Scene("text2",5000,1000,List.of()));
@@ -27,13 +31,13 @@ final class AdSyncTestFixture {
         for(OverlayManifest.Scene s:scenes)events.add(new SceneEvent(s.id,s.startMs,s.durationMs));
         Map<String,AudioEvent> audio=new LinkedHashMap<>();
         for(int i=0;i<3;i++){String id="audio"+(i+1);long start=new long[]{2000,6000,9000}[i];
-            events.add(new SceneEvent(id,start,3000));audio.put(id,AudioEvent.audio(id,"existing-test-tone",start,3000,1f));}
+            events.add(new SceneEvent(id,start,3000));audio.put(id,replay?new AudioEvent(id,AudioEvent.Type.AUDIO,"existing-test-tone",start,3000,1f,AudioEvent.PausePolicy.FREEZE_AND_RESUME):AudioEvent.audio(id,"existing-test-tone",start,3000,1f));}
         var constructor=StudioMultimediaPackage.class.getDeclaredConstructor(JSONObject.class,String.class,
                 MediaCalendar.class,OverlayManifest.class,Map.class,Map.class);
         constructor.setAccessible(true);
         StudioMultimediaPackage track=constructor.newInstance(new JSONObject().put("trackId","synthetic").put("revision",1),
                 "synthetic-software-only",new MediaCalendar(events,true),manifest,audio,Map.of());
-        StudioMultimediaRuntime runtime=new StudioMultimediaRuntime(drawing,port);
+        StudioMultimediaRuntime runtime=new StudioMultimediaRuntime(drawing,port,replay,replay,null);
         runtime.loadForSoftwareQualification(track,"synthetic-activation");return runtime;
     }
     /** Prevent accidental stateful fixture ownership. */
