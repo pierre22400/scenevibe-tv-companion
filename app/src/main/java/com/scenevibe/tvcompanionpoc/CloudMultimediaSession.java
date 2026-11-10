@@ -275,6 +275,15 @@ final class CloudMultimediaSession {
     boolean developerMediaReady(long after) {
         return current() && developerMediaReady(lastAdSample,SystemClock.elapsedRealtime(),after);
     }
+
+    /** Reuse current admission and fresh passive MEDIA facts before a shortcut can expose Track controls. */
+    boolean shortcutReady(){
+        if(!current())return false;
+        probe.captureNow();
+        long now=SystemClock.elapsedRealtime();
+        return current() && adProtection.status().allow && lastAdSample!=null && lastAdSample.valid()
+                && lastAdSample.identityCompatible && now>=lastAdSample.capturedMs && now-lastAdSample.capturedMs<=2500;
+    }
     /** Qualify only a compatible current PLAYING capture obtained after this explicit handoff. */
     static boolean developerMediaReady(AdSyncController.Sample sample,long now,long after) {
         return sample!=null && sample.valid() && sample.playing && sample.capturedMs>=after

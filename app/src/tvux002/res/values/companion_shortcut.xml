@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="companion_shortcut_label">SceneVibe — raccourci du Companion</string>
+    <string name="companion_shortcut_description">Ouvre le recalage de la Track active avec le raccourci Android configuré. Ne lit ni les fenêtres ni les touches ordinaires.</string>
+</resources>

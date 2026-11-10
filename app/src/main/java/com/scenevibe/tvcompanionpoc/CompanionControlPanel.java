@@ -101,6 +101,7 @@ final class CompanionControlPanel {
     private Runnable closed=()->{},parked=()->{},embeddedDismiss=()->{};
     private long lastTimingUpdate=-1;
     private boolean calibration,closing;
+    private boolean shortcutRoute;
     private int receivedKeys;
     private String digits="";
     private CheckBox replay;
@@ -140,6 +141,12 @@ final class CompanionControlPanel {
     boolean open() {
         if(root!=null)return passive?activatePrepared():true;
         return attach(false);
+    }
+
+    /** Open recalage directly from the configured Android shortcut, without visiting the Activity or notification. */
+    boolean openFromShortcut(){
+        if(!open())return false;
+        shortcutRoute=true;showCalibration();return true;
     }
 
     /** Keep the prepared window visible but unable to intercept any key or touch. */
@@ -259,7 +266,7 @@ final class CompanionControlPanel {
     boolean isOpen(){return root!=null;}
 
     /** Pop the in-window form before closing the main panel; neither action stops comments. */
-    void back(){if(calibration)showMain();else close();}
+    void back(){if(shortcutRoute)close();else if(calibration)showMain();else close();}
 
     /** Rebuild only on a route change, keeping live status refresh from moving D-pad focus. */
     private void shell(String title,Runnable dismiss) {
