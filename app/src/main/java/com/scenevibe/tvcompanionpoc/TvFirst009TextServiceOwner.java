@@ -456,6 +456,12 @@ final class TvFirst009TextServiceOwner {
             @Override public void resume(){if(multimediaActive()){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE && !adSyncEnabled())setAdSyncEnabled(true);resumeMultimediaComments();}}
             /** Refresh and diagnose using the actual live service, without a new admission. */
             @Override public AdSyncController.Calibration calibrate(long time,boolean seek){return calibrateMultimediaResult(time,seek);}
+            /** The integrated main Companion supplies the actual private/public Track-clock port. */
+            @Override public boolean supportsManualRecalibration(){return BuildConfig.COMPANION_MUTE_002;}
+            /** Bind the edit to the current service session; no experimental Netflix clock is constructed. */
+            @Override public CompanionControlPanel.ManualEdit beginManualEdit(boolean resume){
+                return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.beginManualEdit(resume);
+            }
         };
     }
 
@@ -486,6 +492,11 @@ final class TvFirst009TextServiceOwner {
     static com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.AudioDiagnostics multimediaAudioDiagnostics(int ordinal){return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.audioDiagnostics(ordinal);}
     /** Report only the local comment-player lifecycle, never the platform player's transport object. */
     static String multimediaAudioState(){return liveInstance==null || liveInstance.multimedia==null?"IDLE":liveInstance.multimedia.audioState();}
+
+    /** Read explicit local suspension independently of MEDIA pause or channel preferences. */
+    static boolean multimediaManuallySuspended(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.manuallySuspended();}
+    /** Read the single current Track clock without exposing an admission or any video-player control. */
+    static long multimediaTrackPosition(){return liveInstance==null || liveInstance.multimedia==null?-1:liveInstance.multimedia.trackPosition();}
 
     /** Return whether a multimedia service already owns a current admitted lifetime. */
     static boolean multimediaActive(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.isActive();}

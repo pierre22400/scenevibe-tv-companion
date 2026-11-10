@@ -49,6 +49,7 @@ final class CloudMultimediaSession {
     private int nativeAudioStarts;
     private String closureReason="CALENDAR_EXPIRE_OR_REPLACE";
     private boolean publicMediaEnded;
+    private long manualEditGeneration;
 
     /** Compose real application ports only after the owner's separate explicit admission. */
     static CloudMultimediaSession open(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
@@ -258,6 +259,64 @@ final class CloudMultimediaSession {
         }
         logAdSync(adSync.status());return result;
     }
+    /** Capture a detached candidate over this exact admission and the one current MEDIA session. */
+    CompanionControlPanel.ManualEdit beginManualEdit(boolean resume){
+        if(!BuildConfig.COMPANION_MUTE_002 || !current())return null;
+        probe.captureNow();
+        if(!manualMediaReady())return null;
+        final Object session=lastAdSample.session;
+        final long generation=++manualEditGeneration;
+        final long initial=adSync.trackPosition();
+        final long horizon=admission.identity.mediaIdentity.durationMs;
+        if(initial<0 || horizon<=0 || initial>horizon)return null;
+        return new CompanionControlPanel.ManualEdit(){
+            private long candidate=initial;
+            private boolean finished;
+            /** Explain only SceneVibe's candidate and the explicitly selected local playback policy. */
+            @Override public String label(){return resume?"Reprise des commentaires après validation":"Les commentaires resteront en pause";}
+            /** Read the real current Track projection without advancing an independent clock. */
+            @Override public String currentLabel(){return formatTrackTime(adSync.trackPosition());}
+            /** Render only the bounded, uncommitted candidate. */
+            @Override public String candidateLabel(){return formatTrackTime(candidate);}
+            /** Retain the command chosen before remote editing. */
+            @Override public boolean resumeOnCommit(){return resume;}
+            /** Saturate arithmetic and stay inside the admitted work's verified horizon. */
+            @Override public void adjust(long deltaMs){
+                if(finished)return;
+                if(deltaMs>0)candidate=deltaMs>horizon-candidate?horizon:candidate+deltaMs;
+                else candidate=deltaMs < -candidate?0:candidate+deltaMs;
+            }
+            /** Recheck the exact owner and MEDIA facts before atomically changing the shared projection. */
+            @Override public boolean commit(){
+                if(finished || generation!=manualEditGeneration || !current())return false;
+                probe.captureNow();
+                if(!manualMediaReady() || !session.equals(lastAdSample.session))return false;
+                long previous=adSync.trackPosition();
+                AdSyncController.Calibration result=adSync.recalibrateTrack(candidate,SystemClock.elapsedRealtime(),resume);
+                if(result!=AdSyncController.Calibration.APPLIED){trace("MANUAL_RECALIBRATION_REFUSED","reason="+result);return false;}
+                finished=true;suspendRuntime("MANUAL_RECALIBRATION");
+                if(candidate<previous)runtime.confirmSeek();else runtime.policyChanged();
+                position=candidate;logAdSync(adSync.status());publish("MANUAL_RECALIBRATION_APPLIED");return true;
+            }
+            /** Cancel the candidate without seeking, pausing, resuming or changing any preference. */
+            @Override public void cancel(){finished=true;}
+        };
+    }
+
+    /** Preserve identity, freshness, advertising and existing Android permission fences during manual edits. */
+    private boolean manualMediaReady(){
+        long now=SystemClock.elapsedRealtime();
+        return current() && adProtection.status().allow && lastAdSample!=null && lastAdSample.valid()
+                && lastAdSample.identityCompatible && now>=lastAdSample.capturedMs && now-lastAdSample.capturedMs<=2500;
+    }
+
+    /** Use unambiguous PRODUCT UX 002 timecodes, including the hour above 59:59. */
+    static String formatTrackTime(long millis){
+        if(millis<0)return "--:--";
+        long seconds=millis/1000;
+        return seconds<3600?String.format(java.util.Locale.ROOT,"%02d:%02d",seconds/60,seconds%60):
+                String.format(java.util.Locale.ROOT,"%02d:%02d:%02d",seconds/3600,seconds/60%60,seconds%60);
+    }
     /** Expose only the bounded controller state for the existing Settings screen. */
     String adSyncStatus(){AdSyncController.Decision d=adSync.status();
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE){
@@ -280,9 +339,7 @@ final class CloudMultimediaSession {
     boolean shortcutReady(){
         if(!current())return false;
         probe.captureNow();
-        long now=SystemClock.elapsedRealtime();
-        return current() && adProtection.status().allow && lastAdSample!=null && lastAdSample.valid()
-                && lastAdSample.identityCompatible && now>=lastAdSample.capturedMs && now-lastAdSample.capturedMs<=2500;
+        return manualMediaReady();
     }
     /** Qualify only a compatible current PLAYING capture obtained after this explicit handoff. */
     static boolean developerMediaReady(AdSyncController.Sample sample,long now,long after) {
@@ -344,6 +401,8 @@ final class CloudMultimediaSession {
     com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.Diagnostics calendarDiagnostics(){return runtime.diagnostics();}
     /** Distinguish explicit user suspension from MEDIA uncertainty or a changed AD-SYNC preference. */
     boolean manuallySuspended(){return adSync.manuallySuspended();}
+    /** Expose the actual Track projection to bounded diagnostics, including an explicitly paused recalage. */
+    long trackPosition(){return current()?adSync.trackPosition():-1;}
     /** Optional recovery for a lower NEW session; ordinary confirmed same-session rewinds need no user action. */
     String confirmReplay(){
         if(!active || !current())return "Relecture refusée : admission ou permissions indisponibles ; cache conservé.";
