@@ -41,11 +41,14 @@ final class CompanionShortcutBench implements AutoCloseable {
     }
     /** Execute shell setup only through UiAutomation on the checked emulator. */
     private String shell(String command) throws Exception {return remote.executeShellCommand(command);}
-    /** Quote a scalar setting as data, never a shell expression. */
-    private String quote(String value){return "'"+value.replace("'","'\\''")+"'";}
+    /** Validate one direct-exec argument; UiAutomation does not interpret POSIX shell quotes. */
+    private String scalarArgument(String value){
+        if(!value.matches("[A-Za-z0-9_.$/:-]+"))throw new IllegalArgumentException("SETTING_SCALAR_REQUIRED");
+        return value;
+    }
     /** Apply initial shortcut setup without touching Cloud, pairing or protected media. */
     private void set(String key,String value) throws Exception {
-        String reply=shell("settings put secure "+key+" "+quote(value));
+        String reply=shell("settings put secure "+key+" "+scalarArgument(value));
         String actual=shell("settings get secure "+key).trim();
         assertEquals("Emulator setting not applied: "+key+"; reply="+reply,value,actual);
     }
@@ -63,7 +66,7 @@ final class CompanionShortcutBench implements AutoCloseable {
     /** Restore only the saved emulator settings; no physical-TV operation exists in this helper. */
     @Override public void close() throws Exception {
         for(var item:settings.entrySet()){
-            if("null".equals(item.getValue()))shell("settings delete secure "+item.getKey());else set(item.getKey(),item.getValue());
+            if("null".equals(item.getValue()) || item.getValue().isEmpty())shell("settings delete secure "+item.getKey());else set(item.getKey(),item.getValue());
         }
         Configurator.getInstance().setUiAutomationFlags(oldFlags);
     }
