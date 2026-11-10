@@ -5,6 +5,9 @@ import android.app.Instrumentation;
 import android.app.UiAutomation;
 import android.content.ComponentName;
 import android.os.SystemClock;
+import android.view.KeyEvent;
+import android.view.KeyCharacterMap;
+import android.view.InputDevice;
 import androidx.test.uiautomator.Configurator;
 import androidx.test.uiautomator.UiDevice;
 import java.util.LinkedHashMap;
@@ -15,7 +18,7 @@ import static org.junit.Assert.*;
 
 /**
  * Emulator-only setup of an actual Android accessibility service and system
- * shortcut target. Global action 13 traverses Android, not a direct callback or
+ * shortcut target. The standard BACK + DOWN TV chord traverses Android policy, not a direct callback or
  * panel PendingIntent. It does not emulate Sony's physical MUTE firmware.
  */
 final class CompanionShortcutBench implements AutoCloseable {
@@ -57,11 +60,23 @@ final class CompanionShortcutBench implements AutoCloseable {
         long deadline=SystemClock.elapsedRealtime()+timeout;
         while(SystemClock.elapsedRealtime()<deadline){AtomicBoolean ready=new AtomicBoolean();instrument.runOnMainSync(()->ready.set(condition.getAsBoolean()));if(ready.get())return;Thread.sleep(50);}fail(message+"; shortcut="+CompanionShortcutService.diagnostics().result);
     }
-    /** Request Android's configured hardware accessibility shortcut, then require a real delivered callback. */
+    /** Inject one standard Android TV BACK+DOWN chord; require the framework to deliver the configured callback. */
     void systemShortcut() throws Exception {
         int before=CompanionShortcutService.diagnostics().callbacks;
-        assertTrue("Android global hardware accessibility shortcut unavailable on this emulator",instrument.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT));
-        await(()->CompanionShortcutService.diagnostics().callbacks>before,"System action did not deliver AccessibilityButtonController callback",10000);
+        UiAutomation automation=instrument.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        long down=SystemClock.uptimeMillis();
+        assertTrue("BACK down input injection refused",automation.injectInputEvent(key(down,KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BACK),false));
+        try{
+            assertTrue("DOWN input injection refused",automation.injectInputEvent(key(down,KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN),false));
+            await(()->CompanionShortcutService.diagnostics().callbacks>before,"Android TV hardware chord did not deliver AccessibilityButtonController callback",10000);
+        }finally{
+            automation.injectInputEvent(key(down,KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_DOWN),false);
+            automation.injectInputEvent(key(down,KeyEvent.ACTION_UP,KeyEvent.KEYCODE_BACK),true);
+        }
+    }
+    /** Supply emulator input events to Android policy; production code never synthesizes any key. */
+    private KeyEvent key(long down,int action,int code){
+        return new KeyEvent(down,SystemClock.uptimeMillis(),action,code,0,0,KeyCharacterMap.VIRTUAL_KEYBOARD,0,0,InputDevice.SOURCE_DPAD);
     }
     /** Restore only the saved emulator settings; no physical-TV operation exists in this helper. */
     @Override public void close() throws Exception {

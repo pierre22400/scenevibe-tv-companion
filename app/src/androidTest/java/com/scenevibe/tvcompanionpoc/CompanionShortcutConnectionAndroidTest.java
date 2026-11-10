@@ -37,7 +37,7 @@ public final class CompanionShortcutConnectionAndroidTest {
             assertEquals("NOT_READY",CompanionShortcutService.diagnostics().result);
             assertEquals(accepted,CompanionShortcutService.diagnostics().accepted);
             assertFalse(TvFirst009TextServiceOwner.controlBusy());
-            System.out.println("MUTE002_P0_PASS; ACTUAL_ANDROID_BINDING; SYSTEM_GLOBAL_ACTION_13; ACTUAL_CALLBACK; NO_TRACK_REFUSED; NOT_SONY_MUTE");
+            System.out.println("MUTE002_P0_PASS; ACTUAL_ANDROID_BINDING; ANDROID_TV_BACK_DOWN_CHORD; ACTUAL_CALLBACK; NO_TRACK_REFUSED; NOT_SONY_MUTE");
         }
     }
 }

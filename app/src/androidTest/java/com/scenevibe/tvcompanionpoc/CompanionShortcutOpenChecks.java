@@ -47,7 +47,7 @@ final class CompanionShortcutOpenChecks {
             assertEquals(30000,media.getController().getPlaybackState().getPosition());
             assertEquals(PlaybackState.STATE_PAUSED,media.getController().getPlaybackState().getState());
             JSONObject proof=new JSONObject().put("scope","REAL_ANDROID_SHORTCUT_OWN_VIEWER_NOT_SONY_PRIME")
-                    .put("systemGlobalAction",13).put("directCallbackInjection",false).put("notificationUsed",false)
+                    .put("systemTrigger","ANDROID_TV_BACK_DOWN_CHORD").put("directCallbackInjection",false).put("notificationUsed",false)
                     .put("actualBinding",true).put("actualCallback",true).put("windowAttached",true).put("inputFocus",true)
                     .put("duplicateWindow",false).put("dpadReceived",true).put("focusReturned",true).put("videoTransportCommands",0);
             Files.write(new File(target.getFilesDir(),"companion-mute002-p0-open.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
