@@ -1,0 +1,126 @@
+{
+  "date": "2026-11-10",
+  "verdict": "READY_FOR_SONY_SOFTWARE_QUALIFICATION_ONLY",
+  "sourceCommit": "a23f91a3250dc4156491428e60a5304dc61dbe2c",
+  "baseCommit": "3a24849603f0e88f60946b870cb7b30b327da26c",
+  "productUxSource": "07fda5229611d412e849cc82ca8cd8594d16955f",
+  "pullRequest": "https://github.com/pierre22400/scenevibe-tv-companion/pull/48",
+  "workflow": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42783765046",
+  "jobs": [
+    {
+      "name": "software",
+      "id": 129719812982,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "native",
+      "id": 129719813072,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "native_retained",
+      "id": 129719813124,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "windows_capture",
+      "id": 129719813184,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "native_https",
+      "id": 129719813400,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "signed_upgrade",
+      "id": 129722655784,
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "apk": {
+    "filename": "scenevibe-companion-integration001-v32-signed.apk",
+    "sha256": "8fac9b4d8b852ad01d80ad0b416476e251097ac403736bcf205caf3420ccf047",
+    "bytes": 2733774,
+    "applicationId": "com.scenevibe.tvcompanionpoc",
+    "versionCode": 32,
+    "versionName": "0.8.2-tv-release-hardening-companion-integration001-v32",
+    "debuggable": false,
+    "variant": "tvux002",
+    "certificateSha256": "f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c",
+    "signatureV2": true,
+    "signatureV3": true,
+    "libraryFileId": "libfile_659c1ba239188191a555215312c28636"
+  },
+  "permissions": {
+    "sameMergedPermissions": true,
+    "newPermissions": 0,
+    "newAccessibilityService": false,
+    "newOnboarding": false,
+    "newPairing": false,
+    "signedV31UpdatePass": true,
+    "settingsUntouchedAfterUpdate": true
+  },
+  "software": {
+    "debug": {
+      "total": 1431,
+      "passed": 1430,
+      "failed": 0,
+      "skipped": 1,
+      "skip": "M1CloudInteropTest.originalColumboProjectionIsInstallable — SCENEVIBE_M1_SONY_FIXTURES absent"
+    },
+    "legacyPanelPassed": 25,
+    "integratedPanelPassed": 13,
+    "integratedClockAndRuntimePassed": 16,
+    "integratedClockAndRuntimeIncludedInDebug": true,
+    "pocBoundaryPassed": 15,
+    "powershell5Passed": 11,
+    "powershell7Passed": 11,
+    "linuxCapturePassed": 11,
+    "realTrackUiGuardsPassed": 3
+  },
+  "native": {
+    "publicPassed": 11,
+    "privateOnIntegratedBuildPassed": 3,
+    "publicRestartPhases": 3,
+    "retainedHistoricalPassed": 52,
+    "retainedSmokePassed": 1,
+    "retainedPrivatePassed": 3,
+    "retainedPrivateRestartPhases": 2,
+    "realHttpsPassed": 1,
+    "signedUpgradePhases": 2,
+    "ownMediaSessionOnly": true,
+    "primeExecuted": false,
+    "sonyExecuted": false
+  },
+  "uxReference": {
+    "workflow": "https://github.com/pierre22400/scenevibe-tv-companion/actions/runs/42785111422",
+    "sourceCommit": "07fda5229611d412e849cc82ca8cd8594d16955f",
+    "panelPassed": 44,
+    "launcherPassed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "artifact": 13749516503
+  },
+  "artifactIds": {
+    "software": 13746719496,
+    "native": 13749155169,
+    "https": 13748435659,
+    "retained": 13748172086,
+    "windows": 13748120556,
+    "signedUpgrade": 13749630252
+  },
+  "physical": "NOT_EXECUTED — owner GO required before Sony installation; any new authorization/setup request is FAIL",
+  "limits": [
+    "Sony notification visibility and remote access remain physically unconfirmed",
+    "Normal launch handoff, focus and playback coexistence on Prime require Sony qualification",
+    "No new platform identity support or video transport added"
+  ]
+}
+
