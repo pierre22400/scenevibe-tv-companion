@@ -18,6 +18,9 @@ public final class CompanionShortcutConnectionAndroidTest {
     @Test public void systemShortcutBindsPrincipalServiceAndRefusesAbsentTrack() throws Exception {
         assertTrue(BuildConfig.COMPANION_MUTE_002);
         var instrument=InstrumentationRegistry.getInstrumentation();
+        var declaration=instrument.getTargetContext().getPackageManager().getServiceInfo(
+                new android.content.ComponentName(instrument.getTargetContext(),CompanionShortcutService.class),0);
+        assertTrue("Installed shortcut component is disabled",declaration.enabled);
         try(var bench=new CompanionShortcutBench(instrument)){
             var context=instrument.getTargetContext();
             var manager=context.getSystemService(AccessibilityManager.class);

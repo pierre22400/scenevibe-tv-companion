@@ -5,6 +5,13 @@ mkdir -p mute002-p0
 scenevibe_mute_serial="$(adb get-serialno)"
 [[ "$scenevibe_mute_serial" == emulator-* ]]
 test "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = 1
+# Always preserve bounded connection diagnostics, including a failed binding.
+collect_mute002_p0() {
+  adb logcat -d -v brief -s SceneVibeMute002:I AndroidRuntime:E AccessibilityManagerService:I > mute002-p0/shortcut.log || true
+  adb shell dumpsys accessibility | grep -E 'User state|boundServices|enabledServices|bindingServices|UiAutomation|suppress|CompanionShortcutService|SystemAction|mIsAccessibilityEnabled' > mute002-p0/binding-state.txt || true
+  adb shell dumpsys package com.scenevibe.tvcompanionpoc | grep -A 12 -B 2 CompanionShortcutService > mute002-p0/component.txt || true
+}
+trap collect_mute002_p0 EXIT
 adb install -r app/build/outputs/apk/tvux002/app-tvux002.apk
 adb install -r app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk
 adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.CompanionShortcutConnectionAndroidTest com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee mute002-p0/instrumentation.log

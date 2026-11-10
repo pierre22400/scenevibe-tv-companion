@@ -44,7 +44,11 @@ final class CompanionShortcutBench implements AutoCloseable {
     /** Quote a scalar setting as data, never a shell expression. */
     private String quote(String value){return "'"+value.replace("'","'\\''")+"'";}
     /** Apply initial shortcut setup without touching Cloud, pairing or protected media. */
-    private void set(String key,String value) throws Exception {shell("settings put secure "+key+" "+quote(value));}
+    private void set(String key,String value) throws Exception {
+        String reply=shell("settings put secure "+key+" "+quote(value));
+        String actual=shell("settings get secure "+key).trim();
+        assertEquals("Emulator setting not applied: "+key+"; reply="+reply,value,actual);
+    }
     /** Poll observable Android state on the actual application main Looper. */
     void await(BooleanSupplier condition,String message,long timeout) throws Exception {
         long deadline=SystemClock.elapsedRealtime()+timeout;
