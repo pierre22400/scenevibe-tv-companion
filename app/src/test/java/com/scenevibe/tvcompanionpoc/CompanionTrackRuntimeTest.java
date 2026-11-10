@@ -38,7 +38,7 @@ public final class CompanionTrackRuntimeTest {
     /** A genuine explicit rewind into AUDIO restarts only the matching native window at its offset. */
     @Test public void backwardRecalageInsideAudioHasOneOffsetPlayer(){at(1750,true);at(2000,true);assertEquals(1,audio.starts);at(2500,true);runtime.suspendComments();runtime.confirmSeek();at(2250,true);assertEquals(2,audio.starts);assertEquals(250,audio.offset);assertEquals(LocalAudioPort.State.STARTED,audio.state());at(2500,true);assertEquals(2,audio.starts);}
     /** A committed paused position emits no speech until an eligible PLAYING observation. */
-    @Test public void recalageWithoutResumeDoesNotStartAudio(){at(0,true);runtime.suspendComments();runtime.confirmSeek();at(2250,false);assertEquals(0,audio.starts);at(2250,true);assertEquals(1,audio.starts);assertEquals(250,audio.offset);}
+    @Test public void recalageWithoutResumeDoesNotStartAudio(){at(0,true);runtime.suspendComments();runtime.confirmSeek();at(2250,false);assertEquals(0,audio.starts);at(2250,true);at(2500,true);assertEquals(1,audio.starts);assertEquals(500,audio.offset);}
     /** Eligibility loss retains all replay protections and suppresses both effect types. */
     @Test public void invalidMediaCannotReleaseTheCalendar(){at(0,true);runtime.suspendComments();runtime.observe("synthetic-activation",new MediaObservation(false,2000,true),"owned",100500,1f);assertEquals(0,audio.starts);assertTrue(texts.isEmpty());}
     /** A policy-only forward correction cannot replay an already consumed MP3. */

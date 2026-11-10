@@ -123,7 +123,7 @@ public final class PublicHostedAndroidTest {
             .put("packageSha256",prepared.binding.digest).put("codeAccepted",1).put("extraApplicationApprovals",0).put("textWindowsAttached",texts).put("audioResourcesStarted",audios)
             .put("nativeCacheReadback",true).put("tls","ANDROID_DEFAULT_TRUST_NO_OVERRIDE");
         if(BuildConfig.COMPANION_INTEGRATION_001){
-            long landing=prepared.track.audio.values().iterator().next().startMs+500;
+            long landing=prepared.track.audio.values().iterator().next().startMs()+500;
             main(()->playback(PlaybackState.STATE_PAUSED,300000));
             await(()->TvFirst009TextServiceOwner.multimediaTrackPosition()==300000,"MEDIA anchor before manual recalage unavailable",15000);
             int priorStarts=TvFirst009TextServiceOwner.multimediaAudioPlaybackStarts();

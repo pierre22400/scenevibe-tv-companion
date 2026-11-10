@@ -31,7 +31,7 @@ final class AdSyncTestFixture {
         for(OverlayManifest.Scene s:scenes)events.add(new SceneEvent(s.id,s.startMs,s.durationMs));
         Map<String,AudioEvent> audio=new LinkedHashMap<>();
         for(int i=0;i<3;i++){String id="audio"+(i+1);long start=new long[]{2000,6000,9000}[i];
-            events.add(new SceneEvent(id,start,3000));audio.put(id,AudioEvent.audio(id,"existing-test-tone",start,3000,1f));}
+            events.add(new SceneEvent(id,start,3000));audio.put(id,replay?new AudioEvent(id,AudioEvent.Type.AUDIO,"existing-test-tone",start,3000,1f,AudioEvent.PausePolicy.FREEZE_AND_RESUME):AudioEvent.audio(id,"existing-test-tone",start,3000,1f));}
         var constructor=StudioMultimediaPackage.class.getDeclaredConstructor(JSONObject.class,String.class,
                 MediaCalendar.class,OverlayManifest.class,Map.class,Map.class);
         constructor.setAccessible(true);

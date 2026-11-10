@@ -173,7 +173,15 @@ public final class ManualTrackAndroidTest {
         assertEquals(30000,media.getController().getPlaybackState().getPosition());
         assertFalse(TvFirst009TextServiceOwner.adSyncEnabled());assertTrue(android.provider.Settings.canDrawOverlays(fixture.target));
         assertTrue(NotificationAccess.isGranted(fixture.target));
+        await(activity::hasWindowFocus,"Closing the panel did not restore the original Activity input",10000);
+        main(()->assertTrue(activity.launchTrackRecalibration(new Intent(activity,DeveloperViewerFixtureActivity.class))));
+        await(()->DeveloperViewerFixtureActivity.current!=null && DeveloperViewerFixtureActivity.current.resumed
+                && TvFirst009TextServiceOwner.developerHasFocus(),"Remote app command did not return to the owned viewer and open the overlay",10000);
+        remote.pressBack();
+        await(()->DeveloperViewerFixtureActivity.current.hasWindowFocus(),"Remote app command did not release input to the owned viewer",10000);
+        main(()->DeveloperViewerFixtureActivity.current.finish());
         JSONObject proof=new JSONObject().put("scope","OWN_ANDROID_MEDIA_SESSION_NOT_SONY_PRIME").put("notificationCapability",true)
+                .put("normalAppRemoteCommand",true)
                 .put("developerModeRequired",false).put("newPermissions",0).put("extraPairing",0).put("dpadAndBack",true)
                 .put("pausedTrackMs",20000).put("resumedTrackMs",80000).put("nativeMediaUnchanged",true);
         Files.write(new File(fixture.target.getFilesDir(),"companion-integration001-panel.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));

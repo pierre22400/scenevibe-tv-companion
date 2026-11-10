@@ -43,6 +43,8 @@ public final class MainActivity extends Activity {
     private CloudMultimediaControls cloudMultimedia;
     private DeveloperTab developerTab;
     private String developerHandoff;
+    private boolean trackRecalibrationHandoff;
+    private long trackRecalibrationGeneration;
     private final Handler handler = new Handler(Looper.getMainLooper());
     /**
      * Periodic status refresh. In consumer mode (ENABLE_LAN_DEV false) it only refreshes
@@ -108,6 +110,7 @@ public final class MainActivity extends Activity {
                 controls.addView(cloudMultimedia.view());
             }
             if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
+                if(BuildConfig.COMPANION_INTEGRATION_001)addButton(controls,"Recaler pendant le film",this::launchTrackRecalibration);
                 addButton(controls,"Autorisation de superposition",this::openPermissionSettings);
                 addButton(controls,"Accès aux sessions MEDIA",this::openMediaSessionAccessSettings);
                 return controls;
@@ -252,6 +255,8 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        trackRecalibrationHandoff=false;
+        trackRecalibrationGeneration++;
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY)Log.i("SceneVibeControls","event=ACTIVITY_RESUMED");
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
             if(developerHandoff!=null){TvFirst009TextServiceOwner.cancelDeveloperHandoff(developerHandoff);developerHandoff=null;}
@@ -290,6 +295,14 @@ public final class MainActivity extends Activity {
     /** Transfer input only after this normal Activity is no longer visible, never on a countdown. */
     @Override protected void onStop() {
         super.onStop();
+        if(trackRecalibrationHandoff){
+            trackRecalibrationHandoff=false;
+            long generation=trackRecalibrationGeneration;
+            if(!isChangingConfigurations())handler.post(()->{
+                if(generation==trackRecalibrationGeneration && !hasWindowFocus() && !isFinishing())
+                    TvFirst009TextServiceOwner.requestControlPanel(this);
+            });
+        }
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY)Log.i("SceneVibeControls","event=ACTIVITY_STOPPED handoff="+(developerHandoff!=null));
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY && developerHandoff!=null){
             String ticket=developerHandoff;developerHandoff=null;
@@ -302,6 +315,19 @@ public final class MainActivity extends Activity {
     private Intent developerPrimeIntent() {
         Intent launch=getPackageManager().getLeanbackLaunchIntentForPackage("com.amazon.amazonvideo.livingroom");
         return launch!=null?launch:getPackageManager().getLaunchIntentForPackage("com.amazon.amazonvideo.livingroom");
+    }
+
+    /** Return to the already supported public player launcher before opening the principal overlay. */
+    boolean launchTrackRecalibration(){return launchTrackRecalibration(developerPrimeIntent());}
+
+    /** Bind this explicit remote action to one normal Activity handoff, without a mode toggle or permission intent. */
+    boolean launchTrackRecalibration(Intent destination){
+        if(!BuildConfig.COMPANION_INTEGRATION_001 || destination==null || !hasWindowFocus() || isFinishing()
+                || !TvFirst009TextServiceOwner.multimediaActive() || !Settings.canDrawOverlays(this))return false;
+        trackRecalibrationHandoff=true;
+        trackRecalibrationGeneration++;
+        try{startActivity(destination);return true;}
+        catch(RuntimeException refused){trackRecalibrationHandoff=false;return false;}
     }
     /** Let the Developer tab clearly disable a destination that is not installed. */
     boolean developerPrimeAvailable(){return BuildConfig.TVUX_DEVELOPER_OVERLAY && developerPrimeIntent()!=null;}
@@ -324,6 +350,7 @@ public final class MainActivity extends Activity {
 
     /** Release Activity-owned 008 work; historical service lifetime remains independent. */
     @Override protected void onDestroy() {
+        trackRecalibrationGeneration++;
         if(developerTab!=null)developerTab.close();
         if (presentation != null) presentation.close();
         super.onDestroy();
