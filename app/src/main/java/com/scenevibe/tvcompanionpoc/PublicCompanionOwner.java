@@ -128,6 +128,11 @@ final class PublicCompanionOwner implements AutoCloseable {
         if(command==null){if(prepared==null)status="Télévision associée · choisis une Track depuis le catalogue.";else restorePreferences();return;}
         PublicCatalogueCandidate.Binding binding=new PublicCatalogueCandidate.Binding(command,identity.getString("deviceId"),identity.getString("generation"),System.currentTimeMillis());
         boolean automatic=viewerPreferences!=null && automaticCommand(polled.optJSONArray("automaticCommandIds"),binding.command);
+        if(automatic && !hasEffectPermissions()){
+            status="Autorisation Android de superposition ou MEDIA indisponible.";
+            client.receipt(binding,"failed");
+            return;
+        }
         if("requested".equals(command.getString("state"))){
             boolean busy=onMain(()->TvFirst009TextServiceOwner.controlBusy());
             if(busy && (prepared==null || prepared.binding.track.equals(binding.track))){
@@ -204,6 +209,11 @@ final class PublicCompanionOwner implements AutoCloseable {
         return false;
     }
 
+    /** L'activation automatique respecte les accès réellement accordés par Android. */
+    private boolean hasEffectPermissions(){
+        return android.provider.Settings.canDrawOverlays(context) && NotificationAccess.isGranted(context);
+    }
+
     /** Une révocation de cette révision suspend ses effets, même si l'association existe encore. */
     private void validateActive() throws Exception {
         try{client.validate(reference.prepared.binding);}
@@ -261,10 +271,12 @@ final class PublicCompanionOwner implements AutoCloseable {
             if(prepared.binding.command.equals(playback.getString("stoppedCommand","")))return false;
             long observed=prepared.binding.command.equals(playback.getString("observedCommand",""))
                     ?Math.max(version,playback.getLong("observedVersion",-1)):version;
-            playback.edit().putString("observedCommand",prepared.binding.command).putLong("observedVersion",observed).commit();
+            if(!automatic || !prepared.binding.command.equals(playback.getString("observedCommand",""))
+                    || observed!=playback.getLong("observedVersion",-1))
+                playback.edit().putString("observedCommand",prepared.binding.command).putLong("observedVersion",observed).commit();
             String live=TvFirst009TextServiceOwner.publicCommand();
             if(TvFirst009TextServiceOwner.controlBusy() && !prepared.binding.command.equals(live)){status="Session actuelle conservée.";return false;}
-            if(automatic && (!android.provider.Settings.canDrawOverlays(context) || !NotificationAccess.isGranted(context))){
+            if(automatic && !hasEffectPermissions()){
                 status="En attente des permissions Android nécessaires.";return false;
             }
             if(!text && !audio && live==null)return true;
