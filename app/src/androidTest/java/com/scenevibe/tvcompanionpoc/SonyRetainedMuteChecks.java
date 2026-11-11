@@ -56,7 +56,7 @@ final class SonyRetainedMuteChecks {
             bench.await(TvFirst009TextServiceOwner::multimediaTextAttached,"No native TEXT window after shortcut recalage",12000);
             assertEquals(accepted+5,CompanionShortcutService.diagnostics().accepted);
             assertFalse(TvFirst009TextServiceOwner.adSyncEnabled());
-            System.out.println("SONY001A_RETAINED_SHORTCUT_PASS version=" + version
+            SonySignedContinuityTest.report(instrument, "SONY001A_RETAINED_SHORTCUT_PASS version=" + version
                     + " system_callback real_clock BACK D_PAD focus_return native_TEXT_AUDIO");
         } finally {
             instrument.runOnMainSync(TvFirst009TextServiceOwner::closeDeveloperPanel);

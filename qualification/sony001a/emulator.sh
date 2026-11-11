@@ -17,6 +17,8 @@ adb install "$apk_dir/scenevibe-companion-v32-reference.apk" | tee "$proof/insta
 adb install "$RUNNER_TEMP/sony001a-tests-m5.apk"
 adb install "$RUNNER_TEMP/sony001a-owned-player.apk"
 adb shell input keyevent KEYCODE_WAKEUP
+adb shell am start -W -n "$package/.MainActivity" > "$proof/initial-launch.txt"
+adb shell input keyevent KEYCODE_HOME
 
 # Initial setup is performed exactly once, before v32 is exercised.
 adb shell appops set "$package" SYSTEM_ALERT_WINDOW allow
@@ -47,7 +49,15 @@ snapshot() {
 # Require successful assertions and Android instrumentation exit, not adb transport alone.
 run_tests() {
     local class="$1" logfile="$2" version="$3" seed="$4"
-    adb shell am instrument -w -r -e class "$package.$class" -e expectedVersion "$version" \
+    # Default am instrument force-stops the target and disconnects its accessibility service.
+    # Attach to the process Android started or rebound with the retained grants.
+    for attempt in $(seq 1 20); do
+        if adb shell pidof "$package" >/dev/null 2>&1; then break; fi
+        sleep 1
+    done
+    adb shell pidof "$package" > "$proof/process-$logfile.txt"
+    adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-$logfile.txt" || true
+    adb shell am instrument --no-restart -w -r -e class "$package.$class" -e expectedVersion "$version" \
         -e seed "$seed" -e retainShortcut true -e viewerTrackId track-cc472a2e896b3efecd5d607e517d8d70ab86345a \
         "$package.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r' | tee "$proof/$logfile.txt"
     grep -q '^OK (1 test)$' "$proof/$logfile.txt"

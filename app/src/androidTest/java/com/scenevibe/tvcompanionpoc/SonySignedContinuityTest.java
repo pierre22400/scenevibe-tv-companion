@@ -50,6 +50,13 @@ public final class SonySignedContinuityTest {
         return device;
     }
 
+    /** Add only non-sensitive qualification facts to the instrumentation result. */
+    static void report(Instrumentation instrument, String proof) {
+        android.os.Bundle row = new android.os.Bundle();
+        row.putString("scenevibeProof", proof);
+        instrument.sendStatus(2, row);
+    }
+
     /** Poll production state on the Android main Looper with a bounded timeout. */
     private void await(BooleanSupplier check, String description, long timeout) throws Exception {
         long deadline = SystemClock.elapsedRealtime() + timeout;
@@ -142,7 +149,7 @@ public final class SonySignedContinuityTest {
             for (var row : restored.profile.resources) {
                 assertEquals(row.sha256, MultimediaDeliveryProfile.hash(Files.readAllBytes(restored.resource(row.id).toPath())));
             }
-            System.out.println("SONY001A_PRIVATE_STATE_PASS version=" + version + " original_receipt original_keystore preferences 3_TEXT 3_AUDIO");
+            report(instrument, "SONY001A_PRIVATE_STATE_PASS version=" + version + " original_receipt original_keystore preferences 3_TEXT 3_AUDIO");
 
             activity = (DiagnosticsActivity) instrument.startActivitySync(new Intent(target, DiagnosticsActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
@@ -167,7 +174,7 @@ public final class SonySignedContinuityTest {
             }
             assertEquals(3, texts);
             assertEquals(3, audios);
-            System.out.println("SONY001A_PRIVATE_RENDER_PASS version=" + version + " 3_TEXT 3_AUDIO");
+            report(instrument, "SONY001A_PRIVATE_RENDER_PASS version=" + version + " 3_TEXT 3_AUDIO");
             SonyRetainedMuteChecks.exercise(instrument, version);
         } finally {
             DiagnosticsActivity running = activity;

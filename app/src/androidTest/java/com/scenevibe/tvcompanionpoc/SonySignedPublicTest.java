@@ -140,7 +140,7 @@ public final class SonySignedPublicTest {
         assertFalse(new PublicViewerPreferences(target).audio());
         assertEquals(tv,identity.read("identity").getString("deviceId"));
 
-        System.out.println("SONY001A_SIGNED_PUBLIC_PASS code=1 additional_approval=0 cache="
+        SonySignedContinuityTest.report(instrument, "SONY001A_SIGNED_PUBLIC_PASS code=1 additional_approval=0 cache="
                 + prepared.binding.digest + " TEXT=" + texts + " AUDIO=" + audios + " second_track_audio_disabled");
     }
 
