@@ -20,7 +20,7 @@ final class SonyRetainedMuteChecks {
         try (var bench = new CompanionShortcutBench(instrument)) {
             instrument.runOnMainSync(() -> TvFirst009TextServiceOwner.setDeveloperMode(instrument.getTargetContext(), false));
             SonySignedContinuityTest.player(bench.remote, 30000, false);
-            waitForOwnedFocus(bench);
+            waitForOwnedFocus(bench, "initial");
             bench.await(()->TvFirst009TextServiceOwner.multimediaTrackPosition()==30000,"Initial real clock missing",10000);
             int accepted=CompanionShortcutService.diagnostics().accepted;
             open(bench);bench.remote.pressDPadDown();bench.remote.pressDPadCenter();
@@ -73,20 +73,28 @@ final class SonyRetainedMuteChecks {
     }
     /** Require removal and input restoration after either commit or cancellation. */
     private static void closed(CompanionShortcutBench bench) throws Exception {
-        waitForOwnedFocus(bench);
+        waitForOwnedFocus(bench, "after panel");
         assertFalse(TvFirst009TextServiceOwner.developerHasFocus());
     }
 
-    /** Query Android's actual current window to distinguish input focus from resumed activity state. */
-    private static void waitForOwnedFocus(CompanionShortcutBench bench) throws Exception {
+    /** Verify focus from Android’s display state and the owned viewer’s window callback. */
+    private static void waitForOwnedFocus(CompanionShortcutBench bench, String stage) throws Exception {
         long deadline = SystemClock.elapsedRealtime() + 10000;
+        String displayFocus = "";
+        String viewerFocus = "";
         while (SystemClock.elapsedRealtime() < deadline) {
-            String windows = bench.remote.executeShellCommand("dumpsys window windows");
-            if (java.util.Arrays.stream(windows.split("\\R")).anyMatch(line -> line.contains("mCurrentFocus")
-                    && line.contains("com.amazon.amazonvideo.livingroom") && line.contains("OwnedPlayer"))) return;
+            String display = bench.remote.executeShellCommand("dumpsys window displays");
+            displayFocus = java.util.Arrays.stream(display.split("\\R"))
+                    .filter(line -> line.contains("mCurrentFocus")).findFirst().orElse("").trim();
+            if (displayFocus.contains("com.amazon.amazonvideo.livingroom") && displayFocus.contains("OwnedPlayer")) return;
+            String events = bench.remote.executeShellCommand("logcat -d -v brief -s SceneVibeOwnedFocus:I");
+            viewerFocus = java.util.Arrays.stream(events.split("\\R"))
+                    .filter(line -> line.contains("WINDOW_FOCUSED") || line.contains("WINDOW_UNFOCUSED"))
+                    .reduce((previous, latest) -> latest).orElse("").trim();
+            if (viewerFocus.endsWith("WINDOW_FOCUSED") && displayFocus.isEmpty()) return;
             Thread.sleep(200);
         }
-        fail("Android input focus did not return to the owned viewer");
+        fail("Android focus missing " + stage + "; display=" + displayFocus + "; viewer=" + viewerFocus);
     }
 
     /** Supply an actual held CENTER pair to the native window, rather than calling a View handler. */

@@ -41,6 +41,12 @@ public final class OwnedPlayer extends Activity {
         update(intent);
     }
 
+    /** Record the window manager’s real focus callbacks for this owned fixture. */
+    @Override public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);
+        android.util.Log.i("SceneVibeOwnedFocus", focused ? "WINDOW_FOCUSED" : "WINDOW_UNFOCUSED");
+    }
+
     /** Release only the MEDIA session created by this fixture. */
     @Override protected void onDestroy() {
         if (session != null) session.release();
