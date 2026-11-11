@@ -17,7 +17,21 @@ proof_private="$(mktemp "$RUNNER_TEMP/public-viewer.XXXXXXXX")"
 trap 'rm -f -- "$proof_private"' EXIT
 adb exec-out run-as com.scenevibe.tvcompanionpoc cat files/public-viewer-boot-private.json > "$proof_private"
 
-adb reboot
+# Le redémarrage du noyau invité peut arrêter QEMU sur les images TV CI.
+# Redémarre à froid la même image userdata, sans snapshot ni wipe.
+serial="$(adb get-serialno)"
+avd="$(adb emu avd name | tr -d '\r' | head -n 1)"
+[[ "$serial" =~ ^emulator-[0-9]+$ && "$avd" =~ ^[a-zA-Z0-9_-]+$ ]]
+adb shell sync
+adb emu kill
+for iteration in $(seq 1 30); do
+    if ! adb devices | awk '{print $1}' | grep -Fxq "$serial"; then break; fi
+    sleep 1
+done
+! adb devices | awk '{print $1}' | grep -Fxq "$serial"
+"${ANDROID_SDK_ROOT:?}/emulator/emulator" -avd "$avd" -port "${serial#emulator-}" \
+    -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2 \
+    > "$RUNNER_TEMP/public-viewer-cold-boot.log" 2>&1 &
 timeout 150 adb wait-for-device
 for iteration in $(seq 1 60); do
     if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then break; fi
@@ -29,6 +43,7 @@ for iteration in $(seq 1 45); do
     sleep 2
 done
 adb shell dumpsys activity services com.scenevibe.tvcompanionpoc/.PublicCompanionService | grep 'isForeground=true' > public-viewer-native/boot-service.txt
+adb logcat -d -v brief -s SceneVibePublic:I | grep PUBLIC_RECEIVER_BOOT_START_REQUESTED > public-viewer-native/boot-receiver.txt
 
 SCENEVIBE_VIEWER_BOOT_INPUT="$proof_private" node --input-type=module <<'JS'
 import { readFile, writeFile } from 'node:fs/promises'
