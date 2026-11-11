@@ -48,6 +48,7 @@ adb logcat -d -v brief -s SceneVibePublic:I | grep PUBLIC_RECEIVER_BOOT_START_RE
 SCENEVIBE_VIEWER_BOOT_INPUT="$proof_private" node --input-type=module <<'JS'
 import { readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 
 const origin = 'https://scenevibe-public-viewer001-qual.vercel.app'
@@ -62,6 +63,32 @@ async function command(action, body) {
   assert.equal(response.status, 200, 'POST_BOOT_REQUEST_REFUSED')
   return response.json()
 }
+
+/** Retire puis rétablit l'accès MEDIA du seul émulateur et exige un refus du récepteur. */
+async function verifyRevokedMediaAccess() {
+  const listener = 'com.scenevibe.tvcompanionpoc/com.scenevibe.tvcompanionpoc.MediaSessionAccessService'
+  execFileSync('adb', ['shell', 'cmd', 'notification', 'disallow_listener', listener])
+  try {
+    const rejected = await command('send', { trackId, deviceId, requestId: randomUUID() })
+    for (let i = 0; i < 32; i++) {
+      const current = (await command('status', { trackId, deviceId })).command
+      if (current?.commandId === rejected.commandId) {
+        assert.notEqual(current.state, 'ready', 'REVOKED_MEDIA_ACCESS_ARMED')
+        if (current.state === 'failed') {
+          await writeFile('public-viewer-native/revoked-media-access.json', JSON.stringify({
+            scope: 'OWN_ANDROID_TV_EMULATOR', osMediaAccessRemoved: true, automaticPreparationRefused: true,
+          }, null, 2) + '\n')
+          return
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 3000))
+    }
+    throw new Error('REVOKED_MEDIA_ACCESS_REFUSAL_TIMEOUT')
+  } finally {
+    execFileSync('adb', ['shell', 'cmd', 'notification', 'allow_listener', listener])
+  }
+}
+
 const issued = await command('send', { trackId, deviceId, requestId: randomUUID() })
 for (let i = 0; i < 60; i++) {
   const current = (await command('status', { trackId, deviceId })).command
@@ -72,6 +99,7 @@ for (let i = 0; i < 60; i++) {
       scope: 'OWN_ANDROID_TV_EMULATOR_REBOOT', activityLaunchedAfterBoot: false,
       associationReused: true, receivedAndArmed: true, text: true, audio: false,
     }, null, 2) + '\n')
+    await verifyRevokedMediaAccess()
     process.exit(0)
   }
   await new Promise(resolve => setTimeout(resolve, 3000))
