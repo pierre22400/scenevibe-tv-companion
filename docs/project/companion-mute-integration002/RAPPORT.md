@@ -2,9 +2,9 @@
 
 Décision propriétaire et amendement 001 du 10 novembre 2026.
 
-**Verdict : READY FOR SONY — qualification logicielle terminée.**
+**Verdict actualisé au 11 novembre 2026 : PASS PHYSIQUE SONY — MUTE 002 sur Prime Video, parcours privé.**
 
-**SONY MUTE : NOT EXECUTED — qualification physique requise.**
+**La qualification physique est rapportée par le propriétaire.** L'APK v32 est gelé ; le parcours public, Netflix et la publication Play ne font pas partie de ce PASS.
 
 ## Livraison
 
@@ -57,7 +57,7 @@ Les sources des clients Cloud, caches, reçus, association autonome, `MainActivi
 | Python et outils Windows | 15 contrats POC, 11 outils Linux, 3 gardes G11 ; 11 cas sous PowerShell 5 et 11 sous PowerShell 7 PASS |
 | Page locale dans Chromium | PASS sur le véritable listener HTTP de fixture |
 | HTTPS externe / fournisseurs | NOT EXECUTED dans ce mandat, sans écriture Cloud/Neon/R2 |
-| Sony MUTE / Prime physiques | NOT EXECUTED |
+| Sony MUTE / Prime physiques | **PASS TERRAIN (11/11/2026)** — déclaration propriétaire, parcours privé Columbo ; détails ci-dessous |
 
 Le test historique `M1CloudInteropTest.originalColumboProjectionIsInstallable` reste ignoré car `SCENEVIBE_M1_SONY_FIXTURES` n’est pas fourni. Il n’est pas compté PASS. Les états TEXT/AUDIO natifs portent sur nos MediaSession et packages de fixture ; ils ne constituent pas une observation de Prime ou des haut-parleurs Sony.
 
@@ -69,11 +69,42 @@ Le type `specialUse` du service public était déjà présent dans le manifeste 
 
 Le composant expérimental `com.scenevibe.tvcompanionpoc.netflixoverlay001/com.scenevibe.tvcompanionpoc.NetflixShortcutService` et le nouveau composant `com.scenevibe.tvcompanionpoc/com.scenevibe.tvcompanionpoc.CompanionShortcutService` sont distincts. Une affectation visant l’ancien composant n’est pas transférée automatiquement au nouveau.
 
-La configuration actuellement enregistrée sur la Sony n’a pas été lue. Si elle vise le service expérimental, sélectionner **SceneVibe — raccourci du Companion**, l’activer si Android le demande et lui affecter le raccourci MUTE dans le parcours de réglages existant. Cette configuration initiale est **autorisée et non bloquante**. Aucun assistant de configuration supplémentaire n’est ajouté. La persistance future n’est pas présumée.
+Lors de la livraison logicielle initiale, la configuration Sony n’avait pas encore été lue. Depuis, le propriétaire a configuré et vérifié le service principal sur son Sony BRAVIA, puis constaté le déclenchement physique MUTE. Si elle vise le service expérimental, sélectionner **SceneVibe — raccourci du Companion**, l’activer si Android le demande et lui affecter le raccourci MUTE dans le parcours de réglages existant. Cette configuration initiale est **autorisée et non bloquante**. Aucun assistant de configuration supplémentaire n’est ajouté. La persistance future n’est pas présumée.
 
 Le [protocole Sony complet](../../companion-mute-integration002.md) décrit : v31 → mise à jour v32 sans désinstallation → éventuelle affectation initiale → Track active → Prime → MUTE → panneau → recalage/annulation → fermeture → retour du focus et des commandes à Prime. Aucun passage par une notification ou l’ouverture du Companion n’est requis pour appeler le panneau.
 
-La transmission réelle de MUTE par Sony, la réaction de Prime au focus et la restitution physique de la télécommande doivent être constatées pendant cet essai. **Aucune installation Sony, modification de réglages physiques, fusion, publication Play ou modification de fournisseur n’a été réalisée.** Ces actions restent hors du GO actuel.
+Ces contrôles ont ensuite été exécutés physiquement par le propriétaire le 11 novembre 2026 et sont consignés dans la réception ci-dessous. Le mandat initial de livraison logicielle n'avait réalisé aucune intervention Sony. **Aucune fusion, publication Play ni modification de fournisseur n'est autorisée par cette réception.**
+
+## Réception physique Sony — 11 novembre 2026 (décision propriétaire)
+
+**Verdict : PASS TERRAIN sur le parcours privé COMPANION MUTE INTEGRATION 002.** Source Android **immuable** : `01da23263c0d042192d536c2ed497b6b34daecc1` ; APK signé M5, versionCode **32**, SHA-256 `d4e45b19dd6fd99e6ab6d7cdfa4dfd31e04bac8a50d43e366ba284ff3c5e612b`. Sony BRAVIA VH1 sous Android TV 12 ; application principale `com.scenevibe.tvcompanionpoc`. Les observations ci-dessous ont été faites par le propriétaire et communiquées dans la conversation de qualification, **sans capture logcat complète ni artefact vidéo ajouté à GitHub**. Elles ne sont pas des résultats automatiques CI.
+
+La v32 a été installée par mise à jour `adb install -r`, sans désinstallation ni effacement de données. Le service d'accessibilité principal a été affecté au raccourci MUTE avec le paramétrage Android TV initial explicitement autorisé. Le callback physique `SHORTCUT_CALLBACK_RECEIVED` a été constaté avant la réactivation de la Track (alors `SHORTCUT_NOT_READY`, refus attendu hors session admise).
+
+Le parcours privé historique a été récupéré avec l'appui de [COMPANION CLOUD RECOVERY 001 — PR Draft Cloud #62](https://github.com/pierre22400/interface-scenevibe/pull/62), qui a rétabli `/tv` sur l'origine intégrée à l'APK. La Sony a conservé son identifiant d'appareil ; la nouvelle génération a exigé une vérification du cache multimédia et un téléchargement/réception compatibles. La Track privée « Columbo — Eaux troubles » a été retrouvée et utilisée dans Prime Video.
+
+| Contrôle terrain déclaré par le propriétaire | Verdict |
+| --- | --- |
+| Association historique de la Sony, catalogue et Track privée | **PASS** |
+| TEXT visibles et AUDIO audibles pendant Prime Video après activation locale | **PASS** |
+| Raccourci physique MUTE → panneau « Recalage SceneVibe » sans quitter Prime | **PASS** |
+| Fenêtre superposée à Prime ; navigation télécommande et retour des commandes après fermeture | **PASS** |
+| Recalage effectif du temps SceneVibe, sans SEEK commandé au lecteur tiers | **PASS pour le recalage** ; absence de commande lecteur conforme au code, non instrumentée physiquement |
+| Modification candidate puis BACK : annulation sans décalage de +60 s appliqué | **PASS** |
+| Trois ouvertures/fermetures répétées : pas de fenêtre fantôme ni de perte de télécommande | **PASS** |
+| Recaler et reprendre ; TEXT/AUDIO suivant le nouvel horaire | **PASS** |
+| Recaler sans reprise ; commentaires suspendus puis reprise volontaire | **PASS** |
+| Redémarrage complet Sony : association, Track et raccourci MUTE fonctionnels après réactivation explicite TEXT/AUDIO | **PASS** |
+
+**Observations non bloquantes conservées pour suivi ultérieur :**
+
+- Un premier essai après récupération du compte n'a pas montré les commentaires immédiatement ; un retour dans SceneVibe a semblé débloquer la restitution. **Non reproduit ensuite, y compris après hard reboot** ; cause non démontrée, pas de correction conjecturale.
+- Après redémarrage, le cache et l'association restent disponibles, mais la restitution TEXT/AUDIO exige une **nouvelle activation locale explicite**. Conforme à la politique de consentement actuelle ; amélioration ergonomique éventuelle, **non demandée dans le présent gel**.
+- Dans l'écran d'édition « SceneVibe — recalage », les commandes visuelles « Annuler » et « × Fermer » ne sont pas accessibles à la télécommande dans le parcours constaté. BACK permet néanmoins d'annuler et le recalage par OK fonctionne. **Défaut UX mineur non bloquant : aucune modification autorisée maintenant.**
+
+**Limites de cette réception :** elle ne qualifie pas la distribution publique sans compte créateur, Netflix/Disney+, la persistance de consentement automatique, le comportement publicitaire de Prime ni une publication Play Store. Le caractère non intrusif de l'overlay et le fait que Prime continue de tourner derrière la fenêtre ont été observés ; la totalité des états de transport de Prime n'a pas fait l'objet d'une instrumentation.
+
+**Décision de gel propriétaire :** conserver strictement le code Android, l'APK v32 signé, le certificat, les contrats et le Cloud dans leur état qualifié. La présente actualisation GitHub est **documentaire uniquement**. Conserver la PR Draft #49 ouverte et non fusionnée ; ne pas promouvoir ni publier l'APK. Toute évolution (y compris UX) nécessite un mandat distinct et une nouvelle qualification de non-régression.
 
 ## Preuves conservées
 
