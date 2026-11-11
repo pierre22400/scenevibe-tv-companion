@@ -39,11 +39,17 @@ final class CompanionShortcutBench implements AutoCloseable {
             assertTrue(shell("settings get secure enabled_accessibility_services").trim().contains(component));
             assertEquals(component, shell("settings get secure accessibility_shortcut_target_service").trim());
             if (!CompanionShortcutService.diagnostics().connected) {
-                // Reevaluate binding after ActivityManager's instrumentation process restart.
-                // The two UiAutomation connections change test observation only, never persisted settings.
-                instrument.getUiAutomation(0);
-                Thread.sleep(500);
-                instrument.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+                String running = shell("dumpsys accessibility");
+                if (java.util.Arrays.stream(running.split("\\R")).anyMatch(line -> line.contains("Crashed services") && line.contains(component))) {
+                    // ActivityManager force-stopped the target to launch this instrument.
+                    // Clear that test-induced crash entry, restoring exactly the observed component.
+                    String persisted = shell("settings get secure enabled_accessibility_services").trim();
+                    assertEquals(component, persisted);
+                    shell("settings delete secure enabled_accessibility_services");
+                    Thread.sleep(600);
+                    set("enabled_accessibility_services", persisted);
+                    SonySignedContinuityTest.report(instrument, "SONY001A_INSTRUMENTATION_REBIND same_component");
+                }
             }
             await(() -> CompanionShortcutService.diagnostics().connected, "Retained service did not connect", 20000);
             return;

@@ -43,7 +43,25 @@ snapshot() {
     grep -Fq 'SYSTEM_ALERT_WINDOW: allow' "$proof/grants-v$1.txt"
     grep -Fq "accessibility_shortcut_target_service=$shortcut" "$proof/grants-v$1.txt"
     grep -Fq "$media" "$proof/grants-v$1.txt"
-    diff "$proof/grants-v32.txt" "$proof/grants-v$1.txt"
+    # Android derives the global accessibility_enabled flag from live bindings.
+    # Compare saved targets and grants, and prove the live connection separately.
+    diff <(sed '/^accessibility_enabled=/d' "$proof/grants-v32.txt") \
+        <(sed '/^accessibility_enabled=/d' "$proof/grants-v$1.txt")
+}
+
+# Observe the actual production callback registration before ActivityManager starts instrumentation.
+observe_binding() {
+    local version="$1" pid
+    for attempt in $(seq 1 20); do
+        pid="$(adb shell pidof "$package" | tr -d '\r' | awk '{print $1}' || true)"
+        if [[ -n "$pid" ]] && adb logcat -d --pid="$pid" -s SceneVibeMute002:I |
+            grep 'SHORTCUT_CONNECTED' > "$proof/shortcut-pre-instrument-v$version.txt"; then
+            return 0
+        fi
+        sleep 1
+    done
+    printf 'ANDROID_BINDING_NOT_OBSERVED version=%s\n' "$version" > "$proof/shortcut-pre-instrument-v$version.txt"
+    return 1
 }
 
 # Require successful assertions and Android instrumentation exit, not adb transport alone.
@@ -62,13 +80,16 @@ run_tests() {
 
 failures=0
 snapshot 32
+observe_binding 32 || failures=$((failures + 1))
 run_tests SonySignedContinuityTest private-v32 32 true || failures=$((failures + 1))
 adb install -r "$apk_dir/scenevibe-companion-public-viewer-v34-m5.apk" | tee "$proof/update-v34.txt"
 snapshot 34
+observe_binding 34 || failures=$((failures + 1))
 run_tests SonySignedContinuityTest private-v34 34 false || failures=$((failures + 1))
 run_tests SonySignedPublicTest public-v34 34 false || failures=$((failures + 1))
 adb install -r "$apk_dir/scenevibe-companion-recovery-v35-m5.apk" | tee "$proof/recovery-v35.txt"
 snapshot 35
+observe_binding 35 || failures=$((failures + 1))
 run_tests SonySignedContinuityTest private-v35 35 false || failures=$((failures + 1))
 if (( failures != 0 )); then
     printf 'SIGNED_UPGRADE_TEST_FAILURES=%s\n' "$failures" > "$proof/verdict.txt"
