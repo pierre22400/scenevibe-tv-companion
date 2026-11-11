@@ -1,0 +1,68 @@
+name: Public Viewer 001-A signed update and recovery
+on:
+  push:
+    branches: [work/public-viewer001-sony-001a]
+    paths-ignore: ['docs/**']
+permissions:
+  contents: read
+  actions: read
+env:
+  ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+  ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: 'true'
+  ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+  ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+  SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+jobs:
+  signed:
+    if: github.repository == 'pierre22400/scenevibe-tv-companion' && github.ref == 'refs/heads/work/public-viewer001-sony-001a'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 0c252fc9f2c57e2a12c367187d9ecf9a23570510
+          path: recovery-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 42803530873
+          github-token: ${{ github.token }}
+          name: scenevibe-autonomous-cloud001d-42803530873
+          path: reference-input
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43059547373
+          github-token: ${{ github.token }}
+          name: public-viewer001-candidate-unsigned-b1ed6637e050348247e21b3526fe1dcc9101f546
+          path: candidate-input
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Verify input identity and compiled permissions before signing
+        run: |
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          bash qualification/sony001a/apks.sh preflight
+      - name: Build the recovery from its isolated source
+        working-directory: recovery-source
+        run: gradle --no-daemon --max-workers=2 assembleTvux002
+      - name: Verify recovery manifest and sign both APKs with M5
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: bash qualification/sony001a/apks.sh sign
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-sony001a-m5-${{ github.run_id }}
+          path: sony-proof/
+          if-no-files-found: error
+          retention-days: 30
