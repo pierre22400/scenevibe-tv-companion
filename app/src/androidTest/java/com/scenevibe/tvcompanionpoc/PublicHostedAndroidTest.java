@@ -34,7 +34,8 @@ import static org.junit.Assert.*;
  */
 @RunWith(AndroidJUnit4.class)
 public final class PublicHostedAndroidTest {
-    private static final String ORIGIN="https://scenevibe-autonomous001d-qual-preview.vercel.app";
+    private static final String ORIGIN=BuildConfig.PUBLIC_VIEWER_001?BuildConfig.PUBLIC_VIEWER_ORIGIN:
+            "https://scenevibe-autonomous001d-qual-preview.vercel.app";
     private final Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
     private final Context target=instrument.getTargetContext();
     private MainActivity mainActivity;
@@ -79,6 +80,7 @@ public final class PublicHostedAndroidTest {
 
     /** Qualifie le trajet complet code visible → HTTPS → cache natif → TEXT/AUDIO appliqués et restitués. */
     @Test public void realHttpsCodeCacheAndNativePlaybackWithoutAnotherApproval() throws Exception {
+        if(BuildConfig.PUBLIC_VIEWER_001){realViewerWithoutActivity();return;}
         assertTrue(BuildConfig.DEBUG && BuildConfig.PUBLIC_AUTONOMOUS_001B);assertEquals(ORIGIN,BuildConfig.CLOUD_ORIGIN);
         UiDevice device=UiDevice.getInstance(instrument);assertEquals("1",device.executeShellCommand("getprop ro.kernel.qemu").trim());
         device.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
@@ -123,5 +125,114 @@ public final class PublicHostedAndroidTest {
             .put("packageSha256",prepared.binding.digest).put("codeAccepted",1).put("extraApplicationApprovals",0).put("textWindowsAttached",texts).put("audioResourcesStarted",audios)
             .put("nativeCacheReadback",true).put("tls","ANDROID_DEFAULT_TRUST_NO_OVERRIDE");
         Files.write(new java.io.File(target.getFilesDir(),"public001d-https-proof.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Qualifie l'association, le cache automatique et le second envoi sans Activity visible. */
+    private void realViewerWithoutActivity() throws Exception {
+        assertTrue(BuildConfig.DEBUG && BuildConfig.COMPANION_MUTE_002);
+        assertEquals("https://scenevibe-public-viewer001-qual.vercel.app",ORIGIN);
+        UiDevice device=UiDevice.getInstance(instrument);
+        assertEquals("1",device.executeShellCommand("getprop ro.kernel.qemu").trim());
+        device.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
+        device.executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(target).flattenToString());
+        activity=(PublicPairingActivity)instrument.startActivitySync(new Intent(target,PublicPairingActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        await(()->PublicCompanionService.current()!=null && PublicCompanionService.current().code().matches("[0-9]{6}"),
+                "Code de qualification indisponible",90000);
+        String code=PublicCompanionService.current().code();
+        await(()->code.contentEquals(((android.widget.TextView)activity.getWindow().getDecorView()
+                .findViewWithTag("public-tv-code")).getText()),"Code public non affiché",15000);
+        JSONObject claim=new JSONObject().put("userCode",code).put("consent",true);
+        String tv=web("/api/autonomous/viewer-pair",claim,200).getString("deviceId");
+        await(()->PublicCompanionService.current().viewerPreferences().initialized(),"Préférences initiales absentes",90000);
+        PublicViewerPreferences prefs=PublicCompanionService.current().viewerPreferences();
+        assertTrue(prefs.text());assertTrue(prefs.audio());
+        web("/api/autonomous/viewer-pair",claim,404);
+        main(()->activity.finish());device.pressHome();
+
+        String track=InstrumentationRegistry.getArguments().getString("viewerTrackId");
+        assertNotNull("Track créée dans le vrai Studio requise",track);
+        JSONObject publication=web("/api/public/catalogue/tracks/"+track,null,200);
+        assertTrue(publication.getJSONObject("track").getString("title").startsWith("Qualification spectateur 001 — Columbo"));
+        JSONObject release=publication.getJSONObject("multimedia");
+        main(()->{
+            CloudMultimediaAdmission.useOwnedMediaSessionFixture(true);
+            media=new MediaSession(target,"PUBLIC VIEWER OWNED MEDIA — NOT PRIME");
+            media.setMetadata(new MediaMetadata.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
+                    .putString(MediaMetadata.METADATA_KEY_TITLE,"Columbo — Eaux troubles")
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());
+            playback(PlaybackState.STATE_PAUSED,0);media.setActive(true);
+        });
+        JSONObject request=viewerSend(track,tv);
+        JSONObject ready=waitViewerReady(track,tv,request.getString("commandId"),true);
+        assertTrue(ready.getBoolean("text"));
+        TvFirst008State identity=PublicCompanionOwner.identityState(target);
+        PublicMultimediaCache.Prepared prepared=new PublicMultimediaCache(target,identity.read("identity").getString("generation")).read();
+        assertEquals(release.getString("packageSha256"),prepared.binding.digest);
+        assertEquals(request.getString("commandId"),prepared.binding.command);
+
+        int texts=0,audios=0;
+        for(SceneEvent event:prepared.track.calendar.events()){
+            long before=Math.max(0,event.startMs()-1000);
+            main(()->playback(PlaybackState.STATE_PAUSED,before));
+            await(()->TvFirst009TextServiceOwner.status().positionMs==before,"Coordonnée MEDIA du banc absente",15000);
+            main(()->playback(PlaybackState.STATE_PLAYING,before));
+            if(prepared.track.audio.containsKey(event.eventId())){
+                int count=++audios;
+                await(()->TvFirst009TextServiceOwner.multimediaAudioStarted()>=count,"MP3 vérifié non démarré",15000);
+            }else{
+                int count=++texts;
+                await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>=count,"Fenêtre TEXT absente",15000);
+            }
+        }
+        assertEquals(release.getInt("textCount"),texts);assertEquals(release.getInt("audioCount"),audios);
+        main(()->TvFirst009TextServiceOwner.setMultimediaAudioEnabled(false));
+        waitViewerReady(track,tv,request.getString("commandId"),false);
+        main(()->TvFirst009TextServiceOwner.requestStop(target));
+        await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Arrêt volontaire non appliqué",15000);
+
+        String second=null;
+        JSONArray items=web("/api/public/catalogue/tracks?limit=100",null,200).getJSONArray("items");
+        for(int i=0;i<items.length();i++){
+            JSONObject item=items.getJSONObject(i), description=item.optJSONObject("multimedia");
+            String id=item.getJSONObject("identity").getString("trackId");
+            if(!track.equals(id) && description!=null && description.getInt("audioCount")>0 && description.getInt("textCount")>0){
+                second=id;break;
+            }
+        }
+        assertNotNull("Seconde Track publique de qualification absente",second);
+        JSONObject next=viewerSend(second,tv);
+        assertTrue(waitViewerReady(second,tv,next.getString("commandId"),false).getBoolean("text"));
+        assertFalse(new PublicViewerPreferences(target).audio());
+        assertEquals(tv,identity.read("identity").getString("deviceId"));
+
+        JSONObject proof=new JSONObject().put("scope","ANDROID_TV_EMULATOR_REAL_HTTPS_OWN_MEDIA_SESSION")
+                .put("pairingCodes",1).put("manualApprovalsAfterPairing",0).put("companionActivityClosedBeforeSend",true)
+                .put("textWindows",texts).put("audioStarted",audios).put("cacheSha256",prepared.binding.digest)
+                .put("secondTrackText",true).put("secondTrackAudio",false).put("voluntaryStop",true);
+        Files.write(new java.io.File(target.getFilesDir(),"public-viewer-native.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
+        // Cookie technique du seul banc : lu par run-as après reboot, jamais archivé.
+        JSONObject boot=new JSONObject().put("cookie",cookie).put("deviceId",tv).put("trackId",track);
+        Files.write(new java.io.File(target.getFilesDir(),"public-viewer-boot-private.json").toPath(),boot.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Déclenche une seule distribution avec la capacité de ce navigateur de banc. */
+    private JSONObject viewerSend(String track,String tv) throws Exception {
+        return web("/api/autonomous/viewer-send",new JSONObject().put("trackId",track).put("deviceId",tv)
+                .put("requestId",java.util.UUID.randomUUID().toString()),200);
+    }
+
+    /** Attend le reçu natif de cette commande, en refusant les succès d'une ancienne révision. */
+    private JSONObject waitViewerReady(String track,String tv,String commandId,boolean audio) throws Exception {
+        long deadline=SystemClock.elapsedRealtime()+180000;
+        while(SystemClock.elapsedRealtime()<deadline){
+            JSONObject command=web("/api/autonomous/viewer-status",new JSONObject().put("trackId",track).put("deviceId",tv),200)
+                    .optJSONObject("command");
+            if(command!=null && commandId.equals(command.optString("commandId")) && "ready".equals(command.optString("state"))
+                    && command.getBoolean("audio")==audio)return command;
+            Thread.sleep(2500);
+        }
+        throw new AssertionError("Reçu automatique indisponible. Récepteur: "
+                +(PublicCompanionService.current()==null?"absent":PublicCompanionService.current().status()));
     }
 }

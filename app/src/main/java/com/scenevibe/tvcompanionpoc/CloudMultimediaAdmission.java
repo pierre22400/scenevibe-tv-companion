@@ -62,6 +62,9 @@ final class CloudMultimediaAdmission {
     /** Identifie le propriétaire public sans exposer de token ou d'affectation privée. */
     String publicCommand(){return publicReference==null?null:publicReference.prepared.binding.command;}
 
+    /** Fournit les choix de la TV seulement pour une commande publique automatique. */
+    PublicViewerPreferences viewerPreferences(){return publicReference==null?null:publicReference.viewerPreferences;}
+
     /** Verify exact source mapping before accepting the separate, per-start owner confirmation. */
     static CloudMultimediaAdmission admit(TvFirst008Source.MultimediaReference reference,boolean ownerConfirmedReferenceEdition) {
         if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || !ownerConfirmedReferenceEdition || reference==null

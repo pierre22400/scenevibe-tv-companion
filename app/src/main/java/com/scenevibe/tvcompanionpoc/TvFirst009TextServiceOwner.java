@@ -168,16 +168,21 @@ final class TvFirst009TextServiceOwner {
     /** Stop only this app's existing service; never clear credentials, cache or a Cloud association. */
     static void requestStop(Context context) {
         if (!BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) return;
+        rememberPublicStop(context);
+        pending=null;
+        record("STOP_REQUESTED",latest.positionMs,false);
+        context.stopService(new Intent(context,OverlayService.class));
+        if (liveOwner==0) record("STOPPED",-1,false);
+    }
+
+    /** Conserve l'arrêt volontaire de cette commande, y compris depuis la notification. */
+    private static void rememberPublicStop(Context context) {
         String publicCommand=publicCommand();
         if(BuildConfig.PUBLIC_AUTONOMOUS_001B && publicCommand!=null){
             android.content.SharedPreferences preferences=context.getSharedPreferences("public001d_playback",0);
             preferences.edit().putString("stoppedCommand",publicCommand)
                     .putLong("stoppedVersion",preferences.getLong("observedVersion",-1)).commit();
         }
-        pending=null;
-        record("STOP_REQUESTED",latest.positionMs,false);
-        context.stopService(new Intent(context,OverlayService.class));
-        if (liveOwner==0) record("STOPPED",-1,false);
     }
 
     /** Explicit local confirmation only; cache restoration and receipt callbacks never call this method. */
@@ -208,9 +213,27 @@ final class TvFirst009TextServiceOwner {
     }
 
     /** Read the same requested switches from either surface; opening a view never resets them. */
-    static boolean multimediaTextEnabled(){return multimediaTextPreference;}
+    static boolean multimediaTextEnabled(){
+        PublicViewerPreferences viewer=activeViewerPreferences();
+        return viewer==null?multimediaTextPreference:viewer.text();
+    }
     /** AUDIO state belongs to the service owner, not a second Settings/panel preference. */
-    static boolean multimediaAudioEnabled(){return multimediaAudioPreference;}
+    static boolean multimediaAudioEnabled(){
+        PublicViewerPreferences viewer=activeViewerPreferences();
+        return viewer==null?multimediaAudioPreference:viewer.audio();
+    }
+    /** Résout les préférences de la session courante sans toucher aux réglages privés. */
+    private static PublicViewerPreferences activeViewerPreferences(){
+        return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.viewerPreferences();
+    }
+    /** Applique à la session publique active les choix déjà enregistrés durablement. */
+    static void applyViewerPreferences(){
+        PublicViewerPreferences viewer=activeViewerPreferences();
+        if(viewer!=null){
+            liveInstance.multimedia.setTextEnabled(viewer.text());
+            liveInstance.multimedia.setAudioEnabled(viewer.audio());
+        }
+    }
     /** Retourne seulement la commande de la session publique réellement ouverte. */
     static String publicCommand(){return liveInstance==null || liveInstance.multimedia==null || !liveInstance.multimedia.isActive()?null:liveInstance.multimedia.publicCommand();}
     /** Permet l'installation différée uniquement après un arrêt MEDIA observé. */
@@ -473,9 +496,19 @@ final class TvFirst009TextServiceOwner {
     }
 
     /** Route a visual preference only to the current multimedia lifetime. */
-    static void setMultimediaTextEnabled(boolean enabled){multimediaTextPreference=enabled;savePreference("text",enabled);if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setTextEnabled(enabled);}
+    static void setMultimediaTextEnabled(boolean enabled){
+        PublicViewerPreferences viewer=activeViewerPreferences();
+        if(viewer!=null){if(viewer.setText(enabled))applyViewerPreferences();return;}
+        multimediaTextPreference=enabled;savePreference("text",enabled);
+        if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setTextEnabled(enabled);
+    }
     /** Route an audio preference only to SceneVibe's current local MP3 port. */
-    static void setMultimediaAudioEnabled(boolean enabled){multimediaAudioPreference=enabled;savePreference("audio",enabled);if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAudioEnabled(enabled);}
+    static void setMultimediaAudioEnabled(boolean enabled){
+        PublicViewerPreferences viewer=activeViewerPreferences();
+        if(viewer!=null){if(viewer.setAudio(enabled))applyViewerPreferences();return;}
+        multimediaAudioPreference=enabled;savePreference("audio",enabled);
+        if(liveInstance!=null && liveInstance.multimedia!=null)liveInstance.multimedia.setAudioEnabled(enabled);
+    }
     /** Expose actual distinct native STARTED resources as bounded process-local diagnostics. */
     static int multimediaAudioStarted(){return liveInstance==null || liveInstance.multimedia==null?0:liveInstance.multimedia.audioResourcesStarted();}
     /** Expose original TEXT windows requested by the real service, without claiming physical display. */
@@ -572,6 +605,7 @@ final class TvFirst009TextServiceOwner {
             return Service.START_NOT_STICKY;
         }
         if (intent!=null && STOP.equals(intent.getAction())) {
+            if(BuildConfig.PUBLIC_VIEWER_001)rememberPublicStop(service);
             record("STOPPED",-1,false);destroy();service.stopSelf();return Service.START_NOT_STICKY;
         }
         if(BuildConfig.ADSYNC_PROTOTYPE && intent!=null && ("SCENEVIBE_COMMENT_SUSPEND".equals(intent.getAction())
@@ -595,8 +629,11 @@ final class TvFirst009TextServiceOwner {
         }
         var diagnosticCampaign=multiCampaign;detachMultiObservation();
         liveOwner=owner;liveInstance=this;latest=new Status("WAITING_MEDIA",-1,true,0,-1);
-        if(multimediaRequest)multimedia=CloudMultimediaSession.open(service,request.multimedia,this::observed,
-                multimediaTextPreference,multimediaAudioPreference);
+        if(multimediaRequest){
+            PublicViewerPreferences viewer=request.multimedia.viewerPreferences();
+            multimedia=CloudMultimediaSession.open(service,request.multimedia,this::observed,
+                viewer==null?multimediaTextPreference:viewer.text(),viewer==null?multimediaAudioPreference:viewer.audio());
+        }
         else session=TvFirst009TextSession.openConfirmed(service,request.reference,
                     TvFirst009TextRuntime.Decision.OWNER_LOCAL_AD_FREE_QUALIFICATION,this::observed);
         if (session==null && multimedia==null) { fail("CACHE_OR_PERMISSION_UNAVAILABLE");return Service.START_NOT_STICKY; }

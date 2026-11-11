@@ -19,6 +19,7 @@ import android.widget.TextView;
 public final class PublicPairingActivity extends Activity {
     private final Handler main=new Handler(android.os.Looper.getMainLooper());
     private TextView code,status;
+    private Button text,audio;
     private final Runnable refresh=this::refresh;
     /** Présente le code et démarre le suivi public depuis une Activity visible. */
     @Override protected void onCreate(Bundle saved){
@@ -31,11 +32,24 @@ public final class PublicPairingActivity extends Activity {
         status=new TextView(this);status.setTag("public-tv-status");status.setTextSize(20);status.setTextColor(0xFF25211B);root.addView(status);
         if(!Settings.canDrawOverlays(this))button(root,"Réglage Android : superposition",()->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName()))));
         if(!NotificationAccess.isGranted(this))button(root,"Réglage Android : accès MEDIA",()->startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        if(BuildConfig.PUBLIC_VIEWER_001){
+            text=button(root,"TEXT",()->toggle(true));
+            audio=button(root,"AUDIO",()->toggle(false));
+            text.setEnabled(false);audio.setEnabled(false);
+        }
         button(root,"Retour au Companion",this::finish);setContentView(root);
         startForegroundService(new Intent(this,PublicCompanionService.class));
     }
     /** Un contrôle D-pad ordinaire, sans dialogue d'autorisation applicative. */
-    private void button(LinearLayout root,String label,Runnable action){Button button=new Button(this);button.setText(label);button.setOnClickListener(v->action.run());root.addView(button);}
+    private Button button(LinearLayout root,String label,Runnable action){Button button=new Button(this);button.setText(label);button.setOnClickListener(v->action.run());root.addView(button);return button;}
+    /** Modifie un seul canal public et reflète la modification dans l'overlay actif. */
+    private void toggle(boolean written){
+        PublicCompanionOwner owner=PublicCompanionService.current();
+        PublicViewerPreferences preferences=owner==null?null:owner.viewerPreferences();
+        if(preferences==null)return;
+        boolean saved=written?preferences.setText(!preferences.text()):preferences.setAudio(!preferences.audio());
+        if(saved)TvFirst009TextServiceOwner.applyViewerPreferences();
+    }
     /** Affiche le seul code public et sa durée, jamais le secret de challenge. */
     private void refresh(){
         PublicCompanionOwner owner=PublicCompanionService.current();
@@ -44,6 +58,15 @@ public final class PublicPairingActivity extends Activity {
             code.setText(owner.code().isEmpty()?"TV associée":owner.code());
             long seconds=Math.max(0,(owner.codeExpires()-System.currentTimeMillis())/1000);
             status.setText(owner.status()+(owner.code().isEmpty()?"":"\nCode valable encore "+seconds+" s"));
+            if(text!=null){
+                PublicViewerPreferences preferences=owner.viewerPreferences();
+                boolean ready=preferences!=null && preferences.initialized();
+                text.setEnabled(ready);audio.setEnabled(ready);
+                if(ready){
+                    text.setText("Commentaires écrits · "+(preferences.text()?"ON":"OFF"));
+                    audio.setText("Commentaires audio · "+(preferences.audio()?"ON":"OFF"));
+                }
+            }
         }
         main.postDelayed(refresh,500);
     }
