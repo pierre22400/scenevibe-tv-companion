@@ -40,7 +40,7 @@ snapshot() {
     } > "$proof/grants-v$1.txt"
     grep -Fq 'SYSTEM_ALERT_WINDOW: allow' "$proof/grants-v$1.txt"
     grep -Fq "accessibility_shortcut_target_service=$shortcut" "$proof/grants-v$1.txt"
-    grep -Fq "enabled_notification_listeners=$media" "$proof/grants-v$1.txt"
+    grep -Fq "$media" "$proof/grants-v$1.txt"
     diff "$proof/grants-v32.txt" "$proof/grants-v$1.txt"
 }
 

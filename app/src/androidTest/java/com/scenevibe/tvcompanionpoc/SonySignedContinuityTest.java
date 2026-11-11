@@ -105,6 +105,7 @@ public final class SonySignedContinuityTest {
             assertEquals(initial.getString("device"), identity.getString("deviceId"));
             assertEquals(initial.getString("generation"), identity.getString("generation"));
         }
+        assertTrue(prefs.contains("text") && prefs.contains("audio") && prefs.contains("adsync"));
         assertTrue(prefs.getBoolean("text", false));
         assertTrue(prefs.getBoolean("audio", false));
         assertFalse(prefs.getBoolean("adsync", true));
