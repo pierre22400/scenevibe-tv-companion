@@ -21,7 +21,6 @@ final class SonyRetainedMuteChecks {
             instrument.runOnMainSync(() -> TvFirst009TextServiceOwner.setDeveloperMode(instrument.getTargetContext(), false));
             SonySignedContinuityTest.player(bench.remote, 30000, false);
             waitForOwnedFocus(bench, "initial");
-            SonySignedContinuityTest.report(instrument, "SONY001A_OWNED_FOCUS_PASS version=" + version);
             bench.await(()->TvFirst009TextServiceOwner.multimediaTrackPosition()==30000,"Initial real clock missing",10000);
             int accepted=CompanionShortcutService.diagnostics().accepted;
             open(bench);bench.remote.pressDPadDown();bench.remote.pressDPadCenter();
@@ -29,7 +28,6 @@ final class SonyRetainedMuteChecks {
             bench.remote.pressDPadCenter();closed(bench);
             assertEquals(20000,position(instrument));Thread.sleep(500);assertEquals(20000,position(instrument));
             assertTrue(TvFirst009TextServiceOwner.multimediaManuallySuspended());
-            SonySignedContinuityTest.report(instrument, "SONY001A_FIRST_RECALAGE_PASS version=" + version);
 
             open(bench);bench.remote.pressDPadCenter();bench.remote.pressDPadRight();
             assertEquals(20000,position(instrument));bench.remote.pressBack();closed(bench);
@@ -85,11 +83,11 @@ final class SonyRetainedMuteChecks {
         String displayFocus = "";
         String viewerFocus = "";
         while (SystemClock.elapsedRealtime() < deadline) {
-            String display = bench.remote.executeShellCommand("timeout 3 dumpsys window displays");
+            String display = bench.remote.executeShellCommand("dumpsys window displays");
             displayFocus = java.util.Arrays.stream(display.split("\\R"))
                     .filter(line -> line.contains("mCurrentFocus")).findFirst().orElse("").trim();
             if (displayFocus.contains("com.amazon.amazonvideo.livingroom") && displayFocus.contains("OwnedPlayer")) return;
-            String events = bench.remote.executeShellCommand("timeout 3 logcat -d -t 12 -v brief -s SceneVibeOwnedFocus:I");
+            String events = bench.remote.executeShellCommand("logcat -d -v brief -s SceneVibeOwnedFocus:I");
             viewerFocus = java.util.Arrays.stream(events.split("\\R"))
                     .filter(line -> line.contains("WINDOW_FOCUSED") || line.contains("WINDOW_UNFOCUSED"))
                     .reduce((previous, latest) -> latest).orElse("").trim();

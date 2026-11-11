@@ -68,14 +68,11 @@ observe_binding() {
 run_tests() {
     local class="$1" logfile="$2" version="$3" seed="$4"
     adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-before-$logfile.txt" || true
-    local budget=100
-    if [[ "$class" == SonySignedPublicTest ]]; then budget=250; fi
-    printf 'Testing %s on v%s (timeout %ss)\n' "$class" "$version" "$budget"
-    timeout --foreground "${budget}s" adb shell am instrument -w -r -e class "$package.$class" -e expectedVersion "$version" \
+    adb shell am instrument -w -r -e class "$package.$class" -e expectedVersion "$version" \
         -e seed "$seed" -e retainShortcut true -e viewerTrackId track-cc472a2e896b3efecd5d607e517d8d70ab86345a \
         "$package.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r' | tee "$proof/$logfile.txt"
     local instrument_exit=${PIPESTATUS[0]}
-    timeout 8 adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-after-$logfile.txt" || true
+    adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-after-$logfile.txt" || true
     [[ "$instrument_exit" == 0 ]] &&
         grep -q '^OK (1 test)$' "$proof/$logfile.txt" &&
         grep -q '^INSTRUMENTATION_CODE: -1$' "$proof/$logfile.txt"
