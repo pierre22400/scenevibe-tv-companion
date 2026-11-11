@@ -13,31 +13,23 @@ env:
   ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
   SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
 jobs:
-  signed:
+  emulator:
     if: github.repository == 'pierre22400/scenevibe-tv-companion' && github.ref == 'refs/heads/work/public-viewer001-sony-001a'
     runs-on: ubuntu-24.04
-    timeout-minutes: 28
+    timeout-minutes: 42
+    env:
+      ORG_GRADLE_PROJECT_scenevibePublicViewer001: 'true'
+      SCENEVIBE_PUBLIC_VIEWER_ORIGIN: https://scenevibe-public-viewer001-qual.vercel.app
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 0c252fc9f2c57e2a12c367187d9ecf9a23570510
-          path: recovery-source
-          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          run-id: 42803530873
+          run-id: 43079608451
           github-token: ${{ github.token }}
-          name: scenevibe-autonomous-cloud001d-42803530873
-          path: reference-input
-      - uses: actions/download-artifact@v4
-        with:
-          run-id: 43059547373
-          github-token: ${{ github.token }}
-          name: public-viewer001-candidate-unsigned-b1ed6637e050348247e21b3526fe1dcc9101f546
-          path: candidate-input
+          name: scenevibe-sony001a-m5-43079608451
+          path: signed-apps
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -46,23 +38,49 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Verify input identity and compiled permissions before signing
+      - name: Build instrumentation and isolated MEDIA fixture
         run: |
           sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
-          bash qualification/sony001a/apks.sh preflight
-      - name: Build the recovery from its isolated source
-        working-directory: recovery-source
-        run: gradle --no-daemon --max-workers=2 assembleTvux002
-      - name: Verify recovery manifest and sign both APKs with M5
+          gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true assembleTvux002AndroidTest
+          bash qualification/sony001a/build-player.sh "$RUNNER_TEMP/sony001a-owned-player.apk"
+      - name: Sign instrumentation for the nondebuggable target APKs
         env:
           SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
           SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
           SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
           SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
-        run: bash qualification/sony001a/apks.sh sign
-      - uses: actions/upload-artifact@v4
+        run: |
+          set -euo pipefail
+          umask 077
+          scenevibe_signing_temp="$(mktemp -d)"
+          trap 'rm -rf "$scenevibe_signing_temp"' EXIT
+          printf '%s' "$SCENEVIBE_ANDROID_KEYSTORE_BASE64" | base64 -d > "$scenevibe_signing_temp/m5.jks"
+          tools="$ANDROID_HOME/build-tools/34.0.0"
+          "$tools/apksigner" sign --ks "$scenevibe_signing_temp/m5.jks" --ks-pass env:SCENEVIBE_ANDROID_KEYSTORE_PASSWORD \
+              --ks-key-alias "$SCENEVIBE_ANDROID_KEY_ALIAS" --key-pass env:SCENEVIBE_ANDROID_KEY_PASSWORD \
+              --out "$RUNNER_TEMP/sony001a-tests-m5.apk" app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk
+          "$tools/apksigner" verify --print-certs "$RUNNER_TEMP/sony001a-tests-m5.apk" | grep -Fxq \
+              'Signer #1 certificate SHA-256 digest: f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c'
+      - name: Enable acceleration on the disposable runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: scenevibe-sony001a-m5-${{ github.run_id }}
-          path: sony-proof/
-          if-no-files-found: error
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: bash qualification/sony001a/emulator.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scenevibe-sony001a-emulator-${{ github.run_id }}
+          path: emulator-proof/
+          if-no-files-found: warn
           retention-days: 30

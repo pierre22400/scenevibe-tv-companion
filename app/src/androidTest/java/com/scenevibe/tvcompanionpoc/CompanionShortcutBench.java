@@ -35,6 +35,12 @@ final class CompanionShortcutBench implements AutoCloseable {
         remote=UiDevice.getInstance(instrument);
         assertEquals("Emulator-only shortcut configuration","1",shell("getprop ro.kernel.qemu").trim());
         String component=new ComponentName(instrument.getTargetContext(),CompanionShortcutService.class).flattenToString();
+        if ("true".equals(androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("retainShortcut"))) {
+            assertTrue(shell("settings get secure enabled_accessibility_services").trim().contains(component));
+            assertEquals(component, shell("settings get secure accessibility_shortcut_target_service").trim());
+            await(() -> CompanionShortcutService.diagnostics().connected, "Retained service did not connect", 20000);
+            return;
+        }
         for(String key:new String[]{"enabled_accessibility_services","accessibility_enabled","accessibility_shortcut_target_service","accessibility_button_targets","accessibility_shortcut_dialog_shown"})settings.put(key,shell("settings get secure "+key).trim());
         String previous=settings.get("enabled_accessibility_services");
         String services="null".equals(previous)||previous.isEmpty()?component:previous.contains(component)?previous:previous+":"+component;
