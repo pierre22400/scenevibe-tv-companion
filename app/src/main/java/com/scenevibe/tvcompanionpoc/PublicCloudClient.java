@@ -96,8 +96,13 @@ final class PublicCloudClient {
     }
     /** Une commande ne devient un reçu qu'après le vrai commit local ou les préférences appliquées. */
     void receipt(PublicCatalogueCandidate.Binding binding,String status) throws Exception {
+        receipt(binding,status,null,null);
+    }
+    /** Le reçu d'armement automatique porte les deux choix effectivement appliqués. */
+    void receipt(PublicCatalogueCandidate.Binding binding,String status,Boolean text,Boolean audio) throws Exception {
         JSONObject body=new JSONObject().put("commandId",binding.command).put("revisionId",binding.revision).put("packageSha256",binding.digest).put("state",status);
         if(binding.version>=0)body.put("expectedVersion",binding.version);
+        if(text!=null && audio!=null)body.put("text",text).put("audio",audio);
         JSONObject value=json("receipt",body);
         PublicCatalogueCandidate.Binding received=new PublicCatalogueCandidate.Binding(value,binding.device,binding.generation,0);
         if(!binding.same(received) || !status.equals(value.optString("state")))throw new IllegalArgumentException("PUBLIC_RECEIPT_MISMATCH");

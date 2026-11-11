@@ -19,6 +19,11 @@ def hostedAutonomous001d = providers.gradleProperty("scenevibeAutonomousHosted00
 def publicAutonomous001b = providers.gradleProperty("scenevibePublicAutonomous001b").orElse("false").get() == "true" || hostedAutonomous001d
 def realTrack001 = providers.gradleProperty("scenevibeRealTrack001").orElse("false").get() == "true"
 def companionMute002 = providers.gradleProperty("scenevibeCompanionMute002").orElse("false").get() == "true"
+def publicViewer001 = providers.gradleProperty("scenevibePublicViewer001").orElse("false").get() == "true"
+def publicViewerOrigin = providers.environmentVariable("SCENEVIBE_PUBLIC_VIEWER_ORIGIN").orElse("").get()
+if (publicViewer001 && (!companionMute002 || (publicViewerOrigin && publicViewerOrigin != "https://scenevibe-public-viewer001-qual.vercel.app"))) {
+    throw new GradleException("Public Viewer candidate requires MUTE 002 and its exact qualification origin")
+}
 if (companionMute002 && (!hostedAutonomous001d || !realTrack001)) {
     throw new GradleException("MUTE integration requires the retained private and hosted autonomous profiles")
 }
@@ -51,6 +56,8 @@ android {
         buildConfigField "boolean", "REAL_TRACK_E2E_001", "false"
         buildConfigField "boolean", "PUBLIC_AUTONOMOUS_001B", "false"
         buildConfigField "boolean", "COMPANION_MUTE_002", "false"
+        buildConfigField "boolean", "PUBLIC_VIEWER_001", "false"
+        buildConfigField "String", "PUBLIC_VIEWER_ORIGIN", '""'
         manifestPlaceholders = [scenevibeCompanionMuteEnabled: "false"]
     }
 
@@ -147,8 +154,10 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "COMPANION_MUTE_002", companionMute002 ? "true" : "false"
+        buildConfigField "boolean", "PUBLIC_VIEWER_001", publicViewer001 ? "true" : "false"
+        buildConfigField "String", "PUBLIC_VIEWER_ORIGIN", "\"${publicViewerOrigin}\""
         manifestPlaceholders.scenevibeCompanionMuteEnabled = companionMute002 ? "true" : "false"
         buildConfigField "boolean", "REAL_TRACK_E2E_001", realTrack001 ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_AUTONOMOUS_001B", publicAutonomous001b ? "true" : "false"
@@ -160,7 +169,7 @@ android {
         java.srcDir "src/tvfirst008/java"
         java.srcDir "src/tvux001/java"
         res.srcDir "src/tvfirst008/res"
-        manifest.srcFile "src/tvux002/AndroidManifest.xml"
+        manifest.srcFile publicViewer001 ? "src/publicViewer001/AndroidManifest.xml" : "src/tvux002/AndroidManifest.xml"
     }
     sourceSets.tvux001 {
         java.srcDir "src/tvfirst008/java"
@@ -260,7 +269,7 @@ android {
         buildTypes.tvux002 { debuggable true; signingConfig signingConfigs.debug }
         sourceSets.tvux002 {
             java.srcDir "src/tvux002Qualification/java"
-            manifest.srcFile "src/tvux002Qualification/AndroidManifest.xml"
+            manifest.srcFile publicViewer001 ? "src/publicViewer001/AndroidManifest.xml" : "src/tvux002Qualification/AndroidManifest.xml"
         }
     }
     if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
@@ -304,6 +313,7 @@ androidComponents {
             if (publicAutonomous001b) output.versionCode.set(32)
             if (hostedAutonomous001d) output.versionCode.set(33)
             if (companionMute002) output.versionCode.set(32)
+            if (publicViewer001) output.versionCode.set(34)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
