@@ -1,6 +1,6 @@
 # COMPANION MUTE INTEGRATION 002 — intégration du raccourci Android
 
-Décision propriétaire du 10 novembre 2026 et amendement 001 : le paramétrage initial Android TV, y compris une nouvelle affectation MUTE au package principal, est explicitement autorisé et ne bloque pas la livraison. Aucune configuration physique Sony n'est réalisée dans ce mandat.
+Décision propriétaire du 10 novembre 2026 et amendement 001 : le paramétrage initial Android TV, y compris une nouvelle affectation MUTE au package principal, est explicitement autorisé et ne bloque pas la livraison. Le protocole ci-dessous a été rédigé avant l'essai physique ; la réception réelle du 11 novembre 2026 figure en fin de document.
 
 ## Base et périmètre
 
@@ -15,7 +15,7 @@ La branche est créée directement depuis #47, commit `3a24849603f0e88f60946b870
 
 Un ComponentName Android désigne un package et une classe. Le composant expérimental complet est donc `com.scenevibe.tvcompanionpoc.netflixoverlay001/com.scenevibe.tvcompanionpoc.NetflixShortcutService` ; le nouveau composant est `com.scenevibe.tvcompanionpoc/com.scenevibe.tvcompanionpoc.CompanionShortcutService`. Ces identités sont différentes. Le réglage visant l'ancien composant ne devient pas un réglage du nouveau par simple mise à jour du Companion principal. Le prototype expérimental n'est pas modifié pour servir de relais et aucune deuxième application n'est requise.
 
-La configuration exacte actuellement enregistrée sur la Sony n'a pas été lue. Si elle vise le composant expérimental décrit par #44, il faut sélectionner le nouveau service principal et lui affecter le raccourci dans Android TV. Cette manipulation minimale est acceptable selon l'amendement, à réaliser seulement après GO physique distinct. Aucune persistance future n'est garantie sans essai ; le nom du nouveau service est volontairement indépendant du numéro de version.
+Au moment de la rédaction du protocole initial, la configuration Sony n'avait pas encore été lue. Si elle vise le composant expérimental décrit par #44, il faut sélectionner le nouveau service principal et lui affecter le raccourci dans Android TV. Cette manipulation minimale est acceptable selon l'amendement, à réaliser seulement après GO physique distinct. Aucune persistance future n'est garantie sans essai ; le nom du nouveau service est volontairement indépendant du numéro de version.
 
 ## Chemin de déclenchement P0
 
@@ -55,4 +55,17 @@ Références primaires : [AccessibilityButtonController](https://developer.andro
 
 Nouvelle TV : installation normale du Companion, autorisations existantes nécessaires à sa restitution, activation de ce service et affectation du raccourci Android une première fois. Aucun assistant de configuration supplémentaire n'est développé ici. Le maintien de cette affectation lors de futures mises à jour sera qualifié séparément.
 
-**SONY MUTE : NOT EXECUTED — qualification physique requise.** STOP avant installation Sony, réglages physiques, fusion, Cloud, Neon/R2, Production ou Google Play.
+**Historique :** au 10 novembre, la qualification Sony était **NOT EXECUTED**. La configuration initiale et les essais ont depuis été réalisés par le propriétaire, conformément au GO physique ultérieur. Le STOP avant fusion, promotion et publication Play reste en vigueur.
+
+## Réception physique et gel — 11 novembre 2026
+
+**PASS physique Sony BRAVIA / Prime Video / parcours privé.** Le raccourci MUTE du Companion principal v32 signé ouvre le panneau « Recalage SceneVibe » au-dessus de Prime sans retour à l'Activity ; le recalage, l'annulation par BACK, les ouvertures répétées, la restitution du focus et des commandes à Prime, puis les commentaires TEXT/AUDIO sont déclarés conformes par le propriétaire. Les vérifications ont été répétées après redémarrage complet, avec réactivation locale explicite des commentaires.
+
+**Source APK gelée :** `01da23263c0d042192d536c2ed497b6b34daecc1` — SHA-256 `d4e45b19dd6fd99e6ab6d7cdfa4dfd31e04bac8a50d43e366ba284ff3c5e612b`.
+
+**Réserves non bloquantes :** premier démarrage silencieux non reproduit par la suite ; activation TEXT/AUDIO à renouveler après reboot selon la politique de consentement existante ; boutons « Annuler » et « × Fermer » peu accessibles dans l'écran d'édition du recalage. Aucun correctif UX n'est demandé maintenant.
+
+Le **parcours public sur Sony** reste hors de ce PASS. Aucune fusion avec `main`, modification de code, nouvelle installation, opération Cloud/Neon/R2 ou publication Play n'est autorisée par le gel.
+
+Compte rendu détaillé : [rapport COMPANION MUTE INTEGRATION 002](project/companion-mute-integration002/RAPPORT.md).
+
