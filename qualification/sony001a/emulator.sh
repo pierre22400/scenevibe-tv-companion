@@ -49,28 +49,29 @@ snapshot() {
 # Require successful assertions and Android instrumentation exit, not adb transport alone.
 run_tests() {
     local class="$1" logfile="$2" version="$3" seed="$4"
-    # Default am instrument force-stops the target and disconnects its accessibility service.
-    # Attach to the process Android started or rebound with the retained grants.
-    for attempt in $(seq 1 20); do
-        if adb shell pidof "$package" >/dev/null 2>&1; then break; fi
-        sleep 1
-    done
-    adb shell pidof "$package" > "$proof/process-$logfile.txt"
-    adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-$logfile.txt" || true
-    adb shell am instrument --no-restart -w -r -e class "$package.$class" -e expectedVersion "$version" \
+    adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-before-$logfile.txt" || true
+    adb shell am instrument -w -r -e class "$package.$class" -e expectedVersion "$version" \
         -e seed "$seed" -e retainShortcut true -e viewerTrackId track-cc472a2e896b3efecd5d607e517d8d70ab86345a \
         "$package.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r' | tee "$proof/$logfile.txt"
-    grep -q '^OK (1 test)$' "$proof/$logfile.txt"
-    grep -q '^INSTRUMENTATION_CODE: -1$' "$proof/$logfile.txt"
+    local instrument_exit=${PIPESTATUS[0]}
+    adb shell dumpsys accessibility | grep -F "$package" > "$proof/accessibility-after-$logfile.txt" || true
+    [[ "$instrument_exit" == 0 ]] &&
+        grep -q '^OK (1 test)$' "$proof/$logfile.txt" &&
+        grep -q '^INSTRUMENTATION_CODE: -1$' "$proof/$logfile.txt"
 }
 
+failures=0
 snapshot 32
-run_tests SonySignedContinuityTest private-v32 32 true
+run_tests SonySignedContinuityTest private-v32 32 true || failures=$((failures + 1))
 adb install -r "$apk_dir/scenevibe-companion-public-viewer-v34-m5.apk" | tee "$proof/update-v34.txt"
 snapshot 34
-run_tests SonySignedContinuityTest private-v34 34 false
-run_tests SonySignedPublicTest public-v34 34 false
+run_tests SonySignedContinuityTest private-v34 34 false || failures=$((failures + 1))
+run_tests SonySignedPublicTest public-v34 34 false || failures=$((failures + 1))
 adb install -r "$apk_dir/scenevibe-companion-recovery-v35-m5.apk" | tee "$proof/recovery-v35.txt"
 snapshot 35
-run_tests SonySignedContinuityTest private-v35 35 false
+run_tests SonySignedContinuityTest private-v35 35 false || failures=$((failures + 1))
+if (( failures != 0 )); then
+    printf 'SIGNED_UPGRADE_TEST_FAILURES=%s\n' "$failures" > "$proof/verdict.txt"
+    exit 1
+fi
 printf '%s\n' SIGNED_V32_TO_V34_TO_V35_PRIVATE_RECOVERY_PASS > "$proof/verdict.txt"

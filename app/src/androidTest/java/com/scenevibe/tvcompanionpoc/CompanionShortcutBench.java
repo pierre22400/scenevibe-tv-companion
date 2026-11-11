@@ -38,6 +38,13 @@ final class CompanionShortcutBench implements AutoCloseable {
         if ("true".equals(androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("retainShortcut"))) {
             assertTrue(shell("settings get secure enabled_accessibility_services").trim().contains(component));
             assertEquals(component, shell("settings get secure accessibility_shortcut_target_service").trim());
+            if (!CompanionShortcutService.diagnostics().connected) {
+                // Reevaluate binding after ActivityManager's instrumentation process restart.
+                // The two UiAutomation connections change test observation only, never persisted settings.
+                instrument.getUiAutomation(0);
+                Thread.sleep(500);
+                instrument.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+            }
             await(() -> CompanionShortcutService.diagnostics().connected, "Retained service did not connect", 20000);
             return;
         }
