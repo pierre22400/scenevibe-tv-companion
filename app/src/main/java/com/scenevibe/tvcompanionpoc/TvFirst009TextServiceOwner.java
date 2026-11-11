@@ -54,6 +54,8 @@ final class TvFirst009TextServiceOwner {
     private final Runnable multiLifetime=this::watchMultiLifetime;
     private static final String SHOW_INTERACTIVE="com.scenevibe.tvcompanionpoc.SHOW_INTERACTIVE_CONTROLS";
     private static final DeveloperOverlayState developer=new DeveloperOverlayState();
+    /** Distinguish admission refusal, an existing window and an accepted window request from actual focus evidence. */
+    enum ShortcutResult { WINDOW_REQUESTED, ALREADY_OPEN, NOT_READY, PERMISSION_REQUIRED, WINDOW_REFUSED }
     private static final String DEV_ENABLE="com.scenevibe.tvcompanionpoc.DEVELOPER_ENABLE";
     private static final String DEV_PREPARE="com.scenevibe.tvcompanionpoc.DEVELOPER_PREPARE";
     static final String SHOW_CONTROLS="com.scenevibe.tvcompanionpoc.SHOW_COMPANION_CONTROLS";
@@ -121,6 +123,20 @@ final class TvFirst009TextServiceOwner {
 
     /** Return process-local diagnostics without starting work or reading application secrets. */
     static Status status() { return latest; }
+
+    /** Accept only the current system shortcut callback; never start, restore or associate a Track here. */
+    static ShortcutResult openFromAccessibilityShortcut(){
+        if(!BuildConfig.COMPANION_MUTE_002 || Looper.myLooper()!=Looper.getMainLooper())return ShortcutResult.NOT_READY;
+        TvFirst009TextServiceOwner owner=liveInstance;
+        if(owner==null || !owner.foreground || owner.closing || liveOwner!=owner.owner
+                || owner.multimedia==null || !owner.multimedia.isActive())return ShortcutResult.NOT_READY;
+        if(!Settings.canDrawOverlays(owner.service) || !NotificationAccess.isGranted(owner.service))return ShortcutResult.PERMISSION_REQUIRED;
+        if(!owner.multimedia.shortcutReady())return ShortcutResult.NOT_READY;
+        if(owner.controlPanel!=null && owner.controlPanel.isOpen() && !owner.controlPanel.isPrepared()
+                && !owner.controlPanel.isMonitoring())return ShortcutResult.ALREADY_OPEN;
+        owner.ensureControlPanel();
+        return owner.controlPanel.openFromShortcut()?ShortcutResult.WINDOW_REQUESTED:ShortcutResult.WINDOW_REFUSED;
+    }
 
     /** Report only a current one-use handoff or service lifetime, without starting or restoring it. */
     static boolean controlBusy() {
@@ -440,6 +456,12 @@ final class TvFirst009TextServiceOwner {
             @Override public void resume(){if(multimediaActive()){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE && !adSyncEnabled())setAdSyncEnabled(true);resumeMultimediaComments();}}
             /** Refresh and diagnose using the actual live service, without a new admission. */
             @Override public AdSyncController.Calibration calibrate(long time,boolean seek){return calibrateMultimediaResult(time,seek);}
+            /** The integrated main Companion supplies the actual private/public Track-clock port. */
+            @Override public boolean supportsManualRecalibration(){return BuildConfig.COMPANION_MUTE_002;}
+            /** Bind the edit to the current service session; no experimental Netflix clock is constructed. */
+            @Override public CompanionControlPanel.ManualEdit beginManualEdit(boolean resume){
+                return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.beginManualEdit(resume);
+            }
         };
     }
 
@@ -470,6 +492,11 @@ final class TvFirst009TextServiceOwner {
     static com.scenevibe.tvcompanionpoc.calendar.MediaCalendarScheduler.AudioDiagnostics multimediaAudioDiagnostics(int ordinal){return liveInstance==null || liveInstance.multimedia==null?null:liveInstance.multimedia.audioDiagnostics(ordinal);}
     /** Report only the local comment-player lifecycle, never the platform player's transport object. */
     static String multimediaAudioState(){return liveInstance==null || liveInstance.multimedia==null?"IDLE":liveInstance.multimedia.audioState();}
+
+    /** Read explicit local suspension independently of MEDIA pause or channel preferences. */
+    static boolean multimediaManuallySuspended(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.manuallySuspended();}
+    /** Read the single current Track clock without exposing an admission or any video-player control. */
+    static long multimediaTrackPosition(){return liveInstance==null || liveInstance.multimedia==null?-1:liveInstance.multimedia.trackPosition();}
 
     /** Return whether a multimedia service already owns a current admitted lifetime. */
     static boolean multimediaActive(){return liveInstance!=null && liveInstance.multimedia!=null && liveInstance.multimedia.isActive();}

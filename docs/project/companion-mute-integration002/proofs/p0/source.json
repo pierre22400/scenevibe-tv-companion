@@ -1,0 +1,9 @@
+{
+  "source": "4ef8ba7c8a560dfe697bd41199de4e42b5dbd434",
+  "run": 42800188082,
+  "conclusion": "success",
+  "nativeTests": 4,
+  "scope": "P0 before selective Track recalage integration",
+  "frameworkTrigger": "ANDROID_TV_BACK_DOWN_CHORD",
+  "sonyMute": "NOT_EXECUTED"
+}

@@ -160,6 +160,7 @@ public final class PublicAutonomousAndroidTest {
         assertFalse(TvFirst009TextServiceOwner.multimediaTextEnabled());assertFalse(TvFirst009TextServiceOwner.multimediaAudioEnabled());
         main(()->TvFirst009TextServiceOwner.setMultimediaTextEnabled(true));fixture.owner().pollOnce();
         assertTrue(fixture.command.getBoolean("text"));assertFalse(fixture.command.getBoolean("audio"));
+        if(BuildConfig.COMPANION_MUTE_002)CompanionMuteNativeChecks.exercise(instrument,media,"public");
     }
     /** Un arrêt local survit aux polls et au propriétaire recréé ; le Web seul peut réactiver. */
     @Test public void localStopSurvivesPollingAndOwnerRestartUntilWebActivation() throws Exception {

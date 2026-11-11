@@ -152,6 +152,7 @@ public final class ManualTrackAndroidTest {
                 .put("extraDownloads",fixture.port.audioRequests-downloads).put("historicalAck",0)
                 .put("admissionNeedsOwnerConsent",true).put("historicalCorpusMapping",false);
         Files.write(new File(target.getFilesDir(),"realtrack001-service-proof.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
+        if(BuildConfig.COMPANION_MUTE_002){CompanionShortcutOpenChecks.exercise(instrument,media);CompanionMuteNativeChecks.exercise(instrument,media,"private");}
     }
     /** Décode et relit les six événements après une publication atomique Android. */
     @Test public void nativeDecodeAndOfflineReadbackPreserveAllSixEvents() throws Exception {

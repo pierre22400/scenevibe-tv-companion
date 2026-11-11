@@ -75,6 +75,8 @@ final class AdSyncController {
     private long boundDuration=-1;
     private final boolean automaticRecovery;
     private boolean manualHold;
+    private boolean manualPosition;
+    private long pausedManualPosition=-1;
 
     /** Start disabled so the qualified v17 path remains the default. */
     AdSyncController() {this(false);}
@@ -158,13 +160,18 @@ final class AdSyncController {
             return decision(false,-1);
         }
         if(manualHold && !resumeRequested){state=State.SUSPENDED;reason=Reason.USER_SUSPENDED;return decision(false,-1);}
-        if(!enabled && !manualHold){held=false;state=State.DISABLED;reason=Reason.OFF;accept(sample);return decision(true,sample.selectedMs);}
+        if(!enabled && !manualPosition && !manualHold){held=false;state=State.DISABLED;reason=Reason.OFF;accept(sample);return decision(true,sample.selectedMs);}
         if(held){
+            if(resumeRequested && pausedManualPosition>=0){
+                long offset=pausedManualPosition-sample.selectedMs;
+                if(offset < -MAX_OFFSET_MS || offset > MAX_OFFSET_MS)return decision(false,pausedManualPosition);
+                offsetMs=offset;pausedManualPosition=-1;
+            }
             boolean explicit=resumeRequested;
             confirmResume(sample);
-            if(!held){manualHold=false;if(!enabled){state=State.DISABLED;reason=Reason.OFF;}
+            if(!held){manualHold=false;if(!enabled && !manualPosition){state=State.DISABLED;reason=Reason.OFF;}
                 else if(!explicit)reason=Reason.AUTO_RECOVERED;}
-            return decision(!held,!enabled?sample.selectedMs:translated(sample));
+            return decision(!held,!enabled && !manualPosition?sample.selectedMs:translated(sample));
         }
         Reason discontinuity=boundSession!=null && !boundSession.equals(sample.session)?Reason.SESSION_CHANGED:
                 accepted!=null && !continuous(accepted,sample)?Reason.CLOCK_JUMP:
@@ -185,6 +192,21 @@ final class AdSyncController {
     /** Explain every refusal before applying an offset to a freshly queried, compatible session only. */
     Calibration calibrateResult(long contentMs,long nowMs) {
         if(!enabled)return Calibration.SYNC_DISABLED;
+        return applyCalibration(contentMs,nowMs);
+    }
+
+    /** Reanchor the same MEDIA projection from an explicit native panel, without enabling another setting. */
+    Calibration recalibrateTrack(long contentMs,long nowMs,boolean resume) {
+        Calibration result=applyCalibration(contentMs,nowMs);
+        if(result==Calibration.APPLIED){
+            manualPosition=true;pausedManualPosition=resume?-1:contentMs;
+            if(!resume)suspend();
+        }
+        return result;
+    }
+
+    /** Share every identity, freshness and offset guard with the historical calibration entry point. */
+    private Calibration applyCalibration(long contentMs,long nowMs) {
         if(latest==null || latest.session==null)return Calibration.SESSION_ABSENT;
         if(!latest.identityCompatible)return Calibration.IDENTITY_INCOMPATIBLE;
         if(!latest.valid())return Calibration.INVALID_OBSERVATION;
@@ -192,9 +214,13 @@ final class AdSyncController {
         if(contentMs<0 || contentMs>43_200_000L)return Calibration.FORMAT_INVALID;
         long offset=contentMs-latest.selectedMs;
         if(offset < -MAX_OFFSET_MS || offset > MAX_OFFSET_MS)return Calibration.OFFSET_LIMIT;
-        offsetMs=offset;held=false;manualHold=false;resumeRequested=false;candidate=null;
+        offsetMs=offset;held=false;manualHold=false;resumeRequested=false;candidate=null;pausedManualPosition=-1;
         state=State.MANUAL;reason=Reason.MANUAL_POSITION;accept(latest);return Calibration.APPLIED;
     }
+
+    /** Project the one Track clock; an explicitly paused recalage stays at its committed position. */
+    long trackPosition(){return pausedManualPosition>=0?pausedManualPosition:latest==null?-1:
+            manualPosition || enabled?translated(latest):latest.selectedMs;}
 
     /** Parse a user-confirmed mm:ss or hh:mm:ss without guessing a unit or accepting negative/overflow input. */
     static long parseFilmTime(String text) {
@@ -211,7 +237,7 @@ final class AdSyncController {
     static String formatTime(long millis){long seconds=Math.max(0,millis)/1000;return String.format(java.util.Locale.ROOT,"%02d:%02d",seconds/60,seconds%60);}
 
     /** Present the current gate without claiming advertisement observability. */
-    Decision status(){return decision((automaticRecovery?latest!=null && latest.valid():enabled) && !held,latest==null?-1:automaticRecovery && !enabled?latest.selectedMs:translated(latest));}
+    Decision status(){return decision((automaticRecovery?latest!=null && latest.valid():enabled) && !held,latest==null?-1:automaticRecovery && !enabled && !manualPosition?latest.selectedMs:translated(latest));}
 
     /** Report actual user intent separately from a temporary MEDIA hold or synchronization preference. */
     boolean manuallySuspended(){return manualHold && !resumeRequested;}
