@@ -8,7 +8,6 @@ proof=m5-proof
 [[ "$(adb get-serialno)" =~ ^emulator-[0-9]+$ ]]
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 adb shell svc wifi disable
-adb shell svc data disable
 adb shell cmd connectivity airplane-mode enable
 
 # The dedicated emulator has a reserved TEST-NET DNS. Abort if either reference host resolves.
