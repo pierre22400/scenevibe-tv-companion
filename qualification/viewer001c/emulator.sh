@@ -63,8 +63,22 @@ adb shell settings put secure accessibility_shortcut_dialog_shown 1
 qualify 34 true v34
 adb install -r "$proof/scenevibe-companion-viewer001c-v36-m5.apk" | tee "$proof/update-v36.txt"
 qualify 36 false v36
-adb reboot
-adb wait-for-device
+
+# Restart the same AVD with its userdata intact, as in the HTTPS cold-boot proof.
+serial="$(adb get-serialno)"
+avd="$(adb emu avd name | tr -d '\r' | head -n 1)"
+[[ "$serial" =~ ^emulator-[0-9]+$ && "$avd" =~ ^[a-zA-Z0-9_-]+$ ]]
+timeout 15 adb shell sync
+timeout 15 adb emu kill
+for attempt in $(seq 1 30); do
+    if ! adb devices | awk '{print $1}' | grep -Fxq "$serial"; then break; fi
+    sleep 1
+done
+! adb devices | awk '{print $1}' | grep -Fxq "$serial"
+nohup "${ANDROID_SDK_ROOT:?}/emulator/emulator" -avd "$avd" -port "${serial#emulator-}" \
+    -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2 \
+    -dns-server 192.0.2.1 > "$proof/avd-v36-restart.txt" 2>&1 < /dev/null &
+timeout 150 adb wait-for-device
 for attempt in $(seq 1 90); do
     [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
     sleep 2
