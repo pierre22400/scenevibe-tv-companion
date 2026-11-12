@@ -62,6 +62,11 @@ for attempt in $(seq 1 90); do
 done
 [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]
 adb shell input keyevent KEYCODE_WAKEUP
+for attempt in $(seq 1 40); do
+    if adb shell dumpsys activity services "$package/.PublicCompanionService" | grep 'isForeground=true' > "$proof/receiver-v36-after-boot.txt"; then break; fi
+    sleep 2
+done
+test -s "$proof/receiver-v36-after-boot.txt"
 qualify 36 false v36-after-boot
 adb install -r "$proof/scenevibe-companion-recovery-v37-m5.apk" | tee "$proof/update-v37.txt"
 qualify 37 false v37

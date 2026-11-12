@@ -35,10 +35,17 @@ sign() {
 }
 
 verify "$v34" 34
-sign app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk "$output/scenevibe-companion-viewer001c-v36-m5.apk"
+sha256sum "$RUNNER_TEMP/viewer001c-unsigned-v36.apk" recovery-source/app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk > "$output/unsigned-sha256.txt"
+sign "$RUNNER_TEMP/viewer001c-unsigned-v36.apk" "$output/scenevibe-companion-viewer001c-v36-m5.apk"
 sign recovery-source/app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk "$output/scenevibe-companion-recovery-v37-m5.apk"
 sign app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk "$RUNNER_TEMP/viewer001c-tests-m5.apk"
 verify "$output/scenevibe-companion-viewer001c-v36-m5.apk" 36
 verify "$output/scenevibe-companion-recovery-v37-m5.apk" 37
+for version in 34 36 37; do
+    awk -F "'" '/^uses-permission/ {print $2}' "$output/v$version-badging.txt" | sort -u > "$output/v$version-permissions.txt"
+    test -s "$output/v$version-permissions.txt"
+done
+diff "$output/v34-permissions.txt" "$output/v36-permissions.txt"
+test -z "$(comm -13 "$output/v34-permissions.txt" "$output/v37-permissions.txt")"
 (cd "$output" && sha256sum -- ./*.apk > SHA256SUMS)
 printf 'candidat %s\nrécupération %s\nqualification HTTPS %s\n' "$(git rev-parse HEAD)" "$(git -C recovery-source rev-parse HEAD)" "${QUALIFICATION_RUN:?}" > "$output/provenance.txt"
