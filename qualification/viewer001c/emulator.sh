@@ -31,6 +31,14 @@ qualify() {
         adb shell pm list packages -U "$package"
     } | tr -d '\r' > "$proof/grants-$label.txt"
     diff "$proof/grants-v34.txt" "$proof/grants-$label.txt"
+    for attempt in $(seq 1 35); do
+        local pid
+        pid="$(adb shell pidof "$package" | tr -d '\r' | awk '{print $1}' || true)"
+        if [[ -n "$pid" ]] && adb logcat -d --pid="$pid" -s SceneVibeMute002:I |
+            grep 'SHORTCUT_CONNECTED' > "$proof/shortcut-$label.txt"; then break; fi
+        sleep 1
+    done
+    test -s "$proof/shortcut-$label.txt"
     timeout --foreground 180s adb shell am instrument -w -r -e class "$package.HistoricalM5ContinuityTest" \
         -e expectedVersion "$version" -e seed "$seed" -e retainShortcut true \
         "$package.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r' | tee "$proof/$label.txt"
@@ -43,6 +51,8 @@ adb install signed-input/scenevibe-companion-public-viewer-v34-m5.apk | tee "$pr
 adb install "$RUNNER_TEMP/viewer001c-tests-m5.apk"
 adb install "$RUNNER_TEMP/viewer001c-owned-player.apk"
 adb shell input keyevent KEYCODE_WAKEUP
+adb shell am start -W -n "$package/.MainActivity" > "$proof/initial-launch-v34.txt"
+adb shell input keyevent KEYCODE_HOME
 adb shell appops set "$package" SYSTEM_ALERT_WINDOW allow
 adb shell cmd notification allow_listener "$media"
 adb shell settings put secure enabled_accessibility_services "$shortcut"

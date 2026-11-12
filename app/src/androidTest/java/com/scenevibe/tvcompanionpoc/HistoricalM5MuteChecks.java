@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
 final class HistoricalM5MuteChecks {
     /** Qualify cancellation, both commit policies, TEXT and native AUDIO after actual shortcut editing. */
     static void exercise(Instrumentation instrument,int version) throws Exception {
-        try (var bench = new CompanionShortcutBench(instrument)) {
+        try (var bench = new HistoricalM5ShortcutBench(instrument)) {
             instrument.runOnMainSync(() -> TvFirst009TextServiceOwner.setDeveloperMode(instrument.getTargetContext(), false));
             HistoricalM5ContinuityTest.player(bench.remote, 30000, false);
             waitForOwnedFocus(bench, "initial");
@@ -70,17 +70,17 @@ final class HistoricalM5MuteChecks {
         long[] value={-1};instrument.runOnMainSync(()->value[0]=TvFirst009TextServiceOwner.multimediaTrackPosition());return value[0];
     }
     /** Ask Android policy for the configured callback and require actual window focus. */
-    private static void open(CompanionShortcutBench bench) throws Exception {
+    private static void open(HistoricalM5ShortcutBench bench) throws Exception {
         bench.systemShortcut();bench.await(TvFirst009TextServiceOwner::developerHasFocus,"Shortcut recalage window has no focus",10000);
     }
     /** Require removal and input restoration after either commit or cancellation. */
-    private static void closed(CompanionShortcutBench bench) throws Exception {
+    private static void closed(HistoricalM5ShortcutBench bench) throws Exception {
         waitForOwnedFocus(bench, "after panel");
         assertFalse(TvFirst009TextServiceOwner.developerHasFocus());
     }
 
     /** Verify focus from Android’s display state and the owned viewer’s window callback. */
-    private static void waitForOwnedFocus(CompanionShortcutBench bench, String stage) throws Exception {
+    private static void waitForOwnedFocus(HistoricalM5ShortcutBench bench, String stage) throws Exception {
         long deadline = SystemClock.elapsedRealtime() + 10000;
         String displayFocus = "";
         String viewerFocus = "";
