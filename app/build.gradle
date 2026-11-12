@@ -147,7 +147,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix companionMute002 ? "-companion-mute-integration002-recovery-v35" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix companionMute002 ? "-companion-mute-integration002-recovery-v37" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "COMPANION_MUTE_002", companionMute002 ? "true" : "false"
         manifestPlaceholders.scenevibeCompanionMuteEnabled = companionMute002 ? "true" : "false"
         buildConfigField "boolean", "REAL_TRACK_E2E_001", realTrack001 ? "true" : "false"
@@ -303,7 +303,7 @@ androidComponents {
             output.versionCode.set(realTrack001 ? 31 : 28)
             if (publicAutonomous001b) output.versionCode.set(32)
             if (hostedAutonomous001d) output.versionCode.set(33)
-            if (companionMute002) output.versionCode.set(35)
+            if (companionMute002) output.versionCode.set(37)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
