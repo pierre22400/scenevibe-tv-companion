@@ -174,10 +174,12 @@ final class PublicCompanionOwner implements AutoCloseable {
         if("requested".equals(command.getString("state"))){
             boolean busy=onMain(()->TvFirst009TextServiceOwner.controlBusy());
             if(busy && BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C){
-                if(reference!=null && onMain(()->reference.prepared.binding.command.equals(TvFirst009TextServiceOwner.publicCommand())
-                        && TvFirst009TextServiceOwner.publicMediaEnded())){
-                    onMain(()->{TvFirst009TextServiceOwner.requestStop(context);return true;});reference=null;
-                }
+                onMain(()->{
+                    if(!TvFirst009TextServiceOwner.publicMayYield())return false;
+                    if(!prefer(binding.command))return false;
+                    TvFirst009TextServiceOwner.requestStop(context);
+                    return true;
+                });
                 status="Track publique en attente · session actuelle conservée.";return;
             }
             if(busy && (prepared==null || prepared.binding.track.equals(binding.track))){
@@ -192,6 +194,7 @@ final class PublicCompanionOwner implements AutoCloseable {
                 }
                 reference=null;return;
             }
+            if(BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C && !prefer(binding.command))return;
             status="Téléchargement et vérification TEXT/AUDIO…";
             try{
                 if(automatic && cache.matches(binding)){
@@ -307,6 +310,12 @@ final class PublicCompanionOwner implements AutoCloseable {
         }
     }
 
+    /** Mémorise le dernier nouvel envoi pour éviter qu'un autre transport ne réarme un ancien reçu. */
+    private boolean prefer(String command){
+        return context.getSharedPreferences("public001d_playback",Context.MODE_PRIVATE).edit()
+                .putString("preferredCommand",command).commit();
+    }
+
     /** L'échéance de la commande historique borne les effets, indépendamment du grant. */
     private long effectDeadline(PublicCatalogueCandidate.Binding binding){
         if(!historical)return grantDeadline;
@@ -320,6 +329,8 @@ final class PublicCompanionOwner implements AutoCloseable {
         return onMain(()->{
             android.content.SharedPreferences playback=context.getSharedPreferences("public001d_playback",0);
             if(prepared.binding.command.equals(playback.getString("stoppedCommand","")))return false;
+            if(BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C &&
+                    !prepared.binding.command.equals(playback.getString("preferredCommand",prepared.binding.command)))return false;
             long observed=prepared.binding.command.equals(playback.getString("observedCommand",""))
                     ?Math.max(version,playback.getLong("observedVersion",-1)):version;
             if(!automatic || !prepared.binding.command.equals(playback.getString("observedCommand",""))
