@@ -50,13 +50,17 @@ async function prepare(context) {
   return background.deviceId
 }
 
-/** Attend l'inventaire autorisé avant de choisir la TV de cette exécution. */
-async function awaitDestination(page) {
-  await page.waitForFunction(() => {
-    const button=Array.from(document.querySelectorAll('.public-viewer-controls button'))
-      .find(element=>element.textContent?.trim()==='Envoyer sur ma TV')
-    return button && !button.disabled
-  },null,{timeout:45_000})
+/** Charge la fiche, attend son inventaire et choisit le bon appareil même si un autre a une commande en attente. */
+async function openTrack(page, track, deviceId) {
+  const status=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/autonomous/historical-viewer-status'
+    &&response.request().method()==='POST'&&response.status()===200,{timeout:45_000})
+  await page.goto(origin+'/track/'+encodeURIComponent(track.identity.slug),{waitUntil:'domcontentloaded'})
+  const inventory=await (await status).json()
+  assert.ok(inventory.devices.some(device=>device.deviceId===deviceId),'HISTORICAL_TV_MISSING_FROM_INVENTORY')
+  if(inventory.devices.length>1)await page.getByLabel('Télévision',{exact:true}).selectOption(deviceId,{timeout:20_000})
+  const button=page.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
+  await button.waitFor({state:'visible',timeout:30_000})
+  return button
 }
 
 /** Attend la fin du runner avant de redémarrer son image persistante. */
@@ -94,12 +98,7 @@ try {
   const sendPath='/api/autonomous/historical-viewer-send'
   const pairingCalls=[]
   page.on('request',request=>{if(/viewer-pair|device-activations/.test(request.url()))pairingCalls.push(request.url())})
-  await page.goto(origin+'/track/'+encodeURIComponent(track.identity.slug),{waitUntil:'domcontentloaded'})
-  const button=page.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
-  await button.waitFor({state:'visible',timeout:30_000})
-  await awaitDestination(page)
-  const destination=page.getByLabel('Télévision',{exact:true})
-  if(await destination.count())await destination.selectOption(deviceId)
+  const button=await openTrack(page,track,deviceId)
   const response=page.waitForResponse(r=>new URL(r.url()).pathname===sendPath&&r.request().method()==='POST',{timeout:45_000})
   await button.click({timeout:45_000})
   const sent=await response
@@ -129,12 +128,7 @@ try {
   const phone=await mobile.newPage()
   const calls=[]
   phone.on('request',request=>{if(/viewer-pair|device-activations|sign-in/.test(request.url()))calls.push(request.url())})
-  await phone.goto(origin+'/track/'+encodeURIComponent(second.identity.slug),{waitUntil:'domcontentloaded'})
-  const phoneButton=phone.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
-  await phoneButton.waitFor({state:'visible',timeout:30_000})
-  await awaitDestination(phone)
-  const target=phone.getByLabel('Télévision',{exact:true})
-  if(await target.count())await target.selectOption(deviceId)
+  const phoneButton=await openTrack(phone,second,deviceId)
   const delivered=phone.waitForResponse(r=>new URL(r.url()).pathname===sendPath&&r.request().method()==='POST',{timeout:45_000})
   await phoneButton.tap({timeout:45_000})
   const secondResponse=await delivered
