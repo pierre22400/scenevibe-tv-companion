@@ -47,7 +47,7 @@ async function prepare(context) {
   const background=await deviceEvidence('001c-background.json',110)
   assert.equal(background.activityClosed,true)
   assert.equal(background.publicIdentityPresent,false)
-  return background.deviceId
+  return background
 }
 
 /** Charge la fiche, attend son inventaire et choisit le bon appareil même si un autre a une commande en attente. */
@@ -89,13 +89,26 @@ try {
   await anonymous.close()
 
   const context=await browser.newContext()
-  const deviceId=await prepare(context)
+  const {deviceId,generation,staleGenerationRefused}=await prepare(context)
+  assert.equal(staleGenerationRefused,true)
   const csrf=await context.request.post(origin+'/api/autonomous/historical-viewer-send',{
     headers:{origin:'https://foreign.invalid','sec-fetch-site':'cross-site'},data:{trackId:track.identity.trackId,deviceId,requestId:'csrf-probe'},
   })
   assert.equal(csrf.status(),403,'FOREIGN_ORIGIN_NOT_REFUSED')
-  const page=await context.newPage()
   const sendPath='/api/autonomous/historical-viewer-send'
+  const refusals={}
+  for(const [label,destination,release,expected] of [
+    ['foreign','b1cb3422-a1cf-4599-bf90-4af356b3fab6',track.identity.trackId,401],
+    ['expired','4618c050-3254-4f97-bada-5c704001c101',track.identity.trackId,401],
+    ['revoked','4618c050-3254-4f97-bada-5c704001c102',track.identity.trackId,401],
+    ['withdrawn',deviceId,'track-viewer001c-withdrawn-fixture',404],
+  ]){
+    const refused=await context.request.post(origin+sendPath,{headers:{origin,'sec-fetch-site':'same-origin'},
+      data:{trackId:release,deviceId:destination,requestId:'qualification-'+label}})
+    assert.equal(refused.status(),expected,'HISTORICAL_'+label.toUpperCase()+'_NOT_REFUSED')
+    refusals[label]=refused.status()
+  }
+  const page=await context.newPage()
   const pairingCalls=[]
   page.on('request',request=>{if(/viewer-pair|device-activations/.test(request.url()))pairingCalls.push(request.url())})
   const button=await openTrack(page,track,deviceId)
@@ -104,6 +117,13 @@ try {
   const sent=await response
   assert.equal(sent.status(),200,'BROWSER_HISTORICAL_SEND_REFUSED')
   const command=await sent.json()
+  const requestData=sent.request().postDataJSON()
+  const sendHeaders={origin,'sec-fetch-site':'same-origin'}
+  const repeated=await context.request.post(origin+sendPath,{headers:sendHeaders,data:requestData})
+  assert.equal(repeated.status(),200,'REPLAY_WAS_NOT_IDEMPOTENT')
+  assert.equal((await repeated.json()).commandId,command.commandId,'REPLAY_CREATED_A_NEW_COMMAND')
+  const substituted=await context.request.post(origin+sendPath,{headers:sendHeaders,data:{...requestData,trackId:second.identity.trackId}})
+  assert.equal(substituted.status(),409,'REPLAY_ACCEPTED_A_DIFFERENT_TRACK')
   await page.locator('[data-viewer-state="ready"]').waitFor({timeout:170_000})
   assert.match(await page.locator('[data-viewer-state="ready"]').textContent(),/Track prête.*TEXT ON.*AUDIO ON/s)
   const native=await deviceEvidence('001c-native.json',30)
@@ -112,9 +132,10 @@ try {
   assert.equal(native.revisionId,track.multimedia.revisionId)
   assert.deepEqual(pairingCalls,[])
   assert.deepEqual((await context.cookies(origin)).filter(cookie=>cookie.name.startsWith('sv_autonomous')),[])
-  await writeFile('viewer001c-evidence/test-a.json',JSON.stringify({origin,deviceId,trackId:track.identity.trackId,
+  await writeFile('viewer001c-evidence/test-a.json',JSON.stringify({origin,deviceId,generation,trackId:track.identity.trackId,
     commandId:command.commandId,realBrowserClick:true,anonymousCatalogue:true,historicalCookie:true,
-    publicCookie:false,newPairingCalls:0,native},null,2)+'\n')
+    publicCookie:false,newPairingCalls:0,native,security:{...refusals,anonymous:rejected.status(),csrf:csrf.status(),
+      staleGenerationRefused,replaySameCommand:true,replayDifferentTrack:substituted.status()}},null,2)+'\n')
   execFileSync('adb',['shell','run-as',pkg,'touch','files/001c-browser-ack'])
   const rendered=await deviceEvidence('001c-render.json',150)
   await writeFile('viewer001c-evidence/render.json',JSON.stringify(rendered,null,2)+'\n')

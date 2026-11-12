@@ -60,6 +60,19 @@ public final class HistoricalViewerHttpsAndroidTest {
         throw new AssertionError("HISTORICAL_SETUP_TIMEOUT");
     }
 
+    /** Le bearer Keystore reste en Android. Le vrai transport doit refuser une autre génération. */
+    private void rejectStaleGeneration(TvFirst008State state,JSONObject identity) throws Exception {
+        PublicCloudClient.Https transport=new PublicCloudClient.Https(BuildConfig.CLOUD_ORIGIN,true);
+        JSONObject bad=new JSONObject().put("deviceId",identity.getString("deviceId"))
+                .put("generation",java.util.UUID.randomUUID().toString());
+        try {
+            transport.request("poll",bad,state.token(identity));
+            fail("HISTORICAL_STALE_GENERATION_ACCEPTED");
+        } catch (IllegalArgumentException rejected) {
+            assertEquals("PUBLIC_HTTP_409",rejected.getMessage());
+        }
+    }
+
     /** Positionne uniquement l'œuvre appartenant au banc Android. */
     private void playback(MediaSession media,int state,long position){
         media.setPlaybackState(new PlaybackState.Builder()
@@ -121,6 +134,7 @@ public final class HistoricalViewerHttpsAndroidTest {
         assertNull(state.read("identity"));
         assertNull(PublicCompanionOwner.identityState(app).read("identity"));
         JSONObject identity=initialAssociation(state,new TvFirst008Http(BuildConfig.CLOUD_ORIGIN));
+        rejectStaleGeneration(state,identity);
         Activity initial=instrument.startActivitySync(new Intent(app,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         try{
             instrument.runOnMainSync(()->PublicCompanionService.resumeHistorical(initial));
@@ -131,6 +145,7 @@ public final class HistoricalViewerHttpsAndroidTest {
             await(()->initial.isFinishing() && !app.getPackageName().equals(remote.getCurrentPackageName()),
                     "COMPANION_ACTIVITY_STILL_VISIBLE",25_000);
             evidence("001c-background.json",new JSONObject().put("deviceId",identity.getString("deviceId"))
+                    .put("generation",identity.getString("generation")).put("staleGenerationRefused",true)
                     .put("activityClosed",true).put("publicIdentityPresent",false));
             await(()->PublicCompanionService.current()!=null && PublicCompanionService.current().status().startsWith("Track prête"),
                     "NATIVE_HISTORICAL_READY_TIMEOUT",150_000);
