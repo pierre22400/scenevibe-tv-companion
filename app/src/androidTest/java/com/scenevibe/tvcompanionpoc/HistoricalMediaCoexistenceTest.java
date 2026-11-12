@@ -8,6 +8,7 @@ import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.SystemClock;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
 import java.io.File;
@@ -187,12 +188,8 @@ public final class HistoricalMediaCoexistenceTest {
             assertTrue(privatePrefs.getBoolean("audio",false));
             assertFalse(viewerPrefs.audio());
             await(()->activity.hasWindowFocus() && TvFirst009TextServiceOwner.multimediaTrackPosition()==30_000,"PRIVATE_FOCUS_OR_CLOCK_CHANGED");
-            try(var bench=new CompanionShortcutBench(instrument)){
-                bench.systemShortcut();
-                bench.await(TvFirst009TextServiceOwner::developerHasFocus,"PRIVATE_MUTE_WINDOW_MISSING",10000);
-                bench.remote.pressBack();
-                bench.await(activity::hasWindowFocus,"PRIVATE_MUTE_FOCUS_NOT_RESTORED",10000);
-            }
+            CompanionMuteNativeChecks.exercise(instrument,media,"private-coexistence");
+            await(()->activity.hasWindowFocus() && TvFirst009TextServiceOwner.publicCommand()==null,"PRIVATE_FOCUS_NOT_RESTORED");
             assertEquals(0,cloud.transfers);
             instrument.runOnMainSync(()->TvFirst009TextServiceOwner.requestStop(target));
             await(()->first.equals(cloud.armed),"PUBLIC_RESUME_NOT_ARMED");
@@ -212,7 +209,7 @@ public final class HistoricalMediaCoexistenceTest {
             assertEquals(privateDigest,MultimediaAndroidBridge.restoreCache(target,source).binding.sha256);
             assertTrue(privatePrefs.getBoolean("audio",false));assertFalse(viewerPrefs.audio());
             JSONObject proof=new JSONObject().put("privateWait",true).put("privateCacheAndKeystore",true)
-                    .put("privateMuteAndFocus",true).put("publicResume",true).put("revisionPinned",true)
+                    .put("privateMuteRecalageAndFocus",true).put("publicResume",true).put("revisionPinned",true)
                     .put("revisionResume",true).put("privateAudio",true).put("publicAudio",false);
             Files.write(new File(target.getFilesDir(),"001c-coexistence.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
         }finally{

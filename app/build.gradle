@@ -276,7 +276,8 @@ android {
         buildTypes.tvux002 { debuggable true; signingConfig signingConfigs.debug }
         sourceSets.tvux002 {
             java.srcDir "src/tvux002Qualification/java"
-            manifest.srcFile historicalViewer001c ? "src/publicViewer001cQualification/AndroidManifest.xml" :
+            def mediaQualification = providers.gradleProperty("scenevibeHistoricalMediaQualification").orElse("false").get() == "true"
+            manifest.srcFile (historicalViewer001c || mediaQualification) ? "src/publicViewer001cQualification/AndroidManifest.xml" :
                     publicViewer001 ? "src/publicViewer001/AndroidManifest.xml" : "src/tvux002Qualification/AndroidManifest.xml"
         }
     }

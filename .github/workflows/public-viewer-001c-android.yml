@@ -94,6 +94,7 @@ jobs:
     env:
       SCENEVIBE_CLOUD_ORIGIN: ''
       ORG_GRADLE_PROJECT_scenevibeHistoricalViewer001c: 'false'
+      ORG_GRADLE_PROJECT_scenevibeHistoricalMediaQualification: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
