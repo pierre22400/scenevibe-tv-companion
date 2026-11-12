@@ -50,6 +50,15 @@ async function prepare(context) {
   return background.deviceId
 }
 
+/** Attend la fin du runner avant de redémarrer son image persistante. */
+async function waitForInstrumentation() {
+  for(let i=0;i<40;i++){
+    if((await readFile('viewer001c-evidence/instrumentation.log','utf8')).includes('OK (1 test)'))return
+    await wait(1000)
+  }
+  throw new Error('ANDROID_MEDIA_REGRESSION_FAILED')
+}
+
 const browser=await chromium.launch({executablePath:process.env.SCENEVIBE_CHROMIUM_EXECUTABLE,headless:true,args:['--no-sandbox']})
 try {
   const anonymous=await browser.newContext()
@@ -58,10 +67,20 @@ try {
   const {items}=await catalogue.json()
   const track=items.find(item=>item.track.title.startsWith('Qualification spectateur 001 — Columbo — Eaux troubles')&&item.multimedia?.audioCount===3)
   assert.ok(track,'PUBLISHED_TEXT_AUDIO_TRACK_REQUIRED')
+  const rejected=await anonymous.request.post(origin+'/api/autonomous/historical-viewer-send',{
+    headers:{origin,'sec-fetch-site':'same-origin'},data:{trackId:track.identity.trackId,deviceId:'unknown',requestId:'refusal-probe'},
+  })
+  assert.equal(rejected.status(),401,'ANONYMOUS_COMMAND_NOT_REFUSED')
+  const second=items.find(item=>item.identity.trackId!==track.identity.trackId&&item.multimedia?.audioCount>0&&item.multimedia?.textCount>0)
+  assert.ok(second,'SECOND_PUBLIC_TRACK_REQUIRED')
   await anonymous.close()
 
   const context=await browser.newContext()
   const deviceId=await prepare(context)
+  const csrf=await context.request.post(origin+'/api/autonomous/historical-viewer-send',{
+    headers:{origin:'https://foreign.invalid','sec-fetch-site':'cross-site'},data:{trackId:track.identity.trackId,deviceId,requestId:'csrf-probe'},
+  })
+  assert.equal(csrf.status(),403,'FOREIGN_ORIGIN_NOT_REFUSED')
   const page=await context.newPage()
   const sendPath='/api/autonomous/historical-viewer-send'
   const pairingCalls=[]
@@ -87,4 +106,34 @@ try {
   await writeFile('viewer001c-evidence/test-a.json',JSON.stringify({origin,deviceId,trackId:track.identity.trackId,
     commandId:command.commandId,realBrowserClick:true,anonymousCatalogue:true,historicalCookie:true,
     publicCookie:false,newPairingCalls:0,native},null,2)+'\n')
+  execFileSync('adb',['shell','run-as',pkg,'touch','files/001c-browser-ack'])
+  const media=await deviceEvidence('001c-media.json',150)
+  assert.equal(media.persistedText,true)
+  assert.equal(media.persistedAudio,false)
+  await writeFile('viewer001c-evidence/media.json',JSON.stringify(media,null,2)+'\n')
+  await waitForInstrumentation()
+  execFileSync('bash',['.github/scripts/public-viewer-001c-cold-boot.sh'],{stdio:'inherit',timeout:300_000})
+
+  const mobile=await browser.newContext({storageState:await context.storageState(),
+    viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true})
+  const phone=await mobile.newPage()
+  const calls=[]
+  phone.on('request',request=>{if(/viewer-pair|device-activations|sign-in/.test(request.url()))calls.push(request.url())})
+  await phone.goto(origin+'/track/'+encodeURIComponent(second.identity.slug),{waitUntil:'domcontentloaded'})
+  const phoneButton=phone.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
+  await phoneButton.waitFor({state:'visible',timeout:30_000})
+  const target=phone.getByLabel('Télévision',{exact:true})
+  if(await target.count())await target.selectOption(deviceId)
+  const delivered=phone.waitForResponse(r=>new URL(r.url()).pathname===sendPath&&r.request().method()==='POST',{timeout:45_000})
+  await phoneButton.tap({timeout:45_000})
+  const secondResponse=await delivered
+  assert.equal(secondResponse.status(),200)
+  const secondCommand=await secondResponse.json()
+  assert.notEqual(secondCommand.commandId,command.commandId)
+  await phone.locator('[data-viewer-state="ready"]').waitFor({timeout:170_000})
+  assert.match(await phone.locator('[data-viewer-state="ready"]').textContent(),/Track prête.*TEXT ON.*AUDIO OFF/s)
+  assert.deepEqual(calls,[])
+  await writeFile('viewer001c-evidence/mobile-second-track.json',JSON.stringify({deviceId,trackId:second.identity.trackId,
+    commandId:secondCommand.commandId,mobileBrowser:true,sameOriginHistoricalSession:true,androidColdBoot:true,
+    newPairingOrSignInCalls:0,text:true,audio:false},null,2)+'\n')
 } finally { await browser.close() }

@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
+import com.scenevibe.tvcompanionpoc.calendar.SceneEvent;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
@@ -56,6 +60,54 @@ public final class HistoricalViewerHttpsAndroidTest {
         throw new AssertionError("HISTORICAL_SETUP_TIMEOUT");
     }
 
+    /** Positionne uniquement l'œuvre appartenant au banc Android. */
+    private void playback(MediaSession media,int state,long position){
+        media.setPlaybackState(new PlaybackState.Builder()
+                .setState(state,position,state==PlaybackState.STATE_PLAYING?1f:0f,SystemClock.elapsedRealtime()).build());
+    }
+
+    /** Qualifie les sorties natives et le rappel de raccourci sur une session MEDIA du banc. */
+    private JSONObject mediaRegression(PublicMultimediaCache.Prepared prepared) throws Exception {
+        final MediaSession[] owned={null};
+        instrument.runOnMainSync(()->{
+            owned[0]=new MediaSession(app,"SCENEVIBE 001-C OWNED MEDIA");
+            owned[0].setMetadata(new MediaMetadata.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
+                    .putString(MediaMetadata.METADATA_KEY_TITLE,"Columbo — Eaux troubles")
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());
+            playback(owned[0],PlaybackState.STATE_PAUSED,0);owned[0].setActive(true);
+        });
+        int texts=0,audios=0;
+        try{
+            for(SceneEvent event:prepared.track.calendar.events()){
+                long before=Math.max(0,event.startMs()-1000);
+                instrument.runOnMainSync(()->playback(owned[0],PlaybackState.STATE_PAUSED,before));
+                await(()->TvFirst009TextServiceOwner.status().positionMs==before,"OWN_MEDIA_POSITION_MISSING",15000);
+                instrument.runOnMainSync(()->playback(owned[0],PlaybackState.STATE_PLAYING,before));
+                if(prepared.track.audio.containsKey(event.eventId())){
+                    int count=++audios;
+                    await(()->TvFirst009TextServiceOwner.multimediaAudioStarted()>=count,"OWN_MEDIA_AUDIO_MISSING",15000);
+                }else{
+                    int count=++texts;
+                    await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>=count,"OWN_MEDIA_TEXT_MISSING",15000);
+                }
+            }
+            assertTrue(texts>0 && audios>0);
+            instrument.runOnMainSync(()->playback(owned[0],PlaybackState.STATE_PAUSED,30_000));
+            await(()->TvFirst009TextServiceOwner.status().positionMs==30_000,"MUTE_BASE_POSITION_MISSING",15000);
+            Activity viewer=instrument.startActivitySync(new Intent(app,DeveloperViewerFixtureActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            try(var bench=new CompanionShortcutBench(instrument)){
+                bench.systemShortcut();
+                bench.await(TvFirst009TextServiceOwner::developerHasFocus,"NATIVE_SHORTCUT_WINDOW_MISSING",10000);
+                bench.remote.pressBack();
+                bench.await(viewer::hasWindowFocus,"NATIVE_SHORTCUT_FOCUS_NOT_RESTORED",10000);
+            }finally{instrument.runOnMainSync(viewer::finish);}
+            instrument.runOnMainSync(()->TvFirst009TextServiceOwner.setMultimediaAudioEnabled(false));
+            return new JSONObject().put("textWindows",texts).put("audioStarted",audios)
+                    .put("androidShortcutCallback",true).put("backAndFocus",true);
+        }finally{instrument.runOnMainSync(()->{playback(owned[0],PlaybackState.STATE_STOPPED,30_000);owned[0].release();});}
+    }
+
     /** Vérifie que le vrai service télécharge et arme le cache pendant que l'Activity est fermée. */
     @Test public void historicalOnlyFromBrowserThroughService() throws Exception {
         assertTrue(BuildConfig.DEBUG && BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C);
@@ -63,6 +115,7 @@ public final class HistoricalViewerHttpsAndroidTest {
         assertEquals("1",remote.executeShellCommand("getprop ro.kernel.qemu").trim());
         remote.executeShellCommand("appops set "+app.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
         remote.executeShellCommand("cmd notification allow_listener "+NotificationAccess.component(app).flattenToString());
+        instrument.runOnMainSync(()->CloudMultimediaAdmission.useOwnedMediaSessionFixture(true));
         TvFirst008State state=new TvFirst008State(app);
         assertNull(state.read("identity"));
         assertNull(PublicCompanionOwner.identityState(app).read("identity"));
@@ -93,6 +146,10 @@ public final class HistoricalViewerHttpsAndroidTest {
                     .put("commandId",prepared.binding.command).put("revisionId",prepared.binding.revision)
                     .put("packageSha256",prepared.binding.digest).put("audioResources",prepared.track.audio.size())
                     .put("text",preferences.text()).put("audio",preferences.audio()));
-        }finally{instrument.runOnMainSync(initial::finish);}
+            await(()->new File(app.getFilesDir(),"001c-browser-ack").exists(),"FIRST_BROWSER_PROOF_MISSING",35_000);
+            JSONObject media=mediaRegression(prepared);
+            assertFalse(new PublicViewerPreferences(app).audio());
+            evidence("001c-media.json",media.put("persistedText",new PublicViewerPreferences(app).text()).put("persistedAudio",false));
+        }finally{instrument.runOnMainSync(()->{initial.finish();CloudMultimediaAdmission.useOwnedMediaSessionFixture(false);});}
     }
 }
