@@ -11,5 +11,16 @@ adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.HistoricalVi
 instrument=$!
 trap 'kill "$instrument" 2>/dev/null || true' EXIT
 node .github/scripts/public-viewer-001c-browser.mjs
-wait "$instrument"
-tr -d '\r' < viewer001c-evidence/instrumentation.log | grep -q '^OK (1 test)$'
+instrument_status=0
+wait "$instrument" || instrument_status=$?
+tr -d '\r' < viewer001c-evidence/instrumentation.log > viewer001c-evidence/instrumentation-normalized.log
+grep -Fxq 'OK (1 test)' viewer001c-evidence/instrumentation-normalized.log
+grep -Fxq 'INSTRUMENTATION_CODE: -1' viewer001c-evidence/instrumentation-normalized.log
+test -s viewer001c-evidence/test-a.json
+test -s viewer001c-evidence/media.json
+test -s viewer001c-evidence/mobile-second-track.json
+# Le redémarrage peut couper le client adb après le verdict AndroidJUnitRunner.
+case "$instrument_status" in
+    0|255) printf 'AndroidJUnitRunner PASS, preuve post-redémarrage présente. adb=%s\n' "$instrument_status" ;;
+    *) exit "$instrument_status" ;;
+esac
