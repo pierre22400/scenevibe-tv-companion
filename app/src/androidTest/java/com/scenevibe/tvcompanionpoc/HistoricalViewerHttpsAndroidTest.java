@@ -93,6 +93,7 @@ public final class HistoricalViewerHttpsAndroidTest {
                 }
             }
             assertTrue(texts>0 && audios>0);
+            evidence("001c-render.json",new JSONObject().put("textWindows",texts).put("audioStarted",audios));
             instrument.runOnMainSync(()->playback(owned[0],PlaybackState.STATE_PAUSED,30_000));
             await(()->TvFirst009TextServiceOwner.status().positionMs==30_000,"MUTE_BASE_POSITION_MISSING",15000);
             Activity viewer=instrument.startActivitySync(new Intent(app,DeveloperViewerFixtureActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

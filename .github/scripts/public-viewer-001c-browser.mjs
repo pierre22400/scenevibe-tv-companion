@@ -116,7 +116,9 @@ try {
     commandId:command.commandId,realBrowserClick:true,anonymousCatalogue:true,historicalCookie:true,
     publicCookie:false,newPairingCalls:0,native},null,2)+'\n')
   execFileSync('adb',['shell','run-as',pkg,'touch','files/001c-browser-ack'])
-  const media=await deviceEvidence('001c-media.json',150)
+  const rendered=await deviceEvidence('001c-render.json',150)
+  await writeFile('viewer001c-evidence/render.json',JSON.stringify(rendered,null,2)+'\n')
+  const media=await deviceEvidence('001c-media.json',45)
   assert.equal(media.persistedText,true)
   assert.equal(media.persistedAudio,false)
   await writeFile('viewer001c-evidence/media.json',JSON.stringify(media,null,2)+'\n')
