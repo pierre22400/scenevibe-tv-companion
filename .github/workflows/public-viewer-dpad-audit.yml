@@ -1,0 +1,45 @@
+name: Public Viewer D-pad independent verification
+
+# Unit verification only, without APK assembly, signature or physical device.
+on:
+  push:
+    branches: [work/scenevibe-public-viewer-dpad-audit]
+    paths-ignore: ['docs/**']
+permissions:
+  contents: read
+env:
+  ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+  ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+  ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+  ORG_GRADLE_PROJECT_scenevibePublicViewer001: 'true'
+jobs:
+  android-views:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Verify the native Settings focus and unchanged MUTE/cache preferences
+        run: >-
+          gradle --no-daemon --max-workers=2 testTvux002UnitTest
+          --tests '*PublicAssociationFocusTest'
+          --tests '*PublicViewerPreferencesTest'
+          --tests '*PublicCatalogueCandidateTest'
+          --tests '*CompanionShortcutServiceTest'
+          --tests '*CompanionRecalibrationPanelTest'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-viewer-dpad-junit-${{ github.sha }}
+          path: app/build/test-results/testTvux002UnitTest/*.xml
+          if-no-files-found: error
+          retention-days: 30
