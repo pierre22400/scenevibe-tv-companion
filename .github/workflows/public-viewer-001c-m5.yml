@@ -1,0 +1,108 @@
+name: Public Viewer 001-C M5 update and recovery
+on:
+  push:
+    branches: [work/scenevibe-public-viewer-dpad-audit]
+    paths: ['.github/workflows/public-viewer-001c-m5.yml', 'qualification/viewer001c/**', 'app/build.gradle', 'app/src/androidTest/**/HistoricalM5*.java']
+permissions:
+  contents: read
+  actions: read
+env:
+  QUALIFICATION_RUN: '43198203976'
+  QUALIFICATION_SOURCE: 'b300222eb367be175702422c61766b707fae53c3'
+  SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+jobs:
+  signed-migration:
+    if: github.repository == 'pierre22400/scenevibe-tv-companion' && contains(github.event.head_commit.message, '[m5-qualified]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 42
+    steps:
+      - name: Require the completed real HTTPS qualification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN" \
+            --jq ".head_sha == \"$QUALIFICATION_SOURCE\" and .conclusion == \"success\"" | grep -Fxq true
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN/jobs" \
+            --jq '.jobs[] | select(.name == "test-a") | .conclusion' | grep -Fxq success
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 947b109de4a6e91b7757a5cf1eeea27de567d138
+          path: recovery-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43079608451
+          github-token: ${{ github.token }}
+          name: scenevibe-sony001a-m5-43079608451
+          path: signed-input
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile the two exact release sources
+        env:
+          ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+          ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: 'true'
+          ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+          ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          SCENEVIBE_PUBLIC_VIEWER_ORIGIN=https://scenevibe-public-viewer001-qual.vercel.app \
+            gradle --no-daemon --max-workers=2 -PscenevibePublicViewer001=true -PscenevibeHistoricalViewer001c=true \
+            -PscenevibeQualificationUnsigned=true assembleTvux002
+          cp app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk "$RUNNER_TEMP/viewer001c-unsigned-v36.apk"
+          SCENEVIBE_PUBLIC_VIEWER_ORIGIN=https://scenevibe-public-viewer001-qual.vercel.app \
+            gradle --no-daemon --max-workers=2 -PscenevibePublicViewer001=true -PscenevibeHistoricalViewer001c=true \
+            -PscenevibeTvUx002NativeQualification=true assembleTvux002AndroidTest
+          gradle -p recovery-source --no-daemon --max-workers=2 -PscenevibeQualificationUnsigned=true assembleTvux002
+          bash qualification/viewer001c/build-player.sh "$RUNNER_TEMP/viewer001c-owned-player.apk"
+      - name: Sign and check exact historical M5
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: bash qualification/viewer001c/sign.sh
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2 -dns-server 192.0.2.1
+          script: bash qualification/viewer001c/emulator.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-viewer-001c-m5-qualification
+          path: |
+            m5-proof/*.txt
+            m5-proof/SHA256SUMS
+          if-no-files-found: warn
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-viewer-001c-m5-v36-v37
+          path: |
+            m5-proof/*.apk
+            m5-proof/*.txt
+            m5-proof/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30

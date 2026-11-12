@@ -16,12 +16,16 @@ import org.json.JSONObject;
  * Propriétaire public Android : l'unique code TV associe le navigateur, puis
  * les commandes téléchargent et appliquent les préférences automatiquement.
  * Réseau/décodage restent hors UI ; service et moteurs restent sur le Looper.
- * Les identités et caches privés historiques ne sont jamais consultés.
+ * Le transport 001-C relit uniquement la possession historique dans Keystore.
+ * Ses reçus et préférences de commande restent dans les espaces publics.
  */
 final class PublicCompanionOwner implements AutoCloseable {
     private final Context context;
     private final TvFirst008State state;
     private final PublicCloudClient client;
+    private final boolean historical;
+    private final TvFirst008State commandMetadata;
+    private String cacheGeneration;
     private final PublicViewerPreferences viewerPreferences;
     private final ScheduledExecutorService worker=Executors.newSingleThreadScheduledExecutor();
     private final Handler main=new Handler(Looper.getMainLooper());
@@ -34,6 +38,7 @@ final class PublicCompanionOwner implements AutoCloseable {
     private long grantDeadline;
     private int failedPolls;
     private boolean followUp;
+    private String reportedWait="";
 
     /** Compose le stockage réel et le transport HTTPS déjà configuré, sans compte humain. */
     PublicCompanionOwner(Context context) {
@@ -47,8 +52,28 @@ final class PublicCompanionOwner implements AutoCloseable {
     }
     /** La qualification native remplace seulement le port HTTP par un serveur de fixture. */
     PublicCompanionOwner(Context context,TvFirst008State state,PublicCloudClient.Transport transport){
+        this(context,state,transport,false);
+    }
+
+    /** Réutilise le vrai service de réception avec la possession historique, sans chemin d'association. */
+    static PublicCompanionOwner historical(Context context) {
+        return new PublicCompanionOwner(context,new TvFirst008State(context),
+                new PublicCloudClient.Https(BuildConfig.CLOUD_ORIGIN,true),true);
+    }
+
+    /** Remplace uniquement le transport pour le banc Android contrôlé. */
+    static PublicCompanionOwner ownedHistoricalFixture(Context context,TvFirst008State state,PublicCloudClient.Transport transport){
+        if(!BuildConfig.DEBUG || !BuildConfig.CLOUD_ORIGIN.isEmpty())throw new IllegalStateException("OWNED_DEBUG_FIXTURE_ONLY");
+        return new PublicCompanionOwner(context,state,transport,true);
+    }
+
+    /** Les écritures 001-C sont séparées du namespace privé utilisé pour lire la possession. */
+    private PublicCompanionOwner(Context context,TvFirst008State state,PublicCloudClient.Transport transport,boolean historical){
         if(!BuildConfig.PUBLIC_AUTONOMOUS_001B)throw new IllegalStateException("PUBLIC_VARIANT_DISABLED");
         this.context=context.getApplicationContext();this.state=state;this.client=new PublicCloudClient(state,transport);
+        this.historical=historical;
+        commandMetadata=historical?new TvFirst008State(context.getSharedPreferences("public001c_commands",Context.MODE_PRIVATE),
+                new SecretStore.AndroidKeyStoreSecretStore(context)):state;
         viewerPreferences=BuildConfig.PUBLIC_VIEWER_001?new PublicViewerPreferences(this.context):null;
     }
 
@@ -106,20 +131,40 @@ final class PublicCompanionOwner implements AutoCloseable {
     /** Revalide automatiquement possession et génération avant de traiter les commandes publiques. */
     private void step() throws Exception {
         if(closed)return;
-        JSONObject identity=client.identity();if(identity==null){pairing();return;}
+        JSONObject identity=client.identity();
+        if(identity==null){
+            if(!historical)pairing();
+            else {revoked=true;status="Association historique indisponible.";}
+            return;
+        }
         JSONObject association=client.json("association",new JSONObject());
         if(!identity.getString("deviceId").equals(association.optString("deviceId")) || !identity.getString("generation").equals(association.optString("generation")))throw new IllegalArgumentException("PUBLIC_ASSOCIATION_MISMATCH");
         long remaining=Instant.parse(association.getString("consentExpiresAt")).toEpochMilli()-System.currentTimeMillis();
         if(remaining<=0)throw new IllegalArgumentException("REVOKED");
         grantDeadline=SystemClock.elapsedRealtime()+remaining;revoked=false;
-        if(viewerPreferences!=null)viewerPreferences.initialize(state.read("publicPreferences"));
+        if(viewerPreferences!=null)viewerPreferences.initialize(historical
+                ?identityState(context).read("publicPreferences"):commandMetadata.read("publicPreferences"));
+        String generation=identity.getString("generation");
+        if(historical && cacheGeneration!=null && !generation.equals(cacheGeneration)){
+            if(reference!=null)reference.invalidate();
+            reference=null;cache=null;prepared=null;
+        }
         if(reference!=null){
             if(reference.viewerPreferences!=null)validateActive();
-            if(reference!=null)reference.renewed(grantDeadline);
+            if(reference!=null)reference.renewed(effectDeadline(reference.prepared.binding));
         }
         if(cache==null){
-            cache=new PublicMultimediaCache(context,identity.getString("generation"));prepared=cache.read();
-            if(prepared!=null){client.validate(prepared.binding);restorePreferences();}
+            cache=new PublicMultimediaCache(context,generation);cacheGeneration=generation;prepared=cache.read();
+            if(prepared!=null){
+                if(historical && prepared.binding.expires<=System.currentTimeMillis())prepared=null;
+                else {
+                    try{client.validate(prepared.binding);restorePreferences();}
+                    catch(Exception refused){
+                        if(historical && "PUBLIC_HTTP_404".equals(refused.getMessage()))prepared=null;
+                        else throw refused;
+                    }
+                }
+            }
         }
         JSONObject polled=client.json("poll",new JSONObject());
         JSONArray commands=polled.getJSONArray("commands");
@@ -127,6 +172,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         for(int i=commands.length()-1;i>=0;i--)if(!"failed".equals(commands.getJSONObject(i).optString("state"))){command=commands.getJSONObject(i);break;}
         if(command==null){if(prepared==null)status="Télévision associée · choisis une Track depuis le catalogue.";else restorePreferences();return;}
         PublicCatalogueCandidate.Binding binding=new PublicCatalogueCandidate.Binding(command,identity.getString("deviceId"),identity.getString("generation"),System.currentTimeMillis());
+        boolean supportsWait=historical && polled.optBoolean("mediaWaitSupported",false);
         boolean automatic=viewerPreferences!=null && automaticCommand(polled.optJSONArray("automaticCommandIds"),binding.command);
         if(automatic && !hasEffectPermissions()){
             status="Autorisation Android de superposition ou MEDIA indisponible.";
@@ -135,6 +181,21 @@ final class PublicCompanionOwner implements AutoCloseable {
         }
         if("requested".equals(command.getString("state"))){
             boolean busy=onMain(()->TvFirst009TextServiceOwner.controlBusy());
+            if(busy && (historical || BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C)){
+                String[] reason={""};
+                onMain(()->{
+                    if(!TvFirst009TextServiceOwner.controlBusy())return false;
+                    String publicCommand=TvFirst009TextServiceOwner.publicCommand();
+                    if(publicCommand!=null && TvFirst009TextServiceOwner.publicMayYield() && prefer(binding.command)){
+                        TvFirst009TextServiceOwner.requestStop(context);
+                        return true;
+                    }
+                    reason[0]=publicCommand==null?"private-media":"public-media";
+                    return false;
+                });
+                if(!reason[0].isEmpty())reportWait(binding,reason[0],supportsWait && automatic);
+                return;
+            }
             if(busy && (prepared==null || prepared.binding.track.equals(binding.track))){
                 if(onMain(TvFirst009TextServiceOwner::publicMediaEnded)){
                     onMain(()->{TvFirst009TextServiceOwner.requestStop(context);return true;});reference=null;
@@ -147,6 +208,8 @@ final class PublicCompanionOwner implements AutoCloseable {
                 }
                 reference=null;return;
             }
+            reportedWait="";
+            if((historical || BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C) && !prefer(binding.command))return;
             status="Téléchargement et vérification TEXT/AUDIO…";
             try{
                 if(automatic && cache.matches(binding)){
@@ -162,6 +225,18 @@ final class PublicCompanionOwner implements AutoCloseable {
             return;
         }
         if(prepared==null || !binding.same(prepared.binding))return;
+        if(historical && automatic && "cached".equals(command.getString("state"))){
+            String[] reason={""};
+            if(onMain(()->{
+                String active=TvFirst009TextServiceOwner.publicCommand();
+                if(!TvFirst009TextServiceOwner.controlBusy() || binding.command.equals(active))return false;
+                reason[0]=active==null?"private-media":"public-media";
+                return true;
+            })){
+                reportWait(binding,reason[0],supportsWait);
+                return;
+            }
+        }
         if(reference==null || reference.viewerPreferences==null)client.validate(binding);
         android.content.SharedPreferences playback=context.getSharedPreferences("public001d_playback",0);
         boolean stopped=binding.command.equals(playback.getString("stoppedCommand",""));
@@ -175,7 +250,7 @@ final class PublicCompanionOwner implements AutoCloseable {
                 if(binding.version>=0)preferences.put("expectedVersion",binding.version);
                 client.json("device-preferences",preferences);
             }
-            if(!automatic)state.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",false).put("audio",false));
+            if(!automatic)commandMetadata.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",false).put("audio",false));
             status="Commentaires arrêtés · réactivation disponible depuis le catalogue.";return;
         }
         if(automatic){
@@ -196,9 +271,20 @@ final class PublicCompanionOwner implements AutoCloseable {
             }
         }
         if(apply(text,audio,binding.version,false)){
-            state.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",text).put("audio",audio));
+            commandMetadata.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("text",text).put("audio",audio));
             if(!"armed".equals(command.getString("state")))client.receipt(binding,"armed");
             status="Réglages appliqués · TEXT "+(text?"ON":"OFF")+" · AUDIO "+(audio?"ON":"OFF");
+        }
+    }
+
+    /** Conserve le motif local et transmet au plus un reçu par version de commande et motif. */
+    private void reportWait(PublicCatalogueCandidate.Binding binding,String reason,boolean supported) throws Exception {
+        status="private-media".equals(reason)?"Track publique en attente · session privée conservée."
+                :"Track publique en attente · lecture publique en cours.";
+        String key=binding.command+":"+binding.version+":"+reason;
+        if(supported && !key.equals(reportedWait)){
+            client.mediaWait(binding,reason);
+            reportedWait=key;
         }
     }
 
@@ -238,10 +324,10 @@ final class PublicCompanionOwner implements AutoCloseable {
                 client.json("device-preferences",update);
             }
         }else client.receipt(binding,"armed",text,audio);
-        JSONObject saved=state.read("publicPreferences");
+        JSONObject saved=commandMetadata.read("publicPreferences");
         if(saved==null || !binding.command.equals(saved.optString("commandId"))
                 || !saved.optBoolean("viewer",false) || text!=saved.optBoolean("text") || audio!=saved.optBoolean("audio"))
-            state.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("viewer",true).put("text",text).put("audio",audio));
+            commandMetadata.write("publicPreferences",new JSONObject().put("commandId",binding.command).put("viewer",true).put("text",text).put("audio",audio));
         status="Track prête · TEXT "+(text?"ON":"OFF")+" · AUDIO "+(audio?"ON":"OFF");
     }
 
@@ -253,7 +339,7 @@ final class PublicCompanionOwner implements AutoCloseable {
 
     /** Relit des préférences déjà choisies sur le Web, sans demander d'autorisation après redémarrage. */
     private void restorePreferences() throws Exception {
-        JSONObject preferences=state.read("publicPreferences");
+        JSONObject preferences=commandMetadata.read("publicPreferences");
         if(prepared.binding.command.equals(context.getSharedPreferences("public001d_playback",0).getString("stoppedCommand","")))return;
         if(preferences!=null && prepared.binding.command.equals(preferences.optString("commandId"))){
             boolean automatic=viewerPreferences!=null && preferences.optBoolean("viewer",false);
@@ -262,13 +348,27 @@ final class PublicCompanionOwner implements AutoCloseable {
         }
     }
 
+    /** Mémorise le dernier nouvel envoi pour éviter qu'un autre transport ne réarme un ancien reçu. */
+    private boolean prefer(String command){
+        return context.getSharedPreferences("public001d_playback",Context.MODE_PRIVATE).edit()
+                .putString("preferredCommand",command).commit();
+    }
+
+    /** L'échéance de la commande historique borne les effets, indépendamment du grant. */
+    private long effectDeadline(PublicCatalogueCandidate.Binding binding){
+        if(!historical)return grantDeadline;
+        return Math.min(grantDeadline,SystemClock.elapsedRealtime()+Math.max(0,binding.expires-System.currentTimeMillis()));
+    }
+
     /** Applique sur le propriétaire UI réel ; le reçu attend l'état natif effectivement pris en compte. */
     private boolean apply(boolean text,boolean audio,long version,boolean automatic) throws Exception {
         if(reference==null || !reference.prepared.binding.same(prepared.binding))reference=new PublicRuntimeReference(
-                prepared,cache,state,grantDeadline,()->!closed && !revoked,automatic?viewerPreferences:null);
+                prepared,cache,state,effectDeadline(prepared.binding),()->!closed && !revoked,automatic?viewerPreferences:null);
         return onMain(()->{
             android.content.SharedPreferences playback=context.getSharedPreferences("public001d_playback",0);
             if(prepared.binding.command.equals(playback.getString("stoppedCommand","")))return false;
+            if(BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C &&
+                    !prepared.binding.command.equals(playback.getString("preferredCommand",prepared.binding.command)))return false;
             long observed=prepared.binding.command.equals(playback.getString("observedCommand",""))
                     ?Math.max(version,playback.getLong("observedVersion",-1)):version;
             if(!automatic || !prepared.binding.command.equals(playback.getString("observedCommand",""))

@@ -28,6 +28,13 @@ public final class PublicPairingActivity extends Activity {
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setGravity(Gravity.CENTER);
         root.setPadding(48,32,48,32);root.setBackgroundColor(0xFFFBFAF6);
         TextView title=new TextView(this);title.setText("Associer ma TV au catalogue SceneVibe");title.setTextColor(0xFF25211B);title.setTextSize(28);root.addView(title);
+        if (BuildConfig.PUBLIC_VIEWER_001 && !BuildConfig.PUBLIC_VIEWER_ORIGIN.isEmpty()) {
+            TextView address = new TextView(this);
+            address.setText("Ouvre " + BuildConfig.PUBLIC_VIEWER_ORIGIN + " sur ton téléphone ou ton ordinateur.");
+            address.setTextColor(0xFF25211B);
+            address.setTextSize(18);
+            root.addView(address);
+        }
         code=new TextView(this);code.setTag("public-tv-code");code.setTextColor(0xFF25211B);code.setTextSize(64);code.setGravity(Gravity.CENTER);root.addView(code);
         status=new TextView(this);status.setTag("public-tv-status");status.setTextSize(20);status.setTextColor(0xFF25211B);root.addView(status);
         if(!Settings.canDrawOverlays(this))button(root,"Réglage Android : superposition",()->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName()))));
@@ -38,7 +45,7 @@ public final class PublicPairingActivity extends Activity {
             text.setEnabled(false);audio.setEnabled(false);
         }
         button(root,"Retour au Companion",this::finish);setContentView(root);
-        startForegroundService(new Intent(this,PublicCompanionService.class));
+        startForegroundService(new Intent(this,PublicCompanionService.class).setAction(PublicCompanionService.SHOW_PUBLIC_PAIRING));
     }
     /** Un contrôle D-pad ordinaire, sans dialogue d'autorisation applicative. */
     private Button button(LinearLayout root,String label,Runnable action){Button button=new Button(this);button.setText(label);button.setOnClickListener(v->action.run());root.addView(button);return button;}

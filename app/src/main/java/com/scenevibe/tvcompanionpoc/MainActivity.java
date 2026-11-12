@@ -76,13 +76,18 @@ public final class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         LinearLayout controls = createRuntimeControls();
+        if (BuildConfig.PUBLIC_VIEWER_001) {
+            // These controls are registered and styled by the existing Settings focus controller.
+            addButton(controls, "Associer ma TV au catalogue public",
+                    () -> startActivity(new Intent(this, PublicPairingActivity.class)));
+        }
         presentation = new TvShellController(this, controls, this::presentationStatus,
                 this::openDiagnostics, savedInstanceState);
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
             developerTab=new DeveloperTab(this,()->presentation.back());
             presentation.setDeveloperPage(developerTab.view());
         }
-        if(BuildConfig.PUBLIC_AUTONOMOUS_001B){
+        if(BuildConfig.PUBLIC_AUTONOMOUS_001B && !BuildConfig.PUBLIC_VIEWER_001){
             LinearLayout publicFrame=new LinearLayout(this);publicFrame.setOrientation(LinearLayout.VERTICAL);
             Button associate=new Button(this);associate.setText("Associer ma TV au catalogue public");associate.setTag("public-associate-tv");
             associate.setOnClickListener(v->startActivity(new Intent(this,PublicPairingActivity.class)));

@@ -49,6 +49,7 @@ final class CloudMultimediaSession {
     private int nativeAudioStarts;
     private String closureReason="CALENDAR_EXPIRE_OR_REPLACE";
     private boolean publicMediaEnded;
+    private boolean publicMediaEngaged;
     private long manualEditGeneration;
 
     /** Compose real application ports only after the owner's separate explicit admission. */
@@ -190,7 +191,14 @@ final class CloudMultimediaSession {
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
-        if(admission.publicCommand()!=null && snapshot!=null)publicMediaEnded=snapshot.state==PlaybackState.STATE_STOPPED;
+        if(admission.publicCommand()!=null && snapshot!=null){
+            publicMediaEnded=snapshot.state==PlaybackState.STATE_STOPPED;
+            if(admission.matches(snapshot)){
+                if(publicMediaEnded)publicMediaEngaged=false;
+                else if(snapshot.state==PlaybackState.STATE_PLAYING || snapshot.state==PlaybackState.STATE_PAUSED
+                        || snapshot.state==PlaybackState.STATE_BUFFERING)publicMediaEngaged=true;
+            }
+        }
         if(admission.publicCommand()!=null && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
         if(!adProtection.status().allow){applyAdProtection(adProtection.status());return;}
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
@@ -450,6 +458,9 @@ final class CloudMultimediaSession {
     PublicViewerPreferences viewerPreferences(){return admission.viewerPreferences();}
     /** Seul un STOP publié par MEDIA termine automatiquement l'épinglage, jamais une pause ou perte réseau. */
     boolean publicMediaEnded(){return publicMediaEnded;}
+
+    /** Une Track préparée peut céder avant lecture ; une pause et une disparition temporaire restent épinglées. */
+    boolean publicMayYield(){return admission.publicCommand()!=null && !publicMediaEngaged;}
 
     /** A missing OS permission blocks every effect, retaining only the still-current admission and cache. */
     private boolean holdForPermissions(){

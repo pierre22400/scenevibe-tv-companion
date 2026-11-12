@@ -238,6 +238,8 @@ final class TvFirst009TextServiceOwner {
     static String publicCommand(){return liveInstance==null || liveInstance.multimedia==null || !liveInstance.multimedia.isActive()?null:liveInstance.multimedia.publicCommand();}
     /** Permet l'installation différée uniquement après un arrêt MEDIA observé. */
     static boolean publicMediaEnded(){return publicCommand()!=null && liveInstance.multimedia.publicMediaEnded();}
+    /** Seule une préparation publique sans lecture engagée peut céder devant un nouvel envoi. */
+    static boolean publicMayYield(){return publicCommand()!=null && liveInstance.multimedia.publicMayYield();}
 
     /** Reuse a system-owned PendingIntent to the non-exported service, without launching MainActivity. */
     static PendingIntent panelIntent(Context context) {

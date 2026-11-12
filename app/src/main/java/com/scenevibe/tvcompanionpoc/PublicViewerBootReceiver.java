@@ -14,12 +14,13 @@ public final class PublicViewerBootReceiver extends BroadcastReceiver {
     /** Reçoit seulement les événements système et n'ouvre aucune interface. */
     @Override public void onReceive(Context context, Intent intent) {
         String action = intent == null ? null : intent.getAction();
-        if (!BuildConfig.PUBLIC_VIEWER_001 || BuildConfig.PUBLIC_VIEWER_ORIGIN.isEmpty()
+        if (!BuildConfig.PUBLIC_VIEWER_001
                 || (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))) return;
         Context app = context.getApplicationContext();
         if (!Settings.canDrawOverlays(app) || !NotificationAccess.isGranted(app)) return;
         try {
-            if (PublicCompanionOwner.identityState(app).read("identity") != null) {
+            if (PublicCompanionService.hasHistoricalIdentity(app)
+                    || (!BuildConfig.PUBLIC_VIEWER_ORIGIN.isEmpty() && PublicCompanionOwner.identityState(app).read("identity") != null)) {
                 app.startForegroundService(new Intent(app, PublicCompanionService.class));
                 Log.i("SceneVibePublic", "PUBLIC_RECEIVER_BOOT_START_REQUESTED");
             }

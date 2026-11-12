@@ -20,6 +20,11 @@ def publicAutonomous001b = providers.gradleProperty("scenevibePublicAutonomous00
 def realTrack001 = providers.gradleProperty("scenevibeRealTrack001").orElse("false").get() == "true"
 def companionMute002 = providers.gradleProperty("scenevibeCompanionMute002").orElse("false").get() == "true"
 def publicViewer001 = providers.gradleProperty("scenevibePublicViewer001").orElse("false").get() == "true"
+// Seule la variante Viewer qualifiée peut activer le transport historique.
+def historicalViewer001c = providers.gradleProperty("scenevibeHistoricalViewer001c").orElse("false").get() == "true"
+if (historicalViewer001c && (!publicViewer001 || !cloudOrigin)) {
+    throw new GradleException("Historical Viewer requires the public receiver and the existing historical HTTPS origin")
+}
 def publicViewerOrigin = providers.environmentVariable("SCENEVIBE_PUBLIC_VIEWER_ORIGIN").orElse("").get()
 if (publicViewer001 && (!companionMute002 || (publicViewerOrigin && publicViewerOrigin != "https://scenevibe-public-viewer001-qual.vercel.app"))) {
     throw new GradleException("Public Viewer candidate requires MUTE 002 and its exact qualification origin")
@@ -56,6 +61,7 @@ android {
         buildConfigField "boolean", "REAL_TRACK_E2E_001", "false"
         buildConfigField "boolean", "PUBLIC_AUTONOMOUS_001B", "false"
         buildConfigField "boolean", "COMPANION_MUTE_002", "false"
+        buildConfigField "boolean", "PUBLIC_HISTORICAL_VIEWER_001C", "false"
         buildConfigField "boolean", "PUBLIC_VIEWER_001", "false"
         buildConfigField "String", "PUBLIC_VIEWER_ORIGIN", '""'
         manifestPlaceholders = [scenevibeCompanionMuteEnabled: "false"]
@@ -154,8 +160,9 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix historicalViewer001c ? "-public-viewer-001c-v36" : publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "COMPANION_MUTE_002", companionMute002 ? "true" : "false"
+        buildConfigField "boolean", "PUBLIC_HISTORICAL_VIEWER_001C", historicalViewer001c ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_VIEWER_001", publicViewer001 ? "true" : "false"
         buildConfigField "String", "PUBLIC_VIEWER_ORIGIN", "\"${publicViewerOrigin}\""
         manifestPlaceholders.scenevibeCompanionMuteEnabled = companionMute002 ? "true" : "false"
@@ -246,7 +253,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/CompanionShortcutBench.java", "**/CompanionShortcutConnectionAndroidTest.java", "**/CompanionShortcutOpenChecks.java", "**/CompanionMuteNativeChecks.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/HistoricalViewerHttpsAndroidTest.java", "**/HistoricalMediaCoexistenceTest.java", "**/HistoricalM5ContinuityTest.java", "**/HistoricalM5MuteChecks.java", "**/HistoricalM5ShortcutBench.java", "**/CompanionShortcutBench.java", "**/CompanionShortcutConnectionAndroidTest.java", "**/CompanionShortcutOpenChecks.java", "**/CompanionMuteNativeChecks.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -269,7 +276,9 @@ android {
         buildTypes.tvux002 { debuggable true; signingConfig signingConfigs.debug }
         sourceSets.tvux002 {
             java.srcDir "src/tvux002Qualification/java"
-            manifest.srcFile publicViewer001 ? "src/publicViewer001/AndroidManifest.xml" : "src/tvux002Qualification/AndroidManifest.xml"
+            def mediaQualification = providers.gradleProperty("scenevibeHistoricalMediaQualification").orElse("false").get() == "true"
+            manifest.srcFile((historicalViewer001c || mediaQualification) ? "src/publicViewer001cQualification/AndroidManifest.xml" :
+                    publicViewer001 ? "src/publicViewer001/AndroidManifest.xml" : "src/tvux002Qualification/AndroidManifest.xml")
         }
     }
     if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
@@ -314,6 +323,7 @@ androidComponents {
             if (hostedAutonomous001d) output.versionCode.set(33)
             if (companionMute002) output.versionCode.set(32)
             if (publicViewer001) output.versionCode.set(34)
+            if (historicalViewer001c) output.versionCode.set(36)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->

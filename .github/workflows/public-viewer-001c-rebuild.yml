@@ -1,0 +1,92 @@
+name: Public Viewer 001-C exact source rebuild
+on:
+  push:
+    branches: [work/scenevibe-public-viewer-dpad-audit]
+    paths: ['.github/workflows/public-viewer-001c-rebuild.yml']
+permissions:
+  contents: read
+  actions: read
+env:
+  SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+  ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+  ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: 'true'
+  ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+  ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+jobs:
+  rebuild:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: dd4c45d3b51c772d65a75383a37e2bc171ef83d0
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 947b109de4a6e91b7757a5cf1eeea27de567d138
+          path: recovery-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43203148862
+          github-token: ${{ github.token }}
+          name: public-viewer-001c-m5-v36-v37
+          path: qualified
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Rebuild the exact sources without signing
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          SCENEVIBE_PUBLIC_VIEWER_ORIGIN=https://scenevibe-public-viewer001-qual.vercel.app \
+            gradle --no-daemon --max-workers=2 -PscenevibePublicViewer001=true -PscenevibeHistoricalViewer001c=true \
+            -PscenevibeQualificationUnsigned=true assembleTvux002
+          gradle -p recovery-source --no-daemon --max-workers=2 -PscenevibeQualificationUnsigned=true assembleTvux002
+      - name: Compare unsigned bytes and APK payload entries
+        run: |
+          python - <<'PY' | tee rebuild-proof.json
+          import hashlib
+          import json
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          def digest(data):
+              """Return the SHA-256 of the observed byte sequence."""
+              return hashlib.sha256(data).hexdigest()
+
+          def entries(path):
+              """Index APK payloads without the external APK signing block."""
+              with ZipFile(path) as apk:
+                  return {item.filename: digest(apk.read(item)) for item in apk.infolist()}
+
+          expected = Path('qualified/unsigned-sha256.txt').read_text().splitlines()
+          candidates = {
+              'v36': (Path('app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk'),
+                      Path('qualified/scenevibe-companion-viewer001c-v36-m5.apk'), expected[0].split()[0]),
+              'v37': (Path('recovery-source/app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk'),
+                      Path('qualified/scenevibe-companion-recovery-v37-m5.apk'), expected[1].split()[0]),
+          }
+          proof = {}
+          for version, (unsigned, signed, expected_sha) in candidates.items():
+              actual_sha = digest(unsigned.read_bytes())
+              original, rebuilt = entries(signed), entries(unsigned)
+              proof[version] = {
+                  'expectedUnsignedSha256': expected_sha,
+                  'rebuiltUnsignedSha256': actual_sha,
+                  'identicalUnsigned': actual_sha == expected_sha,
+                  'changedEntries': sorted(name for name in original.keys() | rebuilt.keys()
+                                           if original.get(name) != rebuilt.get(name)),
+              }
+          print(json.dumps(proof, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-viewer-001c-rebuild-proof
+          path: rebuild-proof.json
+          if-no-files-found: error
