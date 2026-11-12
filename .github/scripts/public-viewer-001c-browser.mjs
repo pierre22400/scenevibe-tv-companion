@@ -57,7 +57,7 @@ async function openTrack(page, track, deviceId) {
   await page.goto(origin+'/track/'+encodeURIComponent(track.identity.slug),{waitUntil:'domcontentloaded'})
   const inventory=await (await status).json()
   assert.ok(inventory.devices.some(device=>device.deviceId===deviceId),'HISTORICAL_TV_MISSING_FROM_INVENTORY')
-  if(inventory.devices.length>1)await page.getByLabel('Télévision',{exact:true}).selectOption(deviceId,{timeout:20_000})
+  if(inventory.devices.length>1)await page.locator('.public-viewer-controls select').selectOption(deviceId,{timeout:20_000})
   const button=page.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
   await button.waitFor({state:'visible',timeout:30_000})
   return button
