@@ -291,6 +291,7 @@ public final class TvFirst008Source implements TvAccountSource {
                     : "Compte associé. Consultation et ajout au cache uniquement ; aucun commentaire ni MEDIA.";
             verification = "";
         }
+        PublicCompanionService.resumeHistorical(context);
         main.postDelayed(() -> {
             final long expiredTicket;
             synchronized (lock) {

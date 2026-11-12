@@ -27,18 +27,24 @@ final class PublicCloudClient {
     /** Implémentation HTTPS de l'APK signé : origine exacte, TLS natif, budgets et délais. */
     static final class Https implements Transport {
         private final String origin;
+        private final boolean historical;
         /** Refuse une origine manquante, un chemin ou un port non qualifié avant tout socket. */
-        Https(String origin){
+        Https(String origin){this(origin,false);}
+
+        /** Choisit une famille de routes fixe sur l'origine historique compilée. */
+        Https(String origin,boolean historical){
             if(origin==null || !origin.matches("https://[A-Za-z0-9.-]+") || URI.create(origin).getHost()==null)
                 throw new IllegalArgumentException("PUBLIC_CLOUD_UNCONFIGURED");
-            this.origin=origin;
+            this.origin=origin;this.historical=historical;
         }
         /** Envoie une action fermée et vérifie MIME, taille, longueur et octets chunked. */
         @Override public byte[] request(String action,JSONObject body,String token) throws Exception {
             if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache|device-preferences"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
+            if(historical && (action.startsWith("challenge") || token==null))
+                throw new IllegalArgumentException("HISTORICAL_POSSESSION_REQUIRED");
             byte[] request=body.toString().getBytes(StandardCharsets.UTF_8);
             if(request.length>16_384)throw new IllegalArgumentException("PUBLIC_REQUEST_BUDGET");
-            HttpsURLConnection connection=(HttpsURLConnection)URI.create(origin+"/api/autonomous/"+action).toURL().openConnection();
+            HttpsURLConnection connection=(HttpsURLConnection)URI.create(origin+"/api/autonomous/"+(historical?"historical-":"")+action).toURL().openConnection();
             try{
                 connection.setInstanceFollowRedirects(false);connection.setRequestMethod("POST");connection.setConnectTimeout(15_000);connection.setReadTimeout(60_000);
                 connection.setRequestProperty("Origin",origin);connection.setRequestProperty("Content-Type","application/json");connection.setRequestProperty("Accept-Encoding","identity");

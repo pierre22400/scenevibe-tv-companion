@@ -1,0 +1,38 @@
+name: Public Viewer 001-C Android
+on:
+  push:
+    branches: [work/scenevibe-public-viewer-dpad-audit]
+    paths: ['app/**', '.github/workflows/public-viewer-001c-android.yml']
+permissions:
+  contents: read
+env:
+  ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+  ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+  ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+  ORG_GRADLE_PROJECT_scenevibePublicViewer001: 'true'
+  ORG_GRADLE_PROJECT_scenevibeHistoricalViewer001c: 'true'
+  SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-public-viewer001c-qual.vercel.app
+  SCENEVIBE_PUBLIC_VIEWER_ORIGIN: https://scenevibe-public-viewer001-qual.vercel.app
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile the 001-C Android service and run its focused regressions
+        run: gradle --no-daemon --max-workers=2 testTvux002UnitTest --tests '*PublicViewerPreferencesTest' --tests '*PublicCatalogueCandidateTest' --tests '*CompanionShortcutServiceTest' --tests '*CompanionRecalibrationPanelTest' --tests '*HistoricalViewerTransportTest'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-viewer-001c-android-regressions
+          path: app/build/test-results/testTvux002UnitTest/*.xml

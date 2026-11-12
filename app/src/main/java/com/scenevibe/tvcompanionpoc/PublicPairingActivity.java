@@ -45,7 +45,7 @@ public final class PublicPairingActivity extends Activity {
             text.setEnabled(false);audio.setEnabled(false);
         }
         button(root,"Retour au Companion",this::finish);setContentView(root);
-        startForegroundService(new Intent(this,PublicCompanionService.class));
+        startForegroundService(new Intent(this,PublicCompanionService.class).setAction(PublicCompanionService.SHOW_PUBLIC_PAIRING));
     }
     /** Un contrôle D-pad ordinaire, sans dialogue d'autorisation applicative. */
     private Button button(LinearLayout root,String label,Runnable action){Button button=new Button(this);button.setText(label);button.setOnClickListener(v->action.run());root.addView(button);return button;}
