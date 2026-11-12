@@ -50,6 +50,15 @@ async function prepare(context) {
   return background.deviceId
 }
 
+/** Attend l'inventaire autorisé avant de choisir la TV de cette exécution. */
+async function awaitDestination(page) {
+  await page.waitForFunction(() => {
+    const button=Array.from(document.querySelectorAll('.public-viewer-controls button'))
+      .find(element=>element.textContent?.trim()==='Envoyer sur ma TV')
+    return button && !button.disabled
+  },null,{timeout:45_000})
+}
+
 /** Attend la fin du runner avant de redémarrer son image persistante. */
 async function waitForInstrumentation() {
   for(let i=0;i<40;i++){
@@ -88,6 +97,7 @@ try {
   await page.goto(origin+'/track/'+encodeURIComponent(track.identity.slug),{waitUntil:'domcontentloaded'})
   const button=page.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
   await button.waitFor({state:'visible',timeout:30_000})
+  await awaitDestination(page)
   const destination=page.getByLabel('Télévision',{exact:true})
   if(await destination.count())await destination.selectOption(deviceId)
   const response=page.waitForResponse(r=>new URL(r.url()).pathname===sendPath&&r.request().method()==='POST',{timeout:45_000})
@@ -122,6 +132,7 @@ try {
   await phone.goto(origin+'/track/'+encodeURIComponent(second.identity.slug),{waitUntil:'domcontentloaded'})
   const phoneButton=phone.getByRole('button',{name:'Envoyer sur ma TV',exact:true})
   await phoneButton.waitFor({state:'visible',timeout:30_000})
+  await awaitDestination(phone)
   const target=phone.getByLabel('Télévision',{exact:true})
   if(await target.count())await target.selectOption(deviceId)
   const delivered=phone.waitForResponse(r=>new URL(r.url()).pathname===sendPath&&r.request().method()==='POST',{timeout:45_000})
