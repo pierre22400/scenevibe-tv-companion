@@ -160,7 +160,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix historicalViewer001c ? "-public-viewer-001c-v36" : publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "COMPANION_MUTE_002", companionMute002 ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_HISTORICAL_VIEWER_001C", historicalViewer001c ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_VIEWER_001", publicViewer001 ? "true" : "false"
@@ -253,7 +253,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/HistoricalViewerHttpsAndroidTest.java", "**/HistoricalMediaCoexistenceTest.java", "**/CompanionShortcutBench.java", "**/CompanionShortcutConnectionAndroidTest.java", "**/CompanionShortcutOpenChecks.java", "**/CompanionMuteNativeChecks.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
+            setIncludes(["**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/HistoricalViewerHttpsAndroidTest.java", "**/HistoricalMediaCoexistenceTest.java", "**/HistoricalM5ContinuityTest.java", "**/HistoricalM5MuteChecks.java", "**/CompanionShortcutBench.java", "**/CompanionShortcutConnectionAndroidTest.java", "**/CompanionShortcutOpenChecks.java", "**/CompanionMuteNativeChecks.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -323,6 +323,7 @@ androidComponents {
             if (hostedAutonomous001d) output.versionCode.set(33)
             if (companionMute002) output.versionCode.set(32)
             if (publicViewer001) output.versionCode.set(34)
+            if (historicalViewer001c) output.versionCode.set(36)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->
