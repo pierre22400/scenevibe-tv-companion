@@ -39,7 +39,9 @@ final class PublicCloudClient {
         }
         /** Envoie une action fermée et vérifie MIME, taille, longueur et octets chunked. */
         @Override public byte[] request(String action,JSONObject body,String token) throws Exception {
-            if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache|device-preferences"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
+            if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache|device-preferences|media-wait"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
+            if(action.equals("media-wait") && !historical)
+                throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
             if(historical && (action.startsWith("challenge") || token==null))
                 throw new IllegalArgumentException("HISTORICAL_POSSESSION_REQUIRED");
             byte[] request=body.toString().getBytes(StandardCharsets.UTF_8);
@@ -113,4 +115,14 @@ final class PublicCloudClient {
         PublicCatalogueCandidate.Binding received=new PublicCatalogueCandidate.Binding(value,binding.device,binding.generation,0);
         if(!binding.same(received) || !status.equals(value.optString("state")))throw new IllegalArgumentException("PUBLIC_RECEIPT_MISMATCH");
     }
+    /** Signale un différé MEDIA sans déclarer un cache installé ou un rendu actif. */
+    void mediaWait(PublicCatalogueCandidate.Binding binding,String reason) throws Exception {
+        JSONObject body=new JSONObject().put("commandId",binding.command).put("revisionId",binding.revision)
+                .put("packageSha256",binding.digest).put("expectedVersion",binding.version).put("waitReason",reason);
+        JSONObject received=json("media-wait",body);
+        if(!"WAITING".equals(received.optString("status")) || !binding.command.equals(received.optString("commandId"))
+                || !reason.equals(received.optString("waitReason")))
+            throw new IllegalArgumentException("PUBLIC_WAIT_RECEIPT_MISMATCH");
+    }
+
 }
