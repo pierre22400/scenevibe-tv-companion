@@ -4,7 +4,7 @@ name: Product Consolidation 001-Q unsigned M5 preflight
 on:
   push:
     branches: [work/scenevibe-product-consolidation-001]
-    paths: ['.github/workflows/product-consolidation001q-preflight.yml']
+    paths: ['.github/workflows/product-consolidation001q-preflight.yml', 'app/src/main/java/**', 'app/build.gradle']
 permissions:
   contents: read
   actions: read

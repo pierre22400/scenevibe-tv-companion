@@ -23,11 +23,12 @@ import org.json.JSONObject;
  */
 final class PublicMultimediaCache {
     static final String CODEC="scenevibe.public-multimedia-cache.v1";
-    private static final Map<String,Object> LOCKS=new HashMap<>();
     private final File root;
     private final InstallationStore store;
     private final StudioMultimediaPackage.Decoder decoder;
-    private final Object lock;
+    private final MultimediaCacheDirectories directories;
+
+    private final MultimediaCacheDirectories.Writer writer;
 
     /** Paquet public entièrement relu, jamais une affectation privée fabriquée. */
     static final class Prepared {
@@ -38,6 +39,10 @@ final class PublicMultimediaCache {
         /** Conserve séparément les coordonnées publiques et l'adaptation interne vérifiée. */
         Prepared(PublicCatalogueCandidate.Binding binding,StudioMultimediaPackage track,MultimediaDeliveryProfile profile,File directory){
             this.binding=binding;this.track=track;this.profile=profile;this.directory=directory;
+        }
+        /** Épingle les MP3 avant la construction du lecteur MEDIA. */
+        MultimediaCacheDirectories.Lease pin() {
+            return MultimediaCacheDirectories.at(directory.getParentFile()).pin(directory);
         }
         /** Revérifie le fichier adressé par contenu juste avant chaque lecture AUDIO native. */
         File resource(String id) throws Exception {
@@ -59,7 +64,7 @@ final class PublicMultimediaCache {
         if(!root.isDirectory() && !root.mkdirs())throw new IllegalArgumentException("PUBLIC_CACHE_UNAVAILABLE");
         MultimediaDeliveryProfile.require(!Files.isSymbolicLink(root.toPath()),"PUBLIC_CACHE_SYMLINK");
         this.root=root.getCanonicalFile();this.store=store;this.decoder=decoder;
-        synchronized(LOCKS){lock=LOCKS.computeIfAbsent(this.root.toString(),key->new Object());}
+        directories=MultimediaCacheDirectories.at(this.root);
         InstallationStore.ReadResult current=store.read();
         MultimediaDeliveryProfile.require(current.state()!=InstallationStore.ReadState.CORRUPT && current.acknowledgedRevision()==0
                 && (current.snapshot()==null || CODEC.equals(current.snapshot().codecId())),"PUBLIC_CACHE_NAMESPACE");
@@ -67,7 +72,9 @@ final class PublicMultimediaCache {
 
     /** Exécute le candidat porté avec transport réel, validation native et commit Android atomique. */
     Prepared download(PublicCloudClient client,PublicCatalogueCandidate.Binding binding,java.util.function.BooleanSupplier active) throws Exception {
-        synchronized(lock){
+        synchronized(directories.writer){
+            if(directories.recoveryUncertain)throw new IllegalStateException("PUBLIC_CACHE_ROLLBACK_FAILED");
+            collect();
             byte[][] raw={null};
             PublicCatalogueCandidate candidate=new PublicCatalogueCandidate(new PublicCatalogueCandidate.Port(){
                 /** Recontrôle le grant et la release à chaque frontière. */
@@ -91,43 +98,86 @@ final class PublicMultimediaCache {
                 /** Les préférences sont appliquées par le propriétaire de service Android. */
                 public void preferences(PublicCatalogueCandidate.Binding b,boolean text,boolean audio){throw new IllegalStateException("ANDROID_OWNER_REQUIRED");}
             },decoder);
-            candidate.download(binding);return read();
+            try {
+                candidate.download(binding);
+                return read();
+            } finally {
+                collect();
+            }
         }
     }
 
     /** Écrit, fsync et relit un ensemble avant le commit du pointeur générique. */
     private void install(PublicCatalogueCandidate.Binding binding,byte[] bytes,StudioMultimediaPackage track) throws Exception {
-        String name="set-"+UUID.randomUUID().toString().replace("-","");File directory=new File(root,name+".partial");
-        if(!directory.mkdir())throw new IllegalArgumentException("PUBLIC_STAGE_UNAVAILABLE");
-        write(new File(directory,"package.json"),bytes);write(new File(directory,"binding.json"),binding.json().toString().getBytes(StandardCharsets.UTF_8));
-        MultimediaDeliveryProfile profile=PublicCatalogueCandidate.profile(bytes,binding);
-        for(MultimediaDeliveryProfile.Resource resource:profile.resources)write(new File(directory,resource.sha256+".mp3"),track.resource(resource.id));
-        readSet(directory,binding);
-        File complete=new File(root,name);Files.move(directory.toPath(),complete.toPath(),StandardCopyOption.ATOMIC_MOVE);
         InstallationStore.ReadResult before=store.read();
         MultimediaDeliveryProfile.require(before.state()!=InstallationStore.ReadState.CORRUPT,"PUBLIC_CACHE_CORRUPT");
+        String name="set-"+UUID.randomUUID().toString().replace("-","");File directory=new File(root,name+".partial");
+        if(!directory.mkdir())throw new IllegalArgumentException("PUBLIC_STAGE_UNAVAILABLE");
+        writer.write(new File(directory,"package.json"),bytes);writer.write(new File(directory,"binding.json"),binding.json().toString().getBytes(StandardCharsets.UTF_8));
+        MultimediaDeliveryProfile profile=PublicCatalogueCandidate.profile(bytes,binding);
+        for(MultimediaDeliveryProfile.Resource resource:profile.resources)writer.write(new File(directory,resource.sha256+".mp3"),track.resource(resource.id));
+        readSet(directory,binding);
+        File complete=new File(root,name);Files.move(directory.toPath(),complete.toPath(),StandardCopyOption.ATOMIC_MOVE);
         long revision=before.snapshot()==null?1:before.snapshot().revision()+1;
         JSONObject descriptor=new JSONObject().put("format",CODEC).put("directory",name).put("binding",binding.json());
         InstallRequest request=new InstallRequest(revision,CODEC,Collections.singletonMap("cache",descriptor.toString().getBytes(StandardCharsets.UTF_8)));
         MultimediaDeliveryProfile.require(store.commit(new InstallationSnapshot(request,CODEC))==InstallationStore.CommitState.COMMITTED,"PUBLIC_POINTER_COMMIT_FAILED");
-        MultimediaDeliveryProfile.require(matches(binding),"PUBLIC_POINTER_READBACK_FAILED");
+        try {
+            Prepared verified=readPointer(store.read());
+            MultimediaDeliveryProfile.require(verified!=null && binding.same(verified.binding),"PUBLIC_POINTER_READBACK_FAILED");
+        } catch(Exception failedReadback) {
+            boolean restored=before.snapshot()==null?store.clearAll():store.commit(before.snapshot())==InstallationStore.CommitState.COMMITTED;
+            if(!restored) {
+                directories.recoveryUncertain=true;
+                throw new IllegalStateException("PUBLIC_CACHE_ROLLBACK_FAILED",failedReadback);
+            }
+            throw failedReadback;
+        }
     }
 
     /** Relit intégralement le cache au démarrage, avec MediaCodec via le port existant. */
     Prepared read() throws Exception {
-        synchronized(lock){
-            InstallationStore.ReadResult result=store.read();
-            MultimediaDeliveryProfile.require(result.state()!=InstallationStore.ReadState.CORRUPT && result.acknowledgedRevision()==0,"PUBLIC_CACHE_CORRUPT");
-            if(result.state()==InstallationStore.ReadState.EMPTY)return null;
-            InstallationSnapshot snapshot=result.snapshot();MultimediaDeliveryProfile.require(CODEC.equals(snapshot.codecId()) && CODEC.equals(snapshot.handlerId()),"PUBLIC_CACHE_PROFILE");
-            JSONObject descriptor=new JSONObject(TvFirst008Wire.utf8(snapshot.canonical().artifact("cache")));
-            MultimediaDeliveryProfile.closed(descriptor,"format","directory","binding");
-            String directory=descriptor.getString("directory");MultimediaDeliveryProfile.require(CODEC.equals(descriptor.getString("format")) && directory.matches("set-[0-9a-f]{32}"),"PUBLIC_CACHE_DIRECTORY");
-            JSONObject b=descriptor.getJSONObject("binding");
-            // Expiration bounds the INSTALL command; it cannot erase content or shorten a movie session.
-            PublicCatalogueCandidate.Binding binding=new PublicCatalogueCandidate.Binding(b,b.getString("deviceId"),b.getString("generation"),0);
-            return readSet(new File(root,directory),binding);
+        synchronized(directories.writer){
+            Prepared prepared=readPointer(store.read());
+            if(!directories.recoveryUncertain)directories.collect(prepared==null?null:prepared.directory,true);
+            return prepared;
         }
+    }
+
+    /** Préserve tout sur un pointeur corrompu ou ambigu. */
+    private void collect() {
+        if(directories.recoveryUncertain)return;
+        try {
+            directories.collect(pointedDirectory(store.read()),true);
+        } catch(Exception refused) {
+            // Conserver les dossiers tant que le pointeur ne peut être établi.
+        }
+    }
+
+    /** Relit uniquement le descripteur durable avant de sélectionner un dossier. */
+    private File pointedDirectory(InstallationStore.ReadResult result) throws Exception {
+        MultimediaDeliveryProfile.require(result.state()!=InstallationStore.ReadState.CORRUPT && result.acknowledgedRevision()==0,"PUBLIC_CACHE_CORRUPT");
+        if(result.state()==InstallationStore.ReadState.EMPTY)return null;
+        InstallationSnapshot snapshot=result.snapshot();
+        MultimediaDeliveryProfile.require(CODEC.equals(snapshot.codecId()) && CODEC.equals(snapshot.handlerId())
+                && snapshot.canonical().artifactCount()==1,"PUBLIC_CACHE_PROFILE");
+        JSONObject descriptor=new JSONObject(TvFirst008Wire.utf8(snapshot.canonical().artifact("cache")));
+        MultimediaDeliveryProfile.closed(descriptor,"format","directory","binding");
+        String directory=descriptor.getString("directory");
+        MultimediaDeliveryProfile.require(CODEC.equals(descriptor.getString("format")) && MultimediaCacheDirectories.isSet(directory),"PUBLIC_CACHE_DIRECTORY");
+        File selected=new File(root,directory);
+        MultimediaDeliveryProfile.require(Files.isDirectory(selected.toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS),"PUBLIC_CACHE_DIRECTORY");
+        return selected;
+    }
+
+    /** Vérifie les données publiées par le pointeur sans collecter pendant un retour arrière. */
+    private Prepared readPointer(InstallationStore.ReadResult result) throws Exception {
+        File directory=pointedDirectory(result);
+        if(directory==null)return null;
+        JSONObject b=new JSONObject(TvFirst008Wire.utf8(result.snapshot().canonical().artifact("cache"))).getJSONObject("binding");
+        // Expiration bounds the INSTALL command; it cannot erase content or shorten a movie session.
+        PublicCatalogueCandidate.Binding binding=new PublicCatalogueCandidate.Binding(b,b.getString("deviceId"),b.getString("generation"),0);
+        return readSet(directory,binding);
     }
 
     /** Vérifie tous les octets sans toucher au pointeur ou aux préférences. */
@@ -142,7 +192,7 @@ final class PublicMultimediaCache {
 
     /** Contrôle léger du pointeur courant pour chaque effet, sans décoder les MP3 sur le thread UI. */
     boolean matches(PublicCatalogueCandidate.Binding binding){
-        synchronized(lock){try{
+        synchronized(directories.writer){try{
             InstallationStore.ReadResult r=store.read();if(r.state()!=InstallationStore.ReadState.SNAPSHOT || r.acknowledgedRevision()!=0 || !CODEC.equals(r.snapshot().codecId()))return false;
             JSONObject descriptor=new JSONObject(TvFirst008Wire.utf8(r.snapshot().canonical().artifact("cache")));JSONObject b=descriptor.getJSONObject("binding");
             return binding.same(new PublicCatalogueCandidate.Binding(b,binding.device,binding.generation,0));
