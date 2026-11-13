@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
 import com.scenevibe.tvcompanionpoc.calendar.SceneEvent;
+import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URI;
@@ -233,15 +234,47 @@ public final class PublicHostedAndroidTest {
         assertTrue(waitViewerReady(second,tv,next.getString("commandId"),false).getBoolean("text"));
         assertFalse(new PublicViewerPreferences(target).audio());
         assertEquals(tv,identity.read("identity").getString("deviceId"));
+        JSONObject refusals=chromium?verifyHttpRefusals(identity,prepared.binding):new JSONObject();
 
         JSONObject proof=new JSONObject().put("scope","ANDROID_TV_EMULATOR_REAL_HTTPS_OWN_MEDIA_SESSION")
                 .put("pairingCodes",1).put("manualApprovalsAfterPairing",0).put("companionActivityClosedBeforeSend",true)
                 .put("textWindows",texts).put("audioStarted",audios).put("cacheSha256",prepared.binding.digest)
-                .put("secondTrackText",true).put("secondTrackAudio",false).put("voluntaryStop",true);
+                .put("deviceRefusals",refusals).put("secondTrackText",true).put("secondTrackAudio",false).put("voluntaryStop",true);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-native.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
         // Cookie technique du seul banc : lu par run-as après reboot, jamais archivé.
         JSONObject boot=new JSONObject().put("cookie",cookie).put("deviceId",tv).put("trackId",track);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-boot-private.json").toPath(),boot.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Exerce les gardes du vrai HTTPS en utilisant uniquement la possession du banc Android. */
+    private JSONObject verifyHttpRefusals(TvFirst008State state,PublicCatalogueCandidate.Binding binding) throws Exception {
+        JSONObject identity=state.read("identity");
+        String token=state.token(identity);
+        JSONObject request=new JSONObject().put("deviceId",identity.getString("deviceId"))
+                .put("generation",identity.getString("generation")).put("trackId",binding.track)
+                .put("revisionId",binding.revision).put("packageSha256","0".repeat(64));
+        int fingerprint=deviceStatus("validate-cache",request,token);
+        assertEquals(409,fingerprint);
+        request.put("generation",java.util.UUID.randomUUID().toString());
+        int generation=deviceStatus("validate-cache",request,token);
+        assertTrue(generation==401 || generation==403 || generation==404);
+        return new JSONObject().put("fingerprint",fingerprint).put("generation",generation);
+    }
+
+    /** Envoie une requête défensive bornée sans écrire le bearer dans les preuves. */
+    private int deviceStatus(String action,JSONObject request,String token) throws Exception {
+        HttpsURLConnection connection=(HttpsURLConnection)URI.create(ORIGIN+"/api/autonomous/"+action).toURL().openConnection();
+        try {
+            connection.setConnectTimeout(15000);connection.setReadTimeout(45000);
+            connection.setInstanceFollowRedirects(false);connection.setRequestMethod("POST");
+            connection.setRequestProperty("Origin",ORIGIN);connection.setRequestProperty("Content-Type","application/json");
+            connection.setRequestProperty("Authorization","Bearer "+token);
+            connection.setDoOutput(true);
+            try(var output=connection.getOutputStream()){output.write(request.toString().getBytes(StandardCharsets.UTF_8));}
+            return connection.getResponseCode();
+        } finally {
+            connection.disconnect();
+        }
     }
 
     /** Prépare un cache privé synthétique par les services existants avant l'envoi public HTTPS. */
