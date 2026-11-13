@@ -5,6 +5,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.TextView;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -52,6 +53,34 @@ public final class PublicAssociationFocusTest {
         assertNotNull(next);
         assertNotNull(next.getComponent());
         assertEquals(PublicPairingActivity.class.getName(), next.getComponent().getClassName());
+        controller.pause().stop().destroy();
+    }
+
+    /** La bibliothèque reste accessible au D-pad et Back revient à la section précédente. */
+    @Test public void libraryShowsBothSectionsAndKeepsFocusDuringRefresh() {
+        assertTrue(BuildConfig.PUBLIC_VIEWER_001);
+        new android.app.Instrumentation().setInTouchMode(false);
+        var controller = Robolectric.buildActivity(MainActivity.class)
+                .create().start().resume().visible().windowFocusChanged(true);
+        MainActivity activity = controller.get();
+        View shell = activity.findViewById(android.R.id.content).findViewWithTag("tv-shell");
+        layout(shell);
+        View menu = shell.findViewWithTag("nav-TRACKS");
+        assertNotNull(menu);
+        assertTrue(menu.requestFocus());
+        key(activity, shell, KeyEvent.KEYCODE_DPAD_CENTER);
+        TextView catalogue = shell.findViewWithTag("public-library-status");
+        assertNotNull(catalogue);
+        assertTrue(catalogue.getText().toString().contains("Tracks reçues"));
+        assertNotNull(shell.findViewWithTag("scenevibe-private-multimedia"));
+        key(activity, shell, KeyEvent.KEYCODE_DPAD_RIGHT);
+        assertSame(catalogue, shell.findFocus());
+        assertTrue(catalogue.getBackground().isStateful());
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));
+        assertSame(catalogue, shell.findFocus());
+        activity.onBackPressed();
+        layout(shell);
+        assertNull(shell.findViewWithTag("public-library-status"));
         controller.pause().stop().destroy();
     }
 

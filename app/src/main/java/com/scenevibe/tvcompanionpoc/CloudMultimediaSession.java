@@ -454,6 +454,9 @@ final class CloudMultimediaSession {
     /** Distingue une session publique des restitutions privées préservées. */
     String publicCommand(){return admission.publicCommand();}
 
+    /** Fournit le titre du paquet en session, indépendamment du chargement de la bibliothèque. */
+    String trackTitle(){return admission.track().title();}
+
     /** Les commandes du panneau modifient le profil de cette session publique. */
     PublicViewerPreferences viewerPreferences(){return admission.viewerPreferences();}
     /** Seul un STOP publié par MEDIA termine automatiquement l'épinglage, jamais une pause ou perte réseau. */

@@ -54,6 +54,7 @@ public final class TvShellController {
     private final Runnable openTechnicalDiagnostics;
     private final LinearLayout runtimeControls;
     private final View multimediaControls;
+    private final java.util.function.Supplier<String> publicLibraryReader;
     private final TvNavigation navigation = new TvNavigation();
     private final Map<String, View> targets = new LinkedHashMap<>();
     private final Map<TvNavigation.Screen, Button> menu = new LinkedHashMap<>();
@@ -61,6 +62,7 @@ public final class TvShellController {
     private final ScrollView scroll;
     private final TextView connection;
     private TextView accountStatus, diagnosticConnection, diagnosticService, diagnosticDevice;
+    private TextView publicLibraryStatus;
     private boolean restoring;
     private String defaultFocus;
     private View developerPage;
@@ -68,11 +70,18 @@ public final class TvShellController {
     /** Builds one shell and reuses the real control View tree instead of static placeholders. */
     public TvShellController(Activity activity, LinearLayout runtimeControls, RuntimeReader runtime,
             Runnable openTechnicalDiagnostics, Bundle savedState) {
+        this(activity,runtimeControls,runtime,openTechnicalDiagnostics,savedState,null);
+    }
+
+    /** Ajoute la lecture publique à la présentation du même écran et du même parcours privé. */
+    public TvShellController(Activity activity, LinearLayout runtimeControls, RuntimeReader runtime,
+            Runnable openTechnicalDiagnostics, Bundle savedState, java.util.function.Supplier<String> publicLibraryReader) {
         this.activity = activity;
         this.ui = new TvViews(activity);
         this.runtimeControls = runtimeControls;
         this.multimediaControls = BuildConfig.REAL_TRACK_E2E_001
                 ? runtimeControls.findViewWithTag("scenevibe-private-multimedia") : null;
+        this.publicLibraryReader = BuildConfig.PUBLIC_VIEWER_001 ? publicLibraryReader : null;
         this.runtime = runtime;
         this.openTechnicalDiagnostics = openTechnicalDiagnostics;
         source = TvSourceFactory.create(activity);
@@ -120,7 +129,8 @@ public final class TvShellController {
         String[] icons = BuildConfig.TVUX_DEVELOPER_OVERLAY?new String[]{"house","bookmark","settings","settings","activity"}:new String[]{"house","bookmark","settings","activity"};
         for (int i = 0; i < sections.length; i++) {
             TvNavigation.Screen section = sections[i];
-            Button button = ui.button(s(labels[i]), false, () -> {
+            Button button = ui.button(section == TvNavigation.Screen.TRACKS && this.publicLibraryReader != null
+                    ? "Bibliothèque" : s(labels[i]), false, () -> {
                 remember(); navigation.section(section); render();
             });
             button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
@@ -404,6 +414,10 @@ public final class TvShellController {
         if (diagnosticConnection != null) diagnosticConnection.setText(cloud);
         if (diagnosticService != null) diagnosticService.setText(status.service + "\n" + status.permissions);
         if (diagnosticDevice != null) diagnosticDevice.setText(status.device);
+        if (publicLibraryStatus != null) {
+            String current = publicLibraryReader.get();
+            if (!current.contentEquals(publicLibraryStatus.getText())) publicLibraryStatus.setText(current);
+        }
     }
 
     /** Lets Back leave home normally and otherwise restores the previous actual visit. */
@@ -423,6 +437,7 @@ public final class TvShellController {
             ((ViewGroup) multimediaControls.getParent()).removeView(multimediaControls);
         page.removeAllViews(); targets.clear();
         accountStatus = null; diagnosticConnection = null; diagnosticService = null; diagnosticDevice = null;
+        publicLibraryStatus = null;
         for (Map.Entry<TvNavigation.Screen, Button> entry : menu.entrySet()) {
             Button button = entry.getValue(); boolean selected = entry.getKey() == navigation.activeSection();
             button.setSelected(selected);
@@ -641,7 +656,18 @@ public final class TvShellController {
         if (BuildConfig.REAL_TRACK_E2E_001 && multimediaControls != null) {
             // The private cache remains locally readable even without an active Cloud consent.
             // Only network catalogue/download controls require ASSOCIATED; see CloudMultimediaControls.refresh.
-            introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue et cache de cette TV.");
+            if (publicLibraryReader != null) {
+                introduction("Mes Tracks", "Bibliothèque SceneVibe", "Retrouve les Tracks reçues du catalogue et celles de ton compte.");
+                block(page, text("Tracks du catalogue public", 18, true, 650, R.color.scenevibe_foreground), 12);
+                publicLibraryStatus = text(publicLibraryReader.get(), 15, false, 400, R.color.scenevibe_foreground);
+                publicLibraryStatus.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
+                publicLibraryStatus.setBackground(ui.focusBackground(R.color.scenevibe_card, R.color.scenevibe_public_action_border, 8, false));
+                target(publicLibraryStatus, "public-library-status");
+                block(page, publicLibraryStatus, 6);
+                block(page, text("Tracks privées", 18, true, 650, R.color.scenevibe_foreground), 16);
+            } else {
+                introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue et cache de cette TV.");
+            }
             if (source instanceof TvAccountSource) {
                 TvAccountSource account = (TvAccountSource) source;
                 paragraph(page, account.accountMessage(), 13, 10);
@@ -653,7 +679,7 @@ public final class TvShellController {
             paragraph(page, "Choisis une publication privée et confirme son téléchargement. Le cache local reste consultable hors connexion et ne lance aucun commentaire automatiquement.", 13, 8);
             styleRuntimeControls(multimediaControls, new int[] {0});
             block(page, multimediaControls, 14);
-            defaultFocus = "runtime-control-0";
+            defaultFocus = publicLibraryStatus == null ? "runtime-control-0" : "public-library-status";
             return;
         }
         if (accountPanel()) return;

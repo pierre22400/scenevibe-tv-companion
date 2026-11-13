@@ -1,7 +1,7 @@
 name: Public Viewer 001-C Android
 on:
   push:
-    branches: [work/scenevibe-public-viewer-dpad-audit]
+    branches: [work/scenevibe-public-viewer-dpad-audit, work/scenevibe-product-consolidation-001]
     paths: ['app/**', '.github/scripts/public-viewer-001c-*', '.github/workflows/public-viewer-001c-android.yml']
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
           path: app/build/test-results/testTvux002UnitTest/*.xml
 
   test-a:
-    if: contains(github.event.head_commit.message, '[test-a]')
+    if: github.ref_name == 'work/scenevibe-public-viewer-dpad-audit' && contains(github.event.head_commit.message, '[test-a]')
     needs: compile
     runs-on: ubuntu-24.04
     timeout-minutes: 45

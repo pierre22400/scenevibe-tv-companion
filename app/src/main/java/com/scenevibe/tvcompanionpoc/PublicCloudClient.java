@@ -40,8 +40,6 @@ final class PublicCloudClient {
         /** Envoie une action fermée et vérifie MIME, taille, longueur et octets chunked. */
         @Override public byte[] request(String action,JSONObject body,String token) throws Exception {
             if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache|device-preferences|media-wait"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
-            if(action.equals("media-wait") && !historical)
-                throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
             if(historical && (action.startsWith("challenge") || token==null))
                 throw new IllegalArgumentException("HISTORICAL_POSSESSION_REQUIRED");
             byte[] request=body.toString().getBytes(StandardCharsets.UTF_8);
