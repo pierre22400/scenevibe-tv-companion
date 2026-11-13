@@ -130,7 +130,8 @@ public final class PublicHostedAndroidTest {
     /** Qualifie l'association, le cache automatique et le second envoi sans Activity visible. */
     private void realViewerWithoutActivity() throws Exception {
         assertTrue(BuildConfig.DEBUG && BuildConfig.COMPANION_MUTE_002);
-        assertEquals("https://scenevibe-public-viewer001-qual.vercel.app",ORIGIN);
+        assertTrue("https://scenevibe-public-viewer001-qual.vercel.app".equals(ORIGIN)
+                || "https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app".equals(ORIGIN));
         UiDevice device=UiDevice.getInstance(instrument);
         assertEquals("1",device.executeShellCommand("getprop ro.kernel.qemu").trim());
         device.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");

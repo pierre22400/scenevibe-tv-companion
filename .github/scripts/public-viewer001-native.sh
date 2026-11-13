@@ -51,7 +51,7 @@ import { randomUUID } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 
-const origin = 'https://scenevibe-public-viewer001-qual.vercel.app'
+const origin = process.env.SCENEVIBE_PUBLIC_VIEWER_ORIGIN || 'https://scenevibe-public-viewer001-qual.vercel.app'
 const { cookie, trackId, deviceId } = JSON.parse(await readFile(process.env.SCENEVIBE_VIEWER_BOOT_INPUT, 'utf8'))
 assert.match(cookie, /^sv_autonomous_tv_[a-f0-9-]{36}=[A-Za-z0-9_-]{43}$/)
 /** Reprend le navigateur associé pendant que l'écran du Companion reste fermé. */

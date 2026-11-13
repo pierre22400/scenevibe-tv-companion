@@ -15,3 +15,4 @@ adb shell am instrument -w -r -e class com.scenevibe.tvcompanionpoc.MultimediaCa
   com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee viewer001c-coexistence/cache-lifecycle.log
 grep -Fx 'OK (2 tests)' viewer001c-coexistence/cache-lifecycle.log
 grep -Fx 'INSTRUMENTATION_CODE: -1' viewer001c-coexistence/cache-lifecycle.log
+adb logcat -d -v brief -s SceneVibeCacheQ2:I > viewer001c-coexistence/cache-occupancy.log

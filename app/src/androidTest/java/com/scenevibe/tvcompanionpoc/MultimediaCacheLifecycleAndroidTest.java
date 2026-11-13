@@ -62,7 +62,7 @@ public final class MultimediaCacheLifecycleAndroidTest {
                 }
                 awaitRemoved(pinned);
                 long lastBytes=bytes(root);
-            assertTrue(lastBytes>firstBytes && lastBytes<2*firstBytes);
+                assertTrue(lastBytes>firstBytes && lastBytes<2*firstBytes);
                 PublicMultimediaCache.Prepared retained=cache.read();
                 assertEquals(1,sets(root));
                 assertEquals(0,stages(root));
