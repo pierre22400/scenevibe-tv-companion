@@ -23,6 +23,8 @@ import org.json.JSONObject;
  * Ses reçus et préférences de commande restent dans les espaces publics.
  */
 final class PublicCompanionOwner implements AutoCloseable {
+    private static final long LIBRARY_RECHECK_MS = 120_000L;
+    private static final long LIBRARY_OBSERVATION_MS = LIBRARY_RECHECK_MS + 15_000L;
     private final Context context;
     private final TvFirst008State state;
     private final PublicCloudClient client;
@@ -44,6 +46,7 @@ final class PublicCompanionOwner implements AutoCloseable {
     private String reportedWait="";
     private volatile List<PublicLibraryEntry> library = Collections.emptyList();
     private PublicLibraryEntry cachedEntry, pendingEntry;
+    private long libraryCheckedAt = -1L;
 
     /** Compose le stockage réel et le transport HTTPS déjà configuré, sans compte humain. */
     PublicCompanionOwner(Context context) {
@@ -124,6 +127,7 @@ final class PublicCompanionOwner implements AutoCloseable {
                 status="Catalogue momentanément indisponible · cache conservé.";
                 if(cachedEntry!=null && cachedEntry.state==PublicLibraryEntry.State.VERIFIED)
                     cachedEntry=cachedEntry.withState(PublicLibraryEntry.State.CHECKING,0);
+                libraryCheckedAt=-1L;
                 if(pendingEntry!=null && pendingEntry.state==PublicLibraryEntry.State.DOWNLOADING)
                     pendingEntry=pendingEntry.withState(PublicLibraryEntry.State.CHECKING,0);
             }
@@ -173,7 +177,12 @@ final class PublicCompanionOwner implements AutoCloseable {
             cache=new PublicMultimediaCache(context,generation);cacheGeneration=generation;prepared=cache.read();
             restored=prepared!=null;
         }
-        if(prepared!=null){
+        boolean validateForPlayback=reference!=null && reference.viewerPreferences!=null;
+        // Le cache inactif est contrôlé sans doubler les contrôles de lecture déjà planifiés.
+        boolean validateForLibrary=viewerPreferences!=null && (libraryCheckedAt<0
+                || SystemClock.elapsedRealtime()-libraryCheckedAt>=LIBRARY_RECHECK_MS);
+        boolean validateBeforePoll=restored || validateForPlayback || validateForLibrary;
+        if(prepared!=null && validateBeforePoll){
             if(historical && prepared.binding.expires<=System.currentTimeMillis()){
                 observeCache(prepared,PublicLibraryEntry.State.UNAVAILABLE);
                 invalidateReference();
@@ -287,6 +296,7 @@ final class PublicCompanionOwner implements AutoCloseable {
             }
         }
         pendingEntry=null;publishLibrary();
+        if(!validateBeforePoll && (reference==null || reference.viewerPreferences==null))validateCached(prepared);
         android.content.SharedPreferences playback=context.getSharedPreferences("public001d_playback",0);
         boolean stopped=binding.command.equals(playback.getString("stoppedCommand",""));
         if(stopped && "cached".equals(command.getString("state"))
@@ -375,8 +385,10 @@ final class PublicCompanionOwner implements AutoCloseable {
 
     /** Projette le pointeur complet revalidé sans ajouter de lecture Cloud ni de stockage. */
     private void observeCache(PublicMultimediaCache.Prepared value,PublicLibraryEntry.State observed) {
+        long now=SystemClock.elapsedRealtime();
+        if(observed==PublicLibraryEntry.State.VERIFIED)libraryCheckedAt=now;
         cachedEntry=new PublicLibraryEntry(value.binding.command,value.track.title(),value.track.revision,
-                observed,Math.min(effectDeadline(value.binding),SystemClock.elapsedRealtime()+30_000L));
+                observed,Math.min(effectDeadline(value.binding),now+LIBRARY_OBSERVATION_MS));
         publishLibrary();
     }
 
