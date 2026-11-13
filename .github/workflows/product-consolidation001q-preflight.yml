@@ -1,0 +1,87 @@
+name: Product Consolidation 001-Q unsigned M5 preflight
+
+# Only compile and inspect APKs. No signing environment, installation or publishing.
+on:
+  push:
+    branches: [work/scenevibe-product-consolidation-001]
+    paths: ['.github/workflows/product-consolidation001q-preflight.yml']
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+      ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+      ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: 'true'
+      ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+      ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 947b109de4a6e91b7757a5cf1eeea27de567d138
+          path: recovery-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43203148862
+          github-token: ${{ github.token }}
+          name: public-viewer-001c-m5-v36-v37
+          path: qualified
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Set tentative version numbers in disposable checkouts
+        run: |
+          set -euo pipefail
+          mkdir preflight
+          git rev-parse HEAD > preflight/candidate-source.txt
+          git -C recovery-source rev-parse HEAD > preflight/recovery-source.txt
+          sed -i 's/public-viewer-001c-v36/product-consolidation-v38/g; s/if (historicalViewer001c) output.versionCode.set(36)/if (historicalViewer001c) output.versionCode.set(38)/' app/build.gradle
+          sed -i 's/recovery-v37/recovery-v39/g; s/if (companionMute002) output.versionCode.set(37)/if (companionMute002) output.versionCode.set(39)/' recovery-source/app/build.gradle
+          git diff -- app/build.gradle > preflight/candidate-version.patch
+          git -C recovery-source diff -- app/build.gradle > preflight/recovery-version.patch
+          test -s preflight/candidate-version.patch
+          test -s preflight/recovery-version.patch
+      - name: Compile candidate and recovery without signing
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          SCENEVIBE_PUBLIC_VIEWER_ORIGIN=https://scenevibe-public-viewer001-qual.vercel.app \
+            gradle --no-daemon --max-workers=2 -PscenevibePublicViewer001=true -PscenevibeHistoricalViewer001c=true \
+            -PscenevibeQualificationUnsigned=true assembleTvux002
+          gradle -p recovery-source --no-daemon --max-workers=2 -PscenevibeQualificationUnsigned=true assembleTvux002
+      - name: Verify version order, package and historical certificate
+        run: |
+          set -euo pipefail
+          tools="$ANDROID_HOME/build-tools/34.0.0"
+          for spec in "38:app" "39:recovery-source/app"; do
+            version="${spec%%:*}"
+            apk="${spec#*:}/build/outputs/apk/tvux002/app-tvux002-unsigned.apk"
+            "$tools/aapt" dump badging "$apk" > "preflight/v$version-badging.txt"
+            grep -F "package: name='com.scenevibe.tvcompanionpoc' versionCode='$version'" "preflight/v$version-badging.txt"
+            grep -E "versionName='[^']*-v$version'" "preflight/v$version-badging.txt"
+            sha256sum "$apk" >> preflight/unsigned-sha256.txt
+            if "$tools/apksigner" verify "$apk"; then exit 1; fi
+          done
+          for apk in qualified/*-v3[67]-m5.apk; do
+            test -f "$apk"
+            "$tools/apksigner" verify --print-certs "$apk" > "preflight/$(basename "$apk").certificate.txt"
+            grep -Fx 'Signer #1 certificate SHA-256 digest: f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c' "preflight/$(basename "$apk").certificate.txt"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: consolidation001q-unsigned-preflight
+          path: preflight/
+          if-no-files-found: error
