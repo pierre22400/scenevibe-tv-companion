@@ -7,6 +7,8 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.os.IBinder;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,7 +18,7 @@ import java.util.List;
  */
 public final class PublicCompanionService extends Service {
     private static volatile PublicCompanionOwner current;
-    private static volatile List<PublicCompanionOwner> libraryOwners=List.of();
+    private static volatile List<PublicCompanionOwner> libraryOwners=Collections.emptyList();
     private static volatile String failure="";
     private PublicCompanionOwner owner;
     private PublicCompanionOwner historical;
@@ -79,12 +81,12 @@ public final class PublicCompanionService extends Service {
         }
         current=owner!=null?owner:historical;
         if(current==null){stopSelf();return START_NOT_STICKY;}
-        libraryOwners=owner!=null && historical!=null?List.of(owner,historical):List.of(current);
+        libraryOwners=owner!=null && historical!=null?Arrays.asList(owner,historical):Collections.singletonList(current);
         failure="";
         return START_STICKY;
     }
     /** Aucun client externe ne peut se lier au service ou récupérer son credential. */
     @Override public IBinder onBind(Intent intent){return null;}
     /** Ferme le worker avant de retirer le propriétaire observable. */
-    @Override public void onDestroy(){if(owner!=null)owner.close();if(historical!=null)historical.close();if(current==owner || current==historical){current=null;libraryOwners=List.of();}super.onDestroy();}
+    @Override public void onDestroy(){if(owner!=null)owner.close();if(historical!=null)historical.close();if(current==owner || current==historical){current=null;libraryOwners=Collections.emptyList();}super.onDestroy();}
 }

@@ -5,6 +5,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -40,7 +42,7 @@ final class PublicCompanionOwner implements AutoCloseable {
     private int failedPolls;
     private boolean followUp;
     private String reportedWait="";
-    private volatile List<PublicLibraryEntry> library = List.of();
+    private volatile List<PublicLibraryEntry> library = Collections.emptyList();
     private PublicLibraryEntry cachedEntry, pendingEntry;
 
     /** Compose le stockage réel et le transport HTTPS déjà configuré, sans compte humain. */
@@ -214,8 +216,7 @@ final class PublicCompanionOwner implements AutoCloseable {
                 onMain(()->{
                     if(!TvFirst009TextServiceOwner.controlBusy())return false;
                     String publicCommand=TvFirst009TextServiceOwner.publicCommand();
-                    if((historical || BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C) && publicCommand!=null
-                            && TvFirst009TextServiceOwner.publicMayYield() && prefer(binding.command)){
+                    if(publicCommand!=null && TvFirst009TextServiceOwner.publicMayYield() && prefer(binding.command)){
                         TvFirst009TextServiceOwner.requestStop(context);
                         return true;
                     }
@@ -252,6 +253,18 @@ final class PublicCompanionOwner implements AutoCloseable {
                 reference=null;
                 followUp=true;status="Track téléchargée et vérifiée.";
             }catch(Exception refused){
+                if(automatic && supportsWait && "PUBLIC_ACTIVE_SESSION".equals(refused.getMessage())){
+                    String[] waitReason={null};
+                    onMain(()->{
+                        if(!TvFirst009TextServiceOwner.controlBusy())return false;
+                        waitReason[0]=TvFirst009TextServiceOwner.publicCommand()==null?"private-media":"public-media";
+                        return true;
+                    });
+                    if(waitReason[0]!=null){
+                        reportWait(binding,waitReason[0],true);
+                        return;
+                    }
+                }
                 if(cacheRefused(refused))observePending(binding,PublicLibraryEntry.State.UNAVAILABLE);
                 // Le journal conserve la même demande automatique jusqu'à reprise ou échéance.
                 if(!automatic)try{client.receipt(binding,"failed");}catch(Exception ignored){/* A revoked grant cannot acknowledge even failure. */}
@@ -376,9 +389,13 @@ final class PublicCompanionOwner implements AutoCloseable {
 
     /** Envoie un instantané immuable. Un différé du cache courant s'affiche sur sa seule ligne. */
     private void publishLibrary() {
-        if(pendingEntry==null)library=cachedEntry==null?List.of():List.of(cachedEntry);
-        else if(cachedEntry==null || pendingEntry.command.equals(cachedEntry.command))library=List.of(pendingEntry);
-        else library=List.of(cachedEntry,pendingEntry);
+        if(pendingEntry==null){
+            library=cachedEntry==null?Collections.emptyList():Collections.singletonList(cachedEntry);
+        }else if(cachedEntry==null || pendingEntry.command.equals(cachedEntry.command)){
+            library=Collections.singletonList(pendingEntry);
+        }else{
+            library=Collections.unmodifiableList(Arrays.asList(cachedEntry,pendingEntry));
+        }
     }
 
     /** Arme avec les choix TV réels puis renvoie le reçu, ou synchronise leur changement. */
