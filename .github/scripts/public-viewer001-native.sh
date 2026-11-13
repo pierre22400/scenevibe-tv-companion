@@ -103,16 +103,8 @@ async function verifyRevokedMediaAccess() {
 }
 
 const issued = await command('send', { trackId, deviceId, requestId: randomUUID() })
-const phases = []
-for (let i = 0; i < 95; i++) {
+for (let i = 0; i < 60; i++) {
   const current = (await command('status', { trackId, deviceId })).command
-  if (current?.commandId === issued.commandId) {
-    const phase = current.waitReason ?? current.state
-    if (phases.at(-1) !== phase) {
-      phases.push(phase)
-      await writeFile('public-viewer-native/post-boot-phases.json', JSON.stringify(phases))
-    }
-  }
   if (current?.commandId === issued.commandId && current.state === 'ready') {
     assert.equal(current.text, true)
     assert.equal(current.audio, false)
@@ -125,6 +117,5 @@ for (let i = 0; i < 95; i++) {
   }
   await new Promise(resolve => setTimeout(resolve, 3000))
 }
-execFileSync('adb', ['shell','logcat','-d','-s','SceneVibePublic:I'], {stdio:'inherit'})
 throw new Error('POST_BOOT_CACHE_RECEIPT_TIMEOUT')
 JS
