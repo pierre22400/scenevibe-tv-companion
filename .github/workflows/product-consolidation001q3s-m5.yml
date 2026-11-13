@@ -1,0 +1,160 @@
+name: Product Consolidation 001-Q3-S M5 prototypes
+on:
+  push:
+    branches: [work/scenevibe-product-consolidation-001-q3-s]
+    paths: ['.github/workflows/product-consolidation001q3s-m5.yml']
+permissions:
+  contents: read
+  actions: read
+env:
+  QUALIFICATION_RUN: '43408642894'
+  QUALIFICATION_SOURCE: '98040add0832901b1578874972cf4dc5345c7432'
+  SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+jobs:
+  signed-migration:
+    if: github.repository == 'pierre22400/scenevibe-tv-companion' && contains(github.event.head_commit.message, '[q3-s-m5]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 42
+    steps:
+      - name: Require the successful Q3-R preflight of the exact candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN" \
+            --jq ".head_sha == \"$QUALIFICATION_SOURCE\" and .conclusion == \"success\"" | grep -Fxq true
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN/jobs" \
+            --jq '.jobs[] | select(.name == "preflight") | .conclusion' | grep -Fxq success
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.QUALIFICATION_SOURCE }}
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 947b109de4a6e91b7757a5cf1eeea27de567d138
+          path: recovery-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43079608451
+          github-token: ${{ github.token }}
+          name: scenevibe-sony001a-m5-43079608451
+          path: signed-input
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43408642894
+          github-token: ${{ github.token }}
+          name: consolidation001q-unsigned-preflight
+          path: qualified-preflight
+      - name: Apply the exact Q3-R version patches to disposable checkouts
+        run: |
+          set -euo pipefail
+          mkdir preflight
+          git rev-parse HEAD > preflight/candidate-source.txt
+          git -C recovery-source rev-parse HEAD > preflight/recovery-source.txt
+          sed -i 's/public-viewer-001c-v36/product-consolidation-v38/g; s/if (historicalViewer001c) output.versionCode.set(36)/if (historicalViewer001c) output.versionCode.set(38)/' app/build.gradle
+          sed -i 's/recovery-v37/recovery-v39/g; s/if (companionMute002) output.versionCode.set(37)/if (companionMute002) output.versionCode.set(39)/' recovery-source/app/build.gradle
+          git diff -- app/build.gradle > preflight/candidate-version.patch
+          git -C recovery-source diff -- app/build.gradle > preflight/recovery-version.patch
+          test -s preflight/candidate-version.patch
+          test -s preflight/recovery-version.patch
+          test "$(git rev-parse HEAD)" = "$QUALIFICATION_SOURCE"
+          test "$(git -C recovery-source rev-parse HEAD)" = 947b109de4a6e91b7757a5cf1eeea27de567d138
+          cmp preflight/candidate-version.patch qualified-preflight/candidate-version.patch
+          cmp preflight/recovery-version.patch qualified-preflight/recovery-version.patch
+      - name: Compile the two exact release sources
+        env:
+          ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+          ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: 'true'
+          ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+          ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          SCENEVIBE_PUBLIC_VIEWER_ORIGIN=https://scenevibe-public-viewer001-qual.vercel.app \
+            gradle --no-daemon --max-workers=2 -PscenevibePublicViewer001=true -PscenevibeHistoricalViewer001c=true \
+            -PscenevibeQualificationUnsigned=true assembleTvux002
+          cp app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk "$RUNNER_TEMP/viewer001c-unsigned-v38.apk"
+          # Update the instrumentation assertion for the recovery version only.
+          sed -i 's/version != 37/version != 39/' app/src/androidTest/java/com/scenevibe/tvcompanionpoc/HistoricalM5ContinuityTest.java
+          SCENEVIBE_PUBLIC_VIEWER_ORIGIN=https://scenevibe-public-viewer001-qual.vercel.app \
+            gradle --no-daemon --max-workers=2 -PscenevibePublicViewer001=true -PscenevibeHistoricalViewer001c=true \
+            -PscenevibeTvUx002NativeQualification=true assembleTvux002AndroidTest
+          gradle -p recovery-source --no-daemon --max-workers=2 -PscenevibeQualificationUnsigned=true assembleTvux002
+          bash qualification/viewer001c/build-player.sh "$RUNNER_TEMP/viewer001c-owned-player.apk"
+      - name: Adapt the historical proof scripts and inspect both unsigned manifests
+        run: |
+          set -euo pipefail
+          mkdir -p m5-proof
+          tools="$ANDROID_HOME/build-tools/34.0.0"
+          sed -E 's/\b36\b/38/g; s/\b37\b/39/g; s/v36/v38/g; s/v37/v39/g; s/viewer001c-v38/product-consolidation-v38/g' qualification/viewer001c/sign.sh |
+            sed 's/qualification HTTPS/qualification preflight/' > "$RUNNER_TEMP/q3s-sign.sh"
+          sed -E 's/\b36\b/38/g; s/\b37\b/39/g; s/v36/v38/g; s/v37/v39/g; s/viewer001c-v38/product-consolidation-v38/g' qualification/viewer001c/emulator.sh > "$RUNNER_TEMP/q3s-emulator.sh"
+          for spec in "38:$RUNNER_TEMP/viewer001c-unsigned-v38.apk" "39:recovery-source/app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk"; do
+            version="${spec%%:*}"
+            apk="${spec#*:}"
+            "$tools/aapt" dump badging "$apk" > "m5-proof/v$version-unsigned-badging.txt"
+            grep -F "package: name='com.scenevibe.tvcompanionpoc' versionCode='$version'" "m5-proof/v$version-unsigned-badging.txt"
+            grep -E "versionName='[^']*-v$version'" "m5-proof/v$version-unsigned-badging.txt"
+            "$tools/aapt" dump xmltree "$apk" AndroidManifest.xml > "m5-proof/v$version-manifest.txt"
+          done
+          for patch in preflight/*-version.patch; do
+            cp "$patch" "m5-proof/$(basename "$patch").txt"
+          done
+      - name: Sign and check exact historical M5
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: bash "$RUNNER_TEMP/q3s-sign.sh"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-companion-v38-m5
+          path: m5-proof/scenevibe-companion-product-consolidation-v38-m5.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scenevibe-companion-v39-m5
+          path: m5-proof/scenevibe-companion-recovery-v39-m5.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record verified APK hashes and signing certificates
+        run: |
+          set -euo pipefail
+          cat m5-proof/provenance.txt m5-proof/SHA256SUMS
+          grep -H 'certificate SHA-256 digest:' m5-proof/v{38,39}-signature.txt
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2 -dns-server 192.0.2.1
+          script: bash "$RUNNER_TEMP/q3s-emulator.sh"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consolidation001q3s-m5-qualification
+          path: |
+            m5-proof/*.txt
+            m5-proof/SHA256SUMS
+          if-no-files-found: warn
+          retention-days: 30
