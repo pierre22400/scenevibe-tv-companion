@@ -67,6 +67,21 @@ try {
   assert.match(waitText,/fin de la session SceneVibe en cours/i)
   assert.equal(await page.locator('[data-viewer-state="ready"]').count(),0)
   write("q3-stop-private.json",{stop:true})
+  assert.equal((await read("q3-first-resource-bytes.json",180)).received,true)
+  execFileSync("adb",["shell","cmd","connectivity","airplane-mode","enable"],{stdio:"ignore"})
+  try {
+    const downloading=await context.request.post(origin+"/api/autonomous/viewer-status",
+      {headers:{origin},data:{trackId:track,deviceId}})
+    assert.equal(downloading.status(),200)
+    assert.equal((await downloading.json()).command.state,"downloading")
+    write("q3-network-cut.json",{cut:true})
+    await wait(4000)
+    const interrupted=await context.request.post(origin+"/api/autonomous/viewer-status",
+      {headers:{origin},data:{trackId:track,deviceId}})
+    assert.equal((await interrupted.json()).command.state,"downloading")
+  } finally {
+    execFileSync("adb",["shell","cmd","connectivity","airplane-mode","disable"],{stdio:"ignore"})
+  }
   const ready=page.locator('[data-viewer-state="ready"]')
   await ready.waitFor({timeout:180000})
   assert.match(await ready.innerText(),/TEXT ON.*AUDIO ON/)
@@ -81,7 +96,7 @@ try {
   const foreign=await context.request.post(origin+sendPath,{headers:{origin},data:{...payload,deviceId:randomUUID()}})
   assert.equal(foreign.status(),401)
   await writeFile("public-viewer-native/q3-browser.json",JSON.stringify({origin,track,...cache,
-    browserClick:true,activityClosed:true,webReady:true,privateDeferred:true,waitText,voluntaryStop:true,replaySameCommand:true,foreignDeviceStatus:401},null,2))
+    browserClick:true,activityClosed:true,webReady:true,privateDeferred:true,waitText,voluntaryStop:true,resourceBytesBeforeCut:true,resumedSameCommand:true,replaySameCommand:true,foreignDeviceStatus:401},null,2))
   await page.screenshot({path:"public-viewer-native/q3-browser-ready.png",fullPage:true})
 } finally {
   await browser.close()

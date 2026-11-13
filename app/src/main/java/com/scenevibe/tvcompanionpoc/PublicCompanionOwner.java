@@ -168,7 +168,7 @@ final class PublicCompanionOwner implements AutoCloseable {
                 ?identityState(context).read("publicPreferences"):commandMetadata.read("publicPreferences"));
         String generation=identity.getString("generation");
         boolean restored=false;
-        if(historical && cacheGeneration!=null && !generation.equals(cacheGeneration)){
+        if(cacheGeneration!=null && !generation.equals(cacheGeneration)){
             if(reference!=null)reference.invalidate();
             reference=null;cache=null;prepared=null;
             cachedEntry=null;pendingEntry=null;publishLibrary();
@@ -176,6 +176,10 @@ final class PublicCompanionOwner implements AutoCloseable {
         if(cache==null){
             cache=new PublicMultimediaCache(context,generation);cacheGeneration=generation;prepared=cache.read();
             restored=prepared!=null;
+        }
+        if(prepared!=null && !cache.matches(prepared.binding)){
+            invalidateReference();
+            prepared=null;cachedEntry=null;publishLibrary();
         }
         boolean validateForPlayback=reference!=null && reference.viewerPreferences!=null;
         // Le cache inactif est contrôlé sans doubler les contrôles de lecture déjà planifiés.

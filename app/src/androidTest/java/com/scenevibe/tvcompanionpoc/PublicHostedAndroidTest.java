@@ -188,6 +188,11 @@ public final class PublicHostedAndroidTest {
             readBridge("q3-stop-private.json");
             assertTrue(TvFirst009TextServiceOwner.multimediaActive());
             assertNull(TvFirst009TextServiceOwner.publicCommand());
+            PublicCloudClient.observeOwnedTransfer(()->{
+                writeBridge("q3-first-resource-bytes.json",new JSONObject().put("received",true));
+                readBridge("q3-network-cut.json");
+                throw new java.net.SocketException("Q3_OWNED_NETWORK_INTERRUPTION");
+            });
             main(()->TvFirst009TextServiceOwner.requestStop(target));
             await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Session privée non arrêtée",15000);
         }
