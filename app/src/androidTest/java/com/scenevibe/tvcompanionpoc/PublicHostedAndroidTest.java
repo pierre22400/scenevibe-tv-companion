@@ -343,10 +343,14 @@ public final class PublicHostedAndroidTest {
     private JSONObject waitViewerReady(String track,String tv,String commandId,boolean audio) throws Exception {
         long deadline=SystemClock.elapsedRealtime()+365000;
         while(SystemClock.elapsedRealtime()<deadline){
-            JSONObject command=web("/api/autonomous/viewer-status",new JSONObject().put("trackId",track).put("deviceId",tv),200)
-                    .optJSONObject("command");
-            if(command!=null && commandId.equals(command.optString("commandId")) && "ready".equals(command.optString("state"))
-                    && command.getBoolean("audio")==audio)return command;
+            try {
+                JSONObject command=web("/api/autonomous/viewer-status",new JSONObject().put("trackId",track).put("deviceId",tv),200)
+                        .optJSONObject("command");
+                if(command!=null && commandId.equals(command.optString("commandId")) && "ready".equals(command.optString("state"))
+                        && command.getBoolean("audio")==audio)return command;
+            } catch(java.io.IOException offline) {
+                // Le navigateur et le Companion attendent le rétablissement du réseau du banc.
+            }
             Thread.sleep(2500);
         }
         throw new AssertionError("Reçu automatique indisponible. Récepteur: "
