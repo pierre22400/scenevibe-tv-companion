@@ -43,6 +43,16 @@ final class PublicCompanionOwner implements AutoCloseable {
     private long grantDeadline;
     private int failedPolls;
     private boolean followUp;
+    private String qualificationStage = "idle";
+
+    /** Trace une étape fermée sur le seul build debug du banc isolé, sans credential ni contenu. */
+    private void qualificationTrace(String stage) {
+        if (BuildConfig.DEBUG && "https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app"
+                .equals(BuildConfig.PUBLIC_VIEWER_ORIGIN)) {
+            qualificationStage = stage;
+            android.util.Log.i("SceneVibePublic", (historical ? "historical " : "public ") + stage);
+        }
+    }
     private String reportedWait="";
     private volatile List<PublicLibraryEntry> library = Collections.emptyList();
     private PublicLibraryEntry cachedEntry, pendingEntry;
@@ -87,6 +97,7 @@ final class PublicCompanionOwner implements AutoCloseable {
 
     /** Démarre le suivi du grant existant ou affiche automatiquement un seul code temporaire. */
     void start(){
+        qualificationTrace("worker-start");
         if(BuildConfig.PUBLIC_VIEWER_001)worker.execute(this::tickViewer);
         else worker.scheduleWithFixedDelay(this::tick,0,1500,TimeUnit.MILLISECONDS);
     }
@@ -119,6 +130,9 @@ final class PublicCompanionOwner implements AutoCloseable {
         try{step();failedPolls=0;}catch(Exception refused){
             failedPolls=Math.min(4,failedPolls+1);
             String reason=refused.getMessage();
+            qualificationTrace("retry stage=" + qualificationStage.split(" ", 2)[0] + " count=" + failedPolls
+                    + " exception=" + refused.getClass().getSimpleName()
+                    + (reason != null && reason.matches("PUBLIC_[A-Z0-9_]+|REVOKED|[A-Z_]+_TIMEOUT") ? " code=" + reason : ""));
             if(reason!=null && (reason.contains("HTTP_401") || reason.contains("HTTP_403") || reason.equals("REVOKED"))){
                 revoked=true;status="Association expirée ou révoquée.";
                 if(cachedEntry!=null)cachedEntry=cachedEntry.withState(PublicLibraryEntry.State.UNAVAILABLE,0);
@@ -152,6 +166,7 @@ final class PublicCompanionOwner implements AutoCloseable {
     /** Revalide automatiquement possession et génération avant de traiter les commandes publiques. */
     private void step() throws Exception {
         if(closed)return;
+        qualificationTrace("identity");
         JSONObject identity=client.identity();
         if(identity==null){
             cachedEntry=null;pendingEntry=null;publishLibrary();
@@ -159,7 +174,9 @@ final class PublicCompanionOwner implements AutoCloseable {
             else {revoked=true;status="Association historique indisponible.";}
             return;
         }
+        qualificationTrace("association-request");
         JSONObject association=client.json("association",new JSONObject());
+        qualificationTrace("association-response");
         if(!identity.getString("deviceId").equals(association.optString("deviceId")) || !identity.getString("generation").equals(association.optString("generation")))throw new IllegalArgumentException("PUBLIC_ASSOCIATION_MISMATCH");
         long remaining=Instant.parse(association.getString("consentExpiresAt")).toEpochMilli()-System.currentTimeMillis();
         if(remaining<=0)throw new IllegalArgumentException("REVOKED");
@@ -174,6 +191,7 @@ final class PublicCompanionOwner implements AutoCloseable {
             cachedEntry=null;pendingEntry=null;publishLibrary();
         }
         if(cache==null){
+            qualificationTrace("cache-reopen");
             cache=new PublicMultimediaCache(context,generation);cacheGeneration=generation;prepared=cache.read();
             restored=prepared!=null;
         }
@@ -193,8 +211,12 @@ final class PublicCompanionOwner implements AutoCloseable {
                 prepared=null;
             }else{
                 try{
+                    qualificationTrace("cache-validate");
                     validateCached(prepared);
-                    if(restored)restorePreferences();
+                    if(restored){
+                        qualificationTrace("restore-preferences");
+                        restorePreferences();
+                    }
                 }
                 catch(Exception refused){
                     if(!cacheRefused(refused))throw refused;
@@ -204,7 +226,9 @@ final class PublicCompanionOwner implements AutoCloseable {
             }
         }
         if(reference!=null)reference.renewed(effectDeadline(reference.prepared.binding));
+        qualificationTrace("poll-request");
         JSONObject polled=client.json("poll",new JSONObject());
+        qualificationTrace("poll-response");
         JSONArray commands=polled.getJSONArray("commands");
         JSONObject command=null;
         for(int i=commands.length()-1;i>=0;i--)if(!"failed".equals(commands.getJSONObject(i).optString("state"))){command=commands.getJSONObject(i);break;}
@@ -215,6 +239,7 @@ final class PublicCompanionOwner implements AutoCloseable {
             return;
         }
         PublicCatalogueCandidate.Binding binding=new PublicCatalogueCandidate.Binding(command,identity.getString("deviceId"),identity.getString("generation"),System.currentTimeMillis());
+        qualificationTrace("selected " + binding.command);
         boolean supportsWait=polled.optBoolean("mediaWaitSupported",false);
         boolean automatic=viewerPreferences!=null && automaticCommand(polled.optJSONArray("automaticCommandIds"),binding.command);
         if(automatic && !hasEffectPermissions()){
@@ -256,12 +281,14 @@ final class PublicCompanionOwner implements AutoCloseable {
             }
             reportedWait="";
             if((historical || BuildConfig.PUBLIC_HISTORICAL_VIEWER_001C) && !prefer(binding.command))return;
+            qualificationTrace("download-start " + binding.command);
             status="Téléchargement et vérification TEXT/AUDIO…";
             observePending(binding,PublicLibraryEntry.State.DOWNLOADING);
             try{
                 if(automatic && cache.matches(binding)){
                     prepared=cache.read();validateCached(prepared);client.receipt(binding,"cached");
                 }else prepared=cache.download(client,binding,this::sessionBusy);
+                qualificationTrace("cache-receipt " + binding.command);
                 pendingEntry=null;
                 observeCache(prepared,PublicLibraryEntry.State.VERIFIED);
                 reference=null;
@@ -425,7 +452,10 @@ final class PublicCompanionOwner implements AutoCloseable {
                 if(binding.version>=0)update.put("expectedVersion",binding.version);
                 client.json("device-preferences",update);
             }
-        }else client.receipt(binding,"armed",text,audio);
+        }else {
+            client.receipt(binding,"armed",text,audio);
+            qualificationTrace("armed-receipt " + binding.command);
+        }
         JSONObject saved=commandMetadata.read("publicPreferences");
         if(saved==null || !binding.command.equals(saved.optString("commandId"))
                 || !saved.optBoolean("viewer",false) || text!=saved.optBoolean("text") || audio!=saved.optBoolean("audio"))

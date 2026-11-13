@@ -58,6 +58,17 @@ done
 adb shell dumpsys activity services com.scenevibe.tvcompanionpoc/.PublicCompanionService | grep 'isForeground=true' > public-viewer-native/boot-service.txt
 adb logcat -d -v brief -s SceneVibePublic:I | grep PUBLIC_RECEIVER_BOOT_START_REQUESTED > public-viewer-native/boot-receiver.txt
 
+# Capture seulement les traces SceneVibe après l'essai, même en cas de refus.
+# Réduit les diagnostics réseau à des valeurs d'état, sans adresse ni identifiant.
+capture_boot_evidence() {
+    adb logcat -d -v epoch -s SceneVibePublic:I > public-viewer-native/post-boot-android.log || true
+    {
+        adb shell settings get global wifi_on
+        adb shell dumpsys connectivity | awk '/Active default network:/ { print $0 }'
+    } > public-viewer-native/post-boot-network.txt || true
+    rm -f -- "$proof_private"
+}
+trap capture_boot_evidence EXIT
 SCENEVIBE_VIEWER_BOOT_INPUT="$proof_private" node --input-type=module <<'JS'
 import { readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
@@ -103,8 +114,16 @@ async function verifyRevokedMediaAccess() {
 }
 
 const issued = await command('send', { trackId, deviceId, requestId: randomUUID() })
+const phases = []
 for (let i = 0; i < 60; i++) {
   const current = (await command('status', { trackId, deviceId })).command
+  const phase = current?.commandId === issued.commandId ? current.waitReason ?? current.state : 'command-not-current'
+  if (phases.at(-1)?.phase !== phase) {
+    phases.push({ time: new Date().toISOString(), phase })
+    await writeFile('public-viewer-native/post-boot-cloud.json', JSON.stringify({
+      commandId: issued.commandId, phases,
+    }, null, 2) + '\n')
+  }
   if (current?.commandId === issued.commandId && current.state === 'ready') {
     assert.equal(current.text, true)
     assert.equal(current.audio, false)
