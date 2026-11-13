@@ -39,7 +39,7 @@ final class CloudMultimediaControls {
         // REAL TRACK G11 moves this existing view to Mes Tracks; no duplicate network controls.
         root.setTag("scenevibe-private-multimedia");
         status=new TextView(activity);status.setTextColor(0xFFFFFFFF);status.setTextSize(17);root.addView(status);
-        catalogue=button("Charger le catalogue multimédia privé",this::catalogue);
+        catalogue=button(BuildConfig.PUBLIC_VIEWER_001?"Charger mes Tracks privées":"Charger le catalogue multimédia privé",this::catalogue);
         restore=button("Relire le cache multimédia local",this::restore);
         items=new LinearLayout(activity);items.setOrientation(LinearLayout.VERTICAL);root.addView(items);
         if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){
@@ -78,10 +78,15 @@ final class CloudMultimediaControls {
         restore.setEnabled(ready);
         for(int i=0;i<items.getChildCount();i++)items.getChildAt(i).setEnabled(catalogue.isEnabled());
         String state=source==null?"Association disponible dans le parcours Compte.":source.accountMessage();
+        if(BuildConfig.PUBLIC_VIEWER_001){
+            String active=TvFirst009TextServiceOwner.privateTrackTitle();
+            status.setText(result+"\n"+state+(active.isEmpty()?"":"\nTrack privée sélectionnée pour la restitution · "+active));
+        }else{
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
                 +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\nÉtat technique : ":"\nAdmission locale explicite requise. ")+TvFirst009TextServiceOwner.status().code:
                     "\nLe cache n'arme pas la restitution. L'identité d'édition et le mapping MEDIA restent à qualifier."));
-        if(BuildConfig.ADSYNC_NONDESTRUCTIVE)status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability()
+        }
+        if(BuildConfig.ADSYNC_NONDESTRUCTIVE && (!BuildConfig.PUBLIC_VIEWER_001 || TvFirst009TextServiceOwner.publicCommand()==null))status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability()
                 +(TvFirst009TextServiceOwner.multimediaActive()?"\nAdmission conservée tant que consentement et reçu restent valides.":"\nNouvelle confirmation de restitution depuis le cache ; aucun retéléchargement requis."));
         if(activate!=null){
             activate.setEnabled(ready && preparedCache!=null && source.accountStage()==TvAccountSource.AccountStage.ASSOCIATED

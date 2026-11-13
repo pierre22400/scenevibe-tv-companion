@@ -18,7 +18,7 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
     final Context target=InstrumentationRegistry.getInstrumentation().getTargetContext();
     final String namespace;
     final TvFirst008State state;
-    final byte[] profile;
+    byte[] profile;
     final JSONObject publicIdentity;
     final java.util.Map<String,byte[]> resources=new java.util.HashMap<>();
     final java.util.Map<String,String> resourceIds=new java.util.HashMap<>();

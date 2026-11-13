@@ -82,7 +82,7 @@ public final class MainActivity extends Activity {
                     () -> startActivity(new Intent(this, PublicPairingActivity.class)));
         }
         presentation = new TvShellController(this, controls, this::presentationStatus,
-                this::openDiagnostics, savedInstanceState);
+                this::openDiagnostics, savedInstanceState, this::publicLibraryStatus);
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
             developerTab=new DeveloperTab(this,()->presentation.back());
             presentation.setDeveloperPage(developerTab.view());
@@ -94,6 +94,17 @@ public final class MainActivity extends Activity {
             publicFrame.addView(associate,new LinearLayout.LayoutParams(-1,-2));
             publicFrame.addView(presentation.view(),new LinearLayout.LayoutParams(-1,0,1));setContentView(publicFrame);
         }else setContentView(presentation.view());
+    }
+
+    /** Formate la projection reçue du service sans relire de fichier, autorisation ni paquet. */
+    private String publicLibraryStatus() {
+        var entries=PublicCompanionService.library();
+        if(entries.isEmpty())return "Les Tracks reçues depuis le catalogue Web apparaissent ici.";
+        String active=TvFirst009TextServiceOwner.publicCommand();
+        long now=android.os.SystemClock.elapsedRealtime();
+        java.util.StringJoiner rows=new java.util.StringJoiner("\n\n");
+        for(PublicLibraryEntry entry:entries)rows.add(entry.describe(active,now));
+        return rows.toString();
     }
 
     /**

@@ -1,12 +1,13 @@
 name: PUBLIC VIEWER E2E 001 - Android candidate
 on:
   push:
-    branches: [work/scenevibe-public-viewer-e2e-001-tv]
+    branches: [work/scenevibe-public-viewer-e2e-001-tv, work/scenevibe-product-consolidation-001]
     paths-ignore: ['docs/**']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: public-viewer001-android
+  group: public-viewer001-android-${{ github.ref_name }}
   cancel-in-progress: true
 env:
   ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
@@ -17,6 +18,7 @@ env:
   SCENEVIBE_PUBLIC_VIEWER_ORIGIN: https://scenevibe-public-viewer001-qual.vercel.app
 jobs:
   candidate:
+    if: github.ref_name == 'work/scenevibe-public-viewer-e2e-001-tv'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -45,6 +47,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   emulator:
+    if: github.ref_name == 'work/scenevibe-public-viewer-e2e-001-tv' || github.ref_name == 'work/scenevibe-product-consolidation-001'
+    env:
+      ORG_GRADLE_PROJECT_scenevibeProductConsolidation001q2: ${{ github.ref_name == 'work/scenevibe-product-consolidation-001' }}
+      SCENEVIBE_CLOUD_ORIGIN: ${{ github.ref_name == 'work/scenevibe-product-consolidation-001' && 'https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app' || 'https://scenevibe-autonomous001d-qual-preview.vercel.app' }}
+      SCENEVIBE_PUBLIC_VIEWER_ORIGIN: ${{ github.ref_name == 'work/scenevibe-product-consolidation-001' && 'https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app' || 'https://scenevibe-public-viewer001-qual.vercel.app' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 55
     steps:
@@ -72,9 +79,10 @@ jobs:
             const response = await fetch(process.env.SCENEVIBE_PUBLIC_VIEWER_ORIGIN + '/api/public/catalogue/tracks?limit=100').catch(()=>null)
             if (response?.ok) {
               const { items } = await response.json()
-              const track = items.find(row => row.track.title.startsWith('Qualification spectateur 001 — Columbo — Eaux troubles — ')
-                && row.multimedia?.textCount >= 4 && row.multimedia?.audioCount === 3)
-              if (track) {
+              const candidates = items.filter(row => row.track.title.startsWith('Qualification spectateur 001 — Columbo — Eaux troubles — ')
+                && row.multimedia?.textCount >= 3 && row.multimedia?.audioCount === 3)
+              const track = candidates.find(row => row.multimedia.textCount >= 4)
+              if (track && (process.env.ORG_GRADLE_PROJECT_scenevibeProductConsolidation001q2 !== 'true' || candidates.length >= 2)) {
                 await appendFile(process.env.GITHUB_ENV, 'SCENEVIBE_VIEWER_TRACK_ID=' + track.identity.trackId + '\n')
                 process.exit(0)
               }
@@ -83,6 +91,12 @@ jobs:
           }
           throw new Error('PUBLISHED_STUDIO_TRACK_UNAVAILABLE')
           JS
+      - name: Set up Chromium for the isolated Android journey
+        if: github.ref_name == 'work/scenevibe-product-consolidation-001'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/q3-browser" --no-package-lock --ignore-scripts playwright@1.62.1
+          echo "SCENEVIBE_PLAYWRIGHT_MODULE=$RUNNER_TEMP/q3-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+          echo "SCENEVIBE_CHROMIUM_EXECUTABLE=$(command -v google-chrome)" >> "$GITHUB_ENV"
       - name: Enable acceleration on the owned emulator runner
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

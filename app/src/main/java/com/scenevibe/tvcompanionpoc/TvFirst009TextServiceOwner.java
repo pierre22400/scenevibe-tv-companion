@@ -236,6 +236,12 @@ final class TvFirst009TextServiceOwner {
     }
     /** Retourne seulement la commande de la session publique réellement ouverte. */
     static String publicCommand(){return liveInstance==null || liveInstance.multimedia==null || !liveInstance.multimedia.isActive()?null:liveInstance.multimedia.publicCommand();}
+
+    /** Indique le paquet privé sélectionné par le propriétaire MEDIA en cours. */
+    static String privateTrackTitle(){
+        if(!multimediaActive() || publicCommand()!=null)return "";
+        return liveInstance.multimedia.trackTitle();
+    }
     /** Permet l'installation différée uniquement après un arrêt MEDIA observé. */
     static boolean publicMediaEnded(){return publicCommand()!=null && liveInstance.multimedia.publicMediaEnded();}
     /** Seule une préparation publique sans lecture engagée peut céder devant un nouvel envoi. */

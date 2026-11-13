@@ -23,6 +23,7 @@ final class CloudMultimediaSession {
     private final Handler main=new Handler(Looper.getMainLooper());
     private final Context context;
     private final CloudMultimediaAdmission admission;
+    private final MultimediaCacheDirectories.Lease cacheLease;
     private final TvFirst009TextRuntime.Observer observer;
     private final SceneRenderer renderer;
     private final AndroidLocalAudioPort audio;
@@ -58,12 +59,24 @@ final class CloudMultimediaSession {
         if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || Looper.myLooper()!=Looper.getMainLooper()
                 || admission==null || !admission.current() || !Settings.canDrawOverlays(context)
                 || !NotificationAccess.isGranted(context))return null;
-        try{return new CloudMultimediaSession(context,admission,observer,textEnabled,audioEnabled);}catch(RuntimeException refused){return null;}
+        MultimediaCacheDirectories.Lease lease;
+        try {
+            lease=admission.pinCache();
+        } catch(RuntimeException unavailable) {
+            return null;
+        }
+        try {
+            return new CloudMultimediaSession(context,admission,observer,textEnabled,audioEnabled,lease);
+        } catch(RuntimeException refused) {
+            lease.close();
+            return null;
+        }
     }
 
     /** Reuse SceneRenderer and AndroidLocalAudioPort; preparation never starts a second video player. */
     private CloudMultimediaSession(Context context,CloudMultimediaAdmission admission,TvFirst009TextRuntime.Observer observer,
-            boolean textEnabled,boolean audioEnabled) {
+            boolean textEnabled,boolean audioEnabled,MultimediaCacheDirectories.Lease lease) {
+        this.cacheLease=lease;
         this.context=context;this.admission=admission;this.observer=observer;
         this.textEnabled=textEnabled;this.audioEnabled=audioEnabled;
         renderer=new SceneRenderer(context,id->null,()->main.post(()->{
@@ -454,6 +467,9 @@ final class CloudMultimediaSession {
     /** Distingue une session publique des restitutions privées préservées. */
     String publicCommand(){return admission.publicCommand();}
 
+    /** Fournit le titre du paquet en session, indépendamment du chargement de la bibliothèque. */
+    String trackTitle(){return admission.track().title();}
+
     /** Les commandes du panneau modifient le profil de cette session publique. */
     PublicViewerPreferences viewerPreferences(){return admission.viewerPreferences();}
     /** Seul un STOP publié par MEDIA termine automatiquement l'épinglage, jamais une pause ou perte réseau. */
@@ -527,6 +543,11 @@ final class CloudMultimediaSession {
     /** Invalidate callbacks before releasing the same probe, regie, native player and windows. */
     void close(){
         if(!active)return;active=false;main.removeCallbacks(watchdog);
-        probe.stop();runtime.close();audio.release();renderer.dismissNow();publish("STOPPED");
+        try {
+            probe.stop();runtime.close();
+        } finally {
+            try { audio.release(); } finally { cacheLease.close(); }
+        }
+        renderer.dismissNow();publish("STOPPED");
     }
 }

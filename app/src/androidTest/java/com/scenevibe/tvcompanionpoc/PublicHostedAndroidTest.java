@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
 import com.scenevibe.tvcompanionpoc.calendar.SceneEvent;
+import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URI;
@@ -42,6 +43,8 @@ public final class PublicHostedAndroidTest {
     private PublicPairingActivity activity;
     private MediaSession media;
     private String cookie="";
+    private TvFirst008Source privateSource;
+    private ManualNativeFixture privateFixture;
 
     /** Exécute les effets d'interface sur le vrai Looper de l'application. */
     private void main(Runnable action){instrument.runOnMainSync(action);}
@@ -75,8 +78,11 @@ public final class PublicHostedAndroidTest {
     private void playback(int state,long position){media.setPlaybackState(new PlaybackState.Builder().setState(state,position,state==PlaybackState.STATE_PLAYING?1f:0f,SystemClock.elapsedRealtime()).build());}
 
     /** Arrête les seuls services de cet émulateur, sans effacer de cache ni de données TV. */
-    @After public void after(){main(()->{TvFirst009TextServiceOwner.requestStop(target);target.stopService(new Intent(target,PublicCompanionService.class));
-        if(media!=null)media.release();CloudMultimediaAdmission.useOwnedMediaSessionFixture(false);if(activity!=null)activity.finish();if(mainActivity!=null)mainActivity.finish();});}
+    @After public void after() throws Exception {main(()->{TvFirst009TextServiceOwner.requestStop(target);target.stopService(new Intent(target,PublicCompanionService.class));
+        if(media!=null)media.release();CloudMultimediaAdmission.useOwnedMediaSessionFixture(false);if(activity!=null)activity.finish();if(mainActivity!=null)mainActivity.finish();});
+        if(privateSource!=null)privateSource.close();
+        if(privateFixture!=null)privateFixture.cleanup();
+    }
 
     /** Qualifie le trajet complet code visible → HTTPS → cache natif → TEXT/AUDIO appliqués et restitués. */
     @Test public void realHttpsCodeCacheAndNativePlaybackWithoutAnotherApproval() throws Exception {
@@ -130,7 +136,8 @@ public final class PublicHostedAndroidTest {
     /** Qualifie l'association, le cache automatique et le second envoi sans Activity visible. */
     private void realViewerWithoutActivity() throws Exception {
         assertTrue(BuildConfig.DEBUG && BuildConfig.COMPANION_MUTE_002);
-        assertEquals("https://scenevibe-public-viewer001-qual.vercel.app",ORIGIN);
+        assertTrue("https://scenevibe-public-viewer001-qual.vercel.app".equals(ORIGIN)
+                || "https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app".equals(ORIGIN));
         UiDevice device=UiDevice.getInstance(instrument);
         assertEquals("1",device.executeShellCommand("getprop ro.kernel.qemu").trim());
         device.executeShellCommand("appops set "+target.getPackageName()+" SYSTEM_ALERT_WINDOW allow");
@@ -141,12 +148,21 @@ public final class PublicHostedAndroidTest {
         String code=PublicCompanionService.current().code();
         await(()->code.contentEquals(((android.widget.TextView)activity.getWindow().getDecorView()
                 .findViewWithTag("public-tv-code")).getText()),"Code public non affiché",15000);
-        JSONObject claim=new JSONObject().put("userCode",code).put("consent",true);
-        String tv=web("/api/autonomous/viewer-pair",claim,200).getString("deviceId");
+        boolean chromium=InstrumentationRegistry.getArguments().getString("q3Chromium","false").equals("true");
+        String tv;
+        if(chromium) {
+            writeBridge("q3-code.json",new JSONObject().put("code",code));
+            JSONObject browser=readBridge("q3-paired.json");
+            tv=browser.getString("deviceId");
+            cookie=browser.getString("cookie");
+        } else {
+            JSONObject claim=new JSONObject().put("userCode",code).put("consent",true);
+            tv=web("/api/autonomous/viewer-pair",claim,200).getString("deviceId");
+            web("/api/autonomous/viewer-pair",claim,404);
+        }
         await(()->PublicCompanionService.current().viewerPreferences().initialized(),"Préférences initiales absentes",90000);
         PublicViewerPreferences prefs=PublicCompanionService.current().viewerPreferences();
         assertTrue(prefs.text());assertTrue(prefs.audio());
-        web("/api/autonomous/viewer-pair",claim,404);
         main(()->activity.finish());device.pressHome();
 
         String track=InstrumentationRegistry.getArguments().getString("viewerTrackId");
@@ -163,13 +179,31 @@ public final class PublicHostedAndroidTest {
                     .putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());
             playback(PlaybackState.STATE_PAUSED,0);media.setActive(true);
         });
-        JSONObject request=viewerSend(track,tv);
+        if(chromium){
+            startPrivateSession();
+            writeBridge("q3-background.json",new JSONObject().put("activityClosed",true).put("privateActive",true));
+        }
+        JSONObject request=chromium?readBridge("q3-command.json"):viewerSend(track,tv);
+        if(chromium) {
+            readBridge("q3-stop-private.json");
+            assertTrue(TvFirst009TextServiceOwner.multimediaActive());
+            assertNull(TvFirst009TextServiceOwner.publicCommand());
+            PublicCloudClient.observeOwnedTransfer(()->{
+                writeBridge("q3-first-resource-bytes.json",new JSONObject().put("received",true));
+                readBridge("q3-network-cut.json");
+                throw new java.net.SocketException("Q3_OWNED_NETWORK_INTERRUPTION");
+            });
+            main(()->TvFirst009TextServiceOwner.requestStop(target));
+            await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Session privée non arrêtée",15000);
+        }
         JSONObject ready=waitViewerReady(track,tv,request.getString("commandId"),true);
         assertTrue(ready.getBoolean("text"));
         TvFirst008State identity=PublicCompanionOwner.identityState(target);
         PublicMultimediaCache.Prepared prepared=new PublicMultimediaCache(target,identity.read("identity").getString("generation")).read();
         assertEquals(release.getString("packageSha256"),prepared.binding.digest);
         assertEquals(request.getString("commandId"),prepared.binding.command);
+        if(chromium)writeBridge("q3-cache.json",new JSONObject().put("commandId",prepared.binding.command)
+                .put("revision",prepared.binding.revision).put("packageSha256",prepared.binding.digest));
 
         int texts=0,audios=0;
         for(SceneEvent event:prepared.track.calendar.events()){
@@ -186,8 +220,10 @@ public final class PublicHostedAndroidTest {
             }
         }
         assertEquals(release.getInt("textCount"),texts);assertEquals(release.getInt("audioCount"),audios);
+        String activeCommand=chromium && "true".equals(InstrumentationRegistry.getArguments().getString("q3Revision"))
+                ? verifyRevisionDuringMedia(track,tv,identity,prepared) : request.getString("commandId");
         main(()->TvFirst009TextServiceOwner.setMultimediaAudioEnabled(false));
-        waitViewerReady(track,tv,request.getString("commandId"),false);
+        waitViewerReady(track,tv,activeCommand,false);
         main(()->TvFirst009TextServiceOwner.requestStop(target));
         await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Arrêt volontaire non appliqué",15000);
 
@@ -205,15 +241,125 @@ public final class PublicHostedAndroidTest {
         assertTrue(waitViewerReady(second,tv,next.getString("commandId"),false).getBoolean("text"));
         assertFalse(new PublicViewerPreferences(target).audio());
         assertEquals(tv,identity.read("identity").getString("deviceId"));
+        JSONObject refusals=chromium?verifyHttpRefusals(identity,prepared.binding):new JSONObject();
 
         JSONObject proof=new JSONObject().put("scope","ANDROID_TV_EMULATOR_REAL_HTTPS_OWN_MEDIA_SESSION")
                 .put("pairingCodes",1).put("manualApprovalsAfterPairing",0).put("companionActivityClosedBeforeSend",true)
                 .put("textWindows",texts).put("audioStarted",audios).put("cacheSha256",prepared.binding.digest)
-                .put("secondTrackText",true).put("secondTrackAudio",false).put("voluntaryStop",true);
+                .put("deviceRefusals",refusals).put("secondTrackText",true).put("secondTrackAudio",false).put("voluntaryStop",true);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-native.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
         // Cookie technique du seul banc : lu par run-as après reboot, jamais archivé.
         JSONObject boot=new JSONObject().put("cookie",cookie).put("deviceId",tv).put("trackId",track);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-boot-private.json").toPath(),boot.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Vérifie le cache épinglé avant l'arrêt volontaire et la collecte après activation de la nouvelle révision. */
+    private String verifyRevisionDuringMedia(String track,String tv,TvFirst008State identity,
+            PublicMultimediaCache.Prepared old) throws Exception {
+        main(()->playback(PlaybackState.STATE_PAUSED,30000));
+        await(()->old.binding.command.equals(TvFirst009TextServiceOwner.publicCommand())
+                && !TvFirst009TextServiceOwner.publicMayYield(),"Lecture publique non engagée",15000);
+        java.io.File priorAudio=old.resource(old.profile.resources.get(0).id);
+        writeBridge("q3-media-engaged.json",new JSONObject().put("commandId",old.binding.command).put("revision",old.binding.revision));
+        JSONObject next=readBridge("q3-revision-waiting.json");
+        String command=next.getString("commandId");
+        PublicMultimediaCache cache=new PublicMultimediaCache(target,identity.read("identity").getString("generation"));
+        assertEquals(old.binding.command,TvFirst009TextServiceOwner.publicCommand());
+        assertTrue(old.binding.same(cache.read().binding));
+        assertTrue(priorAudio.isFile());
+        main(()->TvFirst009TextServiceOwner.requestStop(target));
+        waitViewerReady(track,tv,command,true);
+        PublicMultimediaCache.Prepared updated=cache.read();
+        assertEquals(command,updated.binding.command);
+        assertEquals(next.getString("revision"),updated.binding.revision);
+        assertEquals(next.getString("packageSha256"),updated.binding.digest);
+        assertFalse(old.binding.revision.equals(updated.binding.revision));
+        await(()->!priorAudio.exists(),"Ancien ensemble multimédia encore présent",15000);
+        writeBridge("q3-revision-cache.json",new JSONObject().put("before",old.binding.revision)
+                .put("after",updated.binding.revision).put("packageSha256",updated.binding.digest).put("oldCacheCollected",true));
+        return command;
+    }
+
+    /** Exerce les gardes du vrai HTTPS en utilisant uniquement la possession du banc Android. */
+    private JSONObject verifyHttpRefusals(TvFirst008State state,PublicCatalogueCandidate.Binding binding) throws Exception {
+        JSONObject identity=state.read("identity");
+        String token=state.token(identity);
+        JSONObject request=new JSONObject().put("deviceId",identity.getString("deviceId"))
+                .put("generation",identity.getString("generation")).put("trackId",binding.track)
+                .put("revisionId",binding.revision).put("packageSha256","0".repeat(64));
+        int fingerprint=deviceStatus("validate-cache",request,token);
+        assertEquals(409,fingerprint);
+        request.put("generation",java.util.UUID.randomUUID().toString());
+        int generation=deviceStatus("validate-cache",request,token);
+        assertTrue(generation==401 || generation==403 || generation==404);
+        return new JSONObject().put("fingerprint",fingerprint).put("generation",generation);
+    }
+
+    /** Envoie une requête défensive bornée sans écrire le bearer dans les preuves. */
+    private int deviceStatus(String action,JSONObject request,String token) throws Exception {
+        HttpsURLConnection connection=(HttpsURLConnection)URI.create(ORIGIN+"/api/autonomous/"+action).toURL().openConnection();
+        try {
+            connection.setConnectTimeout(15000);connection.setReadTimeout(45000);
+            connection.setInstanceFollowRedirects(false);connection.setRequestMethod("POST");
+            connection.setRequestProperty("Origin",ORIGIN);connection.setRequestProperty("Content-Type","application/json");
+            connection.setRequestProperty("Authorization","Bearer "+token);
+            connection.setDoOutput(true);
+            try(var output=connection.getOutputStream()){output.write(request.toString().getBytes(StandardCharsets.UTF_8));}
+            return connection.getResponseCode();
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    /** Prépare un cache privé synthétique par les services existants avant l'envoi public HTTPS. */
+    private void startPrivateSession() throws Exception {
+        privateFixture=new ManualNativeFixture();
+        TvFirst008State state=new TvFirst008State(target);
+        String token="Q".repeat(43);
+        state.claimed(new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("deviceId",privateFixture.binding.device)
+                .put("generation",privateFixture.generation).put("deviceToken",token));
+        JSONObject identity=state.read("identity");
+        assertTrue(target.getSharedPreferences("multimedia_user_preferences",0).edit()
+                .putBoolean("text",true).putBoolean("audio",true).commit());
+        privateSource=new TvFirst008Source(target,state,(method,path,bearer,body)->{
+            assertEquals(token,bearer);
+            if(path.contains("/association"))return new JSONObject(identity.toString()).put("profile",TvFirst008Wire.PROFILE)
+                    .put("accountAssociated",true).put("rendering","FORBIDDEN")
+                    .put("consentExpiresAt",java.time.Instant.now().plusSeconds(3600).toString())
+                    .put("currentRevision",privateFixture.binding.revision-1);
+            if(path.contains("/library"))return new JSONObject().put("profile",TvFirst008Wire.PROFILE)
+                    .put("items",new JSONArray()).put("next",JSONObject.NULL);
+            throw new IllegalArgumentException("PRIVATE_FIXTURE_ROUTE");
+        },"https://owned-fixture.invalid",java.util.concurrent.Executors.newSingleThreadExecutor());
+        mainActivity=(MainActivity)instrument.startActivitySync(new Intent(target,MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        main(privateSource::resume);
+        await(()->privateSource.accountStage()==TvAccountSource.AccountStage.ASSOCIATED && !privateSource.busy(),
+                "Q3 private association missing",30000);
+        java.util.concurrent.atomic.AtomicReference<MultimediaPrivateCache.Prepared> installed=new java.util.concurrent.atomic.AtomicReference<>();
+        main(()->privateSource.downloadMultimedia(privateFixture.binding.publication,installed::set,privateFixture.port));
+        await(()->installed.get()!=null && !privateSource.busy(),"Q3 private cache missing",30000);
+        main(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(mainActivity,privateSource,installed.get(),true)));
+        await(()->TvFirst009TextServiceOwner.multimediaActive() && TvFirst009TextServiceOwner.publicCommand()==null,
+                "Q3 private MEDIA missing",30000);
+        main(()->mainActivity.finish());
+        UiDevice.getInstance(instrument).pressHome();
+    }
+
+    /** Transmet une observation uniquement au runner du banc possédé. */
+    private void writeBridge(String name,JSONObject value) throws Exception {
+        Files.write(new java.io.File(target.getFilesDir(),name).toPath(),value.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Attend le fichier atomiquement transféré par Chromium via ADB, sans journaliser son contenu. */
+    private JSONObject readBridge(String name) throws Exception {
+        java.io.File file=new java.io.File(target.getFilesDir(),name);
+        long deadline=SystemClock.elapsedRealtime()+180000;
+        while(SystemClock.elapsedRealtime()<deadline) {
+            if(file.isFile())return new JSONObject(new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Q3_BROWSER_EVIDENCE_TIMEOUT: "+name);
     }
 
     /** Déclenche une seule distribution avec la capacité de ce navigateur de banc. */
@@ -224,12 +370,16 @@ public final class PublicHostedAndroidTest {
 
     /** Attend le reçu natif de cette commande, en refusant les succès d'une ancienne révision. */
     private JSONObject waitViewerReady(String track,String tv,String commandId,boolean audio) throws Exception {
-        long deadline=SystemClock.elapsedRealtime()+180000;
+        long deadline=SystemClock.elapsedRealtime()+365000;
         while(SystemClock.elapsedRealtime()<deadline){
-            JSONObject command=web("/api/autonomous/viewer-status",new JSONObject().put("trackId",track).put("deviceId",tv),200)
-                    .optJSONObject("command");
-            if(command!=null && commandId.equals(command.optString("commandId")) && "ready".equals(command.optString("state"))
-                    && command.getBoolean("audio")==audio)return command;
+            try {
+                JSONObject command=web("/api/autonomous/viewer-status",new JSONObject().put("trackId",track).put("deviceId",tv),200)
+                        .optJSONObject("command");
+                if(command!=null && commandId.equals(command.optString("commandId")) && "ready".equals(command.optString("state"))
+                        && command.getBoolean("audio")==audio)return command;
+            } catch(java.io.IOException offline) {
+                // Le navigateur et le Companion attendent le rétablissement du réseau du banc.
+            }
             Thread.sleep(2500);
         }
         throw new AssertionError("Reçu automatique indisponible. Récepteur: "

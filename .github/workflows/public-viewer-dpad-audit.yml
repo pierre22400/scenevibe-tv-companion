@@ -3,7 +3,7 @@ name: Public Viewer D-pad independent verification
 # Unit verification only, without APK assembly, signature or physical device.
 on:
   push:
-    branches: [work/scenevibe-public-viewer-dpad-audit]
+    branches: [work/scenevibe-public-viewer-dpad-audit, work/scenevibe-product-consolidation-001]
     paths-ignore: ['docs/**']
 permissions:
   contents: read
@@ -32,6 +32,7 @@ jobs:
         run: >-
           gradle --no-daemon --max-workers=2 testTvux002UnitTest
           --tests '*PublicAssociationFocusTest'
+          --tests '*PublicLibraryEntryTest'
           --tests '*PublicViewerPreferencesTest'
           --tests '*PublicCatalogueCandidateTest'
           --tests '*CompanionShortcutServiceTest'

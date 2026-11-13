@@ -7,9 +7,22 @@ test "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = 1
 test -n "${SCENEVIBE_VIEWER_TRACK_ID:-}"
 adb install -r app/build/outputs/apk/tvux002/app-tvux002.apk
 adb install -r app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk
+if [[ "${ORG_GRADLE_PROJECT_scenevibeProductConsolidation001q2:-}" == true ]]; then
+    adb shell am instrument -w -r -e q3Chromium true -e q3Revision "${SCENEVIBE_Q3_STUDIO_REVISION:-false}" -e viewerTrackId "$SCENEVIBE_VIEWER_TRACK_ID" \
+        -e class com.scenevibe.tvcompanionpoc.PublicHostedAndroidTest \
+        com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner > public-viewer-native/instrumentation.raw 2>&1 &
+    runner=$!
+    trap 'kill "$runner" 2>/dev/null || true' EXIT
+    node .github/scripts/product-consolidation001q3-browser.mjs
+    wait "$runner"
+    tr -d '\r' < public-viewer-native/instrumentation.raw > public-viewer-native/instrumentation.log
+    rm public-viewer-native/instrumentation.raw
+    trap - EXIT
+else
 adb shell am instrument -w -r -e viewerTrackId "$SCENEVIBE_VIEWER_TRACK_ID" \
     -e class com.scenevibe.tvcompanionpoc.PublicHostedAndroidTest \
     com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee public-viewer-native/instrumentation.log
+fi
 grep -q '^OK (1 test)$' public-viewer-native/instrumentation.log
 grep -q '^INSTRUMENTATION_CODE: -1$' public-viewer-native/instrumentation.log
 adb exec-out run-as com.scenevibe.tvcompanionpoc cat files/public-viewer-native.json > public-viewer-native/cache-and-playback.json
@@ -45,13 +58,15 @@ done
 adb shell dumpsys activity services com.scenevibe.tvcompanionpoc/.PublicCompanionService | grep 'isForeground=true' > public-viewer-native/boot-service.txt
 adb logcat -d -v brief -s SceneVibePublic:I | grep PUBLIC_RECEIVER_BOOT_START_REQUESTED > public-viewer-native/boot-receiver.txt
 
+# Capture seulement les traces SceneVibe après l'essai, même en cas de refus.
+trap 'adb logcat -d -v epoch -s SceneVibePublic:I > public-viewer-native/post-boot-android.log || true; rm -f -- "$proof_private"' EXIT
 SCENEVIBE_VIEWER_BOOT_INPUT="$proof_private" node --input-type=module <<'JS'
 import { readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 
-const origin = 'https://scenevibe-public-viewer001-qual.vercel.app'
+const origin = process.env.SCENEVIBE_PUBLIC_VIEWER_ORIGIN || 'https://scenevibe-public-viewer001-qual.vercel.app'
 const { cookie, trackId, deviceId } = JSON.parse(await readFile(process.env.SCENEVIBE_VIEWER_BOOT_INPUT, 'utf8'))
 assert.match(cookie, /^sv_autonomous_tv_[a-f0-9-]{36}=[A-Za-z0-9_-]{43}$/)
 /** Reprend le navigateur associé pendant que l'écran du Companion reste fermé. */
@@ -90,8 +105,16 @@ async function verifyRevokedMediaAccess() {
 }
 
 const issued = await command('send', { trackId, deviceId, requestId: randomUUID() })
+const phases = []
 for (let i = 0; i < 60; i++) {
   const current = (await command('status', { trackId, deviceId })).command
+  const phase = current?.commandId === issued.commandId ? current.waitReason ?? current.state : 'command-not-current'
+  if (phases.at(-1)?.phase !== phase) {
+    phases.push({ time: new Date().toISOString(), phase })
+    await writeFile('public-viewer-native/post-boot-cloud.json', JSON.stringify({
+      commandId: issued.commandId, phases,
+    }, null, 2) + '\n')
+  }
   if (current?.commandId === issued.commandId && current.state === 'ready') {
     assert.equal(current.text, true)
     assert.equal(current.audio, false)

@@ -18,6 +18,19 @@ final class PublicCloudClient {
         /** Retourne des octets bornés ; les erreurs ne doivent contenir aucun secret. */
         byte[] request(String action,JSONObject body,String token) throws Exception;
     }
+    /** Signal de banc après réception d'octets sur le vrai flux HTTPS. */
+    interface TransferObserver {
+        /** Observe le premier bloc d'une ressource sans accéder au bearer ni aux octets. */
+        void firstResourceBytes() throws Exception;
+    }
+    private static volatile TransferObserver ownedTransferObserver;
+
+    /** Réservé au build debug du Viewer isolé et à son test d'interruption. */
+    static void observeOwnedTransfer(TransferObserver observer) {
+        if(!BuildConfig.DEBUG || !"https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app"
+                .equals(BuildConfig.PUBLIC_VIEWER_ORIGIN))throw new IllegalStateException("OWNED_TRANSFER_ONLY");
+        ownedTransferObserver=observer;
+    }
     private final TvFirst008State state;
     private final Transport transport;
 
@@ -40,8 +53,6 @@ final class PublicCloudClient {
         /** Envoie une action fermée et vérifie MIME, taille, longueur et octets chunked. */
         @Override public byte[] request(String action,JSONObject body,String token) throws Exception {
             if(!action.matches("challenge|challenge-status|association|poll|package|resource|receipt|validate-cache|device-preferences|media-wait"))throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
-            if(action.equals("media-wait") && !historical)
-                throw new IllegalArgumentException("PUBLIC_ROUTE_REFUSED");
             if(historical && (action.startsWith("challenge") || token==null))
                 throw new IllegalArgumentException("HISTORICAL_POSSESSION_REQUIRED");
             byte[] request=body.toString().getBytes(StandardCharsets.UTF_8);
@@ -60,7 +71,13 @@ final class PublicCloudClient {
                 long length=connection.getContentLengthLong();if(length < -1 || length>maximum)throw new IllegalArgumentException("PUBLIC_HTTP_BUDGET");
                 try(InputStream input=connection.getInputStream();ByteArrayOutputStream bytes=new ByteArrayOutputStream()){
                     byte[] buffer=new byte[8192];for(int n;(n=input.read(buffer))!=-1;){
-                        if(Thread.currentThread().isInterrupted() || bytes.size()+n>maximum)throw new IllegalArgumentException("PUBLIC_DOWNLOAD_CANCELLED");bytes.write(buffer,0,n);
+                        if(Thread.currentThread().isInterrupted() || bytes.size()+n>maximum)throw new IllegalArgumentException("PUBLIC_DOWNLOAD_CANCELLED");
+                        TransferObserver observer=ownedTransferObserver;
+                        if(observer!=null && n>0 && bytes.size()==0 && action.equals("resource")) {
+                            ownedTransferObserver=null;
+                            observer.firstResourceBytes();
+                        }
+                        bytes.write(buffer,0,n);
                     }
                     if(length>=0 && bytes.size()!=length)throw new IllegalArgumentException("PUBLIC_HTTP_TRUNCATED");return bytes.toByteArray();
                 }

@@ -55,6 +55,10 @@ final class CloudMultimediaAdmission {
     StudioMultimediaPackage track(){return publicReference==null?reference.prepared.track:publicReference.prepared.track;}
     /** Résout uniquement une ressource du cache vérifié, sans changement du port AUDIO. */
     java.io.File resource(String id) throws Exception {return publicReference==null?reference.prepared.resource(id):publicReference.prepared.resource(id);}
+    /** Garde le cache à disposition du lecteur pendant toute la session native. */
+    MultimediaCacheDirectories.Lease pinCache() {
+        return publicReference==null?reference.prepared.pin():publicReference.prepared.pin();
+    }
     /** Sérialise les effets avec leur autorité privée ou publique respective. */
     boolean whileCurrent(long now,Runnable effect){return publicReference==null?reference.whileCurrent(now,effect):publicReference.whileCurrent(now,effect);}
     /** Conserve les diagnostics de validité de chaque namespace. */

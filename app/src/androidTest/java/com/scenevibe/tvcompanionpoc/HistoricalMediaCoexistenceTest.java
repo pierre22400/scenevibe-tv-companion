@@ -62,6 +62,7 @@ public final class HistoricalMediaCoexistenceTest {
         volatile String armed="";
         volatile int transfers;
         volatile boolean lastText,lastAudio;
+        volatile boolean withdrawn;
 
         /** Réutilise le credential historique et les actifs immuables de la fixture public existante. */
         ControlledPublic(PublicNativeFixture fixture,JSONObject identity,String token) throws Exception {
@@ -97,7 +98,10 @@ public final class HistoricalMediaCoexistenceTest {
             if("poll".equals(action))return bytes(new JSONObject().put("mediaWaitSupported",true)
                     .put("commands",command==null?new JSONArray():new JSONArray().put(new JSONObject(command.toString())))
                     .put("automaticCommandIds",command==null?new JSONArray():new JSONArray().put(command.getString("commandId"))));
-            if("validate-cache".equals(action))return bytes(new JSONObject(body.toString()).put("status","VALIDATED"));
+            if("validate-cache".equals(action)){
+                if(withdrawn)throw new IllegalArgumentException("PUBLIC_HTTP_404");
+                return bytes(new JSONObject(body.toString()).put("status","VALIDATED"));
+            }
             assertNotNull(command);
             assertEquals(command.getString("commandId"),body.getString("commandId"));
             if("package".equals(action)){transfers++;return packageBytes.clone();}
@@ -180,6 +184,8 @@ public final class HistoricalMediaCoexistenceTest {
                 activity.startForegroundService(new Intent(target,PublicCompanionService.class));
             });
             await(()->"private-media".equals(cloud.waiting),"PRIVATE_WAIT_RECEIPT_MISSING");
+            assertTrue(PublicCompanionService.library().stream()
+                    .anyMatch(entry->first.equals(entry.command) && entry.state==PublicLibraryEntry.State.WAITING));
             assertEquals(0,cloud.transfers);
             assertNull(publicFixture.cache().read());
             assertEquals(privateDigest,MultimediaAndroidBridge.restoreCache(target,source).binding.sha256);
@@ -195,22 +201,35 @@ public final class HistoricalMediaCoexistenceTest {
             await(()->first.equals(cloud.armed),"PUBLIC_RESUME_NOT_ARMED");
             assertTrue(cloud.lastText);assertFalse(cloud.lastAudio);
             var old=publicFixture.cache().read().binding;
+            String publicTitle=publicFixture.cache().read().track.title();
+            assertTrue(PublicCompanionService.library().stream().anyMatch(entry->first.equals(entry.command)
+                    && entry.describe(first,SystemClock.elapsedRealtime()).contains(publicTitle)));
             instrument.runOnMainSync(()->playback(PlaybackState.STATE_PLAYING,30_000));
             await(()->first.equals(TvFirst009TextServiceOwner.publicCommand()) && !TvFirst009TextServiceOwner.publicMayYield(),"PUBLIC_MEDIA_NOT_PINNED");
             int transfers=cloud.transfers;
             String next=cloud.send(true);
             await(()->"public-media".equals(cloud.waiting),"PUBLIC_REVISION_WAIT_MISSING");
+            assertTrue(PublicCompanionService.library().stream()
+                    .anyMatch(entry->first.equals(entry.command) && entry.state==PublicLibraryEntry.State.VERIFIED));
+            assertTrue(PublicCompanionService.library().stream()
+                    .anyMatch(entry->next.equals(entry.command) && entry.state==PublicLibraryEntry.State.WAITING));
             assertEquals(transfers,cloud.transfers);
             assertEquals(old.digest,publicFixture.cache().read().binding.digest);
             await(()->first.equals(TvFirst009TextServiceOwner.publicCommand()) && activity.hasWindowFocus(),"PUBLIC_REVISION_INTERRUPTED_PLAYBACK");
             instrument.runOnMainSync(()->playback(PlaybackState.STATE_STOPPED,30_000));
             await(()->next.equals(cloud.armed),"PUBLIC_REVISION_NOT_RESUMED");
             assertNotEquals(old.revision,publicFixture.cache().read().binding.revision);
+            String newDigest=publicFixture.cache().read().binding.digest;
+            cloud.withdrawn=true;
+            await(()->PublicCompanionService.library().stream().anyMatch(entry->next.equals(entry.command)
+                    && entry.state==PublicLibraryEntry.State.UNAVAILABLE),"WITHDRAWN_PUBLIC_LIBRARY_ENTRY");
+            assertEquals(newDigest,publicFixture.cache().read().binding.digest);
             assertEquals(privateDigest,MultimediaAndroidBridge.restoreCache(target,source).binding.sha256);
             assertTrue(privatePrefs.getBoolean("audio",false));assertFalse(viewerPrefs.audio());
             JSONObject proof=new JSONObject().put("privateWait",true).put("privateCacheAndKeystore",true)
                     .put("privateMuteRecalageAndFocus",true).put("publicResume",true).put("revisionPinned",true)
-                    .put("revisionResume",true).put("privateAudio",true).put("publicAudio",false);
+                    .put("revisionResume",true).put("privateAudio",true).put("publicAudio",false)
+                    .put("publicLibraryCacheWaitingAndWithdrawal",true);
             Files.write(new File(target.getFilesDir(),"001c-coexistence.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));
         }finally{
             instrument.runOnMainSync(()->{

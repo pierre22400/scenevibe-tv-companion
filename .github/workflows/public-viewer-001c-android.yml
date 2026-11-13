@@ -1,7 +1,7 @@
 name: Public Viewer 001-C Android
 on:
   push:
-    branches: [work/scenevibe-public-viewer-dpad-audit]
+    branches: [work/scenevibe-public-viewer-dpad-audit, work/scenevibe-product-consolidation-001]
     paths: ['app/**', '.github/scripts/public-viewer-001c-*', '.github/workflows/public-viewer-001c-android.yml']
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
           path: app/build/test-results/testTvux002UnitTest/*.xml
 
   test-a:
-    if: contains(github.event.head_commit.message, '[test-a]')
+    if: github.ref_name == 'work/scenevibe-public-viewer-dpad-audit' && contains(github.event.head_commit.message, '[test-a]')
     needs: compile
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -129,3 +129,47 @@ jobs:
         with:
           name: public-viewer-001c-coexistence
           path: viewer001c-coexistence/
+
+  library-restart:
+    if: github.ref_name == 'work/scenevibe-product-consolidation-001'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SCENEVIBE_CLOUD_ORIGIN: ''
+      SCENEVIBE_PUBLIC_VIEWER_ORIGIN: ''
+      ORG_GRADLE_PROJECT_scenevibeHistoricalViewer001c: 'false'
+      ORG_GRADLE_PROJECT_scenevibeHistoricalMediaQualification: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Assemble the isolated library and restart fixtures
+        run: gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true assembleTvux002 assembleTvux002AndroidTest
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: bash .github/scripts/product-consolidation001-restart.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: product-consolidation001-library-restart
+          path: product-consolidation001-restart/

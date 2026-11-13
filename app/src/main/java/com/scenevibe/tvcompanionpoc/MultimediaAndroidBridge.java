@@ -24,7 +24,7 @@ final class MultimediaAndroidBridge {
         client=new MultimediaCloudClient(session,port);
         String generation=TvFirst008Wire.uuid(session.generation()).replace("-","");
         InstallationStore store=new InstallationStore(new AndroidInstallationBackend(context,"multimedia003d_cache_"+generation));
-        cache=new MultimediaPrivateCache(new File(context.getFilesDir(),"multimedia003d/"+generation),store,new AndroidStudioAudioInspector(context));
+        cache=new MultimediaPrivateCache(context,new File(context.getFilesDir(),"multimedia003d/"+generation),store,new AndroidStudioAudioInspector(context));
     }
     /** Complete the actual private transfer, then offer the verified calendar without admitting MEDIA. */
     MultimediaPrivateCache.Prepared prepare(String publicationId,StudioMultimediaRuntime runtime) throws Exception {
@@ -43,7 +43,7 @@ final class MultimediaAndroidBridge {
     static MultimediaPrivateCache.Prepared restoreCache(Context context,TvFirst008Source source) throws Exception {
         String generation=source.multimediaCachedGeneration().replace("-","");
         InstallationStore store=new InstallationStore(new AndroidInstallationBackend(context,"multimedia003d_cache_"+generation));
-        return new MultimediaPrivateCache(new File(context.getFilesDir(),"multimedia003d/"+generation),store,
+        return new MultimediaPrivateCache(context,new File(context.getFilesDir(),"multimedia003d/"+generation),store,
                 new AndroidStudioAudioInspector(context)).read();
     }
     /** Restore verified inert bytes after restart; no credential, receipt or admission is restored. */
@@ -54,7 +54,7 @@ final class MultimediaAndroidBridge {
     static MultimediaPrivateCache.Prepared restoreInert(Context context,TvFirst008Source source,StudioMultimediaRuntime runtime) throws Exception {
         String generation=source.multimediaCachedGeneration().replace("-","");
         InstallationStore store=new InstallationStore(new AndroidInstallationBackend(context,"multimedia003d_cache_"+generation));
-        MultimediaPrivateCache cache=new MultimediaPrivateCache(new File(context.getFilesDir(),"multimedia003d/"+generation),store,new AndroidStudioAudioInspector(context));
+        MultimediaPrivateCache cache=new MultimediaPrivateCache(context,new File(context.getFilesDir(),"multimedia003d/"+generation),store,new AndroidStudioAudioInspector(context));
         MultimediaPrivateCache.Prepared prepared=cache.read();if(prepared!=null)runtime.prepareFromVerifiedCloudCache(prepared);return prepared;
     }
 }
