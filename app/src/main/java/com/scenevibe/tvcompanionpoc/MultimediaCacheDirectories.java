@@ -10,6 +10,10 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
@@ -22,6 +26,8 @@ final class MultimediaCacheDirectories {
     private static final Pattern SET = Pattern.compile("set-[0-9a-f]{32}");
     private static final Pattern PUBLIC_STAGE = Pattern.compile("set-[0-9a-f]{32}\\.partial");
     private static final Pattern PRIVATE_STAGE = Pattern.compile("stage-[0-9a-f]{32}");
+
+    private static final ExecutorService CLEANUP = Executors.newSingleThreadExecutor();
 
     final Object writer = new Object();
     // Shared under writer until process restart can recover the durable pointer.
@@ -51,25 +57,27 @@ final class MultimediaCacheDirectories {
     }
 
     /** Épingle le dossier jusqu'à la libération du lecteur natif, y compris ses callbacks. */
-    synchronized Lease pin(File directory) {
+    synchronized Lease pin(File directory,Runnable collect) {
         if (!root.equals(directory.getParentFile()) || !isSet(directory.getName())
                 || !Files.isDirectory(directory.toPath(), LinkOption.NOFOLLOW_LINKS)) {
             throw new IllegalStateException("CACHE_SET_UNAVAILABLE");
         }
         pins.merge(directory, 1, Integer::sum);
-        return new Lease(this, directory);
+        return new Lease(this, directory, collect);
     }
 
     /** Libère le bail exactement une fois. */
     static final class Lease implements AutoCloseable {
         private final MultimediaCacheDirectories owner;
         private final File directory;
+        private final Runnable collect;
         private boolean closed;
 
         /** Lie la restitution à un seul dossier vérifié. */
-        private Lease(MultimediaCacheDirectories owner, File directory) {
+        private Lease(MultimediaCacheDirectories owner, File directory, Runnable collect) {
             this.owner = owner;
             this.directory = directory;
+            this.collect = collect;
         }
 
         /** Autorise une future collecte lorsque le dernier lecteur a terminé. */
@@ -78,9 +86,14 @@ final class MultimediaCacheDirectories {
                 if (closed) return;
                 closed = true;
                 int count = owner.pins.get(directory);
-                if (count == 1) owner.pins.remove(directory);
-                else owner.pins.put(directory, count - 1);
+                if (count > 1) {
+                    owner.pins.put(directory, count - 1);
+                    return;
+                }
+                owner.pins.remove(directory);
             }
+            // Le lecteur se ferme sur le Looper. Un transfert peut attendre ce Looper.
+            CLEANUP.execute(collect);
         }
     }
 
@@ -103,6 +116,18 @@ final class MultimediaCacheDirectories {
             } catch (IOException | SecurityException retryLater) {
                 // Un nettoyage différé ne change ni le pointeur ni le résultat du transfert.
             }
+        }
+    }
+
+    /** Compare le poids des octets à écrire, sans compter deux fois un même MP3 physique. */
+    void requireSpace(MultimediaDeliveryProfile profile, long metadataBytes) throws IOException {
+        Set<String> counted = new HashSet<>();
+        long needed = metadataBytes;
+        for (MultimediaDeliveryProfile.Resource resource : profile.resources) {
+            if (counted.add(resource.sha256)) needed += resource.byteLength;
+        }
+        if (Files.getFileStore(root.toPath()).getUsableSpace() < needed) {
+            throw new java.nio.file.FileSystemException(root.getName(), null, "ENOSPC");
         }
     }
 

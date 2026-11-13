@@ -10,6 +10,9 @@ import java.io.FileOutputStream;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.Base64;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONObject;
 import java.util.Set;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,35 +38,58 @@ public final class MultimediaCacheLifecycleAndroidTest {
             PublicMultimediaCache cache=new PublicMultimediaCache(root,new InstallationStore(fault),
                     new AndroidStudioAudioInspector(fixture.target),fault::write);
             PublicCloudClient client=new PublicCloudClient(fixture.state,fixture);
-            PublicMultimediaCache.Prepared first=nextPublic(fixture,cache,client);
-            String resource=first.profile.resources.get(0).id;
-            File pinned=first.resource(resource);
-            try(MultimediaCacheDirectories.Lease lease=first.pin()) {
-                for(int i=0;i<3;i++)nextPublic(fixture,cache,client);
-                assertEquals(2,sets(root));
-                assertEquals(first.profile.resources.get(0).sha256,MultimediaDeliveryProfile.hash(Files.readAllBytes(pinned.toPath())));
+            ManualNativeFixture privateFixture=new ManualNativeFixture();
+            try {
+                MultimediaPrivateCache.Prepared privateBefore=privateFixture.download();
+                long privateBytes=bytes(privateFixture.root);
+                PublicMultimediaCache.Prepared first=nextPublic(fixture,cache,client);
+                String resource=first.profile.resources.get(0).id;
+                File pinned=first.resource(resource);
+                long firstBytes=bytes(root);
+                try(MultimediaCacheDirectories.Lease lease=first.pin()) {
+
+                    for(int i=1;i<10;i++){
+                        changeTrack(fixture,i);
+                        PublicMultimediaCache.Prepared latest=nextPublic(fixture,cache,client);
+                        assertEquals(fixture.publicIdentity.getString("trackId"),latest.binding.track);
+                        assertEquals(2,sets(root));
+                    }
+                    assertTrue(bytes(root)>firstBytes);
+                    assertEquals(privateBytes,bytes(privateFixture.root));
+                    assertTrue(privateBefore.binding.same(privateFixture.reopen().read().binding));
+                    assertEquals(2,sets(root));
+                    assertEquals(first.profile.resources.get(0).sha256,MultimediaDeliveryProfile.hash(Files.readAllBytes(pinned.toPath())));
+                }
+                awaitRemoved(pinned);
+                long lastBytes=bytes(root);
+            assertTrue(lastBytes>firstBytes && lastBytes<2*firstBytes);
+                PublicMultimediaCache.Prepared retained=cache.read();
+                assertEquals(1,sets(root));
+                assertEquals(0,stages(root));
+                android.util.Log.i("SceneVibeCacheQ2","public tracks=10 residual=1 firstBytes="+firstBytes+" finalBytes="+lastBytes
+                        +" preservedPrivateBytes="+privateBytes);
+                abandoned(root,"set-00000000000000000000000000000001.partial");
+                abandoned(root,"set-00000000000000000000000000000002");
+                fault.full=true;
+                int receipts=fixture.cacheReceipts;
+                expectFailure(FileSystemException.class,()->nextPublic(fixture,cache,client));
+                assertEquals(receipts,fixture.cacheReceipts);
+                assertTrue(retained.binding.same(cache.read().binding));
+                assertEquals(1,sets(root));
+                assertEquals(0,stages(root));
+                fault.full=false;
+                fault.rejectPointer=true;
+                expectFailure(IllegalArgumentException.class,()->nextPublic(fixture,cache,client));
+                assertTrue(fault.sawUnpublishedDirectory);
+                assertEquals(receipts,fixture.cacheReceipts);
+                assertTrue(retained.binding.same(cache.read().binding));
+                fault.rejectPointer=false;
+                assertFalse(retained.binding.same(nextPublic(fixture,cache,client).binding));
+                assertEquals(receipts+1,fixture.cacheReceipts);
+                assertEquals(1,sets(root));
+            } finally {
+                privateFixture.cleanup();
             }
-            PublicMultimediaCache.Prepared retained=cache.read();
-            assertFalse(pinned.exists());
-            abandoned(root,"set-00000000000000000000000000000001.partial");
-            abandoned(root,"set-00000000000000000000000000000002");
-            fault.full=true;
-            int receipts=fixture.cacheReceipts;
-            assertThrows(FileSystemException.class,()->nextPublic(fixture,cache,client));
-            assertEquals(receipts,fixture.cacheReceipts);
-            assertTrue(retained.binding.same(cache.read().binding));
-            assertEquals(1,sets(root));
-            assertEquals(0,stages(root));
-            fault.full=false;
-            fault.rejectPointer=true;
-            assertThrows(IllegalArgumentException.class,()->nextPublic(fixture,cache,client));
-            assertTrue(fault.sawUnpublishedDirectory);
-            assertEquals(receipts,fixture.cacheReceipts);
-            assertTrue(retained.binding.same(cache.read().binding));
-            fault.rejectPointer=false;
-            assertFalse(retained.binding.same(nextPublic(fixture,cache,client).binding));
-            assertEquals(receipts+1,fixture.cacheReceipts);
-            assertEquals(1,sets(root));
         } finally {
             fixture.close(true);
         }
@@ -80,24 +106,24 @@ public final class MultimediaCacheLifecycleAndroidTest {
             MultimediaPrivateCache.Prepared first=fixture.download();
             File pinned=first.resource(first.profile.resources.get(0).id);
             try(MultimediaCacheDirectories.Lease lease=first.pin()) {
-                for(int i=0;i<3;i++){fixture.replacement();cache.download(fixture.client,fixture.binding);}
+                for(int i=1;i<10;i++){fixture.replacement();cache.download(fixture.client,fixture.binding);}
                 assertEquals(2,sets(fixture.root));
                 assertEquals(first.profile.resources.get(0).sha256,MultimediaDeliveryProfile.hash(Files.readAllBytes(pinned.toPath())));
             }
+            awaitRemoved(pinned);
             MultimediaPrivateCache.Prepared retained=fixture.reopen().read();
-            assertFalse(pinned.exists());
             abandoned(fixture.root,"stage-00000000000000000000000000000001");
             abandoned(fixture.root,"set-00000000000000000000000000000002");
             fixture.replacement();
             int receipts=fixture.port.receipts;
             fault.full=true;
-            assertThrows(FileSystemException.class,()->cache.download(fixture.client,fixture.binding));
+            expectFailure(FileSystemException.class,()->cache.download(fixture.client,fixture.binding));
             assertEquals(0,stages(fixture.root));
             assertEquals(receipts,fixture.port.receipts);
             assertTrue(retained.binding.same(fixture.reopen().read().binding));
             fault.full=false;
             fault.rejectPointer=true;
-            assertThrows(IllegalArgumentException.class,()->cache.download(fixture.client,fixture.binding));
+            expectFailure(IllegalArgumentException.class,()->cache.download(fixture.client,fixture.binding));
             assertTrue(fault.sawUnpublishedDirectory);
             assertEquals(receipts,fixture.port.receipts);
             assertTrue(retained.binding.same(fixture.reopen().read().binding));
@@ -109,6 +135,23 @@ public final class MultimediaCacheLifecycleAndroidTest {
         } finally {
             fixture.cleanup();
         }
+    }
+
+    /** Action du banc susceptible de lever une erreur de disque. */
+    private interface CheckedAction {
+        /** Exécute exactement une tentative. */
+        void run() throws Exception;
+    }
+
+    /** Vérifie le type de refus sans dépendre d'une version JUnit spécifique au runner. */
+    private static void expectFailure(Class<? extends Exception> type,CheckedAction action) throws Exception {
+        try {
+            action.run();
+        } catch(Exception failure) {
+            if(type.isInstance(failure))return;
+            throw failure;
+        }
+        fail("Missing failure: "+type.getSimpleName());
     }
 
     /** Refuse un appareil physique et conserve les données dans des générations synthétiques. */
@@ -124,6 +167,52 @@ public final class MultimediaCacheLifecycleAndroidTest {
         fixture.select();
         return cache.download(client,new PublicCatalogueCandidate.Binding(fixture.command,
                 fixture.device,fixture.generation,System.currentTimeMillis()),()->false);
+    }
+
+    /** Produit une nouvelle identité éditoriale et un profil de taille variable sans modifier les MP3. */
+    private static void changeTrack(PublicNativeFixture fixture,int number) throws Exception {
+        JSONObject envelope=new JSONObject(new String(fixture.profile,StandardCharsets.UTF_8));
+        JSONObject track=decode(envelope,"trackBase64");
+        String id=fixture.publicIdentity.getString("trackId");
+        String next=id.substring(0,id.length()-2)+String.format(java.util.Locale.ROOT,"%02x",number);
+        JSONObject runtime=decode(envelope,"runtimeBase64");
+        track.put("trackId",next).put("title","Track "+number+" "+new String(new char[number*7]).replace('\0','x'));
+        runtime.put("trackId",next);
+        byte[] trackBytes=encode(envelope,"trackBase64",track);
+        byte[] runtimeBytes=encode(envelope,"runtimeBase64",runtime);
+        envelope.put("runtimeSha256",MultimediaDeliveryProfile.hash(runtimeBytes));
+        envelope.getJSONObject("identity").put("trackId",next).put("snapshotSha256",MultimediaDeliveryProfile.hash(trackBytes));
+        fixture.publicIdentity.put("trackId",next);
+        fixture.profile=envelope.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** Lit une des pièces exactes de l'enveloppe synthétique. */
+    private static JSONObject decode(JSONObject envelope,String key) throws Exception {
+        return new JSONObject(new String(Base64.getDecoder().decode(envelope.getString(key)),StandardCharsets.UTF_8));
+    }
+
+    /** Conserve les octets utilisés pour le nouveau SHA-256. */
+    private static byte[] encode(JSONObject envelope,String key,JSONObject document) throws Exception {
+        byte[] data=document.toString().getBytes(StandardCharsets.UTF_8);
+        envelope.put(key,Base64.getEncoder().encodeToString(data));
+        return data;
+    }
+
+    /** Mesure l'espace logique occupé par les fichiers dans le seul namespace du test. */
+    private static long bytes(File root) throws Exception {
+        long total=0;
+        try(var files=Files.walk(root.toPath())){
+            for(java.nio.file.Path path:(Iterable<java.nio.file.Path>)files::iterator)
+                if(Files.isRegularFile(path))total+=Files.size(path);
+        }
+        return total;
+    }
+
+    /** Attend la collecte automatique, sans relire ni réinstaller le cache. */
+    private static void awaitRemoved(File file) throws Exception {
+        long deadline=android.os.SystemClock.elapsedRealtime()+5000;
+        while(file.exists() && android.os.SystemClock.elapsedRealtime()<deadline)Thread.sleep(20);
+        assertFalse(file.exists());
     }
 
     /** Simule un dossier d'un processus interrompu avant la reprise. */

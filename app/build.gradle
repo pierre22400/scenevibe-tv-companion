@@ -26,7 +26,14 @@ if (historicalViewer001c && (!publicViewer001 || !cloudOrigin)) {
     throw new GradleException("Historical Viewer requires the public receiver and the existing historical HTTPS origin")
 }
 def publicViewerOrigin = providers.environmentVariable("SCENEVIBE_PUBLIC_VIEWER_ORIGIN").orElse("").get()
-if (publicViewer001 && (!companionMute002 || (publicViewerOrigin && publicViewerOrigin != "https://scenevibe-public-viewer001-qual.vercel.app"))) {
+def productConsolidationQ2 = providers.gradleProperty("scenevibeProductConsolidation001q2").orElse("false").get() == "true"
+def qualifiedViewerOrigin = productConsolidationQ2
+        ? "https://scenevibe-product-consolidation001q2-viewe-git-6ef46d-archc-ode.vercel.app"
+        : "https://scenevibe-public-viewer001-qual.vercel.app"
+if (productConsolidationQ2 && (!publicViewer001 || historicalViewer001c || publicViewerOrigin != qualifiedViewerOrigin || cloudOrigin != qualifiedViewerOrigin)) {
+    throw new GradleException("001-Q2 requires both origins to match the isolated Viewer")
+}
+if (publicViewer001 && (!companionMute002 || (publicViewerOrigin && publicViewerOrigin != qualifiedViewerOrigin))) {
     throw new GradleException("Public Viewer candidate requires MUTE 002 and its exact qualification origin")
 }
 if (companionMute002 && (!hostedAutonomous001d || !realTrack001)) {

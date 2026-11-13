@@ -36,13 +36,14 @@ final class PublicMultimediaCache {
         final StudioMultimediaPackage track;
         final MultimediaDeliveryProfile profile;
         private final File directory;
+        private final Runnable collect;
         /** Conserve séparément les coordonnées publiques et l'adaptation interne vérifiée. */
-        Prepared(PublicCatalogueCandidate.Binding binding,StudioMultimediaPackage track,MultimediaDeliveryProfile profile,File directory){
-            this.binding=binding;this.track=track;this.profile=profile;this.directory=directory;
+        Prepared(PublicCatalogueCandidate.Binding binding,StudioMultimediaPackage track,MultimediaDeliveryProfile profile,File directory,Runnable collect){
+            this.binding=binding;this.track=track;this.profile=profile;this.directory=directory;this.collect=collect;
         }
         /** Épingle les MP3 avant la construction du lecteur MEDIA. */
         MultimediaCacheDirectories.Lease pin() {
-            return MultimediaCacheDirectories.at(directory.getParentFile()).pin(directory);
+            return MultimediaCacheDirectories.at(directory.getParentFile()).pin(directory,collect);
         }
         /** Revérifie le fichier adressé par contenu juste avant chaque lecture AUDIO native. */
         File resource(String id) throws Exception {
@@ -61,6 +62,13 @@ final class PublicMultimediaCache {
     }
     /** Port de stockage partagé avec les bancs JVM ; les règles et parseurs restent identiques. */
     PublicMultimediaCache(File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder) throws Exception {
+        this(root,store,decoder,PublicMultimediaCache::write);
+    }
+
+    /** Utilise le même parcours atomique avec une frontière d’écriture instrumentable. */
+    PublicMultimediaCache(File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder,
+            MultimediaCacheDirectories.Writer writer) throws Exception {
+        this.writer=writer;
         if(!root.isDirectory() && !root.mkdirs())throw new IllegalArgumentException("PUBLIC_CACHE_UNAVAILABLE");
         MultimediaDeliveryProfile.require(!Files.isSymbolicLink(root.toPath()),"PUBLIC_CACHE_SYMLINK");
         this.root=root.getCanonicalFile();this.store=store;this.decoder=decoder;
@@ -112,10 +120,15 @@ final class PublicMultimediaCache {
         InstallationStore.ReadResult before=store.read();
         MultimediaDeliveryProfile.require(before.state()!=InstallationStore.ReadState.CORRUPT,"PUBLIC_CACHE_CORRUPT");
         String name="set-"+UUID.randomUUID().toString().replace("-","");File directory=new File(root,name+".partial");
-        if(!directory.mkdir())throw new IllegalArgumentException("PUBLIC_STAGE_UNAVAILABLE");
-        writer.write(new File(directory,"package.json"),bytes);writer.write(new File(directory,"binding.json"),binding.json().toString().getBytes(StandardCharsets.UTF_8));
+        byte[] bindingBytes=binding.json().toString().getBytes(StandardCharsets.UTF_8);
         MultimediaDeliveryProfile profile=PublicCatalogueCandidate.profile(bytes,binding);
-        for(MultimediaDeliveryProfile.Resource resource:profile.resources)writer.write(new File(directory,resource.sha256+".mp3"),track.resource(resource.id));
+        directories.requireSpace(profile,bytes.length+bindingBytes.length);
+        if(!directory.mkdir())throw new IllegalArgumentException("PUBLIC_STAGE_UNAVAILABLE");
+        writer.write(new File(directory,"package.json"),bytes);writer.write(new File(directory,"binding.json"),bindingBytes);
+        java.util.Set<String> written=new java.util.HashSet<>();
+        for(MultimediaDeliveryProfile.Resource resource:profile.resources) {
+            if(written.add(resource.sha256))writer.write(new File(directory,resource.sha256+".mp3"),track.resource(resource.id));
+        }
         readSet(directory,binding);
         File complete=new File(root,name);Files.move(directory.toPath(),complete.toPath(),StandardCopyOption.ATOMIC_MOVE);
         long revision=before.snapshot()==null?1:before.snapshot().revision()+1;
@@ -146,11 +159,13 @@ final class PublicMultimediaCache {
 
     /** Préserve tout sur un pointeur corrompu ou ambigu. */
     private void collect() {
-        if(directories.recoveryUncertain)return;
-        try {
-            directories.collect(pointedDirectory(store.read()),true);
-        } catch(Exception refused) {
-            // Conserver les dossiers tant que le pointeur ne peut être établi.
+        synchronized(directories.writer) {
+            if(directories.recoveryUncertain)return;
+            try {
+                directories.collect(pointedDirectory(store.read()),true);
+            } catch(Exception refused) {
+                // Conserver les dossiers tant que le pointeur ne peut être établi.
+            }
         }
     }
 
@@ -187,7 +202,7 @@ final class PublicMultimediaCache {
         MultimediaDeliveryProfile.require(binding.same(new PublicCatalogueCandidate.Binding(stored,binding.device,binding.generation,0)),"PUBLIC_CACHE_BINDING");
         MultimediaDeliveryProfile profile=PublicCatalogueCandidate.profile(bytes,binding);Map<String,byte[]> physical=new HashMap<>();
         for(MultimediaDeliveryProfile.Resource resource:profile.resources)physical.put(resource.sha256,read(new File(directory,resource.sha256+".mp3"),MultimediaDeliveryProfile.MAX_AUDIO));
-        return new Prepared(binding,profile.prepare(physical,decoder),profile,directory);
+        return new Prepared(binding,profile.prepare(physical,decoder),profile,directory,this::collect);
     }
 
     /** Contrôle léger du pointeur courant pour chaque effet, sans décoder les MP3 sur le thread UI. */

@@ -31,13 +31,14 @@ final class MultimediaPrivateCache {
     static final class Prepared {
         final StudioMultimediaPackage track;final MultimediaCloudClient.Binding binding;final MultimediaDeliveryProfile profile;
         private final File directory;
+        private final Runnable collect;
         /** Retain only an immutable package and its validated private directory. */
-        Prepared(StudioMultimediaPackage track,MultimediaCloudClient.Binding binding,MultimediaDeliveryProfile profile,File directory) {
-            this.track=track;this.binding=binding;this.profile=profile;this.directory=directory;
+        Prepared(StudioMultimediaPackage track,MultimediaCloudClient.Binding binding,MultimediaDeliveryProfile profile,File directory,Runnable collect) {
+            this.track=track;this.binding=binding;this.profile=profile;this.directory=directory;this.collect=collect;
         }
         /** Épingle le dossier tant que la session MEDIA peut ouvrir ses fichiers. */
         MultimediaCacheDirectories.Lease pin() {
-            return MultimediaCacheDirectories.at(directory.getParentFile()).pin(directory);
+            return MultimediaCacheDirectories.at(directory.getParentFile()).pin(directory,collect);
         }
         /** Resolve an existing logical MP3 through a content-addressed file and recheck its actual bytes. */
         File resource(String id) throws Exception {
@@ -84,14 +85,17 @@ final class MultimediaPrivateCache {
             File committed=new File(root,"set-"+UUID.randomUUID().toString().replace("-",""));boolean pointed=false,success=false;
             MultimediaDeliveryProfile.require(stage.mkdir(),"STAGING_UNAVAILABLE");
             try {
-                MultimediaDeliveryProfile profile=client.profile(binding);Map<String,byte[]> physical=new LinkedHashMap<>();
+                MultimediaDeliveryProfile profile=client.profile(binding);
+                byte[] bindingBytes=binding.json().toString().getBytes(StandardCharsets.UTF_8);
+                directories.requireSpace(profile,profile.encoded.length+bindingBytes.length);
+                Map<String,byte[]> physical=new LinkedHashMap<>();
                 for(MultimediaDeliveryProfile.Resource row:profile.resources) {
                     client.check();byte[] bytes=physical.get(row.sha256);
                     if(bytes==null) {bytes=client.resource(binding,row);physical.put(row.sha256,bytes);writer.write(new File(stage,row.sha256+".mp3"),bytes);}
                     MultimediaDeliveryProfile.require(bytes.length==row.byteLength && MultimediaDeliveryProfile.hash(bytes).equals(row.sha256),"MP3_INTEGRITY");
                 }
                 profile.prepare(physical,decoder);writer.write(new File(stage,"profile.json"),profile.encoded);
-                writer.write(new File(stage,"binding.json"),binding.json().toString().getBytes(StandardCharsets.UTF_8));
+                writer.write(new File(stage,"binding.json"),bindingBytes);
                 client.verify(binding);client.check();
                 Files.move(stage.toPath(),committed.toPath(),StandardCopyOption.ATOMIC_MOVE);
                 JSONObject descriptor=new JSONObject().put("format","scenevibe.multimedia-cache.v1").put("directory",committed.getName())
@@ -119,6 +123,18 @@ final class MultimediaPrivateCache {
             Prepared prepared=readPointer(store.read());
             if(!directories.recoveryUncertain)directories.collect(prepared==null?null:prepared.directory,false);
             return prepared;
+        }
+    }
+
+    /** Après libération du lecteur, relit le pointeur avant de collecter hors du Looper. */
+    private void collect() {
+        synchronized(directories.writer) {
+            if(directories.recoveryUncertain)return;
+            try {
+                directories.collect(pointedDirectory(store.read()),false);
+            } catch(Exception refused) {
+                // Conserver les dossiers tant que le pointeur ne peut être établi.
+            }
         }
     }
 
@@ -151,7 +167,7 @@ final class MultimediaPrivateCache {
         MultimediaDeliveryProfile profile=new MultimediaDeliveryProfile(readFile(new File(directory,"profile.json"),MultimediaDeliveryProfile.MAX_PROFILE));
         MultimediaDeliveryProfile.require(profile.packageSha256.equals(binding.sha256),"CACHE_PACKAGE_INTEGRITY");Map<String,byte[]> physical=new LinkedHashMap<>();
         for(MultimediaDeliveryProfile.Resource row:profile.resources)if(!physical.containsKey(row.sha256))physical.put(row.sha256,readFile(new File(directory,row.sha256+".mp3"),MultimediaDeliveryProfile.MAX_AUDIO));
-        StudioMultimediaPackage track=profile.prepare(physical,decoder);return new Prepared(track,binding,profile,directory);
+        StudioMultimediaPackage track=profile.prepare(physical,decoder);return new Prepared(track,binding,profile,directory,this::collect);
     }
 
     /** Flush a new immutable file; no existing committed content is ever overwritten. */
