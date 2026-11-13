@@ -69,7 +69,6 @@ try {
   write("q3-stop-private.json",{stop:true})
   assert.equal((await read("q3-first-resource-bytes.json",180)).received,true)
   execFileSync("adb",["shell","svc","wifi","disable"],{stdio:"ignore"})
-  execFileSync("adb",["shell","svc","data","disable"],{stdio:"ignore"})
   try {
     const downloading=await context.request.post(origin+"/api/autonomous/viewer-status",
       {headers:{origin},data:{trackId:track,deviceId}})
@@ -82,7 +81,6 @@ try {
     assert.equal((await interrupted.json()).command.state,"downloading")
   } finally {
     execFileSync("adb",["shell","svc","wifi","enable"],{stdio:"ignore"})
-    execFileSync("adb",["shell","svc","data","enable"],{stdio:"ignore"})
   }
   await writeFile("public-viewer-native/q3-interruption.json",JSON.stringify({
     commandId:command.commandId,privateWaitText:waitText,firstResourceBytes:true,noPositiveReceiptDuringCut:true,
