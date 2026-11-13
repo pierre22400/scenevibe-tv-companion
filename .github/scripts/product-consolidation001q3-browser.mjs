@@ -49,7 +49,9 @@ try {
   const cookies=(await context.cookies(origin)).filter(item=>item.name.startsWith("sv_autonomous_tv_"))
   assert.equal(cookies.length,1)
   write("q3-paired.json",{deviceId,cookie:cookies[0].name+"="+cookies[0].value})
-  assert.equal((await read("q3-background.json")).activityClosed,true)
+  const background=await read("q3-background.json")
+  assert.equal(background.activityClosed,true)
+  assert.equal(background.privateActive,true)
   await page.reload()
   const sendPath="/api/autonomous/viewer-send"
   const pending=page.waitForResponse(response=>new URL(response.url()).pathname===sendPath &&
@@ -59,6 +61,12 @@ try {
   assert.equal(response.status(),200)
   const command=await response.json()
   write("q3-command.json",{commandId:command.commandId})
+  const waiting=page.locator('[data-viewer-state="waiting"]')
+  await waiting.waitFor({timeout:150000})
+  const waitText=await waiting.innerText()
+  assert.match(waitText,/fin de la session SceneVibe en cours/i)
+  assert.equal(await page.locator('[data-viewer-state="ready"]').count(),0)
+  write("q3-stop-private.json",{stop:true})
   const ready=page.locator('[data-viewer-state="ready"]')
   await ready.waitFor({timeout:180000})
   assert.match(await ready.innerText(),/TEXT ON.*AUDIO ON/)
@@ -73,7 +81,7 @@ try {
   const foreign=await context.request.post(origin+sendPath,{headers:{origin},data:{...payload,deviceId:randomUUID()}})
   assert.equal(foreign.status(),401)
   await writeFile("public-viewer-native/q3-browser.json",JSON.stringify({origin,track,...cache,
-    browserClick:true,activityClosed:true,webReady:true,replaySameCommand:true,foreignDeviceStatus:401},null,2))
+    browserClick:true,activityClosed:true,webReady:true,privateDeferred:true,waitText,voluntaryStop:true,replaySameCommand:true,foreignDeviceStatus:401},null,2))
   await page.screenshot({path:"public-viewer-native/q3-browser-ready.png",fullPage:true})
 } finally {
   await browser.close()

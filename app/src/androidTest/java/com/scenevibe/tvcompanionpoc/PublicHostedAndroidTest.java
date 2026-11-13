@@ -42,6 +42,8 @@ public final class PublicHostedAndroidTest {
     private PublicPairingActivity activity;
     private MediaSession media;
     private String cookie="";
+    private TvFirst008Source privateSource;
+    private ManualNativeFixture privateFixture;
 
     /** Exécute les effets d'interface sur le vrai Looper de l'application. */
     private void main(Runnable action){instrument.runOnMainSync(action);}
@@ -75,8 +77,11 @@ public final class PublicHostedAndroidTest {
     private void playback(int state,long position){media.setPlaybackState(new PlaybackState.Builder().setState(state,position,state==PlaybackState.STATE_PLAYING?1f:0f,SystemClock.elapsedRealtime()).build());}
 
     /** Arrête les seuls services de cet émulateur, sans effacer de cache ni de données TV. */
-    @After public void after(){main(()->{TvFirst009TextServiceOwner.requestStop(target);target.stopService(new Intent(target,PublicCompanionService.class));
-        if(media!=null)media.release();CloudMultimediaAdmission.useOwnedMediaSessionFixture(false);if(activity!=null)activity.finish();if(mainActivity!=null)mainActivity.finish();});}
+    @After public void after() throws Exception {main(()->{TvFirst009TextServiceOwner.requestStop(target);target.stopService(new Intent(target,PublicCompanionService.class));
+        if(media!=null)media.release();CloudMultimediaAdmission.useOwnedMediaSessionFixture(false);if(activity!=null)activity.finish();if(mainActivity!=null)mainActivity.finish();});
+        if(privateSource!=null)privateSource.close();
+        if(privateFixture!=null)privateFixture.cleanup();
+    }
 
     /** Qualifie le trajet complet code visible → HTTPS → cache natif → TEXT/AUDIO appliqués et restitués. */
     @Test public void realHttpsCodeCacheAndNativePlaybackWithoutAnotherApproval() throws Exception {
@@ -173,8 +178,18 @@ public final class PublicHostedAndroidTest {
                     .putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());
             playback(PlaybackState.STATE_PAUSED,0);media.setActive(true);
         });
-        if(chromium)writeBridge("q3-background.json",new JSONObject().put("activityClosed",true));
+        if(chromium){
+            startPrivateSession();
+            writeBridge("q3-background.json",new JSONObject().put("activityClosed",true).put("privateActive",true));
+        }
         JSONObject request=chromium?readBridge("q3-command.json"):viewerSend(track,tv);
+        if(chromium) {
+            readBridge("q3-stop-private.json");
+            assertTrue(TvFirst009TextServiceOwner.multimediaActive());
+            assertNull(TvFirst009TextServiceOwner.publicCommand());
+            main(()->TvFirst009TextServiceOwner.requestStop(target));
+            await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Session privée non arrêtée",15000);
+        }
         JSONObject ready=waitViewerReady(track,tv,request.getString("commandId"),true);
         assertTrue(ready.getBoolean("text"));
         TvFirst008State identity=PublicCompanionOwner.identityState(target);
@@ -227,6 +242,41 @@ public final class PublicHostedAndroidTest {
         // Cookie technique du seul banc : lu par run-as après reboot, jamais archivé.
         JSONObject boot=new JSONObject().put("cookie",cookie).put("deviceId",tv).put("trackId",track);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-boot-private.json").toPath(),boot.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Prépare un cache privé synthétique par les services existants avant l'envoi public HTTPS. */
+    private void startPrivateSession() throws Exception {
+        privateFixture=new ManualNativeFixture();
+        TvFirst008State state=new TvFirst008State(target);
+        String token="Q".repeat(43);
+        state.claimed(new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("deviceId",privateFixture.binding.device)
+                .put("generation",privateFixture.generation).put("deviceToken",token));
+        JSONObject identity=state.read("identity");
+        assertTrue(target.getSharedPreferences("multimedia_user_preferences",0).edit()
+                .putBoolean("text",true).putBoolean("audio",true).commit());
+        privateSource=new TvFirst008Source(target,state,(method,path,bearer,body)->{
+            assertEquals(token,bearer);
+            if(path.contains("/association"))return new JSONObject(identity.toString()).put("profile",TvFirst008Wire.PROFILE)
+                    .put("accountAssociated",true).put("rendering","FORBIDDEN")
+                    .put("consentExpiresAt",java.time.Instant.now().plusSeconds(3600).toString())
+                    .put("currentRevision",privateFixture.binding.revision-1);
+            if(path.contains("/library"))return new JSONObject().put("profile",TvFirst008Wire.PROFILE)
+                    .put("items",new JSONArray()).put("next",JSONObject.NULL);
+            throw new IllegalArgumentException("PRIVATE_FIXTURE_ROUTE");
+        },"https://owned-fixture.invalid",java.util.concurrent.Executors.newSingleThreadExecutor());
+        mainActivity=(MainActivity)instrument.startActivitySync(new Intent(target,MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        main(privateSource::resume);
+        await(()->privateSource.accountStage()==TvAccountSource.AccountStage.ASSOCIATED && !privateSource.busy(),
+                "Q3 private association missing",30000);
+        java.util.concurrent.atomic.AtomicReference<MultimediaPrivateCache.Prepared> installed=new java.util.concurrent.atomic.AtomicReference<>();
+        main(()->privateSource.downloadMultimedia(privateFixture.binding.publication,installed::set,privateFixture.port));
+        await(()->installed.get()!=null && !privateSource.busy(),"Q3 private cache missing",30000);
+        main(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(mainActivity,privateSource,installed.get(),true)));
+        await(()->TvFirst009TextServiceOwner.multimediaActive() && TvFirst009TextServiceOwner.publicCommand()==null,
+                "Q3 private MEDIA missing",30000);
+        main(()->mainActivity.finish());
+        UiDevice.getInstance(instrument).pressHome();
     }
 
     /** Transmet une observation uniquement au runner du banc possédé. */
