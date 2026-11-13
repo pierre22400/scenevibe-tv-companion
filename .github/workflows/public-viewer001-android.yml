@@ -80,8 +80,8 @@ jobs:
             if (response?.ok) {
               const { items } = await response.json()
               const candidates = items.filter(row => row.track.title.startsWith('Qualification spectateur 001 — Columbo — Eaux troubles — ')
-                && row.multimedia?.textCount >= 4 && row.multimedia?.audioCount === 3)
-              const track = candidates[0]
+                && row.multimedia?.textCount >= 3 && row.multimedia?.audioCount === 3)
+              const track = candidates.find(row => row.multimedia.textCount >= 4)
               if (track && (process.env.ORG_GRADLE_PROJECT_scenevibeProductConsolidation001q2 !== 'true' || candidates.length >= 2)) {
                 await appendFile(process.env.GITHUB_ENV, 'SCENEVIBE_VIEWER_TRACK_ID=' + track.identity.trackId + '\n')
                 process.exit(0)
