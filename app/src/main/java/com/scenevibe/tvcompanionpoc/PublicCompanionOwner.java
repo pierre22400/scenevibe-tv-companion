@@ -206,6 +206,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         boolean automatic=viewerPreferences!=null && automaticCommand(polled.optJSONArray("automaticCommandIds"),binding.command);
         if(automatic && !hasEffectPermissions()){
             status="Autorisation Android de superposition ou MEDIA indisponible.";
+            pendingEntry=null;publishLibrary();
             client.receipt(binding,"failed");
             return;
         }

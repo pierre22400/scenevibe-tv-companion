@@ -21,8 +21,10 @@ public final class PublicRestartReadTest {
         PublicMultimediaCache.Prepared p=fixture.cache().read();assertEquals(seed.getJSONObject("binding").getString("packageSha256"),p.binding.digest);
         fixture.owner().pollOnce();assertNotNull(fixture.state.read("identity"));assertEquals(0,fixture.audioRequests);assertEquals(0,fixture.claims);
         assertEquals(6,p.track.calendar.events().size());assertEquals(3,p.track.audio.size());
+        assertTrue(fixture.owner().library().stream().anyMatch(entry->p.binding.command.equals(entry.command)
+                && entry.state==PublicLibraryEntry.State.VERIFIED));
         JSONObject proof=new JSONObject().put("scope","OWN_ANDROID_RESTART_NOT_SONY").put("readPid",Process.myPid()).put("cacheEvents",6)
-                .put("nativeDecodedAudio",3).put("newCodes",0).put("extraDownloads",0);
+                .put("nativeDecodedAudio",3).put("newCodes",0).put("extraDownloads",0).put("libraryRestored",true);
         Files.write(new File(fixture.target.getFilesDir(),"public001b-restart-proof.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));fixture.close(false);
     }
 }
