@@ -91,6 +91,12 @@ jobs:
           }
           throw new Error('PUBLISHED_STUDIO_TRACK_UNAVAILABLE')
           JS
+      - name: Set up Chromium for the isolated Android journey
+        if: github.ref_name == 'work/scenevibe-product-consolidation-001'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/q3-browser" --no-package-lock --ignore-scripts playwright@1.62.1
+          echo "SCENEVIBE_PLAYWRIGHT_MODULE=$RUNNER_TEMP/q3-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+          echo "SCENEVIBE_CHROMIUM_EXECUTABLE=$(command -v google-chrome)" >> "$GITHUB_ENV"
       - name: Enable acceleration on the owned emulator runner
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

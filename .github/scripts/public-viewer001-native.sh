@@ -7,9 +7,22 @@ test "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = 1
 test -n "${SCENEVIBE_VIEWER_TRACK_ID:-}"
 adb install -r app/build/outputs/apk/tvux002/app-tvux002.apk
 adb install -r app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk
+if [[ "${ORG_GRADLE_PROJECT_scenevibeProductConsolidation001q2:-}" == true ]]; then
+    adb shell am instrument -w -r -e q3Chromium true -e viewerTrackId "$SCENEVIBE_VIEWER_TRACK_ID" \
+        -e class com.scenevibe.tvcompanionpoc.PublicHostedAndroidTest \
+        com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner > public-viewer-native/instrumentation.raw 2>&1 &
+    runner=$!
+    trap 'kill "$runner" 2>/dev/null || true' EXIT
+    node .github/scripts/product-consolidation001q3-browser.mjs
+    wait "$runner"
+    tr -d '\r' < public-viewer-native/instrumentation.raw > public-viewer-native/instrumentation.log
+    rm public-viewer-native/instrumentation.raw
+    trap - EXIT
+else
 adb shell am instrument -w -r -e viewerTrackId "$SCENEVIBE_VIEWER_TRACK_ID" \
     -e class com.scenevibe.tvcompanionpoc.PublicHostedAndroidTest \
     com.scenevibe.tvcompanionpoc.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee public-viewer-native/instrumentation.log
+fi
 grep -q '^OK (1 test)$' public-viewer-native/instrumentation.log
 grep -q '^INSTRUMENTATION_CODE: -1$' public-viewer-native/instrumentation.log
 adb exec-out run-as com.scenevibe.tvcompanionpoc cat files/public-viewer-native.json > public-viewer-native/cache-and-playback.json

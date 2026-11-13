@@ -142,12 +142,21 @@ public final class PublicHostedAndroidTest {
         String code=PublicCompanionService.current().code();
         await(()->code.contentEquals(((android.widget.TextView)activity.getWindow().getDecorView()
                 .findViewWithTag("public-tv-code")).getText()),"Code public non affiché",15000);
-        JSONObject claim=new JSONObject().put("userCode",code).put("consent",true);
-        String tv=web("/api/autonomous/viewer-pair",claim,200).getString("deviceId");
+        boolean chromium=InstrumentationRegistry.getArguments().getString("q3Chromium","false").equals("true");
+        String tv;
+        if(chromium) {
+            writeBridge("q3-code.json",new JSONObject().put("code",code));
+            JSONObject browser=readBridge("q3-paired.json");
+            tv=browser.getString("deviceId");
+            cookie=browser.getString("cookie");
+        } else {
+            JSONObject claim=new JSONObject().put("userCode",code).put("consent",true);
+            tv=web("/api/autonomous/viewer-pair",claim,200).getString("deviceId");
+            web("/api/autonomous/viewer-pair",claim,404);
+        }
         await(()->PublicCompanionService.current().viewerPreferences().initialized(),"Préférences initiales absentes",90000);
         PublicViewerPreferences prefs=PublicCompanionService.current().viewerPreferences();
         assertTrue(prefs.text());assertTrue(prefs.audio());
-        web("/api/autonomous/viewer-pair",claim,404);
         main(()->activity.finish());device.pressHome();
 
         String track=InstrumentationRegistry.getArguments().getString("viewerTrackId");
@@ -164,13 +173,16 @@ public final class PublicHostedAndroidTest {
                     .putLong(MediaMetadata.METADATA_KEY_DURATION,5884768L).build());
             playback(PlaybackState.STATE_PAUSED,0);media.setActive(true);
         });
-        JSONObject request=viewerSend(track,tv);
+        if(chromium)writeBridge("q3-background.json",new JSONObject().put("activityClosed",true));
+        JSONObject request=chromium?readBridge("q3-command.json"):viewerSend(track,tv);
         JSONObject ready=waitViewerReady(track,tv,request.getString("commandId"),true);
         assertTrue(ready.getBoolean("text"));
         TvFirst008State identity=PublicCompanionOwner.identityState(target);
         PublicMultimediaCache.Prepared prepared=new PublicMultimediaCache(target,identity.read("identity").getString("generation")).read();
         assertEquals(release.getString("packageSha256"),prepared.binding.digest);
         assertEquals(request.getString("commandId"),prepared.binding.command);
+        if(chromium)writeBridge("q3-cache.json",new JSONObject().put("commandId",prepared.binding.command)
+                .put("revision",prepared.binding.revision).put("packageSha256",prepared.binding.digest));
 
         int texts=0,audios=0;
         for(SceneEvent event:prepared.track.calendar.events()){
@@ -215,6 +227,22 @@ public final class PublicHostedAndroidTest {
         // Cookie technique du seul banc : lu par run-as après reboot, jamais archivé.
         JSONObject boot=new JSONObject().put("cookie",cookie).put("deviceId",tv).put("trackId",track);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-boot-private.json").toPath(),boot.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Transmet une observation uniquement au runner du banc possédé. */
+    private void writeBridge(String name,JSONObject value) throws Exception {
+        Files.write(new java.io.File(target.getFilesDir(),name).toPath(),value.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Attend le fichier atomiquement transféré par Chromium via ADB, sans journaliser son contenu. */
+    private JSONObject readBridge(String name) throws Exception {
+        java.io.File file=new java.io.File(target.getFilesDir(),name);
+        long deadline=SystemClock.elapsedRealtime()+180000;
+        while(SystemClock.elapsedRealtime()<deadline) {
+            if(file.isFile())return new JSONObject(new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Q3_BROWSER_EVIDENCE_TIMEOUT: "+name);
     }
 
     /** Déclenche une seule distribution avec la capacité de ce navigateur de banc. */
