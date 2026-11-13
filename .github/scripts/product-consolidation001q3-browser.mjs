@@ -46,7 +46,7 @@ try {
   const pair=await context.request.post(origin+"/api/autonomous/viewer-pair",{ headers:{origin},data:{userCode:code,consent:true} })
   assert.equal(pair.status(),200)
   const { deviceId }=await pair.json()
-  const cookies=(await context.cookies(origin)).filter(item=>item.name.startsWith("sv_autonomous_tv_"))
+  const cookies=(await context.cookies(origin+"/api/autonomous/viewer-status")).filter(item=>item.name.startsWith("sv_autonomous_tv_"))
   assert.equal(cookies.length,1)
   write("q3-paired.json",{deviceId,cookie:cookies[0].name+"="+cookies[0].value})
   const background=await read("q3-background.json")
