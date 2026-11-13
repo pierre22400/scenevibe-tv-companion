@@ -126,7 +126,7 @@ final class MultimediaCacheDirectories {
         for (MultimediaDeliveryProfile.Resource resource : profile.resources) {
             if (counted.add(resource.sha256)) needed += resource.byteLength;
         }
-        if (Files.getFileStore(root.toPath()).getUsableSpace() < needed) {
+        if (root.getUsableSpace() < needed) {
             throw new java.nio.file.FileSystemException(root.getName(), null, "ENOSPC");
         }
     }
