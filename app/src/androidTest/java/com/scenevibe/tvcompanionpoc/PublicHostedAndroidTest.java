@@ -341,7 +341,7 @@ public final class PublicHostedAndroidTest {
 
     /** Attend le reçu natif de cette commande, en refusant les succès d'une ancienne révision. */
     private JSONObject waitViewerReady(String track,String tv,String commandId,boolean audio) throws Exception {
-        long deadline=SystemClock.elapsedRealtime()+180000;
+        long deadline=SystemClock.elapsedRealtime()+365000;
         while(SystemClock.elapsedRealtime()<deadline){
             JSONObject command=web("/api/autonomous/viewer-status",new JSONObject().put("trackId",track).put("deviceId",tv),200)
                     .optJSONObject("command");

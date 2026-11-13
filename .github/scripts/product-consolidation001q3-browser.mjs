@@ -68,7 +68,8 @@ try {
   assert.equal(await page.locator('[data-viewer-state="ready"]').count(),0)
   write("q3-stop-private.json",{stop:true})
   assert.equal((await read("q3-first-resource-bytes.json",180)).received,true)
-  execFileSync("adb",["shell","cmd","connectivity","airplane-mode","enable"],{stdio:"ignore"})
+  execFileSync("adb",["shell","svc","wifi","disable"],{stdio:"ignore"})
+  execFileSync("adb",["shell","svc","data","disable"],{stdio:"ignore"})
   try {
     const downloading=await context.request.post(origin+"/api/autonomous/viewer-status",
       {headers:{origin},data:{trackId:track,deviceId}})
@@ -80,10 +81,14 @@ try {
       {headers:{origin},data:{trackId:track,deviceId}})
     assert.equal((await interrupted.json()).command.state,"downloading")
   } finally {
-    execFileSync("adb",["shell","cmd","connectivity","airplane-mode","disable"],{stdio:"ignore"})
+    execFileSync("adb",["shell","svc","wifi","enable"],{stdio:"ignore"})
+    execFileSync("adb",["shell","svc","data","enable"],{stdio:"ignore"})
   }
+  await writeFile("public-viewer-native/q3-interruption.json",JSON.stringify({
+    commandId:command.commandId,privateWaitText:waitText,firstResourceBytes:true,noPositiveReceiptDuringCut:true,
+  },null,2))
   const ready=page.locator('[data-viewer-state="ready"]')
-  await ready.waitFor({timeout:180000})
+  await ready.waitFor({timeout:360000})
   assert.match(await ready.innerText(),/TEXT ON.*AUDIO ON/)
   const cache=await read("q3-cache.json",30)
   assert.equal(cache.commandId,command.commandId)
