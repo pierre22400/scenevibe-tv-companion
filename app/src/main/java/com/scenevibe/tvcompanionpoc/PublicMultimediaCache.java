@@ -27,6 +27,7 @@ final class PublicMultimediaCache {
     private final InstallationStore store;
     private final StudioMultimediaPackage.Decoder decoder;
     private final MultimediaCacheDirectories directories;
+    private final MultimediaCacheDomain domain;
 
     private final MultimediaCacheDirectories.Writer writer;
 
@@ -58,7 +59,7 @@ final class PublicMultimediaCache {
     /** Compose un namespace Android public par génération sans lire ni modifier le cache privé. */
     PublicMultimediaCache(Context context,String generation) throws Exception {
         this(new File(context.getFilesDir(),"public001b/"+TvFirst008Wire.uuid(generation)),
-                new InstallationStore(new AndroidInstallationBackend(context,"public001b_cache_"+generation.replace("-",""))),new AndroidStudioAudioInspector(context));
+                new InstallationStore(new AndroidInstallationBackend(context,"public001b_cache_"+generation.replace("-",""))),new AndroidStudioAudioInspector(context),PublicMultimediaCache::write,new MultimediaCacheDomain(context,true));
     }
     /** Port de stockage partagé avec les bancs JVM ; les règles et parseurs restent identiques. */
     PublicMultimediaCache(File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder) throws Exception {
@@ -68,6 +69,13 @@ final class PublicMultimediaCache {
     /** Utilise le même parcours atomique avec une frontière d’écriture instrumentable. */
     PublicMultimediaCache(File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder,
             MultimediaCacheDirectories.Writer writer) throws Exception {
+        this(root,store,decoder,writer,null);
+    }
+
+    /** Associe le namespace Android à son pointeur global public. */
+    private PublicMultimediaCache(File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder,
+            MultimediaCacheDirectories.Writer writer,MultimediaCacheDomain domain) throws Exception {
+        this.domain=domain;
         this.writer=writer;
         if(!root.isDirectory() && !root.mkdirs())throw new IllegalArgumentException("PUBLIC_CACHE_UNAVAILABLE");
         MultimediaDeliveryProfile.require(!Files.isSymbolicLink(root.toPath()),"PUBLIC_CACHE_SYMLINK");
@@ -80,37 +88,39 @@ final class PublicMultimediaCache {
 
     /** Exécute le candidat porté avec transport réel, validation native et commit Android atomique. */
     Prepared download(PublicCloudClient client,PublicCatalogueCandidate.Binding binding,java.util.function.BooleanSupplier active) throws Exception {
-        synchronized(directories.writer){
-            if(directories.recoveryUncertain)throw new IllegalStateException("PUBLIC_CACHE_ROLLBACK_FAILED");
-            collect();
-            byte[][] raw={null};
-            PublicCatalogueCandidate candidate=new PublicCatalogueCandidate(new PublicCatalogueCandidate.Port(){
-                /** Recontrôle le grant et la release à chaque frontière. */
-                public void validate(PublicCatalogueCandidate.Binding b) throws Exception {client.validate(b);}
-                /** Une session en cours interdit tout remplacement. */
-                public boolean sessionActive(){return active.getAsBoolean();}
-                /** Télécharge les octets originaux publics pour leur conservation exacte. */
-                public byte[] packageBytes(PublicCatalogueCandidate.Binding b) throws Exception {
-                    return raw[0]=client.bytes("package",new JSONObject().put("commandId",b.command));
-                }
-                /** Le manifeste choisit l'identifiant logique, jamais un chemin HTTP libre. */
-                public byte[] resource(PublicCatalogueCandidate.Binding b,String id) throws Exception {
-                    return client.bytes("resource",new JSONObject().put("commandId",b.command).put("resourceId",id));
-                }
-                /** Publie seulement un ensemble entièrement vérifié. */
-                public void commit(PublicCatalogueCandidate.Binding b,StudioMultimediaPackage track) throws Exception {install(b,raw[0],track);}
-                /** Le reçu suit le commit et sa relecture, sans conférer MEDIA. */
-                public void cached(PublicCatalogueCandidate.Binding b) throws Exception {client.receipt(b,"cached");}
-                /** La comparaison porte sur le binding complet du pointeur installé. */
-                public boolean installed(PublicCatalogueCandidate.Binding b){return matches(b);}
-                /** Les préférences sont appliquées par le propriétaire de service Android. */
-                public void preferences(PublicCatalogueCandidate.Binding b,boolean text,boolean audio){throw new IllegalStateException("ANDROID_OWNER_REQUIRED");}
-            },decoder);
-            try {
-                candidate.download(binding);
-                return read();
-            } finally {
+        synchronized(domain==null?directories.writer:domain.writer) {
+            synchronized(directories.writer){
+                if(directories.recoveryUncertain)throw new IllegalStateException("PUBLIC_CACHE_ROLLBACK_FAILED");
                 collect();
+                byte[][] raw={null};
+                PublicCatalogueCandidate candidate=new PublicCatalogueCandidate(new PublicCatalogueCandidate.Port(){
+                    /** Recontrôle le grant et la release à chaque frontière. */
+                    public void validate(PublicCatalogueCandidate.Binding b) throws Exception {client.validate(b);}
+                    /** Une session en cours interdit tout remplacement. */
+                    public boolean sessionActive(){return active.getAsBoolean();}
+                    /** Télécharge les octets originaux publics pour leur conservation exacte. */
+                    public byte[] packageBytes(PublicCatalogueCandidate.Binding b) throws Exception {
+                        return raw[0]=client.bytes("package",new JSONObject().put("commandId",b.command));
+                    }
+                    /** Le manifeste choisit l'identifiant logique, jamais un chemin HTTP libre. */
+                    public byte[] resource(PublicCatalogueCandidate.Binding b,String id) throws Exception {
+                        return client.bytes("resource",new JSONObject().put("commandId",b.command).put("resourceId",id));
+                    }
+                    /** Publie seulement un ensemble entièrement vérifié. */
+                    public void commit(PublicCatalogueCandidate.Binding b,StudioMultimediaPackage track) throws Exception {install(b,raw[0],track);}
+                    /** Le reçu suit le commit et sa relecture, sans conférer MEDIA. */
+                    public void cached(PublicCatalogueCandidate.Binding b) throws Exception {client.receipt(b,"cached");}
+                    /** La comparaison porte sur le binding complet du pointeur installé. */
+                    public boolean installed(PublicCatalogueCandidate.Binding b){return matches(b);}
+                    /** Les préférences sont appliquées par le propriétaire de service Android. */
+                    public void preferences(PublicCatalogueCandidate.Binding b,boolean text,boolean audio){throw new IllegalStateException("ANDROID_OWNER_REQUIRED");}
+                },decoder);
+                try {
+                    candidate.download(binding);
+                    return read();
+                } finally {
+                    collect();
+                }
             }
         }
     }
@@ -138,6 +148,7 @@ final class PublicMultimediaCache {
         try {
             Prepared verified=readPointer(store.read());
             MultimediaDeliveryProfile.require(verified!=null && binding.same(verified.binding),"PUBLIC_POINTER_READBACK_FAILED");
+            if(domain!=null)domain.publish(root);
         } catch(Exception failedReadback) {
             boolean restored=before.snapshot()==null?store.clearAll():store.commit(before.snapshot())==InstallationStore.CommitState.COMMITTED;
             if(!restored) {
@@ -150,21 +161,29 @@ final class PublicMultimediaCache {
 
     /** Relit intégralement le cache au démarrage, avec MediaCodec via le port existant. */
     Prepared read() throws Exception {
-        synchronized(directories.writer){
-            Prepared prepared=readPointer(store.read());
-            if(!directories.recoveryUncertain)directories.collect(prepared==null?null:prepared.directory,true);
-            return prepared;
+        synchronized(domain==null?directories.writer:domain.writer) {
+            synchronized(directories.writer){
+                if(domain!=null && !domain.allows(root))return null;
+                Prepared prepared=readPointer(store.read());
+                if(prepared!=null && domain!=null && !domain.hasCurrent())domain.publish(root);
+                if(!directories.recoveryUncertain)directories.collect(prepared==null?null:prepared.directory,true);
+                if(prepared!=null && domain!=null)domain.collect();
+                return prepared;
+            }
         }
     }
 
     /** Préserve tout sur un pointeur corrompu ou ambigu. */
     private void collect() {
-        synchronized(directories.writer) {
-            if(directories.recoveryUncertain)return;
-            try {
-                directories.collect(pointedDirectory(store.read()),true);
-            } catch(Exception refused) {
-                // Conserver les dossiers tant que le pointeur ne peut être établi.
+        synchronized(domain==null?directories.writer:domain.writer) {
+            synchronized(directories.writer) {
+                if(directories.recoveryUncertain)return;
+                try {
+                    if(domain==null || domain.allows(root))directories.collect(pointedDirectory(store.read()),true);
+                    if(domain!=null)domain.collect();
+                } catch(Exception refused) {
+                    // Conserver les dossiers tant que le pointeur ne peut être établi.
+                }
             }
         }
     }
@@ -207,11 +226,12 @@ final class PublicMultimediaCache {
 
     /** Contrôle léger du pointeur courant pour chaque effet, sans décoder les MP3 sur le thread UI. */
     boolean matches(PublicCatalogueCandidate.Binding binding){
-        synchronized(directories.writer){try{
+        try{
+            if(domain!=null && !domain.allows(root))return false;
             InstallationStore.ReadResult r=store.read();if(r.state()!=InstallationStore.ReadState.SNAPSHOT || r.acknowledgedRevision()!=0 || !CODEC.equals(r.snapshot().codecId()))return false;
             JSONObject descriptor=new JSONObject(TvFirst008Wire.utf8(r.snapshot().canonical().artifact("cache")));JSONObject b=descriptor.getJSONObject("binding");
             return binding.same(new PublicCatalogueCandidate.Binding(b,binding.device,binding.generation,0));
-        }catch(Exception refused){return false;}}
+        }catch(Exception refused){return false;}
     }
 
     /** Lecture bornée d'un fichier régulier non symbolique appartenant au cache. */

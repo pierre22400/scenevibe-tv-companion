@@ -1,5 +1,6 @@
 package com.scenevibe.tvcompanionpoc;
 
+import android.content.Context;
 import com.scenevibe.tvcompanionpoc.installation.InstallRequest;
 import com.scenevibe.tvcompanionpoc.installation.InstallationSnapshot;
 import com.scenevibe.tvcompanionpoc.installation.InstallationStore;
@@ -24,6 +25,7 @@ import org.json.JSONObject;
  */
 final class MultimediaPrivateCache {
     private final File root;private final InstallationStore store;private final StudioMultimediaPackage.Decoder decoder;private final MultimediaCacheDirectories directories;
+    private final MultimediaCacheDomain domain;
 
     private final MultimediaCacheDirectories.Writer writer;
 
@@ -56,6 +58,17 @@ final class MultimediaPrivateCache {
 
     /** Utilise le même parcours atomique avec une frontière d’écriture instrumentable. */
     MultimediaPrivateCache(File privateRoot,InstallationStore store,StudioMultimediaPackage.Decoder decoder,MultimediaCacheDirectories.Writer writer) throws Exception {
+        this(privateRoot,store,decoder,writer,null);
+    }
+
+    /** Associe le namespace Android à son pointeur global privé. */
+    MultimediaPrivateCache(Context context,File root,InstallationStore store,StudioMultimediaPackage.Decoder decoder) throws Exception {
+        this(root,store,decoder,MultimediaPrivateCache::writeFile,new MultimediaCacheDomain(context,false));
+    }
+
+    /** Conserve le même stockage et son éventuelle coordination de domaine. */
+    private MultimediaPrivateCache(File privateRoot,InstallationStore store,StudioMultimediaPackage.Decoder decoder,MultimediaCacheDirectories.Writer writer,MultimediaCacheDomain domain) throws Exception {
+        this.domain=domain;
         this.writer=writer;
         if(privateRoot==null || store==null || decoder==null)throw new IllegalArgumentException("PRIVATE_CACHE_PORTS_REQUIRED");
         if(!privateRoot.isDirectory() && !privateRoot.mkdirs())throw new IllegalArgumentException("PRIVATE_CACHE_UNAVAILABLE");
@@ -69,71 +82,101 @@ final class MultimediaPrivateCache {
 
     /** Download the whole set, publish one atomic pointer, read back, then emit only a cache receipt. */
     Prepared download(MultimediaCloudClient client,MultimediaCloudClient.Binding binding) throws Exception {
-        synchronized(directories.writer) {
-            if(directories.recoveryUncertain)throw new IllegalStateException("CACHE_ROLLBACK_FAILED");
-            client.check();InstallationStore.ReadResult previous=store.read();
-            File previousDirectory=pointedDirectory(previous);
-            if(!directories.recoveryUncertain)directories.collect(previousDirectory,false);
-            if(previous.snapshot()!=null) {
-                MultimediaDeliveryProfile.require(binding.revision>=previous.snapshot().revision(),"STALE_ASSIGNMENT");
-                if(binding.revision==previous.snapshot().revision()) {
-                    Prepared existing=read();MultimediaDeliveryProfile.require(existing!=null && binding.same(existing.binding),"IMMUTABLE_CACHE_CONFLICT");
-                    client.verify(binding);client.receipt(binding);client.check();return existing;
+        synchronized(domain==null?directories.writer:domain.writer) {
+            synchronized(directories.writer) {
+                if(directories.recoveryUncertain)throw new IllegalStateException("CACHE_ROLLBACK_FAILED");
+                client.check();InstallationStore.ReadResult previous=store.read();
+                File previousDirectory=pointedDirectory(previous);
+                String previousGeneration=domain==null?null:domain.current();
+                if(!directories.recoveryUncertain)directories.collect(previousDirectory,false);
+                if(previous.snapshot()!=null) {
+                    MultimediaDeliveryProfile.require(binding.revision>=previous.snapshot().revision(),"STALE_ASSIGNMENT");
+                    if(binding.revision==previous.snapshot().revision()) {
+                        Prepared existing=readPointer(previous);
+                        MultimediaDeliveryProfile.require(existing!=null && binding.same(existing.binding),"IMMUTABLE_CACHE_CONFLICT");
+                        client.verify(binding);client.check();
+                        if(domain!=null)domain.publish(root);
+                        try {
+                            client.receipt(binding);client.check();
+                        } catch(Exception failedReceipt) {
+                            if(domain!=null && !domain.restore(previousGeneration))domain.holdRecovery();
+                            throw failedReceipt;
+                        }
+                        if(domain!=null)domain.collect();
+                        return existing;
+                    }
                 }
-            }
-            File stage=new File(root,"stage-"+UUID.randomUUID().toString().replace("-",""));
-            File committed=new File(root,"set-"+UUID.randomUUID().toString().replace("-",""));boolean pointed=false,success=false;
-            MultimediaDeliveryProfile.require(stage.mkdir(),"STAGING_UNAVAILABLE");
-            try {
-                MultimediaDeliveryProfile profile=client.profile(binding);
-                byte[] bindingBytes=binding.json().toString().getBytes(StandardCharsets.UTF_8);
-                directories.requireSpace(profile,profile.encoded.length+bindingBytes.length);
-                Map<String,byte[]> physical=new LinkedHashMap<>();
-                for(MultimediaDeliveryProfile.Resource row:profile.resources) {
-                    client.check();byte[] bytes=physical.get(row.sha256);
-                    if(bytes==null) {bytes=client.resource(binding,row);physical.put(row.sha256,bytes);writer.write(new File(stage,row.sha256+".mp3"),bytes);}
-                    MultimediaDeliveryProfile.require(bytes.length==row.byteLength && MultimediaDeliveryProfile.hash(bytes).equals(row.sha256),"MP3_INTEGRITY");
+                File stage=new File(root,"stage-"+UUID.randomUUID().toString().replace("-",""));
+                File committed=new File(root,"set-"+UUID.randomUUID().toString().replace("-",""));boolean pointed=false,success=false;
+                MultimediaDeliveryProfile.require(stage.mkdir(),"STAGING_UNAVAILABLE");
+                try {
+                    MultimediaDeliveryProfile profile=client.profile(binding);
+                    byte[] bindingBytes=binding.json().toString().getBytes(StandardCharsets.UTF_8);
+                    directories.requireSpace(profile,profile.encoded.length+bindingBytes.length);
+                    Map<String,byte[]> physical=new LinkedHashMap<>();
+                    for(MultimediaDeliveryProfile.Resource row:profile.resources) {
+                        client.check();byte[] bytes=physical.get(row.sha256);
+                        if(bytes==null) {bytes=client.resource(binding,row);physical.put(row.sha256,bytes);writer.write(new File(stage,row.sha256+".mp3"),bytes);}
+                        MultimediaDeliveryProfile.require(bytes.length==row.byteLength && MultimediaDeliveryProfile.hash(bytes).equals(row.sha256),"MP3_INTEGRITY");
+                    }
+                    profile.prepare(physical,decoder);writer.write(new File(stage,"profile.json"),profile.encoded);
+                    writer.write(new File(stage,"binding.json"),bindingBytes);
+                    client.verify(binding);client.check();
+                    Files.move(stage.toPath(),committed.toPath(),StandardCopyOption.ATOMIC_MOVE);
+                    JSONObject descriptor=new JSONObject().put("format","scenevibe.multimedia-cache.v1").put("directory",committed.getName())
+                            .put("packageSha256",binding.sha256).put("binding",binding.json());
+                    InstallRequest request=new InstallRequest(binding.revision,MultimediaDeliveryProfile.CODEC,
+                            Collections.singletonMap("cache",descriptor.toString().getBytes(StandardCharsets.UTF_8)));
+                    InstallationSnapshot snapshot=new InstallationSnapshot(request,MultimediaDeliveryProfile.CODEC);
+                    MultimediaDeliveryProfile.require(store.commit(snapshot)==InstallationStore.CommitState.COMMITTED,"CACHE_COMMIT_FAILED");pointed=true;
+                    Prepared readback=readPointer(store.read());MultimediaDeliveryProfile.require(readback!=null && binding.same(readback.binding),"CACHE_READBACK_FAILED");
+                    client.verify(binding);client.check();
+                    if(domain!=null)domain.publish(root);
+                    client.receipt(binding);client.check();success=true;return readback;
+                } finally {
+                    if(!success && pointed) {
+                        boolean restored=previous.snapshot()==null?store.clearAll():store.commit(previous.snapshot())==InstallationStore.CommitState.COMMITTED;
+                        if(restored && domain!=null)restored=domain.restore(previousGeneration);
+                        if(!restored) {
+                            directories.recoveryUncertain=true;
+                            if(domain!=null)domain.holdRecovery();
+                        }
+                        MultimediaDeliveryProfile.require(restored,"CACHE_ROLLBACK_FAILED");
+                    }
+                    if(!directories.recoveryUncertain) {
+                        directories.collect(success?committed:previousDirectory,false);
+                        if(success && domain!=null)domain.collect();
+                    }
                 }
-                profile.prepare(physical,decoder);writer.write(new File(stage,"profile.json"),profile.encoded);
-                writer.write(new File(stage,"binding.json"),bindingBytes);
-                client.verify(binding);client.check();
-                Files.move(stage.toPath(),committed.toPath(),StandardCopyOption.ATOMIC_MOVE);
-                JSONObject descriptor=new JSONObject().put("format","scenevibe.multimedia-cache.v1").put("directory",committed.getName())
-                        .put("packageSha256",binding.sha256).put("binding",binding.json());
-                InstallRequest request=new InstallRequest(binding.revision,MultimediaDeliveryProfile.CODEC,
-                        Collections.singletonMap("cache",descriptor.toString().getBytes(StandardCharsets.UTF_8)));
-                InstallationSnapshot snapshot=new InstallationSnapshot(request,MultimediaDeliveryProfile.CODEC);
-                MultimediaDeliveryProfile.require(store.commit(snapshot)==InstallationStore.CommitState.COMMITTED,"CACHE_COMMIT_FAILED");pointed=true;
-                Prepared readback=readPointer(store.read());MultimediaDeliveryProfile.require(readback!=null && binding.same(readback.binding),"CACHE_READBACK_FAILED");
-                client.verify(binding);client.receipt(binding);client.check();success=true;return readback;
-            } finally {
-                if(!success && pointed) {
-                    boolean restored=previous.snapshot()==null?store.clearAll():store.commit(previous.snapshot())==InstallationStore.CommitState.COMMITTED;
-                    if(!restored)directories.recoveryUncertain=true;
-                    MultimediaDeliveryProfile.require(restored,"CACHE_ROLLBACK_FAILED");
-                }
-                if(!directories.recoveryUncertain)directories.collect(success?committed:previousDirectory,false);
             }
         }
     }
 
     /** Restore only verified data, never a runtime activation, permission, network request or ACK. */
     Prepared read() throws Exception {
-        synchronized(directories.writer) {
-            Prepared prepared=readPointer(store.read());
-            if(!directories.recoveryUncertain)directories.collect(prepared==null?null:prepared.directory,false);
-            return prepared;
+        synchronized(domain==null?directories.writer:domain.writer) {
+            synchronized(directories.writer) {
+                if(domain!=null && !domain.allows(root))return null;
+                Prepared prepared=readPointer(store.read());
+                if(prepared!=null && domain!=null && !domain.hasCurrent())domain.publish(root);
+                if(!directories.recoveryUncertain)directories.collect(prepared==null?null:prepared.directory,false);
+                if(prepared!=null && domain!=null)domain.collect();
+                return prepared;
+            }
         }
     }
 
     /** Après libération du lecteur, relit le pointeur avant de collecter hors du Looper. */
     private void collect() {
-        synchronized(directories.writer) {
-            if(directories.recoveryUncertain)return;
-            try {
-                directories.collect(pointedDirectory(store.read()),false);
-            } catch(Exception refused) {
-                // Conserver les dossiers tant que le pointeur ne peut être établi.
+        synchronized(domain==null?directories.writer:domain.writer) {
+            synchronized(directories.writer) {
+                if(directories.recoveryUncertain)return;
+                try {
+                    if(domain==null || domain.allows(root))directories.collect(pointedDirectory(store.read()),false);
+                    if(domain!=null)domain.collect();
+                } catch(Exception refused) {
+                    // Conserver les dossiers tant que le pointeur ne peut être établi.
+                }
             }
         }
     }

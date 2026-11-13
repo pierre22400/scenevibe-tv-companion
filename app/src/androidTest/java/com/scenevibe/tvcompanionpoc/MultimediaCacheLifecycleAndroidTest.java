@@ -95,6 +95,65 @@ public final class MultimediaCacheLifecycleAndroidTest {
         }
     }
 
+    /** Traverse dix générations Android sur le même appareil et relit le pointeur après recréation. */
+    @Test public void oneCachePerDomainAcrossGenerations() throws Exception {
+        requireEmulator();
+        ManualNativeFixture privateFixture=new ManualNativeFixture();
+        java.util.List<PublicNativeFixture> viewers=new java.util.ArrayList<>();
+        MultimediaCacheDirectories.Lease lease=null;
+        try {
+            File privateRoot=new File(privateFixture.target.getFilesDir(),
+                    "multimedia003d/"+privateFixture.generation.replace("-",""));
+            MultimediaPrivateCache privateCache=new MultimediaPrivateCache(privateFixture.target,privateRoot,
+                    privateFixture.store,new AndroidStudioAudioInspector(privateFixture.target));
+            MultimediaPrivateCache.Prepared privateBefore=privateCache.download(privateFixture.client,privateFixture.binding);
+            long privateBytes=bytes(privateRoot);
+            File publicRoot=new File(privateFixture.target.getFilesDir(),"public001b");
+            File pinned=null;
+            PublicMultimediaCache.Prepared newest=null;
+            for(int n=0;n<10;n++) {
+                PublicNativeFixture viewer=new PublicNativeFixture();
+                viewers.add(viewer);
+                // Établit la possession par le flux existant, puis installe par le vrai cache Android.
+                viewer.pair();
+                changeTrack(viewer,n);
+                PublicCloudClient client=new PublicCloudClient(viewer.state,viewer);
+                newest=nextPublic(viewer,viewer.cache(),client);
+                if(n==0) {
+                    pinned=newest.resource(newest.profile.resources.get(0).id);
+                    lease=newest.pin();
+                } else {
+                    assertTrue(pinned.exists());
+                    assertEquals(2,domainSets(publicRoot));
+                }
+            }
+            lease.close();
+            awaitRemoved(pinned);
+            assertEquals(1,domainSets(publicRoot));
+            assertEquals(1,domainSets(privateRoot.getParentFile()));
+            assertEquals(privateBytes,bytes(privateRoot));
+            assertTrue(privateBefore.binding.same(privateCache.read().binding));
+            PublicNativeFixture last=viewers.get(9);
+            assertTrue(newest.binding.same(last.cache().read().binding));
+            assertNull(viewers.get(0).cache().read());
+            android.util.Log.i("SceneVibeCacheQ3","publicGenerations=10 publicSets="+domainSets(publicRoot)
+                    +" privateSets="+domainSets(privateRoot.getParentFile())+" publicBytes="+bytes(publicRoot));
+        } finally {
+            if(lease!=null)lease.close();
+            for(PublicNativeFixture viewer:viewers)viewer.close(true);
+            ManualNativeFixture.remove(new File(privateFixture.target.getFilesDir(),"multimedia003d/"+
+                    privateFixture.generation.replace("-","")));
+            privateFixture.cleanup();
+        }
+    }
+
+    /** Compte les ensembles finaux dans tous les namespaces historiques du domaine. */
+    private static long domainSets(File root) throws Exception {
+        try(var files=Files.walk(root.toPath(),2)) {
+            return files.filter(Files::isDirectory).filter(path->MultimediaCacheDirectories.isSet(path.getFileName().toString())).count();
+        }
+    }
+
     /** Réutilise le stockage privé historique et vérifie restauration, espace et empreintes. */
     @Test public void privateRevisionsAndDiskFailure() throws Exception {
         requireEmulator();
