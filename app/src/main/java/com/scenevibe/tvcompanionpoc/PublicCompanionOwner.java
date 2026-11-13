@@ -117,6 +117,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         if(closed)return;
         followUp=false;
         try{step();failedPolls=0;}catch(Exception refused){
+            if(BuildConfig.DEBUG)android.util.Log.i("SceneVibePublic","POLL_FAILED "+refused.getClass().getSimpleName());
             failedPolls=Math.min(4,failedPolls+1);
             String reason=refused.getMessage();
             if(reason!=null && (reason.contains("HTTP_401") || reason.contains("HTTP_403") || reason.equals("REVOKED"))){
@@ -194,7 +195,7 @@ final class PublicCompanionOwner implements AutoCloseable {
             }else{
                 try{
                     validateCached(prepared);
-                    if(restored)restorePreferences();
+
                 }
                 catch(Exception refused){
                     if(!cacheRefused(refused))throw refused;
