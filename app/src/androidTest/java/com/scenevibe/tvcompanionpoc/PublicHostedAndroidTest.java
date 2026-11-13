@@ -220,8 +220,10 @@ public final class PublicHostedAndroidTest {
             }
         }
         assertEquals(release.getInt("textCount"),texts);assertEquals(release.getInt("audioCount"),audios);
+        String activeCommand=chromium && "true".equals(InstrumentationRegistry.getArguments().getString("q3Revision"))
+                ? verifyRevisionDuringMedia(track,tv,identity,prepared) : request.getString("commandId");
         main(()->TvFirst009TextServiceOwner.setMultimediaAudioEnabled(false));
-        waitViewerReady(track,tv,request.getString("commandId"),false);
+        waitViewerReady(track,tv,activeCommand,false);
         main(()->TvFirst009TextServiceOwner.requestStop(target));
         await(()->!TvFirst009TextServiceOwner.multimediaActive(),"Arrêt volontaire non appliqué",15000);
 
@@ -249,6 +251,33 @@ public final class PublicHostedAndroidTest {
         // Cookie technique du seul banc : lu par run-as après reboot, jamais archivé.
         JSONObject boot=new JSONObject().put("cookie",cookie).put("deviceId",tv).put("trackId",track);
         Files.write(new java.io.File(target.getFilesDir(),"public-viewer-boot-private.json").toPath(),boot.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Vérifie le cache épinglé avant l'arrêt volontaire et la collecte après activation de la nouvelle révision. */
+    private String verifyRevisionDuringMedia(String track,String tv,TvFirst008State identity,
+            PublicMultimediaCache.Prepared old) throws Exception {
+        main(()->playback(PlaybackState.STATE_PAUSED,30000));
+        await(()->old.binding.command.equals(TvFirst009TextServiceOwner.publicCommand())
+                && !TvFirst009TextServiceOwner.publicMayYield(),"Lecture publique non engagée",15000);
+        java.io.File priorAudio=old.resource(old.profile.resources.get(0).id);
+        writeBridge("q3-media-engaged.json",new JSONObject().put("commandId",old.binding.command).put("revision",old.binding.revision));
+        JSONObject next=readBridge("q3-revision-waiting.json");
+        String command=next.getString("commandId");
+        PublicMultimediaCache cache=new PublicMultimediaCache(target,identity.read("identity").getString("generation"));
+        assertEquals(old.binding.command,TvFirst009TextServiceOwner.publicCommand());
+        assertTrue(old.binding.same(cache.read().binding));
+        assertTrue(priorAudio.isFile());
+        main(()->TvFirst009TextServiceOwner.requestStop(target));
+        waitViewerReady(track,tv,command,true);
+        PublicMultimediaCache.Prepared updated=cache.read();
+        assertEquals(command,updated.binding.command);
+        assertEquals(next.getString("revision"),updated.binding.revision);
+        assertEquals(next.getString("packageSha256"),updated.binding.digest);
+        assertFalse(old.binding.revision.equals(updated.binding.revision));
+        await(()->!priorAudio.exists(),"Ancien ensemble multimédia encore présent",15000);
+        writeBridge("q3-revision-cache.json",new JSONObject().put("before",old.binding.revision)
+                .put("after",updated.binding.revision).put("packageSha256",updated.binding.digest).put("oldCacheCollected",true));
+        return command;
     }
 
     /** Exerce les gardes du vrai HTTPS en utilisant uniquement la possession du banc Android. */

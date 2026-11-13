@@ -101,6 +101,46 @@ try {
   await writeFile("public-viewer-native/q3-browser.json",JSON.stringify({origin,track,...cache,
     browserClick:true,activityClosed:true,webReady:true,privateDeferred:true,waitText,voluntaryStop:true,resourceBytesBeforeCut:true,resumedSameCommand:true,replaySameCommand:true,foreignDeviceStatus:401},null,2))
   await page.screenshot({path:"public-viewer-native/q3-browser-ready.png",fullPage:true})
+  if (process.env.SCENEVIBE_Q3_STUDIO_REVISION === "true") {
+    const engaged = await read("q3-media-engaged.json", 180)
+    assert.equal(engaged.commandId, command.commandId)
+    assert.equal(engaged.revision, multimedia.revisionId)
+    await writeFile(process.env.SCENEVIBE_Q3_MEDIA_BARRIER, JSON.stringify({trackId:track, ...engaged}))
+    let newer
+    for (let index=0; index<85; index++) {
+      const latest=await context.request.get(origin+"/api/public/catalogue/tracks/"+encodeURIComponent(track))
+      if(latest.ok()) {
+        const current=(await latest.json()).multimedia
+        if(current?.editorialRevision>multimedia.editorialRevision){newer=current;break}
+      }
+      await wait(2000)
+    }
+    assert.ok(newer,"Q3_STUDIO_REVISION_NOT_PUBLISHED")
+    await page.reload()
+    const revisionResponse=page.waitForResponse(response=>new URL(response.url()).pathname===sendPath &&
+      response.request().method()==="POST",{timeout:60000})
+    await button.click()
+    const sent=await revisionResponse
+    assert.equal(sent.status(),200)
+    const next=await sent.json()
+    assert.notEqual(next.commandId,command.commandId)
+    await waiting.waitFor({timeout:150000})
+    const status=await context.request.post(origin+"/api/autonomous/viewer-status",
+      {headers:{origin},data:{trackId:track,deviceId}})
+    assert.equal(status.status(),200)
+    const pendingRevision=(await status.json()).command
+    assert.equal(pendingRevision.commandId,next.commandId)
+    assert.equal(pendingRevision.waitReason,"public-media")
+    write("q3-revision-waiting.json",{commandId:next.commandId,revision:newer.revisionId,packageSha256:newer.packageSha256})
+    const after=await read("q3-revision-cache.json",320)
+    assert.equal(after.before,multimedia.revisionId)
+    assert.equal(after.after,newer.revisionId)
+    assert.equal(after.packageSha256,newer.packageSha256)
+    assert.equal(after.oldCacheCollected,true)
+    await ready.waitFor({timeout:150000})
+    await writeFile("public-viewer-native/q3-revision.json",JSON.stringify({track,...after,
+      firstCommand:command.commandId,newCommand:next.commandId,waitReason:"public-media",ready:true},null,2))
+  }
 } finally {
   await browser.close()
 }
