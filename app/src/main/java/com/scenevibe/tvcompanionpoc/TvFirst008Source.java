@@ -282,6 +282,32 @@ public final class TvFirst008Source implements TvAccountSource {
         },result);
     }
 
+    /** Poll Q2 using the current grant, with no implicit MEDIA activation. */
+    void pollStudioPrivate(java.util.function.Consumer<StudioPrivateCommand> result) {
+        if(!studioQ2)return;
+        multimediaWork(()->new StudioPrivateCommand(new MultimediaCloudClient(multimediaSession(),new MultimediaHttpsPort(multimediaOrigin)).studioInbox(null)),result);
+    }
+
+    /** Fetch the exact Studio request on the existing serial worker. */
+    void receiveStudioPrivate(StudioPrivateCommand command,java.util.function.Consumer<MultimediaPrivateCache.Prepared> result) {
+        if(!studioQ2 || command==null || command.id==null)return;
+        multimediaWork(()->new MultimediaAndroidBridge(context,this,new MultimediaHttpsPort(multimediaOrigin)).receive(command),result);
+    }
+
+    /** Record an exact retry before receipt, without changing a live MEDIA reference. */
+    JSONObject pendingStudioPrivate(StudioPrivateCommand value,long osRevision) throws Exception {
+        synchronized(lock) {
+            MultimediaCloudClient.Session session=multimediaSession();
+            JSONObject previous=state.read("multimediaPending");
+            if(previous!=null && value.id.equals(previous.optString("intentionId")))return previous;
+            JSONObject command=new JSONObject().put("profile",MultimediaDeliveryProfile.PROFILE).put("generation",session.generation())
+                    .put("intentionId",value.id).put("publicationId",value.publication).put("confirmed",true)
+                    .put("expectedRevision",value.expectedRevision==null?osRevision:value.expectedRevision);
+            state.write("multimediaPending",command);
+            return command;
+        }
+    }
+
     /** Restore verified inert files on the worker; process restart never restores playback permission. */
     void restoreMultimedia(java.util.function.Consumer<MultimediaPrivateCache.Prepared> result) {
         multimediaWork(()->MultimediaAndroidBridge.restoreCache(context,this),result,true);
