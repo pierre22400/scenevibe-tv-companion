@@ -140,7 +140,8 @@ async function assignAndroid(page, browserContext, deviceId, history, revision, 
   const devices = await (await browserContext.request.get(root + "/devices")).json()
   const selected = devices.items.find(item=>item.deviceId===deviceId)
   assert.ok(selected?.deviceId && selected.generation, "NO_AUTHORIZED_Q2_TV")
-  await page.getByLabel("Appareil",{exact:true}).selectOption(deviceId,{timeout:25_000})
+  const panel = page.getByRole("region",{name:"Distribution privée TV",exact:true})
+  await panel.getByRole("combobox").selectOption(deviceId,{timeout:25_000})
   const first = await clickResponse(page,"Envoyer cette révision à la TV","/revisions/"+revision+"/send")
   assert.equal(first.status,"REQUESTED")
   const data = { requestId: first.requestId, deviceId: selected.deviceId, generation: selected.generation, publicationId: release.publicationId }
