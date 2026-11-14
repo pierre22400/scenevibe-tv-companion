@@ -27,20 +27,20 @@ jobs:
       - uses: android-actions/setup-android@v4
       - uses: actions/download-artifact@v4
         with:
-          run-id: 43638963752
+          run-id: 43643847974
           github-token: ${{ github.token }}
           name: scenevibe-companion-studio-private-q2-v40-m5
           path: ${{ runner.temp }}/q2d-android
       - uses: actions/download-artifact@v4
         with:
-          run-id: 43638963752
+          run-id: 43643847974
           github-token: ${{ github.token }}
           name: studio-private-q2-v40-emulator-tools
           path: ${{ runner.temp }}/q2d-test
       - name: Verify the pinned APK, prepare Chrome and enable the isolated emulator
         run: |
           set -euo pipefail
-          printf '%s  %s\n' 9695a50ab2ed492e628bb354aea2e88bd7b824219757b86f9b8b5d87728823c9 "$RUNNER_TEMP/q2d-android/scenevibe-companion-studio-private-q2-v40-m5.apk" | sha256sum -c -
+          printf '%s  %s\n' f48931b03c1e4fcbae89bde04620558cac303385392e78682773a894c4b56915 "$RUNNER_TEMP/q2d-android/scenevibe-companion-studio-private-q2-v40-m5.apk" | sha256sum -c -
           sdkmanager 'build-tools;34.0.0'
           npm install --prefix "$RUNNER_TEMP/q2d-chrome" --no-package-lock --ignore-scripts playwright@1.62.1
           mkdir -p "$RUNNER_TEMP/q2d-integrated"
@@ -53,6 +53,7 @@ jobs:
           SCENEVIBE_CHROMIUM_EXECUTABLE: /usr/bin/google-chrome
           SCENEVIBE_PLAYWRIGHT_MODULE: ${{ runner.temp }}/q2d-chrome/node_modules/playwright
           SCENEVIBE_STUDIO_EVIDENCE: ${{ runner.temp }}/q2d-integrated
+          SCENEVIBE_Q2_CLOUD_COMMIT: b9dd42a5d6baba98b2df7f6b98706437aac3d57b
         with:
           api-level: 31
           target: android-tv

@@ -1,4 +1,4 @@
-# Recette Sony après GO propriétaire. Le mode par défaut lit seulement l'APK et la TV.
+﻿# Recette Sony après GO propriétaire. Le mode par défaut lit seulement l'APK et la TV.
 # Utiliser platform-tools et build-tools officiels. Aucun appairage ni effacement automatique.
 [CmdletBinding()]
 param(
@@ -37,16 +37,14 @@ function Assert-Apk {
         'Verified using v2 scheme (APK Signature Scheme v2): true',
         'Verified using v3 scheme (APK Signature Scheme v3): true'
     )) {
-        if (($Signing -split '?
-') -notcontains $Line) { throw "Certificat M5 ou schéma de signature absent." }
+        if (($Signing -split '\r?\n') -notcontains $Line) { throw "Certificat M5 ou schéma de signature absent." }
     }
 }
 
 # Demande à Android le chemin de l'APK du package présent sur le seul appareil désigné.
 function Get-InstalledBase {
     $Paths = Invoke-Tool $Adb @('-s', $Serial, 'shell', 'pm', 'path', $Package)
-    $Base = ($Paths -split '?
-' | Where-Object { $_ -match '^package:.+/base.apk$' } | Select-Object -First 1)
+    $Base = ($Paths -split '\r?\n' | Where-Object { $_ -match '^package:.+/base.apk$' } | Select-Object -First 1)
     if (-not $Base) { throw 'APK de base du Companion absent.' }
     return $Base.Substring(8).Trim()
 }
@@ -81,7 +79,7 @@ try {
     $AfterApk = Join-Path $Scratch 'after.apk'
     Invoke-Tool $Adb @('-s', $Serial, 'pull', (Get-InstalledBase), $AfterApk) | Out-Null
     Assert-Apk $AfterApk 40
-    if ((Get-FileHash -Algorithm SHA256 $AfterApk).Hash -ne $Sha256) { throw 'Le fichier effectivement installé diffère de l’APK qualifiée.' }
+    if ((Get-FileHash -Algorithm SHA256 $AfterApk).Hash -ne $Sha256) { throw "Le fichier effectivement installé diffère de l'APK qualifiée." }
     $After = Read-Grants
     foreach ($Key in $Before.Keys) {
         if ($Before[$Key] -cne $After[$Key]) { throw "Repère Android modifié après installation. Contrôle physique requis pour $Key." }
