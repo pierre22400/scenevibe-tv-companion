@@ -360,11 +360,13 @@ try {
     const third = await save(reopened)
     check("third_revision_same_track",third.revision===3 && third.projectId===first.projectId && third.textCount===4 && third.audioCount===1)
     await clickResponse(reopened,"Préparer pour la TV","/revisions/3/prepare")
-    const queued = await clickResponse(reopened,"Rendre cette révision distribuable en privé","/revisions/3/authorize")
     const media = renderWithPendingReplacement()
     let native, completed = false
     try {
       await media.requireMarker("Q2D_ACTIVE_R2_READY",135)
+      // La bibliothèque TV présente la dernière révision autorisée de chaque projet.
+      // Autoriser r3 après la sélection locale de r2 permet d'exercer le vrai différé.
+      const queued = await clickResponse(reopened,"Rendre cette révision distribuable en privé","/revisions/3/authorize")
       const next = await assignAndroid(second, deviceId, history, 3, queued)
       await media.requireMarker("Q2D_DEFERRED_R3_CACHE_R2_PRESERVED")
       await waitAndroidReceipt(second,history,3,next.requestId,"DEFERRED")
