@@ -179,8 +179,27 @@ async function rebootAndroid() {
 await waitPreview()
 await mkdir(output, { recursive: true })
 const wav = join(output, "q2d-synthetic.wav")
-execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "sine=frequency=431:duration=2",
-  "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", "-y", wav])
+/** Génère un WAV PCM mono de deux secondes dont le flux ne dépend pas d'un paquet du runner. */
+function testWav() {
+  const sampleRate = 48_000, count = sampleRate * 2
+  const bytes = Buffer.alloc(44 + count * 2)
+  bytes.write("RIFF", 0)
+  bytes.writeUInt32LE(bytes.length - 8, 4)
+  bytes.write("WAVEfmt ", 8)
+  bytes.writeUInt32LE(16, 16)
+  bytes.writeUInt16LE(1, 20)
+  bytes.writeUInt16LE(1, 22)
+  bytes.writeUInt32LE(sampleRate, 24)
+  bytes.writeUInt32LE(sampleRate * 2, 28)
+  bytes.writeUInt16LE(2, 32)
+  bytes.writeUInt16LE(16, 34)
+  bytes.write("data", 36)
+  bytes.writeUInt32LE(count * 2, 40)
+  for (let index = 0; index < count; index++)
+    bytes.writeInt16LE(Math.round(2800 * Math.sin(2 * Math.PI * 431 * index / sampleRate)), 44 + index * 2)
+  return bytes
+}
+await writeFile(wav, testWav())
 const originalSha = createHash("sha256").update(await readFile(wav)).digest("hex")
 const { chromium } = require(process.env.SCENEVIBE_PLAYWRIGHT_MODULE)
 const browser = await chromium.launch({ headless: true, executablePath: process.env.SCENEVIBE_CHROMIUM_EXECUTABLE || undefined,
