@@ -22,6 +22,7 @@ import org.json.JSONObject;
  */
 final class StudioPrivateControls {
     private final Activity activity;
+    private final Runnable targetsChanged;
     private final LinearLayout root, tracks;
     private final TextView status;
     private final Button pair, cancel, list, activate, stop, text, audio;
@@ -29,8 +30,8 @@ final class StudioPrivateControls {
     private boolean pairPending;
 
     /** Construit la vue sans ouvrir de session Cloud ou de code TV. */
-    StudioPrivateControls(Activity activity) {
-        this.activity=activity;
+    StudioPrivateControls(Activity activity,Runnable targetsChanged) {
+        this.activity=activity;this.targetsChanged=targetsChanged;
         root=new LinearLayout(activity);root.setOrientation(LinearLayout.VERTICAL);root.setTag("scenevibe-private-q2");
         status=new TextView(activity);root.addView(status);
         pair=button(root,"Obtenir un code Studio Q2",this::pair);
@@ -110,7 +111,7 @@ final class StudioPrivateControls {
             }
             notice=rows.length()==0?"Aucune Track Q2 distribuable pour cette TV.":"";
         }catch(Exception invalid){tracks.removeAllViews();notice="Bibliothèque privée Q2 indisponible.";}
-        refresh();
+        targetsChanged.run();refresh();
     }
 
     /** Affiche uniquement des métadonnées d'œuvre attestées par la projection privée. */

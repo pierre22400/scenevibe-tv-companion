@@ -671,7 +671,7 @@ public final class TvShellController {
             }
             if(studioPrivatePage!=null) {
                 block(page,text("Studio Q2",16,true,650,R.color.scenevibe_foreground),10);
-                styleRuntimeControls(studioPrivatePage,new int[]{40});
+                styleRuntimeControls(studioPrivatePage,new int[]{0},"studio-q2-");
                 block(page,studioPrivatePage,12);
                 block(page,text("Bibliothèque privée historique",16,true,650,R.color.scenevibe_foreground),10);
             }
@@ -1006,6 +1006,11 @@ public final class TvShellController {
 
     /** Restyles the existing controls while retaining listeners, labels and permission fallbacks. */
     private void styleRuntimeControls(View view, int[] buttonIndex) {
+        styleRuntimeControls(view,buttonIndex,"runtime-control-");
+    }
+
+    /** Garde les cibles des deux bibliothèques distinctes pendant une découverte. */
+    private void styleRuntimeControls(View view,int[] buttonIndex,String prefix) {
         if (view instanceof TextView) {
             TextView text = (TextView) view;
             ui.typography(text, view instanceof Button ? 14 : 13, false, view instanceof Button ? 600 : 400);
@@ -1016,11 +1021,11 @@ public final class TvShellController {
             button.setTextColor(ui.buttonTextColors(false));
             button.setBackgroundTintList(null); button.setStateListAnimator(null);
             button.setBackground(ui.focusBackground(R.color.scenevibe_card, R.color.scenevibe_public_action_border, 8, false));
-            target(button, "runtime-control-" + buttonIndex[0]++);
+            target(button, prefix + buttonIndex[0]++);
         }
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view; group.setClipChildren(false); group.setClipToPadding(false);
-            for (int i = 0; i < group.getChildCount(); i++) styleRuntimeControls(group.getChildAt(i), buttonIndex);
+            for (int i = 0; i < group.getChildCount(); i++) styleRuntimeControls(group.getChildAt(i),buttonIndex,prefix);
         }
     }
 
@@ -1028,6 +1033,13 @@ public final class TvShellController {
     public void setStudioPrivatePage(View view) {
         studioPrivatePage=view;
         if(navigation.current().screen==TvNavigation.Screen.TRACKS)render();
+    }
+
+    /** Enregistre les cartes reçues sans reconstruire le shell ni quitter le panneau. */
+    public void refreshStudioPrivateTargets() {
+        if(studioPrivatePage==null || navigation.current().screen!=TvNavigation.Screen.TRACKS)return;
+        targets.keySet().removeIf(key->key.startsWith("studio-q2-"));
+        styleRuntimeControls(studioPrivatePage,new int[]{0},"studio-q2-");
     }
 
     /** Attach only normal Activity views; the shared service owns every overlay window. */

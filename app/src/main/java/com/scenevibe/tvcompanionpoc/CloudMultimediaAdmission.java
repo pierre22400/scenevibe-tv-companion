@@ -53,6 +53,8 @@ final class CloudMultimediaAdmission {
         if(strictIdentity && (snapshot==null || snapshot.mediaId==null || !identity.mediaIdentity.videoId.equals(snapshot.mediaId.trim())))return false;
         return MediaIdentityMatcher.matches(identity,snapshot);
     }
+    /** La Track Studio Q2 exige aussi ce contrôle à chaque nouvel échantillon MEDIA. */
+    boolean requiresNativeMediaId(){return strictIdentity;}
     /** Fournit le même calendrier et les mêmes ressources aux moteurs historiques. */
     StudioMultimediaPackage track(){return publicReference==null?reference.prepared.track:publicReference.prepared.track;}
     /** Résout uniquement une ressource du cache vérifié, sans changement du port AUDIO. */

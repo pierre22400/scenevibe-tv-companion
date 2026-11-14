@@ -212,7 +212,7 @@ final class CloudMultimediaSession {
                         || snapshot.state==PlaybackState.STATE_BUFFERING)publicMediaEngaged=true;
             }
         }
-        if(admission.publicCommand()!=null && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
+        if(admission.requiresNativeMediaId() && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
         if(!adProtection.status().allow){applyAdProtection(adProtection.status());return;}
         MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
         boolean usable=snapshot!=null && selected!=null && selected.eligible() && snapshot.positionMs>=0

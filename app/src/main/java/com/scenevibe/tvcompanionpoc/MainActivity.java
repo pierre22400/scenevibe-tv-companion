@@ -86,7 +86,7 @@ public final class MainActivity extends Activity {
         presentation = new TvShellController(this, controls, this::presentationStatus,
                 this::openDiagnostics, savedInstanceState, this::publicLibraryStatus);
         if(!BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty()){
-            studioPrivate=new StudioPrivateControls(this);
+            studioPrivate=new StudioPrivateControls(this,presentation::refreshStudioPrivateTargets);
             presentation.setStudioPrivatePage(studioPrivate.view());
         }
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){

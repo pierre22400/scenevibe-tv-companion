@@ -88,6 +88,19 @@ jobs:
           path: m5-proof/scenevibe-companion-studio-private-q2-v40-m5.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Stage the disposable emulator harness
+        if: success()
+        run: |
+          mkdir -p emulator-tools
+          cp "$RUNNER_TEMP/studio-q2-v40-tests-m5.apk" emulator-tools/scenevibe-q2d-tests-m5.apk
+          cp "$RUNNER_TEMP/studio-q2-owned-player.apk" emulator-tools/scenevibe-q2d-owned-player.apk
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: studio-private-q2-v40-emulator-tools
+          path: emulator-tools/*.apk
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always()
         with:
