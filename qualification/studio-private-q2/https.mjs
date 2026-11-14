@@ -103,6 +103,14 @@ function adb(...args) {
   return execFileSync("adb", args, { encoding: "utf8", timeout: 170_000 }).trim()
 }
 
+/** Transmet au test Android un point de rendez-vous lisible par UiAutomation. */
+function acknowledgeAndroid(marker) {
+  assert.ok(["deferred-checked","grant-revoked"].includes(marker))
+  const path="/data/local/tmp/scenevibe-q2d-"+marker
+  adb("shell","echo ready > "+path)
+  assert.equal(adb("shell","cat",path),"ready")
+}
+
 /** Demande un code natif, le consomme via Chrome puis exige l'association confirmée. */
 async function pairAndroid(page) {
   assert.match(adb("get-serialno"), /^emulator-\d+$/)
@@ -374,7 +382,7 @@ try {
       await media.requireMarker("Q2D_DEFERRED_R3_CACHE_R2_PRESERVED")
       await waitAndroidReceipt(second,history,3,next.requestId,"DEFERRED")
       check("android_active_r2_and_cache_preserved_while_r3_deferred",true)
-      adb("shell","touch","/data/local/tmp/scenevibe-q2d-deferred-checked")
+      acknowledgeAndroid("deferred-checked")
       await waitAndroidReceipt(second,history,3,next.requestId)
       await media.requireMarker("Q2D_REPLACEMENT_AND_TWO_CACHES_PASS")
       check("android_r3_replaced_after_voluntary_stop_and_public_cache_unchanged",true)
@@ -383,7 +391,7 @@ try {
       assert.equal((await revoked.json()).status,"REVOKED")
       const repeat = await second.request.post(history+"/3/send",{headers:{origin},data:{...next,requestId:randomUUID()}})
       check("owner_send_refused_after_revocation",repeat.status()===403)
-      adb("shell","touch","/data/local/tmp/scenevibe-q2d-grant-revoked")
+      acknowledgeAndroid("grant-revoked")
       await media.requireMarker("Q2D_REVOKED_DEVICE_REFUSED_CACHE_PRESERVED")
       await media.requireMarker("OK (1 test)",15)
       completed = true
