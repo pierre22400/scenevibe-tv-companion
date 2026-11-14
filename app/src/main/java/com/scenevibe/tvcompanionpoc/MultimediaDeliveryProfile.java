@@ -16,7 +16,7 @@ import org.json.JSONObject;
 
 /**
  * CLOUD BRIDGE 003-D : vérifie un profil fermé et ses documents originaux avant
- * toute écriture. Les trois identités AUDIO restent distinctes d'un éventuel
+ * toute écriture. Le profil Q2 autorise aussi un paquet privé TEXT seul. Les identités AUDIO restent distinctes d'un éventuel
  * unique fichier physique. L'adaptation interne vers le lecteur de paquet
  * Studio réutilise ses validations et ne fabrique aucune admission MEDIA.
  */
@@ -57,13 +57,19 @@ final class MultimediaDeliveryProfile {
         require(identity.get("trackId").equals(track.get("trackId")) && integer(identity,"editorialRevision",1,Long.MAX_VALUE)==integer(track,"revision",1,Long.MAX_VALUE),"EDITORIAL_IDENTITY_MISMATCH");
         resourceManifestBytes=base64(object,"resourceManifestBase64",MAX_PROFILE);
         require(hash(resourceManifestBytes).equals(digest(identity.get("resourceManifestSha256"))),"RESOURCE_MANIFEST_INTEGRITY");
-        JSONArray rows=new JSONArray(TvFirst008Wire.utf8(resourceManifestBytes));require(rows.length()>0 && rows.length()<=256,"RESOURCE_BUDGET");
+        JSONArray rows=new JSONArray(TvFirst008Wire.utf8(resourceManifestBytes));require((rows.length()>0 || studioPrivate()) && rows.length()<=256,"RESOURCE_BUDGET");
         List<Resource> checked=new ArrayList<>();Set<String> ids=new HashSet<>();long total=0;String previous="";
         for(int index=0;index<rows.length();index++) {
             Resource row=new Resource(rows.getJSONObject(index));require(ids.add(row.id) && row.id.compareTo(previous)>0,"RESOURCE_ORDER_OR_DUPLICATE");previous=row.id;
             total+=row.byteLength;require(total<=250L*1024*1024,"RESOURCE_BYTE_BUDGET");checked.add(row);
         }
         resources=Collections.unmodifiableList(checked);
+    }
+
+    /** Recognize the explicitly configured Q2 source namespace, never a title. */
+    boolean studioPrivate() {
+        return !BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty() && identity.optString("trackId")
+                .matches("studio-private:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}");
     }
 
     /** Reuse the exact Studio parser and native-inspection seam after every resource is verified. */

@@ -13,7 +13,7 @@ import android.widget.TextView;
 public final class OwnedPlayer extends Activity {
     private MediaSession session;
 
-    /** Show a focusable local surface and publish the reference work's metadata. */
+    /** Show a focusable local surface for the emulator's reference work or Q2 test film. */
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         if (!android.os.Build.FINGERPRINT.contains("generic")
@@ -27,10 +27,6 @@ public final class OwnedPlayer extends Activity {
         setContentView(label);
         label.requestFocus();
         session = new MediaSession(this, "SceneVibe owned emulator MEDIA");
-        session.setMetadata(new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
-                .putString(MediaMetadata.METADATA_KEY_TITLE, "Columbo — Eaux troubles")
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, 5884768L).build());
         update(getIntent());
         session.setActive(true);
     }
@@ -56,6 +52,11 @@ public final class OwnedPlayer extends Activity {
     /** Publish real Android MediaSession state sampled by the unchanged Companion. */
     private void update(Intent intent) {
         if (session == null) return;
+        boolean studio = intent.getBooleanExtra("studioQ2",false);
+        session.setMetadata(new MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID,studio?"q2d-owned-media":"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
+                .putString(MediaMetadata.METADATA_KEY_TITLE,studio?"Séquence de qualification Q2-D":"Columbo — Eaux troubles")
+                .putLong(MediaMetadata.METADATA_KEY_DURATION,studio?240_000L:5884768L).build());
         boolean playing = intent.getBooleanExtra("playing", false);
         long position = intent.getLongExtra("position", 0);
         session.setPlaybackState(new PlaybackState.Builder()

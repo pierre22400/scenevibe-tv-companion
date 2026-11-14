@@ -1,0 +1,76 @@
+# Qualification de l'APK v40 historique M5 sur le vrai Preview Studio Q2.
+name: Studio Q2-D signed Android HTTPS
+
+on:
+  push:
+    branches: [work/scenevibe-studio-q2d-v40]
+    paths:
+      - '.github/workflows/studio-private-q2-https.yml'
+      - 'qualification/studio-private-q2/https.*'
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+jobs:
+  private-android:
+    if: github.repository == 'pierre22400/scenevibe-tv-companion'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: android-actions/setup-android@v4
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43643847974
+          github-token: ${{ github.token }}
+          name: scenevibe-companion-studio-private-q2-v40-m5
+          path: ${{ runner.temp }}/q2d-android
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43650983297
+          github-token: ${{ github.token }}
+          name: studio-private-q2-v40-emulator-tools
+          path: ${{ runner.temp }}/q2d-test
+      - name: Verify the pinned APK, prepare Chrome and enable the isolated emulator
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' f48931b03c1e4fcbae89bde04620558cac303385392e78682773a894c4b56915 "$RUNNER_TEMP/q2d-android/scenevibe-companion-studio-private-q2-v40-m5.apk" | sha256sum -c -
+          sdkmanager 'build-tools;34.0.0'
+          npm install --prefix "$RUNNER_TEMP/q2d-chrome" --no-package-lock --ignore-scripts playwright@1.62.1
+          mkdir -p "$RUNNER_TEMP/q2d-integrated"
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SCENEVIBE_CHROMIUM_EXECUTABLE: /usr/bin/google-chrome
+          SCENEVIBE_PLAYWRIGHT_MODULE: ${{ runner.temp }}/q2d-chrome/node_modules/playwright
+          SCENEVIBE_STUDIO_EVIDENCE: ${{ runner.temp }}/q2d-integrated
+          SCENEVIBE_Q2_CLOUD_COMMIT: b9dd42a5d6baba98b2df7f6b98706437aac3d57b
+          # La réception après un démarrage à froid est documentée dans le run 43647342215.
+          SCENEVIBE_Q2_REPLACEMENT_ONLY: 'true'
+        with:
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2
+          script: bash qualification/studio-private-q2/https.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-q2d-signed-android-https
+          path: |
+            ${{ runner.temp }}/q2d-integrated/*.json
+            ${{ runner.temp }}/q2d-integrated/*.txt
+            ${{ runner.temp }}/q2d-integrated/*.png

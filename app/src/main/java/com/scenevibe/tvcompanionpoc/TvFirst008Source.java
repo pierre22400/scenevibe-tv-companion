@@ -29,10 +29,11 @@ public final class TvFirst008Source implements TvAccountSource {
     private final TvFirst008HttpPort http;
     private final String address;
     private final String multimediaOrigin;
+    private final boolean studioQ2;
     private final ExecutorService worker;
     private final Handler main = new Handler(Looper.getMainLooper());
     private static final Object MULTIMEDIA_SOURCE_MONITOR=new Object();
-    private static long multimediaAuthorityEpoch;
+    private static long multimediaAuthorityEpoch, studioMultimediaAuthorityEpoch;
     private final Object lock = BuildConfig.CLOUD_MULTIMEDIA_SERVICE?MULTIMEDIA_SOURCE_MONITOR:new Object();
     private final Map<String, TvOffer> entries = new LinkedHashMap<>();
     private volatile AccountStage stage;
@@ -50,10 +51,18 @@ public final class TvFirst008Source implements TvAccountSource {
         this(context, new TvFirst008State(context), BuildConfig.CLOUD_ORIGIN.isEmpty() ? null : new TvFirst008Http(BuildConfig.CLOUD_ORIGIN),
                 BuildConfig.CLOUD_ORIGIN, Executors.newSingleThreadExecutor());
     }
+    /** Reuse the one-code possession flow on the exact Studio Q2 Preview. */
+    static TvFirst008Source studioQ2(Context context) {
+        String origin=BuildConfig.STUDIO_PRIVATE_ORIGIN;
+        if(origin.isEmpty())throw new IllegalStateException("STUDIO_Q2_NOT_CONFIGURED");
+        return new TvFirst008Source(context,TvFirst008State.studioQ2(context),new TvFirst008Http(origin),
+                origin,Executors.newSingleThreadExecutor());
+    }
     /** Bind real state/cache and an injectable HTTP boundary for local software qualification. */
     TvFirst008Source(Context context, TvFirst008State state, TvFirst008HttpPort http, String origin, ExecutorService worker) {
         this.context = context.getApplicationContext(); this.state = state; this.http = http; this.worker = worker;
-        address = http == null ? "" : origin + "/tv"; multimediaOrigin = origin;
+        studioQ2 = !BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty() && BuildConfig.STUDIO_PRIVATE_ORIGIN.equals(origin);
+        address = http == null ? "" : origin + (studioQ2 ? "/studio" : "/tv"); multimediaOrigin = origin;
         stage = http == null ? AccountStage.UNCONFIGURED : AccountStage.UNASSOCIATED;
         message = http == null ? "Le service de qualification n’est pas configuré pour cette APK. Association indisponible."
                 : "Crée ton compte ou connecte-toi depuis un téléphone ou un ordinateur, puis associe cette TV.";
@@ -122,7 +131,7 @@ public final class TvFirst008Source implements TvAccountSource {
         else if (error instanceof TvFirst008Http.Failure) {
             int code = ((TvFirst008Http.Failure) error).status;
             if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE && (code==401 || code==403)) {
-                ++multimediaAuthorityEpoch;
+                advanceMultimediaAuthority();
                 try{state.write("multimediaReceipt",null);}catch(Exception unavailable){/* The in-memory epoch already revoked every live permit. */}
             }
             message = code == 401 || code == 403 ? "Association ou consentement indisponible. Reconnecte ton compte et choisis explicitement une récupération."
@@ -184,7 +193,7 @@ public final class TvFirst008Source implements TvAccountSource {
             JSONObject command=new JSONObject().put("profile",MultimediaDeliveryProfile.PROFILE).put("generation",session.generation())
                     .put("intentionId",java.util.UUID.randomUUID().toString()).put("publicationId",publicationId).put("expectedRevision",osRevision).put("confirmed",true);
             state.write("multimediaPending",command);
-            if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE){++multimediaAuthorityEpoch;state.write("multimediaBinding",null);}
+            if(BuildConfig.CLOUD_MULTIMEDIA_SERVICE && !studioQ2){advanceMultimediaAuthority();state.write("multimediaBinding",null);}
             return new JSONObject(command.toString());
         }
     }
@@ -197,12 +206,13 @@ public final class TvFirst008Source implements TvAccountSource {
             if(!active || accountStage()!=AccountStage.ASSOCIATED || pending==null || !binding.intention.equals(pending.optString("intentionId"))
                     || !binding.generation.equals(current.optString("generation")) || !binding.device.equals(current.optString("deviceId"))
                     || !binding.publication.equals(pending.optString("publicationId")))throw new IllegalStateException("STALE_MULTIMEDIA_INTENTION");
-            state.write("multimediaPending",null);
+            if (!studioQ2) state.write("multimediaPending",null);
             if (BuildConfig.CLOUD_MULTIMEDIA_SERVICE) {
                 state.write("multimediaBinding",binding.json());
                 state.write("multimediaReceipt",binding.json());
                 recordMultimediaRevision(binding.device,binding.generation,binding.revision);
             }
+            if(studioQ2)state.write("multimediaPending",null);
         }
     }
 
@@ -230,7 +240,30 @@ public final class TvFirst008Source implements TvAccountSource {
     }
     /** Discover only multimedia publications authorized for this encrypted account/device association. */
     void listMultimedia(java.util.function.Consumer<JSONObject> result) {
-        multimediaWork(()->new MultimediaCloudClient(multimediaSession(),new MultimediaHttpsPort(multimediaOrigin)).publications(),result);
+        multimediaWork(()->{
+            MultimediaCloudClient client=new MultimediaCloudClient(multimediaSession(),new MultimediaHttpsPort(multimediaOrigin));
+            return studioQ2?client.studioLibrary():client.publications();
+        },result);
+    }
+
+    /** Recognize an interrupted receipt handoff after a process or Android restart. */
+    boolean studioPendingMatches(String intention) {
+        synchronized(lock) {
+            try {
+                JSONObject pending=state.read("multimediaPending");
+                return studioQ2 && pending!=null && intention.equals(pending.optString("intentionId"));
+            } catch(RuntimeException unavailable){return false;}
+        }
+    }
+
+    /** Prevent a confirmed server response from standing in for a locally committed receipt. */
+    boolean studioReceiptMatches(MultimediaCloudClient.Binding binding) {
+        synchronized(lock) {
+            try {
+                JSONObject receipt=state.read("multimediaReceipt");
+                return studioQ2 && receipt!=null && binding.same(new MultimediaCloudClient.Binding(receipt));
+            } catch(Exception unavailable){return false;}
+        }
     }
 
     /** Run an explicit confirmed selection on the existing serial worker, preserving durable retry ids. */
@@ -241,7 +274,38 @@ public final class TvFirst008Source implements TvAccountSource {
     /** Exercise the exact TV selection callback with a test-local trusted TLS boundary on Android. */
     void downloadMultimedia(String publicationId,java.util.function.Consumer<MultimediaPrivateCache.Prepared> result,MultimediaCloudClient.Port port) {
         TvFirst008Wire.uuid(publicationId);
-        multimediaWork(()->new MultimediaAndroidBridge(context,this,port).fetch(publicationId),result);
+        multimediaWork(()->{
+            if (!studioQ2) return new MultimediaAndroidBridge(context,this,port).fetch(publicationId);
+            if (!TvFirst009TextServiceOwner.beginStudioCacheSwitch()) return null;
+            try { return new MultimediaAndroidBridge(context,this,port).fetch(publicationId); }
+            finally {TvFirst009TextServiceOwner.endStudioCacheSwitch();}
+        },result);
+    }
+
+    /** Poll Q2 using the current grant, with no implicit MEDIA activation. */
+    void pollStudioPrivate(java.util.function.Consumer<StudioPrivateCommand> result) {
+        if(!studioQ2)return;
+        multimediaWork(()->new StudioPrivateCommand(new MultimediaCloudClient(multimediaSession(),new MultimediaHttpsPort(multimediaOrigin)).studioInbox(null)),result);
+    }
+
+    /** Fetch the exact Studio request on the existing serial worker. */
+    void receiveStudioPrivate(StudioPrivateCommand command,java.util.function.Consumer<MultimediaPrivateCache.Prepared> result) {
+        if(!studioQ2 || command==null || command.id==null)return;
+        multimediaWork(()->new MultimediaAndroidBridge(context,this,new MultimediaHttpsPort(multimediaOrigin)).receive(command),result);
+    }
+
+    /** Record an exact retry before receipt, without changing a live MEDIA reference. */
+    JSONObject pendingStudioPrivate(StudioPrivateCommand value,long osRevision) throws Exception {
+        synchronized(lock) {
+            MultimediaCloudClient.Session session=multimediaSession();
+            JSONObject previous=state.read("multimediaPending");
+            if(previous!=null && value.id.equals(previous.optString("intentionId")))return previous;
+            JSONObject command=new JSONObject().put("profile",MultimediaDeliveryProfile.PROFILE).put("generation",session.generation())
+                    .put("intentionId",value.id).put("publicationId",value.publication).put("confirmed",true)
+                    .put("expectedRevision",value.expectedRevision==null?osRevision:value.expectedRevision);
+            state.write("multimediaPending",command);
+            return command;
+        }
     }
 
     /** Restore verified inert files on the worker; process restart never restores playback permission. */
@@ -291,7 +355,7 @@ public final class TvFirst008Source implements TvAccountSource {
                     : "Compte associé. Consultation et ajout au cache uniquement ; aucun commentaire ni MEDIA.";
             verification = "";
         }
-        PublicCompanionService.resumeHistorical(context);
+        if (!studioQ2) PublicCompanionService.resumeHistorical(context);
         main.postDelayed(() -> {
             final long expiredTicket;
             synchronized (lock) {
@@ -303,8 +367,10 @@ public final class TvFirst008Source implements TvAccountSource {
         }, remaining);
         // The G11 REAL TRACK profile owns a private multimedia catalogue, not legacy FinalTracks.
         // The isolated Preview has neither the obsolete /library route nor legacy SQL read privileges.
-        if (!BuildConfig.REAL_TRACK_E2E_001) page(ticket, null);
-        restoreReceipt(ticket, id);
+        if (!studioQ2) {
+            if (!BuildConfig.REAL_TRACK_E2E_001) page(ticket, null);
+            restoreReceipt(ticket, id);
+        }
     }
     /** Load one bounded page, retain unknown editorial facts, and never fetch executable artifacts here. */
     private void page(long ticket, String after) throws Exception {
@@ -563,11 +629,22 @@ public final class TvFirst008Source implements TvAccountSource {
             }
         }
     }
+    /** A refresh from one Cloud origin cannot revoke the other origin's live proof. */
+    private static long multimediaAuthority(boolean studio) {
+        return studio?studioMultimediaAuthorityEpoch:multimediaAuthorityEpoch;
+    }
+
+    /** Advance only an authority that this source owns. The shared monitor orders all callers. */
+    private void advanceMultimediaAuthority() {
+        if(studioQ2)++studioMultimediaAuthorityEpoch;
+        else ++multimediaAuthorityEpoch;
+    }
+
     /** Persist observed OS revision metadata; another Activity or failed write cannot retain an older audible permit. */
     private void recordMultimediaRevision(String device,String generation,long revision) throws Exception {
         JSONObject previous=state.read("multimediaAuthorityRevision");
         if(previous==null || !device.equals(previous.optString("deviceId")) || !generation.equals(previous.optString("generation"))
-                || previous.optLong("revision",-1)!=revision)++multimediaAuthorityEpoch;
+                || previous.optLong("revision",-1)!=revision)advanceMultimediaAuthority();
         currentRevision=revision;
         state.write("multimediaAuthorityRevision",new JSONObject().put("deviceId",device).put("generation",generation).put("revision",revision));
     }
@@ -578,7 +655,7 @@ public final class TvFirst008Source implements TvAccountSource {
             if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || !active || busy || prepared==null
                     || accountStage()!=AccountStage.ASSOCIATED)return null;
             try {
-                MultimediaReference ref=new MultimediaReference(lock,state,prepared,consentDeadline,
+                MultimediaReference ref=new MultimediaReference(lock,state,prepared,consentDeadline,studioQ2,
                         ()->BuildConfig.ADSYNC_NONDESTRUCTIVE || accountStage()==AccountStage.ASSOCIATED);
                 return ref.current(android.os.SystemClock.elapsedRealtime())?ref:null;
             }catch(RuntimeException refused){return null;}
@@ -591,12 +668,14 @@ public final class TvFirst008Source implements TvAccountSource {
         private final Object monitor;
         private final TvFirst008State metadata;
         private final long issuedAt=android.os.SystemClock.elapsedRealtime(),expiresAt;
-        private final long authorityEpoch=multimediaAuthorityEpoch;
+        private final long authorityEpoch;
+        final boolean studioQ2;
         private final java.util.function.BooleanSupplier associated;
         /** Retain the exact receipt and the original monotonic consent deadline. */
         private MultimediaReference(Object monitor,TvFirst008State metadata,MultimediaPrivateCache.Prepared prepared,
-                long expiresAt,java.util.function.BooleanSupplier associated) {
+                long expiresAt,boolean studioQ2,java.util.function.BooleanSupplier associated) {
             this.monitor=monitor;this.metadata=metadata;this.prepared=prepared;this.expiresAt=expiresAt;this.associated=associated;
+            this.studioQ2=studioQ2;this.authorityEpoch=multimediaAuthority(studioQ2);
         }
         /** Recheck identity, receipt and current selection before every local effect. */
         boolean current(long now) {
@@ -615,7 +694,7 @@ public final class TvFirst008Source implements TvAccountSource {
                 try {
                     if(now<issuedAt)return "CONSENT_CLOCK_INVALID";
                     if(now>=expiresAt)return "CONSENT_EXPIRED";
-                    if(authorityEpoch!=multimediaAuthorityEpoch)return "AUTHORITY_SUPERSEDED";
+                    if(authorityEpoch!=multimediaAuthority(studioQ2) || !prepared.cacheSelected())return "AUTHORITY_SUPERSEDED";
                     if(!associated.getAsBoolean())return "UI_ASSOCIATION_UNAVAILABLE";
                     MultimediaCloudClient.Binding binding=prepared.binding;
                     JSONObject identity=metadata.read("identity");

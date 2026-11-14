@@ -34,10 +34,13 @@ final class MultimediaPrivateCache {
         final StudioMultimediaPackage track;final MultimediaCloudClient.Binding binding;final MultimediaDeliveryProfile profile;
         private final File directory;
         private final Runnable collect;
+        private java.util.function.BooleanSupplier selected=()->true;
         /** Retain only an immutable package and its validated private directory. */
         Prepared(StudioMultimediaPackage track,MultimediaCloudClient.Binding binding,MultimediaDeliveryProfile profile,File directory,Runnable collect) {
             this.track=track;this.binding=binding;this.profile=profile;this.directory=directory;this.collect=collect;
         }
+        /** Vérifie le pointeur privé global avant une nouvelle admission ou un effet MEDIA. */
+        boolean cacheSelected() {return selected.getAsBoolean();}
         /** Épingle le dossier tant que la session MEDIA peut ouvrir ses fichiers. */
         MultimediaCacheDirectories.Lease pin() {
             return MultimediaCacheDirectories.at(directory.getParentFile()).pin(directory,collect);
@@ -210,7 +213,9 @@ final class MultimediaPrivateCache {
         MultimediaDeliveryProfile profile=new MultimediaDeliveryProfile(readFile(new File(directory,"profile.json"),MultimediaDeliveryProfile.MAX_PROFILE));
         MultimediaDeliveryProfile.require(profile.packageSha256.equals(binding.sha256),"CACHE_PACKAGE_INTEGRITY");Map<String,byte[]> physical=new LinkedHashMap<>();
         for(MultimediaDeliveryProfile.Resource row:profile.resources)if(!physical.containsKey(row.sha256))physical.put(row.sha256,readFile(new File(directory,row.sha256+".mp3"),MultimediaDeliveryProfile.MAX_AUDIO));
-        StudioMultimediaPackage track=profile.prepare(physical,decoder);return new Prepared(track,binding,profile,directory,this::collect);
+        StudioMultimediaPackage track=profile.prepare(physical,decoder);Prepared result=new Prepared(track,binding,profile,directory,this::collect);
+        if(domain!=null)result.selected=()->domain.allows(root);
+        return result;
     }
 
     /** Flush a new immutable file; no existing committed content is ever overwritten. */

@@ -32,8 +32,10 @@ final class TvFirst009TextServiceOwner {
     private static final String CHANNEL="scenevibe_text_qualification";
     private static final String TAG="SceneVibeText009";
     private static final int NOTIFICATION=1009;
-    private static Pending pending;
-    private static long nextOwner,liveOwner;
+    private static volatile Pending pending;
+    private static long nextOwner;
+    private static volatile long liveOwner;
+    private static boolean studioCacheSwitch;
     private static TvFirst009TextServiceOwner liveInstance;
     private static boolean multimediaTextPreference=true,multimediaAudioPreference=true;
     private static boolean adSyncPreference;
@@ -143,8 +145,18 @@ final class TvFirst009TextServiceOwner {
         return liveOwner!=0 || pending!=null && SystemClock.elapsedRealtime()<pending.deadline;
     }
 
+    /** Reserve the private cache switch only while no MEDIA owner exists. */
+    static synchronized boolean beginStudioCacheSwitch() {
+        if(studioCacheSwitch || controlBusy())return false;
+        studioCacheSwitch=true;return true;
+    }
+
+    /** Release cache switching after success or rollback, without touching MEDIA preferences. */
+    static synchronized void endStudioCacheSwitch() {studioCacheSwitch=false;}
+
     /** Explicit TV button only: check permissions/readiness before requesting the existing foreground service. */
-    static boolean requestStart(Activity activity,TvFirst008Source source) {
+    static synchronized boolean requestStart(Activity activity,TvFirst008Source source) {
+        if(studioCacheSwitch)return false;
         if (!BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION || Looper.myLooper()!=Looper.getMainLooper()) return false;
         if (pending!=null && SystemClock.elapsedRealtime()>=pending.deadline) pending=null;
         if (liveOwner!=0 || pending!=null) return false;
@@ -186,8 +198,9 @@ final class TvFirst009TextServiceOwner {
     }
 
     /** Explicit local confirmation only; cache restoration and receipt callbacks never call this method. */
-    static boolean requestMultimediaStart(Activity activity,TvFirst008Source source,MultimediaPrivateCache.Prepared prepared,
+    static synchronized boolean requestMultimediaStart(Activity activity,TvFirst008Source source,MultimediaPrivateCache.Prepared prepared,
             boolean ownerConfirmedReferenceEdition) {
+        if(studioCacheSwitch)return false;
         if(!BuildConfig.CLOUD_MULTIMEDIA_SERVICE || Looper.myLooper()!=Looper.getMainLooper() || controlBusy())return false;
         if(!Settings.canDrawOverlays(activity) || !NotificationAccess.isGranted(activity)){
             record("PERMISSION_REQUIRED",-1,false);return false;
@@ -202,7 +215,8 @@ final class TvFirst009TextServiceOwner {
     }
 
     /** L'action Web après le code TV est l'unique décision ; aucun dialogue local n'est ajouté. */
-    static boolean requestPublicStart(Context context,PublicRuntimeReference reference) {
+    static synchronized boolean requestPublicStart(Context context,PublicRuntimeReference reference) {
+        if(studioCacheSwitch)return false;
         if(!BuildConfig.PUBLIC_AUTONOMOUS_001B || Looper.myLooper()!=Looper.getMainLooper() || controlBusy())return false;
         if(!Settings.canDrawOverlays(context) || !NotificationAccess.isGranted(context)){record("PERMISSION_REQUIRED",-1,false);return false;}
         CloudMultimediaAdmission admitted=CloudMultimediaAdmission.admitPublic(reference);
@@ -236,6 +250,11 @@ final class TvFirst009TextServiceOwner {
     }
     /** Retourne seulement la commande de la session publique réellement ouverte. */
     static String publicCommand(){return liveInstance==null || liveInstance.multimedia==null || !liveInstance.multimedia.isActive()?null:liveInstance.multimedia.publicCommand();}
+
+    /** Indique la Track sélectionnée pendant une transition de cache, quel que soit son domaine. */
+    static String selectedTrackTitle() {
+        return multimediaActive()?liveInstance.multimedia.trackTitle():"";
+    }
 
     /** Indique le paquet privé sélectionné par le propriétaire MEDIA en cours. */
     static String privateTrackTitle(){

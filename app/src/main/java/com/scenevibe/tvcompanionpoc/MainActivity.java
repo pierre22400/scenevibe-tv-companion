@@ -41,6 +41,7 @@ public final class MainActivity extends Activity {
     private TextView textQualificationStatus;
     private Button textActivateButton,textStopButton;
     private CloudMultimediaControls cloudMultimedia;
+    private StudioPrivateControls studioPrivate;
     private DeveloperTab developerTab;
     private String developerHandoff;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -54,6 +55,7 @@ public final class MainActivity extends Activity {
             if (BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION) {
                 refreshTextQualification();
                 if (cloudMultimedia!=null) cloudMultimedia.refresh();
+                if (studioPrivate!=null) studioPrivate.refresh();
                 if (presentation!=null) presentation.refreshRuntime();
                 handler.postDelayed(this,1000L);return;
             }
@@ -83,6 +85,10 @@ public final class MainActivity extends Activity {
         }
         presentation = new TvShellController(this, controls, this::presentationStatus,
                 this::openDiagnostics, savedInstanceState, this::publicLibraryStatus);
+        if(!BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty()){
+            studioPrivate=new StudioPrivateControls(this,presentation::refreshStudioPrivateTargets);
+            presentation.setStudioPrivatePage(studioPrivate.view());
+        }
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
             developerTab=new DeveloperTab(this,()->presentation.back());
             presentation.setDeveloperPage(developerTab.view());
@@ -268,6 +274,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if(studioPrivate!=null) PublicCompanionService.resumeStudio(this,false);
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY)Log.i("SceneVibeControls","event=ACTIVITY_RESUMED");
         if(BuildConfig.TVUX_DEVELOPER_OVERLAY){
             if(developerHandoff!=null){TvFirst009TextServiceOwner.cancelDeveloperHandoff(developerHandoff);developerHandoff=null;}

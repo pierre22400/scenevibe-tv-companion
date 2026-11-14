@@ -419,7 +419,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         long now=SystemClock.elapsedRealtime();
         if(observed==PublicLibraryEntry.State.VERIFIED)libraryCheckedAt=now;
         cachedEntry=new PublicLibraryEntry(value.binding.command,value.track.title(),value.track.revision,
-                observed,Math.min(effectDeadline(value.binding),now+LIBRARY_OBSERVATION_MS));
+                observed,Math.min(effectDeadline(value.binding),now+LIBRARY_OBSERVATION_MS),value.track.publicLibraryDetails());
         publishLibrary();
     }
 

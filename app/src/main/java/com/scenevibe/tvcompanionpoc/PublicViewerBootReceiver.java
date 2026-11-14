@@ -8,7 +8,8 @@ import android.util.Log;
 
 /**
  * Reprend le récepteur public déjà initialisé après le boot Android. Le service
- * contrôle ensuite la possession et le cache via HTTPS avant tout effet MEDIA.
+ * reprend aussi le polling du Studio Q2 si sa propre association existe, puis
+ * contrôle la possession et le cache via HTTPS avant tout effet MEDIA.
  */
 public final class PublicViewerBootReceiver extends BroadcastReceiver {
     /** Reçoit seulement les événements système et n'ouvre aucune interface. */
@@ -17,6 +18,7 @@ public final class PublicViewerBootReceiver extends BroadcastReceiver {
         if (!BuildConfig.PUBLIC_VIEWER_001
                 || (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))) return;
         Context app = context.getApplicationContext();
+        PublicCompanionService.resumeStudio(app,false);
         if (!Settings.canDrawOverlays(app) || !NotificationAccess.isGranted(app)) return;
         try {
             if (PublicCompanionService.hasHistoricalIdentity(app)

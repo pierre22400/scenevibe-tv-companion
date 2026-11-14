@@ -30,6 +30,29 @@ import java.util.zip.ZipInputStream;
 final class StudioMultimediaPackage {
     /** Display the immutable verified package title without exposing its mutable JSON document. */
     String title(){return document.optString("title","Track");}
+
+    /** Projette uniquement les données éditoriales vérifiées du paquet public historique. */
+    String publicLibraryDetails() {
+        JSONObject target=document.optJSONObject("target");
+        JSONObject program=target.optJSONObject("program");
+        JSONObject platform=target.optJSONObject("platform");
+        JSONObject edition=target.optJSONObject("edition");
+        String work=libraryValue(program.optString("title",""),"Œuvre indisponible");
+        String platformLabel="prime_video".equals(platform.optString("id"))?"Prime Video":"Plateforme indisponible";
+        if(!program.isNull("season") && !program.isNull("episode"))
+            work+=" · S"+program.optInt("season")+" E"+program.optInt("episode");
+        String editionLabel=edition!=null && "EVIDENCE_REFERENCED".equals(edition.optString("status"))
+                ?libraryValue(edition.optString("editionId",""),"Édition indisponible"):"Édition indisponible";
+        return work+" · "+platformLabel+" · "+editionLabel+"\n"+originalManifest.scenes.size()+" TEXT · "+audio.size()+" AUDIO"
+                +"\nChannel et dates indisponibles";
+    }
+
+    /** Retire les caractères de contrôle et indique une valeur manquante sans substituer un identifiant. */
+    private static String libraryValue(String value,String fallback) {
+        String clean=value.replaceAll("[\\p{Cc}\\p{Cf}]"," ").trim();
+        return clean.isEmpty()?fallback:clean;
+    }
+
     /** Decode the actual MP3 bytes at the local native/software qualification boundary. */
     interface Decoder { long decodedDurationMs(byte[] bytes) throws Exception; }
     final String trackId;
