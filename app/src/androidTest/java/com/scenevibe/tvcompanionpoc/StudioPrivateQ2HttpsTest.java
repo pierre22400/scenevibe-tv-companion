@@ -205,7 +205,7 @@ public final class StudioPrivateQ2HttpsTest {
     private static void waitMarker(UiDevice remote,String name) throws Exception {
         long deadline=SystemClock.elapsedRealtime()+60_000;
         while(SystemClock.elapsedRealtime()<deadline) {
-            if("ready".equals(remote.executeShellCommand("test -f "+PROOF_MARKERS+name+" && echo ready").trim()))return;
+            if("ready".equals(remote.executeShellCommand("cat "+PROOF_MARKERS+name).trim()))return;
             Thread.sleep(200);
         }
         fail("Q2_HOST_PROOF_MARKER_MISSING "+name);
