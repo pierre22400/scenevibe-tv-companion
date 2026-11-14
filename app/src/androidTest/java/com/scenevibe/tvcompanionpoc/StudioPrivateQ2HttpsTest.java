@@ -4,6 +4,9 @@ import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.Until;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -15,6 +18,7 @@ import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.regex.Pattern;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
@@ -94,7 +98,7 @@ public final class StudioPrivateQ2HttpsTest {
                 publicFixture.pair();
                 publicFixture.download();
                 assertTrue(publicFixture.cache().read().track.publicLibraryDetails().contains("3 TEXT · 3 AUDIO"));
-                activateFromLibrary(remote,prepared.track.title());
+                activateFromLibrary(remote,activity,prepared.track.title());
             }
             if(replacement==0)
                 instrument.runOnMainSync(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,receiver.source,prepared,true)));
@@ -124,21 +128,35 @@ public final class StudioPrivateQ2HttpsTest {
     }
 
     /** Ouvre la vraie carte TV avant de confirmer l'activation locale. */
-    private void activateFromLibrary(UiDevice remote,String title) throws Exception {
-        var tracks=remote.wait(Until.findObject(By.text("Mes Tracks")),15_000);
-        assertNotNull("Navigation privée manquante",tracks);
-        tracks.click();
-        var list=remote.wait(Until.findObject(By.text("Charger mes Tracks privées Q2").enabled(true)),15_000);
-        assertNotNull("Commande de bibliothèque manquante",list);
-        list.click();
-        var row=remote.wait(Until.findObject(By.textStartsWith(title+" · révision ")),25_000);
-        assertNotNull("Carte de la Track vérifiée manquante",row);
-        assertTrue(row.getText().contains("Cache vérifié"));
-        row.click();
-        var confirm=remote.wait(Until.findObject(By.text("Activer").clickable(true)),12_000);
+    private void activateFromLibrary(UiDevice remote,MainActivity activity,String title) throws Exception {
+        View root=activity.getWindow().getDecorView();
+        instrument.runOnMainSync(()->{
+            Button tracks=root.findViewWithTag("nav-TRACKS");
+            assertNotNull("Navigation privée manquante",tracks);
+            assertEquals("Bibliothèque",tracks.getText().toString());
+            assertTrue(tracks.requestFocus());
+            assertTrue(tracks.performClick());
+        });
+        await(()->focusAndClick(root,"Charger mes Tracks privées Q2",false),"Q2_LIBRARY_BUTTON_MISSING",20_000);
+        await(()->focusAndClick(root,title+" · révision ",true),"Q2_VERIFIED_LIBRARY_CARD_MISSING",30_000);
+        var confirm=remote.wait(Until.findObject(By.text(Pattern.compile("Activer",Pattern.CASE_INSENSITIVE)).clickable(true)),12_000);
         assertNotNull("Confirmation d'activation manquante",confirm);
         assertFalse(TvFirst009TextServiceOwner.multimediaActive());
         confirm.click();
+    }
+
+    /** Demande le focus et l'action d'un bouton visible dans la vraie arborescence de l'Activity. */
+    private static boolean focusAndClick(View view,String label,boolean cached) {
+        if(view instanceof Button button && button.getText().toString().startsWith(label) && button.isEnabled() && button.isShown()) {
+            if(cached)assertTrue(button.getText().toString().contains("Cache vérifié"));
+            assertTrue(button.requestFocus());
+            return button.performClick();
+        }
+        if(view instanceof ViewGroup group) {
+            for(int index=0;index<group.getChildCount();index++)
+                if(focusAndClick(group.getChildAt(index),label,cached))return true;
+        }
+        return false;
     }
 
     /** Démontre le différé côté MEDIA et la continuité des deux pointeurs, puis vérifie le refus d'un grant révoqué. */

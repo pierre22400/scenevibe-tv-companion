@@ -10,7 +10,6 @@ unsigned=app/build/outputs/apk/tvux002/app-tvux002-unsigned.apk
 tests=app/build/outputs/apk/androidTest/tvux002/app-tvux002-androidTest.apk
 mkdir -p "$proof"
 certificate=f908bf564ed97ba67e02b1ebc89eb0239cf980752587f55eb9ec0419791a2e9c
-printf '%s  %s\n' 003f1a74c420b909a0fa241ed1cc674b86c17ef00c5b67105c84e463e9945b81 "$v38" | sha256sum -c -
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 printf '%s' "${SCENEVIBE_ANDROID_KEYSTORE_BASE64:?}" | base64 -d > "$tmp/m5.jks"
@@ -18,6 +17,14 @@ printf '%s' "${SCENEVIBE_ANDROID_KEYSTORE_BASE64:?}" | base64 -d > "$tmp/m5.jks"
 # Charge les deux routines historiques sans les opérations v34/v36/v37.
 sed -n '/^verify()/,/^}/p; /^sign()/,/^}/p' qualification/viewer001c/sign.sh > "$tmp/m5-functions.sh"
 source "$tmp/m5-functions.sh"
+if [[ "$#" -eq 1 && "$1" == tests ]]; then
+    signed_tests="$RUNNER_TEMP/studio-q2-v40-tests-m5.apk"
+    sign "$tests" "$signed_tests"
+    "$tools/apksigner" verify --print-certs "$signed_tests" | grep -Fx "Signer #1 certificate SHA-256 digest: $certificate"
+    exit 0
+fi
+test "$#" -eq 0
+printf '%s  %s\n' 003f1a74c420b909a0fa241ed1cc674b86c17ef00c5b67105c84e463e9945b81 "$v38" | sha256sum -c -
 output="$proof"
 verify "$v38" 38
 sign "$unsigned" "$v40"

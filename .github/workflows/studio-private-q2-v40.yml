@@ -111,3 +111,42 @@ jobs:
             app/build/test-results/testTvux002UnitTest/*.xml
           if-no-files-found: warn
           retention-days: 30
+
+  signed-harness:
+    if: github.repository == 'pierre22400/scenevibe-tv-companion' && contains(github.event.head_commit.message, '[q2d-test]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build only the qualification APKs to run with the pinned candidate
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true assembleTvux002AndroidTest
+          mkdir -p emulator-tools
+          bash qualification/viewer001c/build-player.sh emulator-tools/scenevibe-q2d-owned-player.apk
+      - name: Sign the replacement instrumentation with the historic key
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: |
+          bash qualification/studio-private-q2/sign.sh tests
+          cp "$RUNNER_TEMP/studio-q2-v40-tests-m5.apk" emulator-tools/scenevibe-q2d-tests-m5.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studio-private-q2-v40-emulator-tools
+          path: emulator-tools/*.apk
+          if-no-files-found: error
+          retention-days: 7
