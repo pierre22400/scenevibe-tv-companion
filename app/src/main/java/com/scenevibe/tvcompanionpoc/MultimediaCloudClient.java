@@ -89,6 +89,15 @@ final class MultimediaCloudClient {
     }
     /** Discover a bounded owner-authorized private catalogue, without granting rendering. */
     JSONObject publications() throws Exception {return new JSONObject(TvFirst008Wire.utf8(request("GET","publications",null,null,null,"application/json",200_000,-1)));}
+    /** Read the Q2-only enriched list over the existing device proof. */
+    JSONObject studioLibrary() throws Exception {
+        return new JSONObject(TvFirst008Wire.utf8(request("GET","library",null,null,null,"application/json",240_000,-1)));
+    }
+    /** Discover the latest requested private revision or report bounded download progress. */
+    JSONObject studioInbox(JSONObject progress) throws Exception {
+        byte[] body=progress==null?null:progress.toString().getBytes(StandardCharsets.UTF_8);
+        return new JSONObject(TvFirst008Wire.utf8(request(progress==null?"GET":"POST","inbox",null,null,body,"application/json",16_384,-1)));
+    }
     /** Read the actual OS revision rather than assuming continuity with a legacy SHADOW counter. */
     long currentRevision() throws Exception {
         JSONObject current=new JSONObject(TvFirst008Wire.utf8(request("GET","association",null,null,null,"application/json",16_384,-1)));

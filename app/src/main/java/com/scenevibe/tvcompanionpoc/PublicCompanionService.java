@@ -13,6 +13,7 @@ import java.util.List;
 
 /**
  * Propriétaire persistant des commandes publiques après fermeture de l'Activity.
+ * En v40, le même service héberge aussi le récepteur privé Q2 indépendant.
  * Notification passive et même permission FGS déjà présente ; aucun lecteur
  * tiers n'est lancé, pausé ou contrôlé. Le renderer reste OverlayService v31.
  */
@@ -22,6 +23,8 @@ public final class PublicCompanionService extends Service {
     private static volatile String failure="";
     private PublicCompanionOwner owner;
     private PublicCompanionOwner historical;
+    private static volatile StudioPrivateReceiver studio;
+    static final String SHOW_STUDIO_PAIRING="com.scenevibe.tvcompanionpoc.SHOW_STUDIO_PAIRING";
     static final String SHOW_PUBLIC_PAIRING="com.scenevibe.tvcompanionpoc.SHOW_PUBLIC_PAIRING";
     private static PublicCompanionOwner ownedFixture;
     /** Le banc utilise son seul réseau synthétique ; l'APK signé interdit cette substitution. */
@@ -54,6 +57,21 @@ public final class PublicCompanionService extends Service {
             android.util.Log.i("SceneVibePublic","HISTORICAL_RECEIVER_START_UNAVAILABLE");
         }
     }
+    /** Accède uniquement au récepteur Q2 de cette instance, sans lire de secret. */
+    static StudioPrivateReceiver studio(){return studio;}
+
+    /** Réveille le service existant seulement après sélection de Q2 ou quand sa TV est déjà associée. */
+    static void resumeStudio(android.content.Context context,boolean pair) {
+        if(BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty())return;
+        try {
+            if(pair || StudioPrivateReceiver.hasIdentity(context)) {
+                Intent action=new Intent(context,PublicCompanionService.class);
+                if(pair)action.setAction(SHOW_STUDIO_PAIRING);
+                context.startForegroundService(action);
+            }
+        }catch(RuntimeException unavailable){android.util.Log.i("SceneVibePublic","STUDIO_Q2_RECEIVER_START_UNAVAILABLE");}
+    }
+
     /** Démarre les transports présents et n'ouvre un code public que sur demande explicite. */
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         if(!BuildConfig.PUBLIC_AUTONOMOUS_001B){stopSelf();return START_NOT_STICKY;}
@@ -79,14 +97,20 @@ public final class PublicCompanionService extends Service {
         }catch(RuntimeException refused){
             failure="Catalogue public non configuré dans cet environnement.";
         }
+        try {
+            if(studio==null && !BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty()
+                    && (intent!=null && SHOW_STUDIO_PAIRING.equals(intent.getAction()) || StudioPrivateReceiver.hasIdentity(this))) {
+                studio=new StudioPrivateReceiver(this);
+            }
+        } catch(RuntimeException refused){android.util.Log.i("SceneVibePublic","STUDIO_Q2_RECEIVER_UNAVAILABLE");}
         current=owner!=null?owner:historical;
-        if(current==null){stopSelf();return START_NOT_STICKY;}
-        libraryOwners=owner!=null && historical!=null?Arrays.asList(owner,historical):Collections.singletonList(current);
+        if(current==null && studio==null){stopSelf();return START_NOT_STICKY;}
+        libraryOwners=current==null?Collections.emptyList():owner!=null && historical!=null?Arrays.asList(owner,historical):Collections.singletonList(current);
         failure="";
         return START_STICKY;
     }
     /** Aucun client externe ne peut se lier au service ou récupérer son credential. */
     @Override public IBinder onBind(Intent intent){return null;}
     /** Ferme le worker avant de retirer le propriétaire observable. */
-    @Override public void onDestroy(){if(owner!=null)owner.close();if(historical!=null)historical.close();if(current==owner || current==historical){current=null;libraryOwners=Collections.emptyList();}super.onDestroy();}
+    @Override public void onDestroy(){if(owner!=null)owner.close();if(historical!=null)historical.close();if(studio!=null){studio.close();studio=null;}if(current==owner || current==historical){current=null;libraryOwners=Collections.emptyList();}super.onDestroy();}
 }

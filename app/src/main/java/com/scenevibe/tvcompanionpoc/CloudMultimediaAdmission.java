@@ -8,7 +8,8 @@ import org.json.JSONObject;
  * Le mapping technique est une égalité de documents immuables, pas une preuve
  * juridique ou une reconnaissance automatique d'édition. L'utilisateur doit
  * confirmer l'édition de référence et l'absence de publicité à chaque départ.
- * UNKNOWN reste UNKNOWN dans le document éditorial d'origine.
+ * UNKNOWN reste UNKNOWN dans le document éditorial d'origine. Q2 exige en
+ * plus le média natif exact, indépendamment de la correspondance du titre.
  */
 final class CloudMultimediaAdmission {
     private static boolean ownedMediaSessionFixture;
@@ -17,17 +18,18 @@ final class CloudMultimediaAdmission {
     static final String MANIFEST="9b034c30a6d68a8f822dd39696fe95cc8435450ba3c1deaeb0ce910bffb71554";
     final TvFirst008Source.MultimediaReference reference;
     private final PublicRuntimeReference publicReference;
+    private final boolean strictIdentity;
     final ScheduledTrack identity;
     final String activation=java.util.UUID.randomUUID().toString();
 
     /** Retain one validated current cache; no public constructor can manufacture a permit. */
     private CloudMultimediaAdmission(TvFirst008Source.MultimediaReference reference,ScheduledTrack identity) {
-        this.reference=reference;this.identity=identity;this.publicReference=null;
+        this.reference=reference;this.identity=identity;this.publicReference=null;this.strictIdentity=reference.prepared.profile.studioPrivate();
     }
 
     /** Conserve une autorité publique explicite sans fabriquer de référence privée. */
     private CloudMultimediaAdmission(PublicRuntimeReference reference,ScheduledTrack identity){
-        this.reference=null;this.publicReference=reference;this.identity=identity;
+        this.reference=null;this.publicReference=reference;this.identity=identity;this.strictIdentity=true;
     }
 
     /** Admission publique automatique après code TV : cache et programme exacts restent obligatoires. */
@@ -48,7 +50,7 @@ final class CloudMultimediaAdmission {
 
     /** Réutilise le matcher privé ; le public refuse en plus un mediaId absent ou contradictoire. */
     boolean matches(MediaSessionProbe.Snapshot snapshot){
-        if(publicReference!=null && (snapshot==null || snapshot.mediaId==null || !identity.mediaIdentity.videoId.equals(snapshot.mediaId.trim())))return false;
+        if(strictIdentity && (snapshot==null || snapshot.mediaId==null || !identity.mediaIdentity.videoId.equals(snapshot.mediaId.trim())))return false;
         return MediaIdentityMatcher.matches(identity,snapshot);
     }
     /** Fournit le même calendrier et les mêmes ressources aux moteurs historiques. */
@@ -77,7 +79,10 @@ final class CloudMultimediaAdmission {
             MultimediaPrivateCache.Prepared prepared=reference.prepared;
             boolean manual=BuildConfig.REAL_TRACK_E2E_001 && ManualTrackIdentity.matches(prepared.profile);
             boolean imported=BuildConfig.REAL_TRACK_E2E_001 && ImportedTrackIdentity.matches(prepared.profile);
-            if(!manual && !imported && (!mapped(prepared.profile) || prepared.track.calendar.events().size()!=19 || prepared.track.audio.size()!=3))return null;
+            boolean studio=prepared.profile.studioPrivate() && reference.studioQ2;
+            if (prepared.profile.studioPrivate() && !studio) return null;
+            if(!studio && !manual && !imported && (!mapped(prepared.profile) || prepared.track.calendar.events().size()!=19 || prepared.track.audio.size()!=3))return null;
+            if(studio && prepared.track.calendar.events().size()<=prepared.track.audio.size())return null;
             if((manual || imported) && (prepared.track.audio.isEmpty()
                     || prepared.track.calendar.events().size()<=prepared.track.audio.size()))return null;
             ScheduledTrack identity=TrackParser.parse(new JSONObject(TvFirst008Wire.utf8(prepared.profile.runtimeBytes)),

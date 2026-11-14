@@ -65,7 +65,7 @@ public final class TvShellController {
     private TextView publicLibraryStatus;
     private boolean restoring;
     private String defaultFocus;
-    private View developerPage;
+    private View developerPage, studioPrivatePage;
 
     /** Builds one shell and reuses the real control View tree instead of static placeholders. */
     public TvShellController(Activity activity, LinearLayout runtimeControls, RuntimeReader runtime,
@@ -431,6 +431,7 @@ public final class TvShellController {
     /** Rebuilds only presentation Views; no service or durable store is owned or cleared here. */
     private void render() {
         restoring = true;
+        if(studioPrivatePage!=null && studioPrivatePage.getParent() instanceof ViewGroup)((ViewGroup)studioPrivatePage.getParent()).removeView(studioPrivatePage);
         if(developerPage!=null && developerPage.getParent() instanceof ViewGroup)((ViewGroup)developerPage.getParent()).removeView(developerPage);
         if (runtimeControls.getParent() instanceof ViewGroup) ((ViewGroup) runtimeControls.getParent()).removeView(runtimeControls);
         if (multimediaControls != null && multimediaControls.getParent() instanceof ViewGroup)
@@ -664,9 +665,15 @@ public final class TvShellController {
                 publicLibraryStatus.setBackground(ui.focusBackground(R.color.scenevibe_card, R.color.scenevibe_public_action_border, 8, false));
                 target(publicLibraryStatus, "public-library-status");
                 block(page, publicLibraryStatus, 6);
-                block(page, text("Tracks privées", 18, true, 650, R.color.scenevibe_foreground), 16);
+                block(page, text("Mes Tracks privées", 18, true, 650, R.color.scenevibe_foreground), 16);
             } else {
                 introduction("Mes Tracks", "Bibliothèque multimédia privée", "Catalogue et cache de cette TV.");
+            }
+            if(studioPrivatePage!=null) {
+                block(page,text("Studio Q2",16,true,650,R.color.scenevibe_foreground),10);
+                styleRuntimeControls(studioPrivatePage,new int[]{40});
+                block(page,studioPrivatePage,12);
+                block(page,text("Bibliothèque privée historique",16,true,650,R.color.scenevibe_foreground),10);
             }
             if (source instanceof TvAccountSource) {
                 TvAccountSource account = (TvAccountSource) source;
@@ -1015,6 +1022,12 @@ public final class TvShellController {
             ViewGroup group = (ViewGroup) view; group.setClipChildren(false); group.setClipToPadding(false);
             for (int i = 0; i < group.getChildCount(); i++) styleRuntimeControls(group.getChildAt(i), buttonIndex);
         }
+    }
+
+    /** Ajoute la bibliothèque privée Q2 au parcours existant des Tracks. */
+    public void setStudioPrivatePage(View view) {
+        studioPrivatePage=view;
+        if(navigation.current().screen==TvNavigation.Screen.TRACKS)render();
     }
 
     /** Attach only normal Activity views; the shared service owns every overlay window. */

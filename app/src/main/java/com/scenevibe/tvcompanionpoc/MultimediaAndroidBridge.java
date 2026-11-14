@@ -39,6 +39,25 @@ final class MultimediaAndroidBridge {
         source.multimediaCached(binding,session,()->{});
         return prepared;
     }
+    /** Retry the same owner request through the historical assignment, cache and receipt contracts. */
+    MultimediaPrivateCache.Prepared receive(StudioPrivateCommand command) throws Exception {
+        if(command.cacheConfirmed) {
+            MultimediaPrivateCache.Prepared existing=cache.read();
+            if(existing!=null && command.id.equals(existing.binding.intention) && source.studioReceiptMatches(existing.binding))return existing;
+        }
+        if(!TvFirst009TextServiceOwner.beginStudioCacheSwitch()) {
+            client.studioInbox(command.progress("DEFERRED"));
+            return null;
+        }
+        try {
+            client.studioInbox(command.progress("DOWNLOADING"));
+            MultimediaCloudClient.Binding binding=client.select(source.pendingStudioPrivate(command,client.currentRevision()));
+            MultimediaPrivateCache.Prepared prepared=cache.download(client,binding);
+            source.multimediaCached(binding,session,()->{});
+            return prepared;
+        } finally {TvFirst009TextServiceOwner.endStudioCacheSwitch();}
+    }
+
     /** Reopen private data after restart without a credential, HTTP request or playback admission. */
     static MultimediaPrivateCache.Prepared restoreCache(Context context,TvFirst008Source source) throws Exception {
         String generation=source.multimediaCachedGeneration().replace("-","");
