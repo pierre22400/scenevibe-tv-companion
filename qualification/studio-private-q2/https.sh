@@ -14,4 +14,4 @@ adb install "$RUNNER_TEMP/q2d-test/scenevibe-q2d-owned-player.apk"
 adb shell appops set "$package" SYSTEM_ALERT_WINDOW allow
 adb shell cmd notification allow_listener "$package/$package.MediaSessionAccessService"
 adb shell input keyevent KEYCODE_WAKEUP
-node qualification/studio-private-q2/https.mjs
+timeout --foreground 12m node qualification/studio-private-q2/https.mjs
