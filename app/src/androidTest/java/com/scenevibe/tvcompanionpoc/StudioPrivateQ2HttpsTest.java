@@ -4,10 +4,14 @@ import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.Until;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
 import com.scenevibe.tvcompanionpoc.presentation.TvAccountSource;
+import java.io.File;
+import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -22,6 +26,7 @@ import static org.junit.Assert.*;
  */
 @RunWith(AndroidJUnit4.class)
 public final class StudioPrivateQ2HttpsTest {
+    private static final String PROOF_MARKERS="/data/local/tmp/scenevibe-q2d-";
     private final Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
     private final Context target=instrument.getTargetContext();
 
@@ -60,6 +65,7 @@ public final class StudioPrivateQ2HttpsTest {
     @Test public void render() throws Exception {
         UiDevice remote=HistoricalM5ContinuityTest.device(instrument);
         var activity=(MainActivity)instrument.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        PublicNativeFixture publicFixture=null;
         try {
             int revision=Integer.parseInt(InstrumentationRegistry.getArguments().getString("revision"));
             await(()->{
@@ -82,7 +88,16 @@ public final class StudioPrivateQ2HttpsTest {
             }
             assertTrue("Cached publication absent from authorized private library",found);
             assertFalse(TvFirst009TextServiceOwner.multimediaActive());
-            instrument.runOnMainSync(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,receiver.source,prepared,true)));
+            int replacement=Integer.parseInt(InstrumentationRegistry.getArguments().getString("replacement","0"));
+            if(replacement>0) {
+                publicFixture=new PublicNativeFixture();
+                publicFixture.pair();
+                publicFixture.download();
+                assertTrue(publicFixture.cache().read().track.publicLibraryDetails().contains("3 TEXT · 3 AUDIO"));
+                activateFromLibrary(remote,prepared.track.title());
+            }
+            if(replacement==0)
+                instrument.runOnMainSync(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,receiver.source,prepared,true)));
             await(TvFirst009TextServiceOwner::multimediaActive,"Q2_MEDIA_ADMISSION_MISSING",15_000);
             int texts=0,audios=0;
             for(var event:prepared.track.calendar.events()) {
@@ -101,7 +116,108 @@ public final class StudioPrivateQ2HttpsTest {
             assertEquals(revision+1,texts);
             assertEquals(1,audios);
             HistoricalM5ContinuityTest.report(instrument,"Q2D_ANDROID_TEXT_AUDIO_PASS revision="+revision+" text="+texts+" audio="+audios);
-        } finally {instrument.runOnMainSync(()->{TvFirst009TextServiceOwner.requestStop(target);activity.finish();});}
+            if(replacement>0) verifyReplacement(remote,activity,receiver,prepared,replacement,publicFixture);
+        } finally {
+            instrument.runOnMainSync(()->{TvFirst009TextServiceOwner.requestStop(target);activity.finish();});
+            if(publicFixture!=null)publicFixture.close(true);
+        }
+    }
+
+    /** Ouvre la vraie carte TV avant de confirmer l'activation locale. */
+    private void activateFromLibrary(UiDevice remote,String title) throws Exception {
+        var tracks=remote.wait(Until.findObject(By.text("Mes Tracks")),15_000);
+        assertNotNull("Navigation privée manquante",tracks);
+        tracks.click();
+        var list=remote.wait(Until.findObject(By.text("Charger mes Tracks privées Q2").enabled(true)),15_000);
+        assertNotNull("Commande de bibliothèque manquante",list);
+        list.click();
+        var row=remote.wait(Until.findObject(By.textStartsWith(title+" · révision ")),25_000);
+        assertNotNull("Carte de la Track vérifiée manquante",row);
+        assertTrue(row.getText().contains("Cache vérifié"));
+        row.click();
+        var confirm=remote.wait(Until.findObject(By.text("Activer").clickable(true)),12_000);
+        assertNotNull("Confirmation d'activation manquante",confirm);
+        assertFalse(TvFirst009TextServiceOwner.multimediaActive());
+        confirm.click();
+    }
+
+    /** Démontre le différé côté MEDIA et la continuité des deux pointeurs, puis vérifie le refus d'un grant révoqué. */
+    private void verifyReplacement(UiDevice remote,MainActivity activity,StudioPrivateReceiver receiver,
+            MultimediaPrivateCache.Prepared previous,int revision,PublicNativeFixture publicFixture) throws Exception {
+        var publicBefore=publicFixture.cache().read().binding;
+        boolean text=TvFirst009TextServiceOwner.multimediaTextEnabled(),audio=TvFirst009TextServiceOwner.multimediaAudioEnabled();
+        HistoricalM5ContinuityTest.report(instrument,"Q2D_ACTIVE_R2_READY");
+        await(()->receiver.status().contains("r"+revision+" en attente"),"Q2_ACTIVE_REVISION_NOT_DEFERRED",75_000);
+        assertTrue(TvFirst009TextServiceOwner.multimediaActive());
+        assertTrue(previous.binding.same(MultimediaAndroidBridge.restoreCache(target,receiver.source).binding));
+        assertTrue(publicBefore.same(publicFixture.cache().read().binding));
+        HistoricalM5ContinuityTest.report(instrument,"Q2D_DEFERRED_R3_CACHE_R2_PRESERVED");
+        waitMarker(remote,"deferred-checked");
+        instrument.runOnMainSync(()->TvFirst009TextServiceOwner.requestStop(activity));
+        await(()->!TvFirst009TextServiceOwner.controlBusy() && receiver.prepared()!=null
+                && receiver.prepared().track.revision==revision,"Q2_DEFERRED_REVISION_NOT_RESUMED",105_000);
+        var replaced=receiver.prepared();
+        assertEquals(previous.track.trackId,replaced.track.trackId);
+        assertFalse(previous.binding.sha256.equals(replaced.binding.sha256));
+        assertTrue(publicBefore.same(publicFixture.cache().read().binding));
+        assertEquals(1,cacheCount("public001b"));
+        assertEquals(1,cacheCount("multimedia003d"));
+        assertEquals(text,TvFirst009TextServiceOwner.multimediaTextEnabled());
+        assertEquals(audio,TvFirst009TextServiceOwner.multimediaAudioEnabled());
+        refuseCorruptedResource(receiver,replaced);
+        HistoricalM5ContinuityTest.report(instrument,"Q2D_REPLACEMENT_AND_TWO_CACHES_PASS");
+
+        var session=receiver.source.multimediaSession();
+        String token=session.token();
+        String url="/api/v1/devices/"+session.deviceId()+"/multimedia/library?profile="
+                +MultimediaDeliveryProfile.PROFILE+"&generation="+session.generation();
+        waitMarker(remote,"grant-revoked");
+        try (var result=new MultimediaHttpsPort(BuildConfig.STUDIO_PRIVATE_ORIGIN).open("GET",url,token,null)) {
+            assertEquals("Private library must reject the revoked device grant",403,result.status);
+        }
+        await(()->!receiver.source.busy(),"Q2_REVOKED_SOURCE_BUSY",25_000);
+        instrument.runOnMainSync(receiver.source::refresh);
+        await(()->receiver.source.accountStage()==TvAccountSource.AccountStage.ERROR,"Q2_REVOKED_GRANT_STILL_ACTIVE",25_000);
+        instrument.runOnMainSync(()->assertFalse(TvFirst009TextServiceOwner.requestMultimediaStart(activity,receiver.source,replaced,true)));
+        assertTrue(replaced.binding.same(MultimediaAndroidBridge.restoreCache(target,receiver.source).binding));
+        HistoricalM5ContinuityTest.report(instrument,"Q2D_REVOKED_DEVICE_REFUSED_CACHE_PRESERVED");
+    }
+
+    /** Attend un point de rendez-vous sans écrire de token ou de métadonnée utilisateur. */
+    private static void waitMarker(UiDevice remote,String name) throws Exception {
+        long deadline=SystemClock.elapsedRealtime()+60_000;
+        while(SystemClock.elapsedRealtime()<deadline) {
+            if("ready".equals(remote.executeShellCommand("test -f "+PROOF_MARKERS+name+" && echo ready").trim()))return;
+            Thread.sleep(200);
+        }
+        fail("Q2_HOST_PROOF_MARKER_MISSING "+name);
+    }
+
+    /** Compte les répertoires finaux natifs sans lire des fichiers d'une autre application. */
+    private long cacheCount(String domain) throws Exception {
+        try(var entries=Files.walk(new File(target.getFilesDir(),domain).toPath(),2)) {
+            return entries.filter(Files::isDirectory)
+                    .filter(path->MultimediaCacheDirectories.isSet(path.getFileName().toString())).count();
+        }
+    }
+
+    /** Vérifie le refus d'un MP3 altéré dans le cache de qualification et restaure les octets dans tous les cas. */
+    private void refuseCorruptedResource(StudioPrivateReceiver receiver,MultimediaPrivateCache.Prepared prepared) throws Exception {
+        var path=prepared.resource(prepared.profile.resources.get(0).id).toPath();
+        byte[] valid=Files.readAllBytes(path);
+        byte[] changed=valid.clone();
+        changed[0]^=1;
+        try {
+            Files.write(path,changed);
+            try {
+                MultimediaAndroidBridge.restoreCache(target,receiver.source);
+                fail("Corrupted MP3 accepted");
+            } catch(IllegalArgumentException refused) {
+                assertNotNull(refused.getMessage());
+            }
+        } finally {Files.write(path,valid);}
+        assertTrue(prepared.binding.same(MultimediaAndroidBridge.restoreCache(target,receiver.source).binding));
+        HistoricalM5ContinuityTest.report(instrument,"Q2D_CORRUPTED_MP3_REFUSED");
     }
 
     /** Met à jour uniquement la session native du lecteur synthétique possédé par le banc. */

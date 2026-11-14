@@ -12,14 +12,21 @@ final class PublicLibraryEntry {
 
     final String command;
     private final String title;
+    private final String details;
     private final long revision;
     private final long expiresAt;
     final State state;
 
     /** Retient uniquement le titre vérifié et les faits nécessaires à la bibliothèque. */
     PublicLibraryEntry(String command, String title, long revision, State state, long expiresAt) {
+        this(command,title,revision,state,expiresAt,"");
+    }
+
+    /** Ajoute les métadonnées issues du paquet public déjà validé. */
+    PublicLibraryEntry(String command, String title, long revision, State state, long expiresAt, String details) {
         this.command = command;
         this.title = title.replaceAll("[\\p{Cc}\\p{Cf}]", " ").trim();
+        this.details = details;
         this.revision = revision;
         this.state = state;
         this.expiresAt = expiresAt;
@@ -27,7 +34,7 @@ final class PublicLibraryEntry {
 
     /** Conserve l'identité de présentation quand un contrôle change son état. */
     PublicLibraryEntry withState(State next, long deadline) {
-        return new PublicLibraryEntry(command, title, revision, next, deadline);
+        return new PublicLibraryEntry(command, title, revision, next, deadline, details);
     }
 
     /** Distingue le cache revalidé, le différé et la perte d'autorité sans inférer un rendu. */
@@ -48,6 +55,6 @@ final class PublicLibraryEntry {
                 default -> throw new IllegalStateException("PUBLIC_LIBRARY_STATE");
             };
         }
-        return label + "\n" + status;
+        return label + "\n" + (details.isEmpty() ? "" : details + "\n") + status;
     }
 }

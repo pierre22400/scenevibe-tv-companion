@@ -68,3 +68,16 @@ done
 adb shell input keyevent KEYCODE_WAKEUP
 qualify 40 false v40-after-reboot
 printf '%s\n' SIGNED_V38_TO_V40_AND_HISTORICAL_CACHES_PASS > "$proof/upgrade-verdict.txt"
+
+# Les générations et les pannes ci-dessous appartiennent au seul AVD jetable.
+qualify_cache() {
+    local class="$1" testcase="$2"
+    timeout --foreground 210s adb shell am instrument -w -r -e class "$package.$class#$testcase" \
+        -e disposableQ2 true "$package.test/androidx.test.runner.AndroidJUnitRunner" \
+        | tr -d '\r' | tee "$proof/cache-$testcase.txt"
+    grep -Fxq 'OK (1 test)' "$proof/cache-$testcase.txt"
+}
+qualify_cache MultimediaCacheLifecycleAndroidTest oneCachePerDomainAcrossGenerations
+qualify_cache MultimediaCacheLifecycleAndroidTest publicReplacementsAndDiskFailure
+qualify_cache MultimediaCacheLifecycleAndroidTest privateRevisionsAndDiskFailure
+adb logcat -d -s SceneVibeCacheQ2:I SceneVibeCacheQ3:I > "$proof/cache-domains.txt"

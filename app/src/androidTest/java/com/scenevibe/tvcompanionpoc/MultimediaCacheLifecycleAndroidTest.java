@@ -70,8 +70,13 @@ public final class MultimediaCacheLifecycleAndroidTest {
                         +" preservedPrivateBytes="+privateBytes);
                 abandoned(root,"set-00000000000000000000000000000001.partial");
                 abandoned(root,"set-00000000000000000000000000000002");
-                fault.full=true;
                 int receipts=fixture.cacheReceipts;
+                fixture.corrupt=true;
+                expectFailure(IllegalArgumentException.class,()->nextPublic(fixture,cache,client));
+                assertEquals(receipts,fixture.cacheReceipts);
+                assertTrue(retained.binding.same(cache.read().binding));
+                fixture.corrupt=false;
+                fault.full=true;
                 expectFailure(FileSystemException.class,()->nextPublic(fixture,cache,client));
                 assertEquals(receipts,fixture.cacheReceipts);
                 assertTrue(retained.binding.same(cache.read().binding));
@@ -175,6 +180,11 @@ public final class MultimediaCacheLifecycleAndroidTest {
             abandoned(fixture.root,"set-00000000000000000000000000000002");
             fixture.replacement();
             int receipts=fixture.port.receipts;
+            fixture.port.fault="corrupt";
+            expectFailure(IllegalArgumentException.class,()->cache.download(fixture.client,fixture.binding));
+            assertEquals(receipts,fixture.port.receipts);
+            assertTrue(retained.binding.same(fixture.reopen().read().binding));
+            fixture.port.fault="";
             fault.full=true;
             expectFailure(FileSystemException.class,()->cache.download(fixture.client,fixture.binding));
             assertEquals(0,stages(fixture.root));
@@ -215,9 +225,10 @@ public final class MultimediaCacheLifecycleAndroidTest {
 
     /** Refuse un appareil physique et conserve les données dans des générations synthétiques. */
     private static void requireEmulator() throws Exception {
-        assertTrue(BuildConfig.DEBUG);
         assertEquals("1",UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
                 .executeShellCommand("getprop ro.kernel.qemu").trim());
+        assertTrue(BuildConfig.DEBUG || !BuildConfig.STUDIO_PRIVATE_ORIGIN.isEmpty()
+                && "true".equals(InstrumentationRegistry.getArguments().getString("disposableQ2")));
     }
 
     /** Crée une commande isolée en réutilisant le même appareil associé. */

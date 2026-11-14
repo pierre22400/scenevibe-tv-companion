@@ -25,4 +25,14 @@ public final class PublicLibraryEntryTest {
         assertTrue(waiting.withState(PublicLibraryEntry.State.UNAVAILABLE, 0)
                 .describe("command", 1).contains("Publication ou autorisation indisponible"));
     }
+
+    /** Rend lisibles les métadonnées du cache vérifié et les conserve pendant les transitions. */
+    @Test public void displaysVerifiedEditorialDetailsAcrossStates() {
+        String details = "Columbo — Eaux troubles · S4 E4 · Prime Video\n3 TEXT · 3 AUDIO";
+        PublicLibraryEntry entry = new PublicLibraryEntry("command", "Commentaires de qualification", 2,
+                PublicLibraryEntry.State.VERIFIED, 30, details);
+        assertEquals("Commentaires de qualification · révision 2\n" + details + "\nCache vérifié",
+                entry.describe("other", 29));
+        assertTrue(entry.withState(PublicLibraryEntry.State.WAITING, 35).describe("other", 32).contains(details));
+    }
 }
