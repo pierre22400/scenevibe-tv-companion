@@ -150,6 +150,12 @@ async function waitAndroidReceipt(browserContext, history, revision, requestId) 
     if (status.requests?.find(request => request.id === requestId)?.status === "CACHE_CONFIRMED") return
     await new Promise(resolve => setTimeout(resolve, 3000))
   }
+  const services = adb("shell", "dumpsys", "activity", "services", pkg + "/.PublicCompanionService")
+  let proc = ""
+  try { proc = adb("shell", "pidof", pkg) } catch { /* Absence prévue en cas d’arrêt du service. */ }
+  const logs = adb("logcat", "-d", "-s", "SceneVibePublic:I", "SceneVibeText009:I", "SceneVibeMultimediaHttp:I")
+  await writeFile(join(output, "android-receiver-r" + revision + ".txt"),
+    "foreground=" + services.includes("isForeground=true") + " pid=" + proc + "\n" + logs)
   throw new Error("ANDROID_FRESH_CACHE_RECEIPT_TIMEOUT_R" + revision)
 }
 
@@ -231,7 +237,10 @@ try {
     const firstRelease = await clickResponse(page, "Rendre cette révision distribuable en privé", "/authorize")
     await pairAndroid(page)
     const firstPath = `${root}/projects/${first.projectId}/revisions`
+    // AndroidJUnitRunner stops the target process when instrumentation finishes.
+    adb("shell", "am", "start", "-W", "-n", pkg + "/.MainActivity")
     const request = await assignAndroid(context, firstPath, 1, firstRelease)
+    adb("shell", "input", "keyevent", "KEYCODE_HOME")
     await waitAndroidReceipt(context, firstPath, 1, request)
     await renderAndroid(1)
     await rebootAndroid()
