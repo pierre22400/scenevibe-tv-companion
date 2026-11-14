@@ -54,6 +54,8 @@ jobs:
           SCENEVIBE_PLAYWRIGHT_MODULE: ${{ runner.temp }}/q2d-chrome/node_modules/playwright
           SCENEVIBE_STUDIO_EVIDENCE: ${{ runner.temp }}/q2d-integrated
           SCENEVIBE_Q2_CLOUD_COMMIT: b9dd42a5d6baba98b2df7f6b98706437aac3d57b
+          # La réception après un démarrage à froid est documentée dans le run 43647342215.
+          SCENEVIBE_Q2_REPLACEMENT_ONLY: 'true'
         with:
           api-level: 31
           target: android-tv

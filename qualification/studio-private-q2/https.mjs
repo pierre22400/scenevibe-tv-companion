@@ -19,6 +19,7 @@ const observations = []
 const pkg = "com.scenevibe.tvcompanionpoc"
 const instrumentation = pkg + ".test/androidx.test.runner.AndroidJUnitRunner"
 const cloudCommit = process.env.SCENEVIBE_Q2_CLOUD_COMMIT
+const replacementOnly = process.env.SCENEVIBE_Q2_REPLACEMENT_ONLY === "true"
 assert.ok(output && process.env.GITHUB_SHA && /^[a-f0-9]{40}$/.test(cloudCommit ?? ""), "PRIVATE_PROOF_SCOPE_REQUIRED")
 
 /** Consigne seulement un fait démontré et son étape. */
@@ -296,12 +297,14 @@ try {
     const request = await assignAndroid(context, deviceId, firstPath, 1, initialRelease)
     adb("shell", "input", "keyevent", "KEYCODE_HOME")
     await waitAndroidReceipt(context, firstPath, 1, request.requestId)
-    await renderAndroid(1)
-    await wakeAndroid()
-    await renderAndroid(1, "android-q2d-r1-after-wake-and-process-recreation")
-    check("android_private_cache_read_after_wake_and_process_recreation",true)
-    await rebootAndroid()
-    check("android_boot_receiver_foreground", true)
+    if (!replacementOnly) {
+      await renderAndroid(1)
+      await wakeAndroid()
+      await renderAndroid(1, "android-q2d-r1-after-wake-and-process-recreation")
+      check("android_private_cache_read_after_wake_and_process_recreation",true)
+      await rebootAndroid()
+      check("android_boot_receiver_foreground", true)
+    }
   }
   check("first_private_save_2_text_1_audio", first.revision === 1 && first.textCount === 2 && first.audioCount === 1)
   await authenticate(second)
@@ -354,7 +357,7 @@ try {
       data:{...request, requestId:randomUUID(),publicationId:initialRelease.publicationId} })
     check("unrelated_publication_revision_refused",incompatible.status()===422)
     await waitAndroidReceipt(second, history, 2, request.requestId)
-    check("android_new_request_after_reboot_received", true)
+    check(replacementOnly ? "android_second_revision_same_generation" : "android_new_request_after_reboot_received", true)
 
     await text(reopened, 70, "Quatrième repère synthétique.")
     const third = await save(reopened)
@@ -392,7 +395,7 @@ try {
     check("android_revoked_device_refused_and_cache_preserved",native.log.includes("Q2D_REVOKED_DEVICE_REFUSED_CACHE_PRESERVED"))
   }
   await reopened.screenshot({ path: join(output, "private-editor.png"), fullPage: true })
-  await writeFile(join(output, "private-proof.json"), JSON.stringify({ sha: process.env.GITHUB_SHA, cloudCommit, observations,
+  await writeFile(join(output, "private-proof.json"), JSON.stringify({ sha: process.env.GITHUB_SHA, cloudCommit, replacementOnly, observations,
     originalSha, derivedSha: prepared.audioDerivatives[0].distributedSha256, firstRevision: first.revision,
     currentRevision: revised.revision, tls: new URL(origin).protocol === "https:" }, null, 2))
 } finally {
