@@ -38,6 +38,10 @@ if (publicViewer001 && (!companionMute002 || (publicViewerOrigin && publicViewer
     throw new GradleException("Public Viewer candidate requires MUTE 002 and its exact qualification origin")
 }
 def studioPrivateQ2 = providers.gradleProperty("scenevibeStudioPrivateQ2").orElse("false").get() == "true"
+def mediaUniversal = providers.gradleProperty("scenevibeMediaUniversal").orElse("false").get() == "true"
+if (mediaUniversal && !studioPrivateQ2) {
+    throw new GradleException("The v41 candidate requires the v40 Studio and Viewer origins")
+}
 def studioPrivateOrigin = "https://scenevibe-product-consolidation001q2-studi-git-5fd51d-archc-ode.vercel.app"
 if (studioPrivateQ2 && (!historicalViewer001c || productConsolidationQ2 || !companionMute002 ||
         cloudOrigin != "https://scenevibe-autonomous001d-qual-preview.vercel.app" || publicViewerOrigin != qualifiedViewerOrigin)) {
@@ -77,6 +81,7 @@ android {
         buildConfigField "boolean", "COMPANION_MUTE_002", "false"
         buildConfigField "boolean", "PUBLIC_HISTORICAL_VIEWER_001C", "false"
         buildConfigField "boolean", "PUBLIC_VIEWER_001", "false"
+        buildConfigField "boolean", "MEDIA_UNIVERSAL", "false"
         buildConfigField "String", "PUBLIC_VIEWER_ORIGIN", '""'
         buildConfigField "String", "STUDIO_PRIVATE_ORIGIN", '""'
         manifestPlaceholders = [scenevibeCompanionMuteEnabled: "false"]
@@ -175,10 +180,11 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix studioPrivateQ2 ? "-studio-private-q2-v40" : historicalViewer001c ? "-public-viewer-001c-v36" : publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix mediaUniversal ? "-media-universal-v41" : studioPrivateQ2 ? "-studio-private-q2-v40" : historicalViewer001c ? "-public-viewer-001c-v36" : publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "COMPANION_MUTE_002", companionMute002 ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_HISTORICAL_VIEWER_001C", historicalViewer001c ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_VIEWER_001", publicViewer001 ? "true" : "false"
+        buildConfigField "boolean", "MEDIA_UNIVERSAL", mediaUniversal ? "true" : "false"
         buildConfigField "String", "PUBLIC_VIEWER_ORIGIN", "\"${publicViewerOrigin}\""
         buildConfigField "String", "STUDIO_PRIVATE_ORIGIN", '"'+ (studioPrivateQ2 ? studioPrivateOrigin : "") +'"'
         manifestPlaceholders.scenevibeCompanionMuteEnabled = companionMute002 ? "true" : "false"
@@ -269,7 +275,7 @@ android {
     sourceSets.androidTest.java {
         if (providers.gradleProperty("scenevibeTvUx002NativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
-            setIncludes(["**/StudioPrivateQ2HttpsTest.java", "**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/PublicAutonomousAndroidTest.java", "**/MultimediaCacheLifecycleAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/HistoricalViewerHttpsAndroidTest.java", "**/HistoricalMediaCoexistenceTest.java", "**/HistoricalM5ContinuityTest.java", "**/HistoricalM5MuteChecks.java", "**/HistoricalM5ShortcutBench.java", "**/CompanionShortcutBench.java", "**/CompanionShortcutConnectionAndroidTest.java", "**/CompanionShortcutOpenChecks.java", "**/CompanionMuteNativeChecks.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
+            setIncludes(["**/StudioPrivateQ2HttpsTest.java", "**/AdSyncAndroidTest.java", "**/AdDetectionAndroidTest.java", "**/MultiPlatformObservationAndroidTest.java", "**/AdSyncTestFixture.java", "**/DeveloperOverlayAndroidTest.java", "**/LocalControlTestClient.java", "**/RecoveryCacheAndroidTest.java", "**/Native003eFixture.java", "**/CloudBridge003eRestartSeedTest.java", "**/CloudBridge003eRestartReadTest.java", "**/ManualTrackAndroidTest.java", "**/ManualNativeFixture.java", "**/MediaUniversalAndroidTest.java", "**/PublicAutonomousAndroidTest.java", "**/MultimediaCacheLifecycleAndroidTest.java", "**/PublicNativeFixture.java", "**/PublicRestartSeedTest.java", "**/PublicRestartReadTest.java", "**/PublicHostedAndroidTest.java", "**/HistoricalViewerHttpsAndroidTest.java", "**/HistoricalMediaCoexistenceTest.java", "**/HistoricalM5ContinuityTest.java", "**/HistoricalM5MuteChecks.java", "**/HistoricalM5ShortcutBench.java", "**/CompanionShortcutBench.java", "**/CompanionShortcutConnectionAndroidTest.java", "**/CompanionShortcutOpenChecks.java", "**/CompanionMuteNativeChecks.java", "**/CompanionUpgradeSeedTest.java", "**/CompanionUpgradeReadTest.java"])
         } else if (providers.gradleProperty("scenevibeTvUxNativeQualification").orElse("false").get() == "true") {
             srcDir "src/test/java"
             setIncludes(["**/AdSyncAndroidTest.java", "**/AdSyncTestFixture.java", "**/TvUxAndroidTest.java"])
@@ -340,7 +346,7 @@ androidComponents {
             if (companionMute002) output.versionCode.set(32)
             if (publicViewer001) output.versionCode.set(34)
             if (historicalViewer001c) output.versionCode.set(36)
-            if (studioPrivateQ2) output.versionCode.set(40)
+            if (studioPrivateQ2) output.versionCode.set(mediaUniversal ? 41 : 40)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->

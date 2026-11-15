@@ -115,6 +115,7 @@ public final class MediaSessionProbe {
     private ControllerObserver controllerObserver;
     private ControllerObserver diagnosticObserver;
     private final Predicate<Snapshot> preferred;
+    private final Predicate<Snapshot> pinned;
 
     private final Runnable sampler = new Runnable() {
         @Override
@@ -147,7 +148,14 @@ public final class MediaSessionProbe {
 
     /** Prefer an already-admitted identity while leaving historical session selection unchanged by default. */
     public MediaSessionProbe(Context context,Listener listener,Observer observer,long sampleIntervalMs,Predicate<Snapshot> preferred) {
+        this(context,listener,observer,sampleIntervalMs,preferred,null);
+    }
+
+    /** Garde prioritaire une session explicitement rattachée tant qu'Android la présente. */
+    MediaSessionProbe(Context context,Listener listener,Observer observer,long sampleIntervalMs,
+            Predicate<Snapshot> preferred,Predicate<Snapshot> pinned) {
         this.preferred=preferred;
+        this.pinned=pinned;
         if(sampleIntervalMs<250L || sampleIntervalMs>SAMPLE_INTERVAL_MS)throw new IllegalArgumentException("SAMPLE_INTERVAL_OUT_OF_POLICY");
         if (listener != null && observer != null) throw new IllegalArgumentException("One probe mode only");
         this.sampleIntervalMs=sampleIntervalMs;
@@ -252,7 +260,7 @@ public final class MediaSessionProbe {
             try{candidates.add(snapshotController(index,controllers.get(index)));}
             catch(RuntimeException vanished){if(!BuildConfig.ADSYNC_NONDESTRUCTIVE)throw vanished;probeState("SESSION_READ_UNAVAILABLE");}
         }
-        Snapshot primary=select(candidates,preferred,BuildConfig.ADSYNC_NONDESTRUCTIVE?lastSelectedSession:null);
+        Snapshot primary=selectPinned(candidates,preferred,pinned,BuildConfig.ADSYNC_NONDESTRUCTIVE?lastSelectedSession:null);
         if(controllerObserver!=null)diagnostic(()->controllerObserver.onSelection(primary));
         if(diagnosticObserver!=null)multiDiagnostic(()->diagnosticObserver.onSelection(primary));
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && primary!=null){
@@ -266,6 +274,13 @@ public final class MediaSessionProbe {
         }
         if (listener != null && primary != null) listener.onSnapshot(primary);
         else if(primary==null)unavailable();
+    }
+
+    /** Préserve même une session en pause lorsqu'elle possède déjà la sélection. */
+    static Snapshot selectPinned(java.util.List<Snapshot> candidates,Predicate<Snapshot> preferred,
+            Predicate<Snapshot> pinned,Object previous) {
+        if(pinned!=null)for(Snapshot snapshot:candidates)if(pinned.test(snapshot))return snapshot;
+        return select(candidates,preferred,previous);
     }
 
     /** Keep a compatible active session stable on ties; identity and PLAYING priority remain mandatory. */

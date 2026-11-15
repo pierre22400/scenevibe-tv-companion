@@ -15,6 +15,11 @@ final class VideoMediaObservationAdapter {
         if (!MediaIdentityMatcher.matches(track, snapshot)) {
             return new MediaObservation(false, -1L, false);
         }
+        return fromSelectedSession(snapshot);
+    }
+
+    /** Projette la capture déjà validée vers le calendrier unique TEXT et AUDIO. */
+    static MediaObservation fromSelectedSession(MediaSessionProbe.Snapshot snapshot) {
         return new MediaObservation(true,
                 snapshot.estimatedPositionMs >= 0L ? snapshot.estimatedPositionMs : snapshot.positionMs,
                 snapshot.state == PlaybackState.STATE_PLAYING);

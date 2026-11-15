@@ -25,6 +25,18 @@ public final class PublicRestartReadTest {
                 && entry.state==PublicLibraryEntry.State.VERIFIED));
         JSONObject proof=new JSONObject().put("scope","OWN_ANDROID_RESTART_NOT_SONY").put("readPid",Process.myPid()).put("cacheEvents",6)
                 .put("nativeDecodedAudio",3).put("newCodes",0).put("extraDownloads",0).put("libraryRestored",true);
+        if(BuildConfig.MEDIA_UNIVERSAL){
+            fixture.select();
+            fixture.owner().pollOnce();
+            PublicMultimediaCache.Prepared replacement=fixture.cache().read();
+            assertEquals(fixture.command.getString("commandId"),replacement.binding.command);
+            assertNotEquals(p.binding.command,replacement.binding.command);
+            assertEquals(1,fixture.cacheReceipts);
+            assertEquals(0,fixture.claims);
+            proof.put("newCommandAfterBoot",true).put("newCacheReceipts",fixture.cacheReceipts);
+            HistoricalM5ContinuityTest.report(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation(),
+                    "V41_PUBLIC_POST_BOOT_PASS new_command cache_receipt same_grant");
+        }
         Files.write(new File(fixture.target.getFilesDir(),"public001b-restart-proof.json").toPath(),proof.toString().getBytes(StandardCharsets.UTF_8));fixture.close(false);
     }
 }

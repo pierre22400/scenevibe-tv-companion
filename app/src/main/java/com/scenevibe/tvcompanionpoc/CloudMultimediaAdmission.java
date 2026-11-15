@@ -9,7 +9,8 @@ import org.json.JSONObject;
  * juridique ou une reconnaissance automatique d'édition. L'utilisateur doit
  * confirmer l'édition de référence et l'absence de publicité à chaque départ.
  * UNKNOWN reste UNKNOWN dans le document éditorial d'origine. Q2 exige en
- * plus le média natif exact, indépendamment de la correspondance du titre.
+ * plus le média natif exact dans les variantes historiques. En v41, le moteur
+ * choisit une session de la plateforme autorisée et garde les titres informatifs.
  */
 final class CloudMultimediaAdmission {
     private static boolean ownedMediaSessionFixture;
@@ -41,7 +42,7 @@ final class CloudMultimediaAdmission {
             if(!prepared.binding.track.equals(track.getString("trackId")) || prepared.track.audio.isEmpty()
                     || prepared.track.calendar.events().size()<=prepared.track.audio.size())return null;
             ScheduledTrack identity=TrackParser.parse(new JSONObject(TvFirst008Wire.utf8(prepared.profile.runtimeBytes)),
-                    media->{throw new TrackParser.Invalid("TEXT_ONLY_SOURCE","Unexpected source media");});
+                    media->{throw new TrackParser.Invalid("TEXT_ONLY_SOURCE","Unexpected source media");},BuildConfig.MEDIA_UNIVERSAL);
             if(!"prime_video".equals(identity.mediaIdentity.platform) || !"com.amazon.amazonvideo.livingroom".equals(identity.targetPackage))return null;
             if(ownedMediaSessionFixture)identity=new ScheduledTrack(identity.trackId,BuildConfig.APPLICATION_ID,identity.mediaIdentity,identity.comments,identity.pauseFreezesDisplay);
             return new CloudMultimediaAdmission(reference,identity);
@@ -55,6 +56,10 @@ final class CloudMultimediaAdmission {
     }
     /** La Track Studio Q2 exige aussi ce contrôle à chaque nouvel échantillon MEDIA. */
     boolean requiresNativeMediaId(){return strictIdentity;}
+    /** Cadre exclusivement le package Android du paquet déjà admis. */
+    boolean acceptsPlatform(MediaSessionProbe.Snapshot snapshot){
+        return PrimeVideoSessionBinding.platform(identity.targetPackage,snapshot);
+    }
     /** Fournit le même calendrier et les mêmes ressources aux moteurs historiques. */
     StudioMultimediaPackage track(){return publicReference==null?reference.prepared.track:publicReference.prepared.track;}
     /** Résout uniquement une ressource du cache vérifié, sans changement du port AUDIO. */
@@ -88,7 +93,7 @@ final class CloudMultimediaAdmission {
             if((manual || imported) && (prepared.track.audio.isEmpty()
                     || prepared.track.calendar.events().size()<=prepared.track.audio.size()))return null;
             ScheduledTrack identity=TrackParser.parse(new JSONObject(TvFirst008Wire.utf8(prepared.profile.runtimeBytes)),
-                    media->{throw new TrackParser.Invalid("TEXT_ONLY_SOURCE","Unexpected source media");});
+                    media->{throw new TrackParser.Invalid("TEXT_ONLY_SOURCE","Unexpected source media");},BuildConfig.MEDIA_UNIVERSAL && studio);
             if(ownedMediaSessionFixture)identity=new ScheduledTrack(identity.trackId,BuildConfig.APPLICATION_ID,
                     identity.mediaIdentity,identity.comments,identity.pauseFreezesDisplay);
             return new CloudMultimediaAdmission(reference,identity);

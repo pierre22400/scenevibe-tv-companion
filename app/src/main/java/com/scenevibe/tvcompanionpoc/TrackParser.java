@@ -21,6 +21,11 @@ final class TrackParser {
     }
     /** Validates the complete track before returning a schedulable immutable snapshot. */
     static ScheduledTrack parse(JSONObject json, MediaDecoder decoder) throws Invalid {
+        return parse(json,decoder,false);
+    }
+
+    /** Admet une déclaration d'identifiant vide uniquement pour un paquet Studio qualifié sur v41. */
+    static ScheduledTrack parse(JSONObject json, MediaDecoder decoder,boolean optionalNativeId) throws Invalid {
         if (!"scenevibe.track.v1".equals(json.optString("type")))
             throw new Invalid("invalid_type", "Expected scenevibe.track.v1");
         String trackId=json.optString("trackId", "").trim();
@@ -35,7 +40,9 @@ final class TrackParser {
         String videoId=media.optString("videoId","").trim();
         String title=media.optString("title","").trim();
         Object rawMediaDuration=media.opt("durationMs");
-        if (!"prime_video".equals(platform)||videoId.isEmpty()||videoId.length()>256
+        if (!"prime_video".equals(platform)
+                ||(optionalNativeId && !(media.opt("videoId") instanceof String))
+                ||(videoId.isEmpty() && (!optionalNativeId || !"".equals(media.opt("videoId"))))||videoId.length()>256
                 ||title.isEmpty()||title.length()>500||!(rawMediaDuration instanceof Number))
             throw new Invalid("invalid_media_identity","Invalid media identity");
         double mediaDurationDouble=((Number)rawMediaDuration).doubleValue();

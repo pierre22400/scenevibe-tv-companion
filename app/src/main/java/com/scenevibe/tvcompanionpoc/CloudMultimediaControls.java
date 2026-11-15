@@ -80,7 +80,7 @@ final class CloudMultimediaControls {
         String state=source==null?"Association disponible dans le parcours Compte.":source.accountMessage();
         if(BuildConfig.PUBLIC_VIEWER_001){
             String active=TvFirst009TextServiceOwner.privateTrackTitle();
-            status.setText(result+"\n"+state+(active.isEmpty()?"":"\nTrack privée sélectionnée pour la restitution · "+active));
+            status.setText((BuildConfig.MEDIA_UNIVERSAL?"Compte historique · "+BuildConfig.CLOUD_ORIGIN+"/tv\n":"")+result+"\n"+state+(active.isEmpty()?"":"\nTrack privée sélectionnée pour la restitution · "+active));
         }else{
         status.setText("Cloud → Android TV · multimédia expérimental\n"+result+"\n"+state
                 +(BuildConfig.CLOUD_MULTIMEDIA_SERVICE?(BuildConfig.ADSYNC_NONDESTRUCTIVE?"\nÉtat technique : ":"\nAdmission locale explicite requise. ")+TvFirst009TextServiceOwner.status().code:
@@ -136,6 +136,11 @@ final class CloudMultimediaControls {
 
     /** Separate catalogue discovery from the user's confirmed private assignment and download. */
     private void confirm(String publication,String title) {
+        if(BuildConfig.MEDIA_UNIVERSAL && TvFirst009TextServiceOwner.controlBusy()){
+            result="Track privée historique demandée : « "+title+" » · aucun téléchargement en cours. Arrête d’abord les commentaires de « "
+                    +TvFirst009TextServiceOwner.selectedTrackTitle()+" » puis sélectionne la Track à télécharger.";
+            refresh();return;
+        }
         TvCompanionDialogs.builder(activity).setTitle("Télécharger cette track ?").setMessage(title
                 +"\nLes fichiers seront vérifiés et conservés dans le cache privé de SceneVibe.")
                 .setNegativeButton("Annuler",null).setPositiveButton("Télécharger",(dialog,which)->download(publication)).show();
@@ -171,6 +176,8 @@ final class CloudMultimediaControls {
     /** Décrit les comptes réels du cache manuel sans annoncer une détection publicitaire universelle. */
     private String activationMessage() {
         int audio=preparedCache.track.audio.size(),total=preparedCache.track.calendar.events().size();
+        if(BuildConfig.MEDIA_UNIVERSAL)return "Active "+(total-audio)+" TEXT et "+audio+" AUDIO de « "+preparedCache.track.title()
+                +" ». Ouvre Prime Video avec l’œuvre de ton choix. Les commentaires suivent sa position de lecture.";
         return "Active "+(total-audio)+" TEXT et "+audio+" AUDIO de « "+preparedCache.track.title()+" ». "
                 +"Confirme Columbo — Eaux troubles et l'édition de référence. La protection Prime doit être activée séparément. "
                 +"Si une publicité n'est pas reconnue, suspends les commentaires et recale le temps du film avant de reprendre.";
@@ -184,7 +191,10 @@ final class CloudMultimediaControls {
                 .setNegativeButton("Annuler",null).setPositiveButton("Je confirme · Activer",(dialog,which)->{
                     boolean started=TvFirst009TextServiceOwner.requestMultimediaStart(activity,owner.get(),preparedCache,true);
                     if(started){TvFirst009TextServiceOwner.setMultimediaTextEnabled(textEnabled);TvFirst009TextServiceOwner.setMultimediaAudioEnabled(audioEnabled);}
-                    result=started?"Démarrage du service demandé ; attente d'une identité MEDIA compatible.":"Admission refusée : vérifie compte, permissions et mapping de référence.";refresh();
+                    result=BuildConfig.MEDIA_UNIVERSAL
+                            ?started?"Track privée historique sélectionnée · attente de l’horloge Prime Video.":"Vérifie le cache, les autorisations Android et l’association au compte historique."
+                            :started?"Démarrage du service demandé ; attente d'une identité MEDIA compatible.":"Admission refusée : vérifie compte, permissions et mapping de référence.";
+                    refresh();
                 }).show();
     }
 

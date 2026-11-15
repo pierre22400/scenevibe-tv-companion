@@ -18,7 +18,7 @@ import org.json.JSONObject;
 /**
  * Bibliothèque Q2 dans Mes Tracks, avec actions D-pad dans l'Activity existante.
  * Le service possède l'association et le cache. L'activation est un choix local
- * qui exige encore les permissions et la reconnaissance MEDIA.
+ * qui exige encore les permissions et une session MEDIA autorisée.
  */
 final class StudioPrivateControls {
     private final Activity activity;
@@ -69,7 +69,8 @@ final class StudioPrivateControls {
         text.setText("Commentaires écrits : "+(TvFirst009TextServiceOwner.multimediaTextEnabled()?"ON":"OFF"));
         audio.setText("Commentaires audio : "+(TvFirst009TextServiceOwner.multimediaAudioEnabled()?"ON":"OFF"));
         String state=source==null?"Associe cette TV avec un code depuis le Studio Q2.":source.accountMessage()+"\n"+source.verification();
-        status.setText(state+(receiver==null?"":"\n"+receiver.status())+(notice.isEmpty()?"":"\n"+notice));
+        status.setText((BuildConfig.MEDIA_UNIVERSAL?"Studio Q2 · "+BuildConfig.STUDIO_PRIVATE_ORIGIN+"/studio\n":"")
+                +state+(receiver==null?"":"\n"+receiver.status())+(notice.isEmpty()?"":"\n"+notice));
         if(TvFirst009TextServiceOwner.multimediaActive()) status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability());
     }
 
@@ -128,7 +129,7 @@ final class StudioPrivateControls {
     /** Garde les commentaires actifs et décrit le choix avant une sélection manuelle. */
     private void confirmDownload(StudioPrivateReceiver receiver,String publication,String title,long revision) {
         if(TvFirst009TextServiceOwner.controlBusy()) {
-            notice="« "+TvFirst009TextServiceOwner.selectedTrackTitle()+" » est active. Arrête ses commentaires avant de sélectionner « "+title+" » r"+revision+".";
+            notice="« "+TvFirst009TextServiceOwner.selectedTrackTitle()+" » est active. Arrête ses commentaires avant de télécharger la Track privée Studio Q2 « "+title+" » r"+revision+".";
             refresh();return;
         }
         TvCompanionDialogs.builder(activity).setTitle("Télécharger la révision privée")
@@ -150,10 +151,12 @@ final class StudioPrivateControls {
         if(prepared==null || TvFirst009TextServiceOwner.controlBusy())return;
         TvCompanionDialogs.builder(activity).setTitle("Activer les commentaires Q2")
                 .setMessage("Confirme l’édition de « "+prepared.track.title()+" » · révision "+prepared.profile.identity.optLong("editorialRevision")
-                        +". La restitution attend la reconnaissance de l’œuvre par Android TV.")
+                        +(BuildConfig.MEDIA_UNIVERSAL?". La restitution attend une position valide fournie par Prime Video.":
+                        ". La restitution attend la reconnaissance de l’œuvre par Android TV."))
                 .setNegativeButton("Annuler",null).setPositiveButton("Activer",(dialog,which)->{
                     boolean accepted=TvFirst009TextServiceOwner.requestMultimediaStart(activity,receiver.source,prepared,true);
-                    notice=accepted?"Commentaires activés · attente du média compatible.":"Vérifie que le cache, les permissions et l’association sont valides.";
+                    notice=accepted?(BuildConfig.MEDIA_UNIVERSAL?"Track sélectionnée · attente de l’horloge Prime Video.":"Commentaires activés · attente du média compatible."):
+                            "Vérifie que le cache, les permissions et l’association sont valides.";
                     refresh();
                 }).show();
     }

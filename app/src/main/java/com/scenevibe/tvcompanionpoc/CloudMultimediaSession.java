@@ -18,6 +18,8 @@ import java.util.Set;
  * fournit la position au calendrier M5 déjà utilisé par TEXT et AUDIO. Les MP3
  * proviennent uniquement du cache vérifié. Aucun transport vidéo, focus audio,
  * renouvellement réseau ou permis persistant n'est créé par cette composition.
+ * La v41 rattache l'activation à un jeton MEDIA Prime Video pour tous les
+ * propriétaires, sans faire de l'identité éditoriale un permis de restitution.
  */
 final class CloudMultimediaSession {
     private final Handler main=new Handler(Looper.getMainLooper());
@@ -29,6 +31,8 @@ final class CloudMultimediaSession {
     private final AndroidLocalAudioPort audio;
     private final StudioMultimediaRuntime runtime;
     private final MediaSessionProbe probe;
+    private final PrimeVideoSessionBinding binding=BuildConfig.MEDIA_UNIVERSAL?new PrimeVideoSessionBinding():null;
+    private String mediaHold="SESSION_UNAVAILABLE";
     private AdObservationProbe adObservation;
     private boolean adObservationRequested,adGuardBlocked;
     private final com.scenevibe.tvcompanionpoc.ad.AdProtectionController adProtection=new com.scenevibe.tvcompanionpoc.ad.AdProtectionController();
@@ -115,7 +119,8 @@ final class CloudMultimediaSession {
             @Override public void onSnapshot(MediaSessionProbe.Snapshot snapshot){observe(snapshot);}
             /** A disappearing session cannot leave either type of comment active. */
             @Override public void onUnavailable(){unavailable("SESSION_UNAVAILABLE");}
-        },null,250L,BuildConfig.TVUX_CONTROL_PANEL?snapshot->admission.matches(snapshot):null);
+        },null,250L,binding!=null?admission::acceptsPlatform:BuildConfig.TVUX_CONTROL_PANEL?admission::matches:null,
+                binding==null?null:binding::bound);
         try{probe.start();main.postDelayed(watchdog,250);}
         catch(RuntimeException refused){close();throw refused;}
     }
@@ -143,7 +148,8 @@ final class CloudMultimediaSession {
     private void updateAdReader(){
         if(adObservationRequested || adProtection.status().enabled){
             if(adObservation==null){adObservation=new AdObservationProbe(admission.identity.targetPackage,
-                    snapshot->admission.matches(snapshot),adObservationRequested);probe.setControllerObserver(adObservation);}
+                    binding==null?admission::matches:snapshot->admission.acceptsPlatform(snapshot) && binding.bound(snapshot),
+                    adObservationRequested);probe.setControllerObserver(adObservation);}
             adObservation.setDiagnosticsEnabled(adObservationRequested);
             adObservation.setProtectionSink(adProtection.status().enabled && qualifiedProtectionTarget()?new AdObservationProbe.ProtectionSink(){
                 /** Close the local effect fence on this main-thread metadata callback. */
@@ -197,14 +203,15 @@ final class CloudMultimediaSession {
         return current() && adProtection.status().allow && (BuildConfig.ADSYNC_NONDESTRUCTIVE?fresh && adSync.status().allow:(!adSync.enabled() || adSync.status().allow));
     }
 
-    /** Apply the historical native matcher and its established content-time policy without retiming events. */
+    /** Applique la politique du candidat à la capture, puis le même calendrier sans retimer les événements. */
     private void observe(MediaSessionProbe.Snapshot snapshot) {
         if(!active)return;
         if(!admission.current()){retireInvalidAuthority();return;}
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(!current()){retireInvalidAuthority();return;}
         lastCapture=SystemClock.elapsedRealtime();
-        if(admission.publicCommand()!=null && snapshot!=null){
+        if(binding!=null && !admitCapture(snapshot))return;
+        if(binding==null && admission.publicCommand()!=null && snapshot!=null){
             publicMediaEnded=snapshot.state==PlaybackState.STATE_STOPPED;
             if(admission.matches(snapshot)){
                 if(publicMediaEnded)publicMediaEngaged=false;
@@ -212,9 +219,10 @@ final class CloudMultimediaSession {
                         || snapshot.state==PlaybackState.STATE_BUFFERING)publicMediaEngaged=true;
             }
         }
-        if(admission.requiresNativeMediaId() && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
+        if(binding==null && admission.requiresNativeMediaId() && snapshot!=null && !admission.matches(snapshot)){unavailable("MEDIA_IDENTITY_BLOCKED");return;}
         if(!adProtection.status().allow){applyAdProtection(adProtection.status());return;}
-        MediaObservation selected=VideoMediaObservationAdapter.observe(admission.identity,snapshot);
+        MediaObservation selected=binding==null?VideoMediaObservationAdapter.observe(admission.identity,snapshot):
+                VideoMediaObservationAdapter.fromSelectedSession(snapshot);
         boolean usable=snapshot!=null && selected!=null && selected.eligible() && snapshot.positionMs>=0
                 && snapshot.updateAgeMs>=0 && Float.isFinite(snapshot.speed)
                 && (snapshot.state==PlaybackState.STATE_PLAYING || snapshot.state==PlaybackState.STATE_PAUSED)
@@ -223,12 +231,12 @@ final class CloudMultimediaSession {
         if(adSync.enabled() || BuildConfig.TVUX_DEVELOPER_OVERLAY) {
             lastAdSample=snapshot==null?null:new AdSyncController.Sample(snapshot.sessionKey,usable,
                     snapshot.state==PlaybackState.STATE_PLAYING,snapshot.positionMs,selectedPosition,
-                    snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,snapshot.durationMs,
+                    snapshot.updatedAtMs,snapshot.capturedAtMs,snapshot.speed,binding==null?snapshot.durationMs:-1,
                     selected!=null && selected.eligible());
         }
         if(adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE) {
             AdSyncController.Decision decision=adSync.observe(lastAdSample,SystemClock.elapsedRealtime());logAdSync(decision);
-            if(!decision.allow){suspendRuntime(decision.reason.name());position=-1;publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?decision.reason.name():"ADSYNC_"+decision.state.name());auditCalendar();return;}
+            if(!decision.allow){suspendRuntime(decision.reason.name());position=-1;mediaHold=decision.reason.name();publish(BuildConfig.ADSYNC_NONDESTRUCTIVE?decision.reason.name():"ADSYNC_"+decision.state.name());auditCalendar();return;}
             selectedPosition=decision.contentMs;
         }
         if(!usable){unavailable(selected!=null && !selected.eligible()?"MEDIA_IDENTITY_BLOCKED":"MEDIA_CLOCK_UNUSABLE");return;}
@@ -238,6 +246,27 @@ final class CloudMultimediaSession {
             else runtime.observe(admission.activation,new MediaObservation(true,position,snapshot.state==PlaybackState.STATE_PLAYING));
             auditAudio();publish(snapshot.state==PlaybackState.STATE_PLAYING?"MEDIA_PLAYING":"MEDIA_PAUSED");auditCalendar();}
         catch(RuntimeException refused){close();publish("RUNTIME_FAILED");}
+    }
+
+    /** Distingue l'absence, l'horloge et la perte définitive du jeton choisi. */
+    private boolean admitCapture(MediaSessionProbe.Snapshot snapshot) {
+        PrimeVideoSessionBinding.State state=binding.observe(admission.identity.targetPackage,snapshot,SystemClock.elapsedRealtime());
+        if(state==PrimeVideoSessionBinding.State.READY){
+            if(admission.publicCommand()!=null)publicMediaEngaged=true;
+            return true;
+        }
+        if(state==PrimeVideoSessionBinding.State.STOPPED && admission.publicCommand()!=null){
+            publicMediaEnded=true;
+            publicMediaEngaged=false;
+        }
+        unavailable(switch(state) {
+            case BUFFERING -> "MEDIA_BUFFERING";
+            case CLOCK_UNAVAILABLE -> "MEDIA_CLOCK_UNUSABLE";
+            case STOPPED -> "MEDIA_STOPPED";
+            case RESELECT_REQUIRED -> "MEDIA_RESELECT_REQUIRED";
+            default -> "SESSION_UNAVAILABLE";
+        });
+        return false;
     }
 
     /** Log finite temporal facts only; no metadata, session token, credential or alleged ad classification. */
@@ -396,6 +425,7 @@ final class CloudMultimediaSession {
 
     /** Loss of media eligibility stops both renderers without preserving an audible stale window. */
     private void unavailable(String code){if(active){position=-1;
+        if(binding!=null && !("MEDIA_RESELECT_REQUIRED".equals(mediaHold) || "MEDIA_STOPPED".equals(mediaHold)))mediaHold=code;
         if(BuildConfig.ADSYNC_NONDESTRUCTIVE && holdForPermissions())return;
         if(adSync.enabled() || BuildConfig.ADSYNC_NONDESTRUCTIVE){adSync.unavailable();lastAdSample=null;suspendRuntime(code);logAdSync(adSync.status());}
         else {if(BuildConfig.TVUX_DEVELOPER_OVERLAY)lastAdSample=null;runtime.unavailable();}publish(BuildConfig.ADSYNC_NONDESTRUCTIVE && ("CAPTURE_TIMEOUT".equals(code) || "SESSION_UNAVAILABLE".equals(code))?"MEDIA_UNAVAILABLE":code);}}
@@ -523,8 +553,11 @@ final class CloudMultimediaSession {
     /** Truthful runtime state for the restored track, panel and phone, independent of service existence. */
     String availability(){
         if(!active)return "Service arrêté";
-        if(adSync.manuallySuspended())return "Commentaires en pause volontaire · préférences TEXT/AUDIO conservées";
+        if(adSync.manuallySuspended())return (binding==null?"":"« "+trackTitle()+" » · ")
+                +"Commentaires en pause volontaire · préférences TEXT/AUDIO conservées";
         String refused=effectRefusal();
+        if(binding!=null)return "« "+trackTitle()+" » · "+universalStatus(refused)
+                +(position>=0?" · préférences TEXT "+(textEnabled?"ON":"OFF")+" / AUDIO "+(audioEnabled?"ON":"OFF"):"");
         if(!"RENDERER_PREFLIGHT".equals(refused))return "En attente du film · "+refused;
         if(lastAdSample!=null && !lastAdSample.playing)return "Film en pause · calendrier conservé";
         var d=runtime.diagnostics();
@@ -532,6 +565,25 @@ final class CloudMultimediaSession {
                 +" · "+d.future+" événements futurs · prochain "+(d.nextStartMs<0?"aucun":AdSyncController.formatTime(d.nextStartMs))
                 +" · demandes TEXT "+d.textDue+" · TEXT attachés (distincts) "+shown.size()+" · lectures MP3 démarrées "+nativeAudioStarts
                 +("NEW_SESSION_REPLAY_UNCERTAIN".equals(d.replay)?" · nouvelle session en recul : relecture facultative dans les options téléphone":"");
+    }
+
+    /** Donne priorité à l'état réel du média. Les interrupteurs restent des préférences. */
+    private String universalStatus(String refusal) {
+        if("OVERLAY_PERMISSION_REQUIRED".equals(refusal) || "MEDIA_PERMISSION_REQUIRED".equals(refusal))
+            return "Autorisation Android indisponible";
+        if(position>=0 && "RENDERER_PREFLIGHT".equals(refusal)){
+            if(lastAdSample!=null && !lastAdSample.playing)return "Lecture en pause · commentaires gelés";
+            return textEnabled || audioEnabled?"Restitution synchronisée · en attente des repères du calendrier si nécessaire":
+                    "Lecture suivie · commentaires désactivés";
+        }
+        return switch(mediaHold) {
+            case "MEDIA_RESELECT_REQUIRED" -> "Session Prime Video changée · arrête les commentaires puis choisis à nouveau la Track";
+            case "MEDIA_STOPPED" -> "Lecture arrêtée · choisis à nouveau la Track pour reprendre";
+            case "MEDIA_BUFFERING" -> "Chargement Prime Video · commentaires suspendus";
+            case "MEDIA_CLOCK_UNUSABLE","MEDIA_CLOCK_INVALID","OBSERVATION_STALE" -> "Session Prime Video détectée · horloge indisponible";
+            case "SESSION_UNAVAILABLE","CAPTURE_TIMEOUT" -> "Track sélectionnée · attente d’une session Prime Video";
+            default -> "Restitution suspendue · "+refusal;
+        };
     }
 
     /** Stable client vocabulary separates actual manual pause, waiting MEDIA and disabled channels. */
