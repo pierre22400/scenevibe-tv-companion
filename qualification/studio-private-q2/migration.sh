@@ -53,6 +53,15 @@ qualify() {
     grep -Fxq 'INSTRUMENTATION_CODE: -1' "$proof/$output.txt"
 }
 
+# Les générations et les pannes ci-dessous appartiennent au seul AVD jetable.
+qualify_cache() {
+    local class="$1" testcase="$2"
+    timeout --foreground 210s adb shell am instrument -w -r -e class "$package.$class#$testcase" \
+        -e disposableQ2 true "$package.test/androidx.test.runner.AndroidJUnitRunner" \
+        | tr -d '\r' | tee "$proof/cache-$testcase.txt"
+    grep -Fxq 'OK (1 test)' "$proof/cache-$testcase.txt"
+}
+
 qualify 34 true v34
 adb install -r "$v38" | tee "$proof/upgrade-v38.txt"
 qualify 38 false v38
@@ -66,6 +75,7 @@ upgrade_verdict=SIGNED_V38_TO_V40_AND_HISTORICAL_CACHES_PASS
 if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
     adb install -r "$proof/scenevibe-companion-media-universal-v41-m5.apk" | tee "$proof/upgrade-v41.txt"
     qualify 41 false v41
+    qualify_cache PublicRestartSeedTest persistPublicCacheAndAssociationBeforeProcessRestart
     candidate_version=41
     upgrade_verdict=SIGNED_V40_TO_V41_AND_HISTORICAL_CACHES_PASS
 fi
@@ -80,18 +90,11 @@ adb shell input keyevent KEYCODE_WAKEUP
 qualify "$candidate_version" false "v$candidate_version-after-reboot"
 printf '%s\n' "$upgrade_verdict" > "$proof/upgrade-verdict.txt"
 
-# Les générations et les pannes ci-dessous appartiennent au seul AVD jetable.
-qualify_cache() {
-    local class="$1" testcase="$2"
-    timeout --foreground 210s adb shell am instrument -w -r -e class "$package.$class#$testcase" \
-        -e disposableQ2 true "$package.test/androidx.test.runner.AndroidJUnitRunner" \
-        | tr -d '\r' | tee "$proof/cache-$testcase.txt"
-    grep -Fxq 'OK (1 test)' "$proof/cache-$testcase.txt"
-}
 qualify_cache MultimediaCacheLifecycleAndroidTest oneCachePerDomainAcrossGenerations
 qualify_cache MultimediaCacheLifecycleAndroidTest publicReplacementsAndDiskFailure
 qualify_cache MultimediaCacheLifecycleAndroidTest privateRevisionsAndDiskFailure
 if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
+    qualify_cache PublicRestartReadTest restoreWithoutCodeAfterProcessAndAndroidEnvironmentRestart
     qualify_cache MediaUniversalAndroidTest privateQ2AndSessionContinuity
     qualify_cache MediaUniversalAndroidTest publicSelectionAndDeferredReplacement
 fi

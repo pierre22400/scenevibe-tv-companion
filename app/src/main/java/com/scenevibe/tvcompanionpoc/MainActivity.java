@@ -111,7 +111,9 @@ public final class MainActivity extends Activity {
         if(BuildConfig.MEDIA_UNIVERSAL && TvFirst009TextServiceOwner.multimediaActive())
             rows.add(TvFirst009TextServiceOwner.multimediaAvailability());
         if(entries.isEmpty())rows.add("Les Tracks reçues depuis le catalogue Web apparaissent ici.");
-        for(PublicLibraryEntry entry:entries)rows.add(entry.describe(active,now));
+        for(PublicLibraryEntry entry:entries)rows.add(entry.describe(active,now)
+                +(BuildConfig.MEDIA_UNIVERSAL && entry.state==PublicLibraryEntry.State.WAITING
+                        ?" · le titre est confirmé après vérification du paquet":""));
         return rows.toString();
     }
 

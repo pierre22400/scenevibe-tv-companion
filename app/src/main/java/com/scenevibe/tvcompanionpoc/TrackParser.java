@@ -40,7 +40,9 @@ final class TrackParser {
         String videoId=media.optString("videoId","").trim();
         String title=media.optString("title","").trim();
         Object rawMediaDuration=media.opt("durationMs");
-        if (!"prime_video".equals(platform)||videoId.isEmpty() && (!optionalNativeId || !"".equals(media.opt("videoId")))||videoId.length()>256
+        if (!"prime_video".equals(platform)
+                ||(optionalNativeId && !(media.opt("videoId") instanceof String))
+                ||(videoId.isEmpty() && (!optionalNativeId || !"".equals(media.opt("videoId"))))||videoId.length()>256
                 ||title.isEmpty()||title.length()>500||!(rawMediaDuration instanceof Number))
             throw new Invalid("invalid_media_identity","Invalid media identity");
         double mediaDurationDouble=((Number)rawMediaDuration).doubleValue();

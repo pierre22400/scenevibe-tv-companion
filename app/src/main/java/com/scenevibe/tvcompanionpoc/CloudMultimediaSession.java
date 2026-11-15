@@ -553,7 +553,8 @@ final class CloudMultimediaSession {
     /** Truthful runtime state for the restored track, panel and phone, independent of service existence. */
     String availability(){
         if(!active)return "Service arrêté";
-        if(adSync.manuallySuspended())return "Commentaires en pause volontaire · préférences TEXT/AUDIO conservées";
+        if(adSync.manuallySuspended())return (binding==null?"":"« "+trackTitle()+" » · ")
+                +"Commentaires en pause volontaire · préférences TEXT/AUDIO conservées";
         String refused=effectRefusal();
         if(binding!=null)return "« "+trackTitle()+" » · "+universalStatus(refused)
                 +(position>=0?" · préférences TEXT "+(textEnabled?"ON":"OFF")+" / AUDIO "+(audioEnabled?"ON":"OFF"):"");
