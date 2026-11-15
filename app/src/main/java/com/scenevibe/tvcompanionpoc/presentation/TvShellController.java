@@ -63,6 +63,7 @@ public final class TvShellController {
     private final TextView connection;
     private TextView accountStatus, diagnosticConnection, diagnosticService, diagnosticDevice;
     private TextView publicLibraryStatus;
+    private Button tracksAccount;
     private boolean restoring;
     private String defaultFocus;
     private View developerPage, studioPrivatePage;
@@ -164,9 +165,17 @@ public final class TvShellController {
         page = ui.column();
         scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
         render();
-        if (source instanceof TvAccountSource) ((TvAccountSource) source).onChange(() -> {
-            remember(); render();
-        });
+        if (source instanceof TvAccountSource) ((TvAccountSource) source).onChange(this::accountChanged);
+    }
+
+    /** Rafraîchit les états de la bibliothèque multimédia en conservant les vues qui portent le focus. */
+    private void accountChanged() {
+        if (BuildConfig.MEDIA_UNIVERSAL && tracksAccount != null) {
+            refreshRuntime();
+            return;
+        }
+        remember();
+        render();
     }
 
     /** Returns the single native root for the existing MainActivity content view. */
@@ -410,7 +419,12 @@ public final class TvShellController {
         if (source instanceof TvAccountSource) connection.setText(((TvAccountSource) source).accountStage() == TvAccountSource.AccountStage.ASSOCIATED
                 ? (BuildConfig.CLOUD_MULTIMEDIA_SERVICE?"Compte associé · Qualification TEXT + AUDIO":
                     BuildConfig.TVFIRST_TEXT_SONY_QUALIFICATION ? "Compte associé · Qualification TEXT" : "Compte associé · Cache uniquement") : "Compte non confirmé");
-        if (accountStatus != null) accountStatus.setText(cloud);
+        if (accountStatus != null && !cloud.contentEquals(accountStatus.getText())) accountStatus.setText(cloud);
+        if (tracksAccount != null) {
+            boolean associated = ((TvAccountSource)source).accountStage() == TvAccountSource.AccountStage.ASSOCIATED;
+            if (associated && tracksAccount.hasFocus()) requestFocus(defaultFocus);
+            tracksAccount.setVisibility(associated ? View.GONE : View.VISIBLE);
+        }
         if (diagnosticConnection != null) diagnosticConnection.setText(cloud);
         if (diagnosticService != null) diagnosticService.setText(status.service + "\n" + status.permissions);
         if (diagnosticDevice != null) diagnosticDevice.setText(status.device);
@@ -438,7 +452,7 @@ public final class TvShellController {
             ((ViewGroup) multimediaControls.getParent()).removeView(multimediaControls);
         page.removeAllViews(); targets.clear();
         accountStatus = null; diagnosticConnection = null; diagnosticService = null; diagnosticDevice = null;
-        publicLibraryStatus = null;
+        publicLibraryStatus = null; tracksAccount = null;
         for (Map.Entry<TvNavigation.Screen, Button> entry : menu.entrySet()) {
             Button button = entry.getValue(); boolean selected = entry.getKey() == navigation.activeSection();
             button.setSelected(selected);
@@ -677,11 +691,16 @@ public final class TvShellController {
             }
             if (source instanceof TvAccountSource) {
                 TvAccountSource account = (TvAccountSource) source;
-                paragraph(page, account.accountMessage(), 13, 10);
-                if (account.accountStage() != TvAccountSource.AccountStage.ASSOCIATED)
-                    action(page, R.string.tv_back_home, false, "tracks-account", () -> {
+                if (BuildConfig.MEDIA_UNIVERSAL) {
+                    accountStatus = text(account.accountMessage(), 13, false, 400, R.color.scenevibe_muted_foreground);
+                    block(page, accountStatus, 10);
+                } else paragraph(page, account.accountMessage(), 13, 10);
+                if (BuildConfig.MEDIA_UNIVERSAL || account.accountStage() != TvAccountSource.AccountStage.ASSOCIATED) {
+                    Button back = action(page, R.string.tv_back_home, false, "tracks-account", () -> {
                         remember(); navigation.section(TvNavigation.Screen.HOME); render();
                     });
+                    if (BuildConfig.MEDIA_UNIVERSAL) tracksAccount = back;
+                }
             }
             paragraph(page, "Choisis une publication privée et confirme son téléchargement. Le cache local reste consultable hors connexion et ne lance aucun commentaire automatiquement.", 13, 8);
             styleRuntimeControls(multimediaControls, new int[] {0});

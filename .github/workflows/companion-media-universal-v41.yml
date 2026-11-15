@@ -61,7 +61,7 @@ jobs:
           set -euo pipefail
           sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
           gradle --no-daemon --max-workers=2 -PscenevibeQualificationUnsigned=true assembleTvux002
-          gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true testTvux002UnitTest assembleTvux002AndroidTest
+          gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true assembleTvux002AndroidTest testTvux002UnitTest
           bash qualification/viewer001c/build-player.sh "$RUNNER_TEMP/studio-q2-owned-player.apk"
       - name: Sign and compare both M5 certificates and manifests
         env:
