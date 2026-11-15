@@ -62,6 +62,18 @@ qualify_cache() {
     grep -Fxq 'OK (1 test)' "$proof/cache-$testcase.txt"
 }
 
+# Redémarre l'AVD en recréant processus et services sur le même espace utilisateur.
+restart_android() {
+    adb reboot
+    timeout 150 adb wait-for-device
+    for attempt in $(seq 1 90); do
+        [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
+        sleep 2
+    done
+    [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]
+    adb shell input keyevent KEYCODE_WAKEUP
+}
+
 qualify 34 true v34
 adb install -r "$v38" | tee "$proof/upgrade-v38.txt"
 qualify 38 false v38
@@ -75,26 +87,23 @@ upgrade_verdict=SIGNED_V38_TO_V40_AND_HISTORICAL_CACHES_PASS
 if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
     adb install -r "$proof/scenevibe-companion-media-universal-v41-m5.apk" | tee "$proof/upgrade-v41.txt"
     qualify 41 false v41
-    qualify_cache PublicRestartSeedTest persistPublicCacheAndAssociationBeforeProcessRestart
     candidate_version=41
     upgrade_verdict=SIGNED_V40_TO_V41_AND_HISTORICAL_CACHES_PASS
 fi
-adb reboot
-timeout 150 adb wait-for-device
-for attempt in $(seq 1 90); do
-    [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
-    sleep 2
-done
-[[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]
-adb shell input keyevent KEYCODE_WAKEUP
+restart_android
 qualify "$candidate_version" false "v$candidate_version-after-reboot"
 printf '%s\n' "$upgrade_verdict" > "$proof/upgrade-verdict.txt"
 
+if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
+    # La fixture publique possède le même plafond global et remplace l'ancien cache du banc.
+    qualify_cache PublicRestartSeedTest persistPublicCacheAndAssociationBeforeProcessRestart
+    restart_android
+    qualify_cache PublicRestartReadTest restoreWithoutCodeAfterProcessAndAndroidEnvironmentRestart
+fi
 qualify_cache MultimediaCacheLifecycleAndroidTest oneCachePerDomainAcrossGenerations
 qualify_cache MultimediaCacheLifecycleAndroidTest publicReplacementsAndDiskFailure
 qualify_cache MultimediaCacheLifecycleAndroidTest privateRevisionsAndDiskFailure
 if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
-    qualify_cache PublicRestartReadTest restoreWithoutCodeAfterProcessAndAndroidEnvironmentRestart
     qualify_cache MediaUniversalAndroidTest privateQ2AndSessionContinuity
     qualify_cache MediaUniversalAndroidTest publicSelectionAndDeferredReplacement
 fi

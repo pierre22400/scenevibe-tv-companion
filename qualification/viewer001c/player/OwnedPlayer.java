@@ -28,7 +28,6 @@ public final class OwnedPlayer extends Activity {
         label.requestFocus();
         session = new MediaSession(this, "SceneVibe owned emulator MEDIA");
         update(getIntent());
-        session.setActive(true);
     }
 
     /** Receive the emulator's next owned playback position without transport commands. */
@@ -52,10 +51,13 @@ public final class OwnedPlayer extends Activity {
     /** Publish real Android MediaSession state sampled by the unchanged Companion. */
     private void update(Intent intent) {
         if (session == null) return;
+        if(intent.getBooleanExtra("park",false)){
+            session.setActive(false);
+            return;
+        }
         if(intent.getBooleanExtra("newSession",false)){
             session.release();
             session=new MediaSession(this,"SceneVibe replacement emulator MEDIA");
-            session.setActive(true);
         }
         boolean studio = intent.getBooleanExtra("studioQ2",false);
         String identity=intent.getStringExtra("identity");
@@ -77,5 +79,6 @@ public final class OwnedPlayer extends Activity {
         long anchor=intent.getBooleanExtra("invalidClock",false)?0:SystemClock.elapsedRealtime();
         session.setPlaybackState(new PlaybackState.Builder()
                 .setState(state,position,playing?1f:0f,anchor).build());
+        session.setActive(true);
     }
 }

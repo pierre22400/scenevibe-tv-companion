@@ -104,7 +104,9 @@ public final class MediaUniversalAndroidTest {
             if(prepared.audio.containsKey(event.eventId())){
                 int expected=++audios;await(()->TvFirst009TextServiceOwner.multimediaAudioStarted()>=expected,"AUDIO natif");
             }else {
-                int expected=++texts;await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>=expected,"TEXT natif");
+                int expected=++texts;
+                await(()->TvFirst009TextServiceOwner.multimediaTextRequested()>=expected
+                        && TvFirst009TextServiceOwner.multimediaTextAttached(),"Fenêtre TEXT native");
             }
         }
         assertEquals(3,texts);
@@ -139,12 +141,20 @@ public final class MediaUniversalAndroidTest {
             await(()->"MEDIA_CLOCK_UNUSABLE".equals(TvFirst009TextServiceOwner.status().code),"Horloge invalide refusée");
             media(remote,0,true,"different","buffering");
             await(()->"MEDIA_BUFFERING".equals(TvFirst009TextServiceOwner.status().code),"Buffering suspendu");
+            media(remote,0,false,"missing","");
+            await(()->"MEDIA_PAUSED".equals(TvFirst009TextServiceOwner.status().code),"Pause sur le jeton d’origine");
+            media(remote,0,false,"missing","park");
+            await(()->"MEDIA_UNAVAILABLE".equals(TvFirst009TextServiceOwner.status().code),"Perte de session");
             render(remote,cached.get().track);
             media(remote,0,true,"missing","newSession");
             await(()->"MEDIA_RESELECT_REQUIRED".equals(TvFirst009TextServiceOwner.status().code),"Autre jeton MEDIA refusé");
             media(remote,2000,true,"different","");
             await(()->TvFirst009TextServiceOwner.status().positionMs<0,"Aucune reprise implicite");
-            HistoricalM5ContinuityTest.report(instrument,"V41_Q2_PRIVATE_PASS 3_TEXT 3_AUDIO missing_id conflicting_metadata pause_resume buffering invalid_clock new_session_hold");
+            instrument.runOnMainSync(()->TvFirst009TextServiceOwner.requestStop(target));
+            await(()->!TvFirst009TextServiceOwner.controlBusy(),"Arrêt explicite de l’ancienne sélection");
+            instrument.runOnMainSync(()->assertTrue(TvFirst009TextServiceOwner.requestMultimediaStart(activity,source,cached.get(),true)));
+            await(()->"MEDIA_PLAYING".equals(TvFirst009TextServiceOwner.status().code),"Nouvelle sélection explicite");
+            HistoricalM5ContinuityTest.report(instrument,"V41_Q2_PRIVATE_PASS 3_TEXT 3_AUDIO missing_id conflicting_metadata pause_resume buffering invalid_clock transient_loss new_session_hold explicit_reselection");
         }finally{
             instrument.runOnMainSync(()->{TvFirst009TextServiceOwner.requestStop(target);source.close();activity.finish();});
             fixture.cleanup();
