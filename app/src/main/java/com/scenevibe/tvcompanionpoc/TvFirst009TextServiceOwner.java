@@ -739,16 +739,23 @@ final class TvFirst009TextServiceOwner {
             case "PERMISSION_REQUIRED": explanation="Autorisations de superposition et d’accès MEDIA nécessaires, à accorder manuellement.";break;
             case "OVERLAY_PERMISSION_REQUIRED": explanation="Superposition refusée par Android. Effets bloqués ; admission et cache conservés tant qu’ils restent valides.";break;
             case "MEDIA_PERMISSION_REQUIRED": explanation="Accès MEDIA refusé par Android. Effets bloqués ; admission et cache conservés tant qu’ils restent valides.";break;
-            case "MEDIA_PLAYING": explanation="Épisode reconnu par le contrat historique. Lecture MEDIA suivie.";break;
+            case "MEDIA_PLAYING": explanation=BuildConfig.MEDIA_UNIVERSAL?"Lecture suivie sur l’horloge Prime Video.":"Épisode reconnu par le contrat historique. Lecture MEDIA suivie.";break;
             case "MEDIA_PAUSED": explanation="Lecture en pause : commentaires gelés.";break;
-            case "MEDIA_UNAVAILABLE": case "SESSION_CHANGED": case "CLOCK_JUMP": case "FRESH_POSITION_FROZEN": case "OBSERVATION_STALE": case "WAITING_MEDIA": case "SESSION_UNAVAILABLE": case "CAPTURE_TIMEOUT": explanation="En attente d’une session MEDIA reconnue. Aucun commentaire sans identité et position.";break;
+            case "MEDIA_BUFFERING": explanation="Prime Video charge la lecture. La sélection est conservée.";break;
+            case "MEDIA_RESELECT_REQUIRED": explanation="La session Prime Video a changé. Arrête les commentaires et choisis à nouveau la Track.";break;
+            case "MEDIA_STOPPED": explanation="Prime Video a arrêté la lecture. Choisis de nouveau la Track pour relancer les commentaires.";break;
+            case "CLOCK_JUMP": case "FRESH_POSITION_FROZEN": case "OBSERVATION_STALE":
+                explanation=BuildConfig.MEDIA_UNIVERSAL?"Capture Prime Video inutilisable. Restitution suspendue jusqu’à une horloge valide.":"En attente d’une session MEDIA reconnue. Aucun commentaire sans identité et position.";break;
+            case "MEDIA_UNAVAILABLE": case "SESSION_CHANGED": case "WAITING_MEDIA": case "SESSION_UNAVAILABLE": case "CAPTURE_TIMEOUT":
+                explanation=BuildConfig.MEDIA_UNIVERSAL?"Attente d’une session Prime Video avec une position valide.":"En attente d’une session MEDIA reconnue. Aucun commentaire sans identité et position.";break;
             case "START_REQUESTED": explanation="Démarrage TEXT demandé volontairement.";break;
             case "STOPPED": case "STOP_REQUESTED": explanation="Restitution TEXT arrêtée.";break;
             default: explanation="Qualification TEXT indisponible ; consulte le code diagnostic. Aucun secours automatique.";
         }
         long now=SystemClock.elapsedRealtime();
         return explanation+"\nÉtat courant : "+current.code+" · observé "+age(current.updatedAtMs,now)
-                +"\nTEXT : "+(current.active?"ON — session armée (sans garantie d’affichage)":controlBusy()?"transition demandée":"OFF")
+                +(BuildConfig.MEDIA_UNIVERSAL?"\nRestitution : "+multimediaAvailability():
+                "\nTEXT : "+(current.active?"ON — session armée (sans garantie d’affichage)":controlBusy()?"transition demandée":"OFF"))
                 +"\nDernier incident mémorisé : "+current.lastIssue+(current.lastIssueAtMs<0?"":" · "+age(current.lastIssueAtMs,now))
                 +"\nDernier événement de rendu : "+(current.lastRenderAtMs<0?"NONE":"TEXT_RENDER_REQUESTED · "+age(current.lastRenderAtMs,now))
                 +"\nRequêtes de rendu — session courante ou dernière session : "+current.renderRequests

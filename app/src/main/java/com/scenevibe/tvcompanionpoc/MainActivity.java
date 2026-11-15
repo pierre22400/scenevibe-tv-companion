@@ -105,10 +105,12 @@ public final class MainActivity extends Activity {
     /** Formate la projection reçue du service sans relire de fichier, autorisation ni paquet. */
     private String publicLibraryStatus() {
         var entries=PublicCompanionService.library();
-        if(entries.isEmpty())return "Les Tracks reçues depuis le catalogue Web apparaissent ici.";
         String active=TvFirst009TextServiceOwner.publicCommand();
         long now=android.os.SystemClock.elapsedRealtime();
         java.util.StringJoiner rows=new java.util.StringJoiner("\n\n");
+        if(BuildConfig.MEDIA_UNIVERSAL && TvFirst009TextServiceOwner.multimediaActive())
+            rows.add(TvFirst009TextServiceOwner.multimediaAvailability());
+        if(entries.isEmpty())rows.add("Les Tracks reçues depuis le catalogue Web apparaissent ici.");
         for(PublicLibraryEntry entry:entries)rows.add(entry.describe(active,now));
         return rows.toString();
     }

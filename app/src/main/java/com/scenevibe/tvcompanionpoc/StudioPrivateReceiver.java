@@ -48,7 +48,8 @@ final class StudioPrivateReceiver {
         if(pending!=null && !pending.cacheConfirmed && TvFirst009TextServiceOwner.controlBusy()) {
             String active=TvFirst009TextServiceOwner.selectedTrackTitle();
             return (active.isEmpty()?"Commentaires en cours":"« "+active+" » est en cours")
-                    +" · « "+pending.title+" » r"+pending.revision+" en attente. Arrêter les commentaires permet le téléchargement. L’activation reste manuelle.";
+                    +" · « "+pending.title+" » r"+pending.revision+(BuildConfig.MEDIA_UNIVERSAL?" · Studio Q2":"")
+                    +" en attente. Arrêter les commentaires permet le téléchargement. L’activation reste manuelle.";
         }
         return message;
     }

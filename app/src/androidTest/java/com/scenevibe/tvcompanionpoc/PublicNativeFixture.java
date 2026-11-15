@@ -27,6 +27,7 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
     String challengeId,secret,code;
     final String grantExpires=Instant.now().plusSeconds(86400).toString();
     boolean claimed,expired,revoked,corrupt,truncated,withdrawn;
+    boolean automatic;
     int audioRequests,cacheReceipts,armReceipts,claims;
     JSONObject command;
     private PublicCompanionOwner owner;
@@ -92,7 +93,11 @@ final class PublicNativeFixture implements PublicCloudClient.Transport {
         if(!claimed || !device.equals(body.optString("deviceId")) || !generation.equals(body.optString("generation")) || !token.equals(bearer))throw new IllegalArgumentException("POSSESSION_REFUSED");
         if(action.equals("association"))return bytes(new JSONObject().put("profile",TvFirst008Wire.PROFILE).put("deviceId",device).put("generation",generation)
                 .put("consentExpiresAt",grantExpires));
-        if(action.equals("poll"))return bytes(new JSONObject().put("commands",command==null?new JSONArray():new JSONArray().put(new JSONObject(command.toString()))));
+        if(action.equals("poll")){
+            JSONObject result=new JSONObject().put("commands",command==null?new JSONArray():new JSONArray().put(new JSONObject(command.toString())));
+            if(automatic && command!=null)result.put("automaticCommandIds",new JSONArray().put(command.getString("commandId")));
+            return bytes(result);
+        }
         if(withdrawn)throw new IllegalArgumentException("PUBLIC_WITHDRAWN");
         if(action.equals("validate-cache")){
             if(!publicIdentity.getString("trackId").equals(body.getString("trackId")) || !publicIdentity.getString("revisionId").equals(body.getString("revisionId"))

@@ -52,15 +52,30 @@ public final class OwnedPlayer extends Activity {
     /** Publish real Android MediaSession state sampled by the unchanged Companion. */
     private void update(Intent intent) {
         if (session == null) return;
+        if(intent.getBooleanExtra("newSession",false)){
+            session.release();
+            session=new MediaSession(this,"SceneVibe replacement emulator MEDIA");
+            session.setActive(true);
+        }
         boolean studio = intent.getBooleanExtra("studioQ2",false);
-        session.setMetadata(new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID,studio?"q2d-owned-media":"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
-                .putString(MediaMetadata.METADATA_KEY_TITLE,studio?"Séquence de qualification Q2-D":"Columbo — Eaux troubles")
-                .putLong(MediaMetadata.METADATA_KEY_DURATION,studio?240_000L:5884768L).build());
+        String identity=intent.getStringExtra("identity");
+        MediaMetadata.Builder metadata=new MediaMetadata.Builder();
+        if("different".equals(identity)){
+            metadata.putString(MediaMetadata.METADATA_KEY_MEDIA_ID,"fixture-unrelated")
+                    .putString(MediaMetadata.METADATA_KEY_TITLE,"Titre divergent")
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE,"Sous-titre divergent")
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION,7_200_000L);
+        }else if(!"missing".equals(identity)){
+            metadata.putString(MediaMetadata.METADATA_KEY_MEDIA_ID,studio?"q2d-owned-media":"amzn1.dv.gti.baecadcc-c3ef-42a3-bce0-c241adaa992e")
+                    .putString(MediaMetadata.METADATA_KEY_TITLE,studio?"Séquence de qualification Q2-D":"Columbo — Eaux troubles")
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION,studio?240_000L:5884768L);
+        }
+        session.setMetadata(metadata.build());
         boolean playing = intent.getBooleanExtra("playing", false);
         long position = intent.getLongExtra("position", 0);
+        int state=intent.getBooleanExtra("buffering",false)?PlaybackState.STATE_BUFFERING:playing?PlaybackState.STATE_PLAYING:PlaybackState.STATE_PAUSED;
+        long anchor=intent.getBooleanExtra("invalidClock",false)?0:SystemClock.elapsedRealtime();
         session.setPlaybackState(new PlaybackState.Builder()
-                .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED,
-                        position, playing ? 1f : 0f, SystemClock.elapsedRealtime()).build());
+                .setState(state,position,playing?1f:0f,anchor).build());
     }
 }

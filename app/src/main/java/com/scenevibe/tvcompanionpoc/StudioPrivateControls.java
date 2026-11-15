@@ -69,7 +69,8 @@ final class StudioPrivateControls {
         text.setText("Commentaires écrits : "+(TvFirst009TextServiceOwner.multimediaTextEnabled()?"ON":"OFF"));
         audio.setText("Commentaires audio : "+(TvFirst009TextServiceOwner.multimediaAudioEnabled()?"ON":"OFF"));
         String state=source==null?"Associe cette TV avec un code depuis le Studio Q2.":source.accountMessage()+"\n"+source.verification();
-        status.setText(state+(receiver==null?"":"\n"+receiver.status())+(notice.isEmpty()?"":"\n"+notice));
+        status.setText((BuildConfig.MEDIA_UNIVERSAL?"Studio Q2 · "+BuildConfig.STUDIO_PRIVATE_ORIGIN+"/studio\n":"")
+                +state+(receiver==null?"":"\n"+receiver.status())+(notice.isEmpty()?"":"\n"+notice));
         if(TvFirst009TextServiceOwner.multimediaActive()) status.append("\n"+TvFirst009TextServiceOwner.multimediaAvailability());
     }
 
@@ -150,10 +151,12 @@ final class StudioPrivateControls {
         if(prepared==null || TvFirst009TextServiceOwner.controlBusy())return;
         TvCompanionDialogs.builder(activity).setTitle("Activer les commentaires Q2")
                 .setMessage("Confirme l’édition de « "+prepared.track.title()+" » · révision "+prepared.profile.identity.optLong("editorialRevision")
-                        +". La restitution attend la reconnaissance de l’œuvre par Android TV.")
+                        +(BuildConfig.MEDIA_UNIVERSAL?". La restitution attend une position valide fournie par Prime Video.":
+                        ". La restitution attend la reconnaissance de l’œuvre par Android TV."))
                 .setNegativeButton("Annuler",null).setPositiveButton("Activer",(dialog,which)->{
                     boolean accepted=TvFirst009TextServiceOwner.requestMultimediaStart(activity,receiver.source,prepared,true);
-                    notice=accepted?"Commentaires activés · attente du média compatible.":"Vérifie que le cache, les permissions et l’association sont valides.";
+                    notice=accepted?(BuildConfig.MEDIA_UNIVERSAL?"Track sélectionnée · attente de l’horloge Prime Video.":"Commentaires activés · attente du média compatible."):
+                            "Vérifie que le cache, les permissions et l’association sont valides.";
                     refresh();
                 }).show();
     }

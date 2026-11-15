@@ -36,10 +36,16 @@ final class ManualNativeFixture {
 
     /** Keep target-app private files and the actual Android backend, with unique generation isolation. */
     ManualNativeFixture() throws Exception {
+        this(false);
+    }
+    /** Représente l'instantané privé Q2 sans identifiant natif sur le même transport de test. */
+    ManualNativeFixture(boolean studioWithoutNativeId) throws Exception {
         root=new File(target.getFilesDir(),"realtrack001-"+UUID.randomUUID());
-        facts=new JSONObject(new String(asset("facts.json"),StandardCharsets.UTF_8));profileBytes=asset("profile.json");
+        facts=new JSONObject(new String(asset("facts.json"),StandardCharsets.UTF_8));
+        profileBytes=studioWithoutNativeId?MediaUniversalAndroidTest.unidentified(asset("profile.json"),true):asset("profile.json");
         profile=new MultimediaDeliveryProfile(profileBytes);
         JSONObject data=new JSONObject(new String(asset("binding.json"),StandardCharsets.UTF_8)).put("generation",generation);
+        if(studioWithoutNativeId)data.put("packageSha256",profile.packageSha256);
         binding=new MultimediaCloudClient.Binding(data);lease=new Lease(binding);port=new Port(this);client=new MultimediaCloudClient(lease,port);
         store=new InstallationStore(new AndroidInstallationBackend(target,namespace));
         cache=new MultimediaPrivateCache(root,store,new AndroidStudioAudioInspector(target));
