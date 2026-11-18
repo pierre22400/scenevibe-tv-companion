@@ -4,6 +4,9 @@ name: Companion QR Smartphone v42 M5
 on:
   push:
     branches: [work/scenevibe-smartphone-024]
+  pull_request:
+    branches: [work/scenevibe-companion-v41]
+    types: [opened, synchronize, reopened]
 permissions:
   contents: read
   actions: read
@@ -25,13 +28,17 @@ env:
 
 jobs:
   signed-v42:
-    if: github.repository == 'pierre22400/scenevibe-tv-companion'
+    if: >-
+      github.repository == 'pierre22400/scenevibe-tv-companion' &&
+      (github.event_name == 'push' ||
+       (github.head_ref == 'work/scenevibe-smartphone-024' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-24.04
     timeout-minutes: 42
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
