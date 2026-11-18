@@ -37,10 +37,12 @@ final class PublicCompanionOwner implements AutoCloseable {
     private volatile boolean closed,revoked;
     private volatile String code="",status="Connexion au catalogue…";
     private volatile long codeExpires;
+    private volatile String browserPairingStatus="";
+    private JSONObject browserChallenge;
     private PublicMultimediaCache cache;
     private PublicMultimediaCache.Prepared prepared;
     private PublicRuntimeReference reference;
-    private long grantDeadline;
+    private volatile long grantDeadline;
     private int failedPolls;
     private boolean followUp;
     private String qualificationStage = "idle";
@@ -110,6 +112,49 @@ final class PublicCompanionOwner implements AutoCloseable {
         try{worker.schedule(this::tickViewer,delay,TimeUnit.MILLISECONDS);}
         catch(java.util.concurrent.RejectedExecutionException stopped){if(!closed)throw stopped;}
     }
+    /** Indique à l’écran si la TV peut autoriser un autre navigateur, sans consulter le réseau. */
+    boolean canAddBrowser(){
+        return BuildConfig.PUBLIC_VIEWER_001 && !historical && !closed && !revoked && grantDeadline>SystemClock.elapsedRealtime()
+                && code.isEmpty();
+    }
+    /** Lance un challenge explicite sur le worker propriétaire, en gardant la réception active. */
+    void requestBrowserPairing(){
+        if(closed)return;
+        try{worker.execute(this::openBrowserChallenge);}
+        catch(java.util.concurrent.RejectedExecutionException stopped){if(!closed)throw stopped;}
+    }
+    /** Le secret éphémère demeure en mémoire du worker et ne rejoint jamais l’écran. */
+    private void openBrowserChallenge(){
+        if(!canAddBrowser())return;
+        try{
+            byte[] entropy=new byte[32];
+            new java.security.SecureRandom().nextBytes(entropy);
+            String challengeId=java.util.UUID.randomUUID().toString();
+            JSONObject request=new JSONObject().put("profile",TvFirst008Wire.PROFILE)
+                    .put("mode","add-browser").put("challengeId",challengeId).put("installationId","tv008_"+challengeId)
+                    .put("challengeSecret",java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(entropy));
+            JSONObject displayed=client.browserChallenge(request);
+            codeExpires=Instant.parse(displayed.getString("expiresAt")).toEpochMilli();
+            browserChallenge=request;
+            browserPairingStatus="Saisis ce code dans le navigateur à associer.";
+            code=displayed.getString("userCode");
+        }catch(Exception refused){browserPairingStatus="Code indisponible · réessaie « Associer un nouvel appareil ».";}
+    }
+    /** Contrôle l’expiration ou la consommation sans influer sur les commandes et le cache. */
+    private void checkBrowserPairing(){
+        if(browserChallenge==null)return;
+        boolean expired=codeExpires<=System.currentTimeMillis();
+        try{
+            if(!expired && !client.browserClaimed(browserChallenge))return;
+        }catch(Exception unavailable){return;}
+        browserChallenge=null;
+        code="";
+        codeExpires=0;
+        browserPairingStatus=expired?"Code expiré · demande un nouveau code.":"Nouvel appareil associé.";
+    }
+    /** Retourne uniquement le message de présentation de l’association supplémentaire. */
+    String browserPairingStatus(){return browserPairingStatus;}
+
     /** Retourne un code d'affichage seulement ; aucun secret de possession n'atteint l'Activity. */
     String code(){return code;}
     /** Retourne l'expiration du code, distincte du grant et du cache. */
@@ -181,6 +226,7 @@ final class PublicCompanionOwner implements AutoCloseable {
         long remaining=Instant.parse(association.getString("consentExpiresAt")).toEpochMilli()-System.currentTimeMillis();
         if(remaining<=0)throw new IllegalArgumentException("REVOKED");
         grantDeadline=SystemClock.elapsedRealtime()+remaining;revoked=false;
+        checkBrowserPairing();
         if(viewerPreferences!=null)viewerPreferences.initialize(historical
                 ?identityState(context).read("publicPreferences"):commandMetadata.read("publicPreferences"));
         String generation=identity.getString("generation");

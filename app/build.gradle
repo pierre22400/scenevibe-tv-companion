@@ -39,6 +39,9 @@ if (publicViewer001 && (!companionMute002 || (publicViewerOrigin && publicViewer
 }
 def studioPrivateQ2 = providers.gradleProperty("scenevibeStudioPrivateQ2").orElse("false").get() == "true"
 def mediaUniversal = providers.gradleProperty("scenevibeMediaUniversal").orElse("false").get() == "true"
+// Candidate v42 is additive to the exact v41 application and permission set.
+def browserPairing024 = providers.gradleProperty("scenevibeBrowserPairing024").orElse("false").get() == "true"
+if (browserPairing024 && !mediaUniversal) throw new GradleException("The v42 candidate requires the v41 media profile")
 if (mediaUniversal && !studioPrivateQ2) {
     throw new GradleException("The v41 candidate requires the v40 Studio and Viewer origins")
 }
@@ -180,7 +183,7 @@ android {
     // Same Activity/service, with a passive preparation and explicit normal Activity launch.
     buildTypes.create("tvux002") {
         initWith buildTypes.tvux001
-        versionNameSuffix mediaUniversal ? "-media-universal-v41" : studioPrivateQ2 ? "-studio-private-q2-v40" : historicalViewer001c ? "-public-viewer-001c-v36" : publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
+        versionNameSuffix browserPairing024 ? "-qr-browser-v42" : mediaUniversal ? "-media-universal-v41" : studioPrivateQ2 ? "-studio-private-q2-v40" : historicalViewer001c ? "-public-viewer-001c-v36" : publicViewer001 ? "-public-viewer-e2e001-v34" : companionMute002 ? "-companion-mute-integration002-v32" : hostedAutonomous001d ? "-autonomous-cloud001d-v33" : publicAutonomous001b ? "-public-autonomous001b-v32" : realTrack001 ? "-real-track-e2e001-g11-ux1" : "-multiplatform-ad-observation001b"
         buildConfigField "boolean", "COMPANION_MUTE_002", companionMute002 ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_HISTORICAL_VIEWER_001C", historicalViewer001c ? "true" : "false"
         buildConfigField "boolean", "PUBLIC_VIEWER_001", publicViewer001 ? "true" : "false"
@@ -346,7 +349,7 @@ androidComponents {
             if (companionMute002) output.versionCode.set(32)
             if (publicViewer001) output.versionCode.set(34)
             if (historicalViewer001c) output.versionCode.set(36)
-            if (studioPrivateQ2) output.versionCode.set(mediaUniversal ? 41 : 40)
+            if (studioPrivateQ2) output.versionCode.set(browserPairing024 ? 42 : mediaUniversal ? 41 : 40)
         }
     }
     onVariants(selector().withBuildType("tvux001")) { variant ->

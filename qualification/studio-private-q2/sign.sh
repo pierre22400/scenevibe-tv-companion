@@ -40,6 +40,15 @@ if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
     candidate_code=41
     experiment=media-universal-v41
 fi
+if [[ "${SCENEVIBE_SIGN_BROWSER_V42:-}" == true ]]; then
+    baseline="signed-input/scenevibe-companion-media-universal-v41-m5.apk"
+    baseline_code=41
+    baseline_sha=32084541ea228b3566c991d7a80538560c1c6e70dffc4585e8bfa6ab6a3c65f5
+    baseline_run=43709050113
+    candidate="$proof/scenevibe-companion-qr-browser-v42-m5.apk"
+    candidate_code=42
+    experiment=qr-browser-v42
+fi
 printf '%s  %s\n' "$baseline_sha" "$baseline" | sha256sum -c -
 output="$proof"
 verify "$baseline" "$baseline_code"

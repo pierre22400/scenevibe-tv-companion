@@ -102,6 +102,25 @@ final class PublicCloudClient {
         if(!value.getString("challengeId").equals(result.optString("challengeId")) || !result.optString("userCode").matches("[0-9]{6}"))throw new IllegalArgumentException("PUBLIC_CHALLENGE_REFUSED");
         state.write("displayChallenge",result);return result;
     }
+    /** Ouvre le challenge HTTPS existant sans remplacer l’installation ni la possession de la TV. */
+    JSONObject browserChallenge(JSONObject challenge) throws Exception {
+        JSONObject result=json("challenge",challenge);
+        if(!challenge.getString("challengeId").equals(result.optString("challengeId"))
+                || !result.optString("userCode").matches("[0-9]{6}"))throw new IllegalArgumentException("PUBLIC_CHALLENGE_REFUSED");
+        return result;
+    }
+    /** Vérifie la consommation du code sans importer ni écrire un nouveau credential TV. */
+    boolean browserClaimed(JSONObject pending) throws Exception {
+        JSONObject request=new JSONObject().put("challengeId",pending.getString("challengeId"))
+                .put("challengeSecret",pending.getString("challengeSecret"));
+        JSONObject result=new JSONObject(TvFirst008Wire.utf8(transport.request("challenge-status",request,null)));
+        if(!"claimed".equals(result.optString("status")))return false;
+        JSONObject current=identity();
+        if(current==null || !current.getString("deviceId").equals(result.optString("deviceId"))
+                || !current.getString("generation").equals(result.optString("generation"))
+                || result.has("deviceToken"))throw new IllegalArgumentException("PUBLIC_ASSOCIATION_MISMATCH");
+        return true;
+    }
     /** Seule la possession du secret TV reçoit le credential après saisie du code Web. */
     boolean finishChallenge() throws Exception {
         JSONObject c=state.read("challenge");if(c==null)return identity()!=null;
