@@ -31,6 +31,37 @@ public final class MediaUniversalAndroidTest {
     private final Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
     private final Context target=instrument.getTargetContext();
 
+    /** Un code supplémentaire confirme le même appareil sans écrire la possession Android. */
+    @Test public void secondBrowserKeepsExistingDeviceCredential() throws Exception {
+        PublicNativeFixture fixture=new PublicNativeFixture();
+        try{
+            fixture.pair();
+            String identity=fixture.state.read("identity").toString();
+            String challengeId=UUID.randomUUID().toString();
+            String challengeSecret="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+            JSONObject pending=new JSONObject().put("challengeId",challengeId)
+                    .put("challengeSecret",challengeSecret).put("mode","add-browser");
+            PublicCloudClient client=new PublicCloudClient(fixture.state,(action,body,bearer)->{
+                JSONObject response;
+                if("challenge".equals(action)){
+                    assertEquals(fixture.token,bearer);
+                    assertEquals(fixture.generation,body.getString("generation"));
+                    assertEquals(fixture.device,body.getString("deviceId"));
+                    response=new JSONObject().put("challengeId",challengeId).put("userCode","123456");
+                }else{
+                    assertEquals("challenge-status",action);
+                    assertEquals(challengeSecret,body.getString("challengeSecret"));
+                    response=new JSONObject().put("status","claimed").put("deviceId",fixture.device).put("generation",fixture.generation);
+                }
+                return response.toString().getBytes(StandardCharsets.UTF_8);
+            });
+            assertEquals("123456",client.browserChallenge(pending).getString("userCode"));
+            assertTrue(client.browserClaimed(pending));
+            assertEquals(identity,fixture.state.read("identity").toString());
+            assertEquals(fixture.token,fixture.state.token(fixture.state.read("identity")));
+        }finally{fixture.close(true);}
+    }
+
     /** Produit un paquet synthétique dont le seul identifiant d'œuvre est absent. */
     static byte[] unidentified(byte[] bytes,boolean studio) throws Exception {
         JSONObject envelope=new JSONObject(new String(bytes,StandardCharsets.UTF_8));
@@ -65,7 +96,7 @@ public final class MediaUniversalAndroidTest {
     /** Ouvre l'Activity d'admission réelle sur l'unique AVD jetable autorisé. */
     private DiagnosticsActivity launch() throws Exception {
         assertTrue(BuildConfig.MEDIA_UNIVERSAL);
-        assertEquals(41,target.getPackageManager().getPackageInfo(target.getPackageName(),0).getLongVersionCode());
+        assertEquals(BuildConfig.VERSION_NAME.endsWith("-qr-browser-v42")?42:41,target.getPackageManager().getPackageInfo(target.getPackageName(),0).getLongVersionCode());
         assertTrue(android.provider.Settings.canDrawOverlays(target));
         assertTrue(NotificationAccess.isGranted(target));
         return (DiagnosticsActivity)instrument.startActivitySync(new Intent(target,DiagnosticsActivity.class)

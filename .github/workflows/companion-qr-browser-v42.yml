@@ -1,0 +1,123 @@
+# Build et signature expérimentale M5 du candidat QR sur le profil v41.
+name: Companion QR Smartphone v42 M5
+
+on:
+  push:
+    branches: [work/scenevibe-smartphone-024]
+  pull_request:
+    branches: [work/scenevibe-companion-v41]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  actions: read
+
+env:
+  ORG_GRADLE_PROJECT_scenevibeRealTrack001: 'true'
+  ORG_GRADLE_PROJECT_scenevibePublicAutonomous001b: 'true'
+  ORG_GRADLE_PROJECT_scenevibeAutonomousHosted001d: 'true'
+  ORG_GRADLE_PROJECT_scenevibeCompanionMute002: 'true'
+  ORG_GRADLE_PROJECT_scenevibePublicViewer001: 'true'
+  ORG_GRADLE_PROJECT_scenevibeHistoricalViewer001c: 'true'
+  ORG_GRADLE_PROJECT_scenevibeStudioPrivateQ2: 'true'
+  ORG_GRADLE_PROJECT_scenevibeMediaUniversal: 'true'
+  SCENEVIBE_SIGN_V41: 'true'
+  SCENEVIBE_SIGN_BROWSER_V42: 'true'
+  ORG_GRADLE_PROJECT_scenevibeBrowserPairing024: 'true'
+  SCENEVIBE_CLOUD_ORIGIN: https://scenevibe-autonomous001d-qual-preview.vercel.app
+  SCENEVIBE_PUBLIC_VIEWER_ORIGIN: https://scenevibe-public-viewer001-qual.vercel.app
+
+jobs:
+  signed-v42:
+    if: >-
+      github.repository == 'pierre22400/scenevibe-tv-companion' &&
+      (github.event_name == 'push' ||
+       (github.head_ref == 'work/scenevibe-smartphone-024' && github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43441020236
+          github-token: ${{ github.token }}
+          name: scenevibe-companion-v38-m5
+          path: signed-input
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43079608451
+          github-token: ${{ github.token }}
+          name: scenevibe-sony001a-m5-43079608451
+          path: signed-input
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43643847974
+          github-token: ${{ github.token }}
+          name: scenevibe-companion-studio-private-q2-v40-m5
+          path: signed-input
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 43709050113
+          github-token: ${{ github.token }}
+          name: scenevibe-companion-media-universal-v41-m5
+          path: signed-input
+      - name: Build v42 and run the existing JVM suite
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-35' 'build-tools;34.0.0'
+          gradle --no-daemon --max-workers=2 -PscenevibeQualificationUnsigned=true assembleTvux002
+          gradle --no-daemon --max-workers=2 -PscenevibeTvUx002NativeQualification=true assembleTvux002AndroidTest testTvux002UnitTest
+          bash qualification/viewer001c/build-player.sh "$RUNNER_TEMP/studio-q2-owned-player.apk"
+      - name: Sign and compare both M5 certificates and manifests
+        env:
+          SCENEVIBE_ANDROID_KEYSTORE_BASE64: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_BASE64 }}
+          SCENEVIBE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEYSTORE_PASSWORD }}
+          SCENEVIBE_ANDROID_KEY_ALIAS: ${{ secrets.SCENEVIBE_ANDROID_KEY_ALIAS }}
+          SCENEVIBE_ANDROID_KEY_PASSWORD: ${{ secrets.SCENEVIBE_ANDROID_KEY_PASSWORD }}
+        run: |
+          bash qualification/studio-private-q2/sign.sh
+          cat m5-proof/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: scenevibe-companion-qr-browser-v42-m5
+          path: m5-proof/scenevibe-companion-qr-browser-v42-m5.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Reserve space and enable emulator acceleration
+        run: |
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          profile: tv_1080p
+          arch: x86
+          disk-size: 2048M
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2 -dns-server 192.0.2.1
+          script: bash qualification/studio-private-q2/migration.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: companion-qr-browser-v42-proof
+          path: |
+            m5-proof/*.txt
+            m5-proof/SHA256SUMS
+            app/build/test-results/testTvux002UnitTest/*.xml
+          if-no-files-found: warn
+          retention-days: 30

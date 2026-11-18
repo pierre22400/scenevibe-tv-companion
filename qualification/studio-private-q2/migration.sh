@@ -85,10 +85,20 @@ qualify 40 false v40
 candidate_version=40
 upgrade_verdict=SIGNED_V38_TO_V40_AND_HISTORICAL_CACHES_PASS
 if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
-    adb install -r "$proof/scenevibe-companion-media-universal-v41-m5.apk" | tee "$proof/upgrade-v41.txt"
+    v41="$proof/scenevibe-companion-media-universal-v41-m5.apk"
+    if [[ "${SCENEVIBE_SIGN_BROWSER_V42:-}" == true ]]; then
+        v41=signed-input/scenevibe-companion-media-universal-v41-m5.apk
+    fi
+    adb install -r "$v41" | tee "$proof/upgrade-v41.txt"
     qualify 41 false v41
     candidate_version=41
     upgrade_verdict=SIGNED_V40_TO_V41_AND_HISTORICAL_CACHES_PASS
+fi
+if [[ "${SCENEVIBE_SIGN_BROWSER_V42:-}" == true ]]; then
+    adb install -r "$proof/scenevibe-companion-qr-browser-v42-m5.apk" | tee "$proof/upgrade-v42.txt"
+    qualify 42 false v42
+    candidate_version=42
+    upgrade_verdict=SIGNED_V41_TO_V42_AND_HISTORICAL_CACHES_PASS
 fi
 restart_android
 qualify "$candidate_version" false "v$candidate_version-after-reboot"
@@ -106,5 +116,8 @@ qualify_cache MultimediaCacheLifecycleAndroidTest privateRevisionsAndDiskFailure
 if [[ "${SCENEVIBE_SIGN_V41:-}" == true ]]; then
     qualify_cache MediaUniversalAndroidTest privateQ2AndSessionContinuity
     qualify_cache MediaUniversalAndroidTest publicSelectionAndDeferredReplacement
+fi
+if [[ "${SCENEVIBE_SIGN_BROWSER_V42:-}" == true ]]; then
+    qualify_cache MediaUniversalAndroidTest secondBrowserKeepsExistingDeviceCredential
 fi
 adb logcat -d -s SceneVibeCacheQ2:I SceneVibeCacheQ3:I > "$proof/cache-domains.txt"

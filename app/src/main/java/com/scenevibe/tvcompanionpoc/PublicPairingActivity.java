@@ -19,7 +19,7 @@ import android.widget.TextView;
 public final class PublicPairingActivity extends Activity {
     private final Handler main=new Handler(android.os.Looper.getMainLooper());
     private TextView code,status;
-    private Button text,audio;
+    private Button text,audio,addBrowser;
     private final Runnable refresh=this::refresh;
     /** Présente le code et démarre le suivi public depuis une Activity visible. */
     @Override protected void onCreate(Bundle saved){
@@ -40,6 +40,11 @@ public final class PublicPairingActivity extends Activity {
         if(!Settings.canDrawOverlays(this))button(root,"Réglage Android : superposition",()->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName()))));
         if(!NotificationAccess.isGranted(this))button(root,"Réglage Android : accès MEDIA",()->startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
         if(BuildConfig.PUBLIC_VIEWER_001){
+            addBrowser=button(root,"Associer un nouvel appareil",()->{
+                PublicCompanionOwner owner=PublicCompanionService.current();
+                if(owner!=null)owner.requestBrowserPairing();
+            });
+            addBrowser.setEnabled(false);
             text=button(root,"TEXT",()->toggle(true));
             audio=button(root,"AUDIO",()->toggle(false));
             text.setEnabled(false);audio.setEnabled(false);
@@ -64,7 +69,9 @@ public final class PublicPairingActivity extends Activity {
         else{
             code.setText(owner.code().isEmpty()?"TV associée":owner.code());
             long seconds=Math.max(0,(owner.codeExpires()-System.currentTimeMillis())/1000);
-            status.setText(owner.status()+(owner.code().isEmpty()?"":"\nCode valable encore "+seconds+" s"));
+            String pairingStatus=owner.browserPairingStatus();
+            status.setText((pairingStatus.isEmpty()?owner.status():pairingStatus)+(owner.code().isEmpty()?"":"\nCode valable encore "+seconds+" s"));
+            if(addBrowser!=null)addBrowser.setEnabled(owner.canAddBrowser());
             if(text!=null){
                 PublicViewerPreferences preferences=owner.viewerPreferences();
                 boolean ready=preferences!=null && preferences.initialized();
